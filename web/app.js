@@ -174,7 +174,7 @@ function chrome(active, { worldTitle = null, sub = null, showDock = true } = {})
   <div id="topbar">
     <div class="glasschip"><div class="logo-dot"></div><div class="chip-title"><b>${esc(worldTitle || 'Vivarium')}</b><span>${esc(sub || t('your_studio', 'your studio'))}</span></div></div>
     <div style="display:flex;gap:9px">
-      ${S.world ? '<button class="glasschip" id="gm-chip" title="Talk to the Game Master — ask anything, change anything">💬 GM</button>' : ''}
+      ${S.world ? '<button class="glasschip" id="tl-chip" title="Timeline — scroll through every scene, replay or branch">🕰</button><button class="glasschip" id="gm-chip" title="Talk to the Game Master — ask anything, change anything">💬 GM</button>' : ''}
       <button class="glasschip" id="lang-chip" title="Language / Sprache / Langue / Idioma">🌐 ${getLang().toUpperCase()}</button>
       <div class="glasschip" id="credits-chip" title="Your credits"><div class="coin"></div><span id="credits-num">${S.user?.credits ?? '–'}</span></div>
       <button class="glasschip" id="avatar-chip" title="Account & usage">${esc((S.user?.displayName || '?')[0].toUpperCase())}</button>
@@ -195,6 +195,7 @@ function bindChrome() {
   });
   const av = $('#avatar-chip'); if (av) av.onclick = accountModal;
   const gmc = $('#gm-chip'); if (gmc) gmc.onclick = gmChatOverlay;
+  const tlc = $('#tl-chip'); if (tlc) tlc.onclick = () => timelineModal();
   // 🌐 chip cycles EN→DE→FR→ES and re-renders the current screen. From the next tick on,
   // the Game Master also writes the story in the chosen language (lang rides in tick calls).
   const lc = $('#lang-chip');
@@ -1297,6 +1298,7 @@ async function stageScreen() {
     </div>
   </div>
   <div id="topbar" style="justify-content:flex-end"><div style="display:flex;gap:9px">
+    <button class="glasschip" id="tl-chip" title="Timeline — scroll through every scene, replay or branch">🕰</button>
     <button class="glasschip" id="gm-chip" title="Talk to the Game Master — ask anything, change anything">💬 GM</button>
     <button class="glasschip" id="lang-chip" title="Language / Sprache / Langue / Idioma">🌐 ${getLang().toUpperCase()}</button>
     <div class="glasschip" id="credits-chip"><div class="coin"></div><span id="credits-num">${S.user?.credits ?? '–'}</span></div>
@@ -1330,6 +1332,8 @@ async function stageScreen() {
   <nav id="dock">${['home', 'cast', 'bonds', 'world', 'play', 'share'].map(k => `
     <button class="dock-btn ${k === 'play' ? 'active' : ''}" data-nav="${k}">${ICONS[k]}<span>${dockLabel(k)}</span></button>`).join('')}</nav>`;
   bindChrome();
+  // Timeline handoff: a ▶ Replay click stashes the target; play it now that the stage exists.
+  if (S.replay) { const r = S.replay; S.replay = null; playReplay(r.branchId, r.idx); return; }
   // Mobile panel collapse (the handle is display:none on desktop). Preference persists.
   const sb = $('#stage-bottom');
   $('#panel-toggle').onclick = () => {
@@ -1623,6 +1627,43 @@ async function playCinema(cinema) {
        player iterates in chat (look, profile, more outfits via the drawer)
        until they hit "Accept & add to cast" — the normal Forge flow.
    Multiple pitches (a chapter can yield one per scene) are shown one at a time. */
+/* ── ⏪ REPLAY: watch history again without touching it ─────────────────────
+   Launched from the Timeline (▶ Replay on any tick). Runs the cinema renderer
+   over the STORED ticks of the chosen branch, from the chosen tick to its head:
+   transition cards, backdrops, sprites in their outfits-of-the-time (tick
+   states embed the outfit list as it was), narration with audio (cached lines
+   play free; unplayed ones generate now and stay cached). Pure playback — the
+   world's actual position, branch and state are never modified. ⏹ skips a
+   scene; ✕ returns to the live present.                                       */
+async function playReplay(branchId, startIdx) {
+  const data = await loadWorld();
+  const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${encodeURIComponent(branchId)}&toIdx=999999999`);
+  const start = ticks.findIndex(t => t.idx === startIdx);
+  if (start < 0) return toast('That moment is no longer on this timeline', 'err');
+  const rep = { cancelled: false };
+  const hud = document.createElement('div');
+  hud.id = 'cine-hud';
+  hud.innerHTML = `<span class="glasschip" id="rep-pos" style="color:#efeaff;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">⏪ replay</span>
+    <button class="glasschip" id="rep-exit" style="color:#ffd9e6;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">✕ back to now</button>`;
+  $('#stage-root')?.appendChild(hud);
+  $('#rep-exit', hud).onclick = () => { rep.cancelled = true; stopNarration(); };
+
+  let prevLoc = null;
+  for (let i = start; i < ticks.length && !rep.cancelled; i++) {
+    const tick = ticks[i];
+    const rp = $('#rep-pos'); if (rp) rp.textContent = `⏪ replay · tick ${tick.idx} · ${fmtClock(tick.sim_time)}`;
+    await showCineTransition(tick, data, prevLoc);
+    if (rep.cancelled) break;
+    renderCineScene(tick, data);
+    await playSceneNarration(tick, data);
+    prevLoc = tick.pov_location_id;
+  }
+  hud.remove();
+  stopNarration();
+  S.worldData = null;
+  if (location.hash.includes('stage')) await stageScreen();   // settle back on the live present
+}
+
 /* ── 💬 GAME MASTER CHAT ─────────────────────────────────────────────────────
    An out-of-character assistant overlay (💬 GM chip in the top bar). The player
    talks ABOUT the game: ask anything about the story (the GM sees the same
@@ -2108,18 +2149,44 @@ async function timelineModal(world) {
     const b = info.branches.find(x => x.id === selected);
     $('#tl-ticks', m).innerHTML = '<div class="empty-hint" style="padding:30px"><span class="spinner dark"></span></div>';
     const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${selected}&toIdx=${b.head_idx}`);
+    const data = await loadWorld();
+    const locName = (id) => data.locations.find(l => l.id === id)?.name || '';
     const rows = [{ idx: 0, sim_time: null, summary: 'The beginning — genesis', time_delta: '' }, ...ticks];
-    $('#tl-ticks', m).innerHTML = `<div style="max-height:60vh;overflow-y:auto">${rows.map(t => `
+    // Temporal markers keep fast-forward scenes readable: chapter scenes share (or barely
+    // advance) the sim clock — consecutive ticks with the same clock render as "⟲ meanwhile",
+    // small offsets as "moments later", real jumps with their full delta.
+    const marker = (t, prev) => {
+      if (!prev || !t.sim_time) return '';
+      if (prev.sim_time && t.sim_time === prev.sim_time) return '⟲ meanwhile';
+      const mn = /^\+(\d+)m$/.exec(t.time_delta || '');
+      if (mn && +mn[1] <= 2) return '↳ moments later';
+      if (mn && +mn[1] >= 120) {   // chapter offsets come in raw minutes — humanise big ones
+        const h = Math.round(+mn[1] / 60);
+        return `↓ about ${h} hour${h === 1 ? '' : 's'} later`;
+      }
+      return '↓ ' + cineDelta(t.time_delta);
+    };
+    $('#tl-ticks', m).innerHTML = `<div style="max-height:60vh;overflow-y:auto">${rows.map((t, i) => `
+      ${i > 0 ? `<div style="font-size:9.5px;color:var(--soft);padding:1px 0 3px 46px;letter-spacing:.05em">${esc(marker(t, rows[i - 1]))}</div>` : ''}
       <div class="place-row" style="align-items:flex-start;${t.idx === info.tickIndex && selected === info.activeBranchId ? 'border-color:var(--gold);background:#fffaf0' : ''}">
         <div style="flex:none;width:40px;text-align:center"><b style="font-size:11px;color:var(--violet)">#${t.idx}</b></div>
         <div style="flex:1">
           <div style="font-size:12px">${esc(t.summary || '—')}</div>
-          <div style="font-size:10px;color:var(--soft);margin-top:2px">${t.sim_time ? fmtClock(t.sim_time) : ''}</div>
+          <div style="font-size:10px;color:var(--soft);margin-top:2px">${t.sim_time ? fmtClock(t.sim_time) : ''}${t.pov_location_id ? ' · ' + esc(locName(t.pov_location_id)) : ''}</div>
         </div>
-        ${t.idx === info.tickIndex && selected === info.activeBranchId
-          ? '<span class="tag g">here</span>'
-          : `<button class="btn btn-soft small" data-jump="${t.idx}" style="padding:4px 12px">Jump</button>`}
+        <div style="display:flex;gap:5px;flex:none">
+          ${t.idx > 0 ? `<button class="btn btn-ghost small" data-replay="${t.idx}" title="Watch again from here — does not change the story" style="padding:4px 9px">▶ Replay</button>` : ''}
+          ${t.idx === info.tickIndex && selected === info.activeBranchId
+            ? '<span class="tag g">here</span>'
+            : `<button class="btn btn-soft small" data-jump="${t.idx}" title="Rewind the world to here — advancing then forks a new branch" style="padding:4px 12px">⤴ Jump</button>`}
+        </div>
       </div>`).join('')}</div>`;
+    // ▶ Replay: pure playback of history (cinema renderer over stored ticks) — no state change
+    $$('#tl-ticks [data-replay]', m).forEach(el => el.onclick = () => {
+      m.remove();
+      S.replay = { branchId: selected, idx: +el.dataset.replay };
+      if (location.hash.includes('stage')) stageScreen(); else nav(`#/stage?w=${S.world}`);
+    });
     $$('#tl-ticks [data-jump]', m).forEach(el => el.onclick = async () => {
       try {
         stopNarration();

@@ -229,8 +229,15 @@ the story-export flow, so under LAIONBox each line clones the **language-matched
 reference** (see 2.8) — switch 🌐 mid-game and the same characters keep their voices, now speaking
 the new language cleanly (Whisper-verified round-trips in DE and EN).
 
-### 2.10 Time travel
-Undo/redo arrows + the Timeline modal (jump to any tick on any branch, rename branches).
+### 2.10 Time travel & replay
+Undo/redo arrows + the Timeline (🕰 chip in the top bar on every screen, or the stage button):
+a scrollable, branch-aware list of every scene with temporal markers that keep fast-forward
+chapters readable ("⟲ meanwhile" for same-clock scenes, "↳ moments later", "↓ about 5 hours
+later"). Each tick offers two actions — **▶ Replay** runs the cinema renderer over the stored
+history from that point to the branch head (transition cards, backdrops, sprites in their
+outfits-of-the-time, narration with audio; cached lines play free) as PURE playback, never
+touching world state; **⤴ Jump** rewinds the world there (advancing then forks a branch).
+Branches can be renamed.
 Rewinding and advancing forks a new branch; the abandoned future stays intact. Restores rebuild
 character state, relationships (per-tick `rel_snapshot`) and the sim clock; tick 0 uses the
 genesis snapshot. Long-term memory is per-branch (hierarchical summarisation,
