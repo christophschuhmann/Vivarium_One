@@ -16,6 +16,7 @@ The historical design log with screenshots and live API verifications is
 | **Location** | A place with a generated 16:9 background, position on the world map, optional `place_group` cluster | `locations`, `paths` |
 | **Tick** | One advance of time: the Game Master moves everyone, updates bonds, and writes ONE narrated scene (interleaved narrator/dialogue/thought script) | `ticks`, `server/gm.js` |
 | **Branch** | Git-like history: advancing from a rewound position forks a branch; every tick belongs to one | `branches`, `server/branches.js` |
+| **Character attributes** | A git-like working-tree (`materialised.attributes`) of persistent conditions/beliefs/goals/skills, accumulated from per-tick `state_patches` (the append-only "git log"); carries forward across ticks and through undo/branch until a patch removes it | `characters`, `state_patches` |
 | **Credits** | Internal currency. Every metered call (LLM/image/TTS/ASR) debits `credit_ledger` with a configurable USD→credit markup; per-user daily caps; admins top up | `server/credits.js` |
 | **Assets** | Generated media on disk + a DB row (portraits, cutout sprites, backgrounds, audio clips, voice references) | `assets`, `server/assets.js` |
 
@@ -219,7 +220,10 @@ Dashboard (usage curves, top spenders) · **Users** (create/delete with full cas
 top-ups, per-user caps, the **data explorer**: every provider call with full request/response
 JSON, conversations, assets, spend summaries; JSON exports per-user or global) · **Models**
 (TTS engine switch Gemini↔LAIONBox with health probe; model routes: endpoint/model/unit-cost per
-role, live) · **Pricing** (markup, credits/USD, signup gift, daily caps) · **Mailbox** (dev
+role, live; one-click reasoning-LLM presets for gemini-3.5-flash / glm-5.2 / claude-sonnet-5) ·
+**Context** (per-part token breakdown of any world's next-tick context, real avg tokens/tick from
+the ledger, and live-editable memory knobs — verbatim window [default 50], summary chunk size,
+token budget, compression ratio — with a written explainer of the hierarchical compression) · **Pricing** (markup, credits/USD, signup gift, daily caps) · **Mailbox** (dev
 e-mail outbox) · **Audit log** (every admin action).
 
 ---

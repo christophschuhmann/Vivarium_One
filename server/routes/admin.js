@@ -164,6 +164,46 @@ export default async function adminRoutes(app) {
     audit(a.id, 'update_pricing', 'pricing', p);
     return { pricing: p };
   });
+
+  // ---------- context / memory tuning ----------
+  // Live config + fleet-wide context stats + a real per-tick token average from the ledger.
+  app.get('/admin/api/context', async (req) => {
+    requireAdmin(req);
+    const cfg = { tickWindow: 50, memChunk: 5, contextBudget: 200000, compressionRatio: 0.5, ...(getSetting('context_config') || {}) };
+    // real API-reported usage across the last 200 ticks (any world)
+    const rows = db.prepare(`SELECT meter FROM credit_ledger WHERE reason='tick_llm' ORDER BY created_at DESC LIMIT 200`).all();
+    let inSum = 0, outSum = 0, n = 0;
+    for (const r of rows) { const u = pj(r.meter, {}).usage || pj(r.meter, {}); if (u.prompt_tokens) { inSum += u.prompt_tokens; outSum += u.completion_tokens || 0; n++; } }
+    // worlds with the most ticks (candidates worth inspecting)
+    const worlds = db.prepare(`SELECT w.id, w.title, w.tick_index, u.email FROM worlds w JOIN users u ON u.id=w.user_id ORDER BY w.tick_index DESC LIMIT 30`).all();
+    return {
+      config: cfg,
+      defaults: { tickWindow: 50, memChunk: 5, contextBudget: 200000, compressionRatio: 0.5 },
+      usage: n ? { samples: n, avgInput: Math.round(inSum / n), avgOutput: Math.round(outSum / n), avgTotal: Math.round((inSum + outSum) / n) } : null,
+      worlds,
+    };
+  });
+  app.get('/admin/api/context/:worldId', async (req) => {
+    requireAdmin(req);
+    const { contextBreakdown } = await import('../gm.js');
+    const b = contextBreakdown(req.params.worldId);
+    if (!b) throw httpErr(404, 'NOT_FOUND', 'World not found.');
+    return b;
+  });
+  app.patch('/admin/api/context', async (req) => {
+    const a = requireAdmin(req);
+    const b = req.body || {};
+    const cur = { tickWindow: 50, memChunk: 5, contextBudget: 200000, compressionRatio: 0.5, ...(getSetting('context_config') || {}) };
+    const next = {
+      tickWindow: Math.max(2, Math.min(500, Math.round(+b.tickWindow || cur.tickWindow))),
+      memChunk: Math.max(2, Math.min(50, Math.round(+b.memChunk || cur.memChunk))),
+      contextBudget: Math.max(10000, Math.round(+b.contextBudget || cur.contextBudget)),
+      compressionRatio: Math.max(0.2, Math.min(0.9, +b.compressionRatio || cur.compressionRatio)),
+    };
+    setSetting('context_config', next);
+    audit(a.id, 'update_context_config', 'context', next);
+    return { config: next };
+  });
   app.get('/admin/api/audit', async (req) => {
     requireAdmin(req);
     return { audit: db.prepare('SELECT * FROM admin_audit ORDER BY created_at DESC LIMIT 200').all().map(r => ({ ...r, payload: pj(r.payload, {}) })) };

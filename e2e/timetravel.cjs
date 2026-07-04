@@ -26,17 +26,16 @@ require('fs').mkdirSync(SHOT, { recursive: true });
   await shot('40_stage_with_history_controls');
   ok(`Stage shows undo/redo/timeline controls at tick ${tickBefore}`);
 
+  // wait on the actual state change, not a fixed delay (a restore can take >1s and race)
   await page.click('#undobtn');
-  await page.waitForTimeout(1000);
-  const tickAfterUndo = await page.evaluate(() => S.worldData.world.tick_index);
-  if (tickAfterUndo !== tickBefore - 1) throw new Error(`undo failed: ${tickBefore} -> ${tickAfterUndo}`);
-  ok(`Undo via UI: tick ${tickBefore} → ${tickAfterUndo}`);
+  await page.waitForFunction((b) => S.worldData?.world.tick_index === b - 1, tickBefore, { timeout: 15000 })
+    .catch(() => { throw new Error(`undo failed: stuck at ${tickBefore}`); });
+  ok(`Undo via UI: tick ${tickBefore} → ${tickBefore - 1}`);
 
   await page.click('#redobtn');
-  await page.waitForTimeout(1000);
-  const tickAfterRedo = await page.evaluate(() => S.worldData.world.tick_index);
-  if (tickAfterRedo !== tickBefore) throw new Error(`redo failed: got ${tickAfterRedo}`);
-  ok(`Redo via UI: back to tick ${tickAfterRedo}`);
+  await page.waitForFunction((b) => S.worldData?.world.tick_index === b, tickBefore, { timeout: 15000 })
+    .catch(() => { throw new Error(`redo failed: did not return to ${tickBefore}`); });
+  ok(`Redo via UI: back to tick ${tickBefore}`);
 
   // timeline modal
   await page.click('#timelinebtn');

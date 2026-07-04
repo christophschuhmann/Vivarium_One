@@ -177,6 +177,9 @@ seedRoute.run('tts_laionbox', 'laionbox-v0.7-step19000', 'http://45.38.21.39:893
 db.prepare(`INSERT OR IGNORE INTO settings(key,value) VALUES ('tts_provider', ?)`).run(JSON.stringify('gemini'));
 db.prepare(`INSERT OR IGNORE INTO settings(key,value) VALUES ('pricing', ?)`)
   .run(JSON.stringify({ markup: 2.5, credits_per_usd: 100, signup_bonus_credits: 200, default_daily_cap_credits: 500, per_tick_ceiling_credits: 20 }));
+// Context / memory tuning — admin-editable on the Context page (see server/gm.js ctxConfig()).
+db.prepare(`INSERT OR IGNORE INTO settings(key,value) VALUES ('context_config', ?)`)
+  .run(JSON.stringify({ tickWindow: 50, memChunk: 5, contextBudget: 200000, compressionRatio: 0.5 }));
 
 export const now = () => new Date().toISOString();
 export const uid = (p = '') => p + randomBytes(9).toString('base64url');

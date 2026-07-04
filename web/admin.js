@@ -47,12 +47,12 @@ function render() {
     <button class="glasschip" id="alogout">Sign out</button>
   </div>
   <div class="admin-shell">
-    <div class="admin-tabs">${['overview', 'users', 'models', 'mailbox', 'audit'].map(t => `<button class="${TAB === t ? 'active' : ''}" data-t="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div>
+    <div class="admin-tabs">${['overview', 'users', 'models', 'context', 'mailbox', 'audit'].map(t => `<button class="${TAB === t ? 'active' : ''}" data-t="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div>
     <div id="tabc"></div>
   </div>`;
   $('#alogout').onclick = async () => { await api('/admin/api/logout', { method: 'POST' }); loginScreen(); };
   $$('.admin-tabs button').forEach(b => b.onclick = () => { TAB = b.dataset.t; render(); });
-  ({ overview, users, models, mailbox, audit })[TAB]();
+  ({ overview, users, models, context, mailbox, audit })[TAB]();
 }
 
 async function overview() {
@@ -294,6 +294,105 @@ async function models() {
       } catch (e) { fail(e); }
     };
   });
+}
+
+/* ── Context / memory tuning page ──────────────────────────────────────────────
+   Shows how the per-tick LLM context is built (part-by-part token breakdown for a
+   chosen world), the real average tokens per tick from the usage ledger, and the
+   hierarchical-compression status — plus editable knobs (how many recent ticks stay
+   verbatim, chunk size, token budget, compression ratio) that take effect on the
+   very next tick (server/gm.js ctxConfig reads them live). */
+async function context() {
+  const d = await api('/admin/api/context');
+  const c = d.config;
+  const fmt = n => n.toLocaleString();
+  $('#tabc').innerHTML = `
+    <!-- knobs: written to settings.context_config; gm.js reads them live, no restart -->
+    <div class="panel"><b style="font-size:14px">🧠 Context & memory parameters</b>
+      <p style="font-size:12px;color:var(--soft)">How the Game Master's per-tick context is assembled. Changes apply on the next tick — no restart.</p>
+      <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-top:12px;max-width:640px">
+        <label><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600">Recent ticks kept VERBATIM <span><input id="cx-tw-n" type="number" min="2" max="500" value="${c.tickWindow}" style="width:70px;border:1px solid var(--line);border-radius:8px;padding:3px 7px;text-align:right"></span></div>
+          <input id="cx-tw" type="range" min="2" max="200" value="${Math.min(200, c.tickWindow)}" style="width:100%">
+          <div style="font-size:11px;color:var(--soft)">The last N ticks stay word-for-word in context. Older ones get summarised. Higher = better memory, more tokens/cost. <b>Default 50.</b></div></label>
+        <label><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600">Summary chunk size <span><input id="cx-mc" type="number" min="2" max="50" value="${c.memChunk}" style="width:70px;border:1px solid var(--line);border-radius:8px;padding:3px 7px;text-align:right"></span></div>
+          <div style="font-size:11px;color:var(--soft)">Ticks folded into ONE level-1 summary — and how many same-level summaries collapse into the next level up.</div></label>
+        <label><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600">Context token budget <span><input id="cx-cb" type="number" min="10000" step="10000" value="${c.contextBudget}" style="width:100px;border:1px solid var(--line);border-radius:8px;padding:3px 7px;text-align:right"></span></div>
+          <div style="font-size:11px;color:var(--soft)">Hard ceiling (~chars/4). While the assembled context exceeds this, the oldest summaries compact a level up.</div></label>
+        <label><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600">Compression ratio <span id="cx-cr-v">${Math.round(c.compressionRatio * 100)}%</span></div>
+          <input id="cx-cr" type="range" min="0.2" max="0.9" step="0.05" value="${c.compressionRatio}" style="width:100%">
+          <div style="font-size:11px;color:var(--soft)">Target length of each summary vs its source. Lower = more aggressive compression.</div></label>
+      </div>
+      <button class="btn btn-primary small" id="cx-save" style="margin-top:14px">Save parameters</button>
+      <span id="cx-saved" style="font-size:12px;color:#0d9463;margin-left:10px"></span>
+    </div>
+
+    ${d.usage ? `<div class="panel" style="margin-top:14px"><b style="font-size:14px">📊 Real tokens per tick</b>
+      <p style="font-size:12px;color:var(--soft)">API-reported usage across the last ${d.usage.samples} ticks (all worlds).</p>
+      <div style="display:flex;gap:20px;margin-top:8px">
+        <div><div style="font-size:22px;font-weight:700;color:var(--violet)">${fmt(d.usage.avgInput)}</div><small style="color:var(--soft)">avg input tokens</small></div>
+        <div><div style="font-size:22px;font-weight:700;color:var(--teal)">${fmt(d.usage.avgOutput)}</div><small style="color:var(--soft)">avg output tokens</small></div>
+        <div><div style="font-size:22px;font-weight:700">${fmt(d.usage.avgTotal)}</div><small style="color:var(--soft)">avg total / tick</small></div>
+      </div></div>` : ''}
+
+    <div class="panel" style="margin-top:14px"><b style="font-size:14px">🔍 Next-tick context breakdown</b>
+      <p style="font-size:12px;color:var(--soft)">Estimated tokens (~chars/4) for the world's very next tick. The real tokenizer runs ~25-30% higher.</p>
+      <select id="cx-world" style="margin-top:6px;border:1px solid var(--line);border-radius:9px;padding:6px 9px;background:#fff;max-width:100%">
+        ${d.worlds.map(w => `<option value="${w.id}">${esc(w.title)} — tick ${w.tick_index} · ${esc(w.email)}</option>`).join('')}
+      </select>
+      <div id="cx-breakdown" style="margin-top:12px"></div>
+    </div>
+
+    <div class="panel" style="margin-top:14px"><b style="font-size:14px">📖 How the memory compression works</b>
+      <div style="font-size:12.5px;color:#3c3763;line-height:1.65;margin-top:6px">
+        <p><b>1. Verbatim window.</b> The most recent <b>${c.tickWindow}</b> ticks are always in context word-for-word — full narration, character end-states, interventions. This is the GM's short-term memory.</p>
+        <p style="margin-top:8px"><b>2. Rolling summarisation.</b> Once a tick falls outside that window, it waits until a full group of <b>${c.memChunk}</b> such ticks has accumulated, then those ${c.memChunk} are rewritten as one <i>level-1 summary</i> (past-tense prose at ~${Math.round(c.compressionRatio * 100)}% length, keeping events, decisions, emotional beats, and where everyone ended up).</p>
+        <p style="margin-top:8px"><b>3. Hierarchical compaction.</b> Only if the whole assembled context still exceeds the <b>${fmt(c.contextBudget)}</b>-token budget, the ${c.memChunk} oldest same-level summaries collapse into one summary a level up (again ~${Math.round(c.compressionRatio * 100)}%). This repeats — level 2, 3, … — so ancient history keeps shrinking while recent events stay sharp. A world could run thousands of ticks and still fit.</p>
+        <p style="margin-top:8px"><b>Per-branch.</b> Each timeline branch keeps its own memory; undo/redo/branching never mix histories. Everything runs in the background right after each tick.</p>
+        <p style="margin-top:8px"><b>Character state is git-like.</b> Every character carries an accumulated <code>attributes</code> working-tree (conditions, beliefs, goals, skills…) built from per-tick <code>state_patches</code>. A change on tick 12 persists to tick 40 unless a later patch removes it — the full patch history is the append-only "git log", the attributes tree is the current "working copy". It carries through undo/branch with the rest of the state.</p>
+      </div>
+    </div>`;
+
+  // sliders ↔ number boxes stay in sync
+  const twR = $('#cx-tw'), twN = $('#cx-tw-n');
+  twR.oninput = () => { twN.value = twR.value; };
+  twN.oninput = () => { twR.value = Math.min(200, +twN.value || 2); };
+  const cr = $('#cx-cr'); cr.oninput = () => { $('#cx-cr-v').textContent = Math.round(+cr.value * 100) + '%'; };
+
+  $('#cx-save').onclick = async () => {
+    try {
+      const r = await api('/admin/api/context', { method: 'PATCH', body: {
+        tickWindow: +twN.value, memChunk: +$('#cx-mc').value,
+        contextBudget: +$('#cx-cb').value, compressionRatio: +cr.value } });
+      $('#cx-saved').textContent = 'saved ✓ — applies next tick';
+      setTimeout(() => { $('#cx-saved').textContent = ''; }, 3000);
+      loadBreakdown();  // refresh the breakdown with the new window
+    } catch (e) { fail(e); }
+  };
+
+  const loadBreakdown = async () => {
+    const wid = $('#cx-world').value;
+    if (!wid) { $('#cx-breakdown').innerHTML = '<small style="color:var(--soft)">No worlds yet.</small>'; return; }
+    $('#cx-breakdown').innerHTML = '<small style="color:var(--soft)">loading…</small>';
+    try {
+      const b = await api(`/admin/api/context/${wid}`);
+      const labels = { system_prompt: 'System prompt (schema + rules)', characters: 'Characters (profiles + git-like state)', locations: 'Locations', relationships: 'Relationships', recent_ticks_verbatim: `Recent ticks verbatim (${b.windowTicks} in window)`, long_term_memory: 'Long-term memory (summaries)', wrappers_clock: 'Clock + intervention + wrappers' };
+      const max = Math.max(...Object.values(b.parts));
+      $('#cx-breakdown').innerHTML = `
+        <table style="width:100%"><tr><th>Part</th><th style="text-align:right">~tokens</th><th style="width:40%">share</th></tr>
+        ${Object.entries(b.parts).sort((a, x) => x[1] - a[1]).map(([k, v]) => `<tr>
+          <td>${esc(labels[k] || k)}</td><td style="text-align:right">${fmt(v)}</td>
+          <td><div style="height:9px;background:var(--tint);border-radius:5px"><div style="height:100%;width:${Math.round(100 * v / max)}%;background:var(--violet);border-radius:5px"></div></div></td></tr>`).join('')}
+        <tr style="font-weight:700"><td>TOTAL (estimated)</td><td style="text-align:right">${fmt(b.estTotalTokens)}</td><td style="font-size:11px;color:var(--soft)">${b.budgetUsedPct}% of ${fmt(b.budget)} budget</td></tr>
+        </table>
+        <div style="font-size:12px;color:#3c3763;margin-top:10px">
+          <b>${b.world.lineage_length}</b> ticks on this branch · <b>${b.compression.summarised_ticks}</b> already summarised · <b>${b.memoryChunks.length}</b> memory chunk${b.memoryChunks.length === 1 ? '' : 's'}${b.memoryChunks.length ? ` (levels ${[...new Set(b.memoryChunks.map(m => m.level))].join(', ')})` : ''}.
+          ${b.compression.ticks_until_next_summary === 0 ? ' A summary is due on the next maintenance pass.' : ` Next summary in ~<b>${b.compression.ticks_until_next_summary}</b> tick(s).`}
+          ${b.compression.will_compact ? ' <span style="color:#d92e66">Over budget — chunks will compact.</span>' : ''}
+        </div>`;
+    } catch (e) { $('#cx-breakdown').innerHTML = `<small style="color:#d92e66">${esc(e.message)}</small>`; }
+  };
+  $('#cx-world').onchange = loadBreakdown;
+  loadBreakdown();
 }
 
 async function mailbox() {

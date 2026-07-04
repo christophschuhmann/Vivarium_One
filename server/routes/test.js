@@ -15,10 +15,11 @@ export default async function testRoutes(app) {
     return { ok: true };
   });
   app.get('/api/test/memory/:worldId', async (req) => {
-    const { contextEstimate, TICK_WINDOW, CONTEXT_BUDGET } = await import('../gm.js');
+    const { contextEstimate, ctxConfig } = await import('../gm.js');
+    const cfg = ctxConfig();
     const w = db.prepare('SELECT active_branch_id FROM worlds WHERE id=?').get(req.params.worldId);
     return {
-      window: TICK_WINDOW, budget: CONTEXT_BUDGET,
+      window: cfg.tickWindow, budget: cfg.contextBudget,
       estimate: contextEstimate(req.params.worldId, w?.active_branch_id),
       chunks: db.prepare('SELECT level,start_idx,end_idx,length(text) len,substr(text,1,150) preview FROM memory_chunks WHERE world_id=? ORDER BY level DESC, start_idx ASC').all(req.params.worldId),
     };
