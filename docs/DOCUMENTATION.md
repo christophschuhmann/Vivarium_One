@@ -66,8 +66,20 @@ the world live.
 and a final attempt; a failed asset never aborts the build (logged, placeholder, regenerable
 later); `INSUFFICIENT_CREDITS` skips remaining *asset* steps but the world still completes.
 
+### 2.4b World Direction 🎬
+Every world carries standing `directives` in each tick's world bible. New worlds start with
+`DEFAULT_WORLD_DIRECTIVES` (rich social fabric — family/friends/colleagues woven into scenes;
+cinematic amplification — brighter joys, darker shadows, a notch more unpredictable than life;
+mature content allowed when story-serving at prestige-TV frankness, never the default focus).
+Editable in the **🎬 Direction** modal on the World screen (genre/mood/pacing/directives, with
+reset-to-default served from the single source in `gm.js`).
+
 ### 2.5 Cast · Bonds · Atlas
 Cast: profile drawer (rename, teleport, outfit commissioning, voice management, hear-voice).
+**The bond graph stays current**: creating a character (Forge or cast-suggestion) immediately
+drafts their directed bonds to the existing cast (`gm.draftBondsForNewCharacter`, best-effort),
+and during ticks `relationship_updates` UPSERT — the GM can form brand-new bonds when cast
+members meaningfully connect, not just edit existing ones.
 Bonds: directed relationship graph with attributes (nature, common goals, conflicts, shared
 experiences) — drag between portraits to create; two-portrait bond-builder overlay. Atlas: pannable
 world map, background (re)generation, location editing.
@@ -107,7 +119,16 @@ existing sprite captures — the GM proposes painting a new sprite; one click ge
 identity-anchored to the everyday portrait and stores it in `materialised.outfits` **with its
 metadata** (description + emotion tag). Since that state is part of the GM's context every
 tick, it can pick and reuse the sprite later via the per-tick `outfit` field. Declines aren't
-persisted (the GM re-suggests only if the look recurs).
+persisted (the GM re-suggests only if the look recurs). A **reveal popup** shows the finished
+sprite so the player sees it landed in the gallery. (Sprite-loss fix: `materialised` is re-read
+at write time in the outfits endpoint, tick reconcile, AND time-travel restore — a tick landing
+during the ~30 s generation used to silently erase the new sprite; sprites are gallery content
+and survive undo now.)
+
+**Location suggestions:** `location_suggestion {name, description, connect_to[], reason}` —
+when the story keeps pointing at a place that doesn't exist, the GM proposes building it.
+Accepting (`POST …/locations/from-suggestion`) creates the location, wires the proposed path
+connections, paints the 16:9 background, and shows a reveal.
 
 ### 2.7 Time skips as films ("chapters") — `server/gm.js runChapter`
 Skips over ~20 minutes (with *Animate time skips* on) run a **planner LLM** that judges which
@@ -166,6 +187,12 @@ voices without a profile fall back to a same-gender default (`server/voice_profi
 
 Demo casting: Alice = Lily (Leda), Bob = Peter (Puck), narrator = Ian (Iapetus).
 
+**Provider-aware delivery coaching:** the two engines get OPPOSITE default styles — Gemini
+overacts, so its templates are calm/measured (the judged-experiment winners); LAIONBox is
+naturalistic and emotionally clamped, so its templates (`LAIONBOX_NARRATOR_STYLE` /
+`LAIONBOX_CHARACTER_TEMPLATE`) demand vivid, audible emotion. A player customisation overrides
+both engines; all templates are visible on the admin **Prompts** page.
+
 **The style/cache contract (important):** `server/tts_service.js synthesizeLine()` is the only
 path from text to audio. Cache keys are `<engineVoice>|<style>|<text>` — **never truncated**
 (a sliced key once dropped the text entirely for long styles, making every same-style narrator
@@ -221,7 +248,10 @@ top-ups, per-user caps, the **data explorer**: every provider call with full req
 JSON, conversations, assets, spend summaries; JSON exports per-user or global) · **Models**
 (TTS engine switch Gemini↔LAIONBox with health probe; model routes: endpoint/model/unit-cost per
 role, live; one-click reasoning-LLM presets for gemini-3.5-flash / glm-5.2 / claude-sonnet-5) ·
-**Context** (per-part token breakdown of any world's next-tick context, real avg tokens/tick from
+**Prompts** (full prompt transparency: the exact system+user prompt of the last real tick from
+telemetry, all TTS delivery templates for both engines, and an editor for the storytelling core
+block — self-aware multi-layered characters, every-scene story progression — injected into every
+tick) · **Context** (per-part token breakdown of any world's next-tick context, real avg tokens/tick from
 the ledger, and live-editable memory knobs — verbatim window [default 50], summary chunk size,
 token budget, compression ratio — with a written explainer of the hierarchical compression) · **Pricing** (markup, credits/USD, signup gift, daily caps) · **Mailbox** (dev
 e-mail outbox) · **Audit log** (every admin action).

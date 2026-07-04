@@ -1068,13 +1068,58 @@ function bondBuilderModal(characters, done, seed = {}) {
 }
 
 /* ───────── atlas ───────── */
+/* ── 🎬 World Direction modal ──────────────────────────────────────────────────
+   Edits the world's tone knobs (genre, mood, pacing) and its standing DIRECTIVES —
+   the free-text block that rides in every tick's world bible. New worlds start with
+   DEFAULT_WORLD_DIRECTIVES (rich social fabric, cinematic amplification, mature
+   content only when story-serving); this modal lets the player rewrite all of it,
+   with a reset back to that default (fetched from the server so it never drifts). */
+async function worldDirectionModal(world) {
+  const m = document.createElement('div');
+  m.className = 'modal-bg';
+  m.innerHTML = `<div class="modal" style="width:640px"><div class="modal-head teal">
+    <div><b>🎬 World Direction</b><small>the standing instructions every scene is written under</small></div><span class="x">✕</span></div>
+  <div class="modal-body">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <label style="font-size:12px;font-weight:600">Genre <input id="wd-genre" value="${esc(world.genre || '')}" style="display:block;border:1px solid var(--line);border-radius:9px;padding:6px 9px;width:170px"></label>
+      <label style="font-size:12px;font-weight:600">Mood <input id="wd-mood" value="${esc(world.mood || '')}" style="display:block;border:1px solid var(--line);border-radius:9px;padding:6px 9px;width:150px"></label>
+      <label style="font-size:12px;font-weight:600">Pacing <span id="wd-pv" style="font-weight:400;color:var(--soft)">${Math.round((world.pacing ?? 0.4) * 100)}%</span>
+        <input id="wd-pacing" type="range" min="0" max="1" step="0.05" value="${world.pacing ?? 0.4}" style="display:block;width:170px"></label>
+    </div>
+    <label style="font-size:12px;font-weight:600">Directives — how this world and its story should behave</label>
+    <textarea id="wd-dir" rows="12" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12.5px;margin-top:4px">${esc(world.directives || '')}</textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-primary" id="wd-save" style="flex:1">Save direction</button>
+      <button class="btn btn-ghost" id="wd-reset">↺ Reset to default</button>
+    </div>
+  </div></div>`;
+  document.body.appendChild(m);
+  m.onclick = (e) => { if (e.target === m) m.remove(); };
+  $('.x', m).onclick = () => m.remove();
+  $('#wd-pacing', m).oninput = () => { $('#wd-pv', m).textContent = Math.round(+$('#wd-pacing', m).value * 100) + '%'; };
+  $('#wd-reset', m).onclick = async () => {
+    const { directives } = await api('/api/world-direction-default');
+    $('#wd-dir', m).value = directives;
+  };
+  $('#wd-save', m).onclick = async () => {
+    try {
+      await api(`/api/worlds/${S.world}`, { method: 'PATCH', body: {
+        genre: $('#wd-genre', m).value, mood: $('#wd-mood', m).value,
+        pacing: +$('#wd-pacing', m).value, directives: $('#wd-dir', m).value } });
+      toast('World direction saved 🎬', 'gold');
+      S.worldData = null; m.remove();
+    } catch (e) { fail(e); }
+  };
+}
+
 async function atlasScreen() {
   const { world, locations, paths, characters } = await loadWorld(true);
   app.innerHTML = chrome('world', { worldTitle: 'The Atlas', sub: 'world · places & paths' }) + `
   <div class="screen bare"><div class="canvas-wrap" id="wrap"><svg id="asvg"><g id="vp"></g></svg></div></div>
-  <div class="floating-toolbar"><button class="btn btn-primary small" id="newloc">+ Location</button><button class="btn btn-soft small" id="newpath">🔗 Connect</button><button class="btn btn-soft small" id="zin">+</button><button class="btn btn-soft small" id="zout">-</button></div>
+  <div class="floating-toolbar"><button class="btn btn-primary small" id="newloc">+ Location</button><button class="btn btn-soft small" id="newpath">🔗 Connect</button><button class="btn btn-teal small" id="direction">🎬 Direction</button><button class="btn btn-soft small" id="zin">+</button><button class="btn btn-soft small" id="zout">-</button></div>
   <div class="side-panel" id="locpanel" style="display:none"></div>`;
   bindChrome();
+  $('#direction').onclick = () => worldDirectionModal(world);
   const vp = $('#vp');
   const NW = 130, NH = 92;
   const groups = {};
@@ -1346,6 +1391,7 @@ async function stageScreen() {
             // queued here and shown AFTER the moment has fully arrived (end of tick / film).
             if (data.cast_suggestion) stageState.castSugs.push({ kind: 'cast', ...data.cast_suggestion });
             if (data.outfit_suggestion) stageState.castSugs.push({ kind: 'outfit', ...data.outfit_suggestion });
+            if (data.location_suggestion) stageState.castSugs.push({ kind: 'location', ...data.location_suggestion });
             if (cinema) {
               cinema.scenes.push(data);
               if (cinema.scenes.length === 1) playCinema(cinema); // roll film on the first scene — rest streams in behind
@@ -1562,6 +1608,57 @@ async function playCinema(cinema) {
        player iterates in chat (look, profile, more outfits via the drawer)
        until they hit "Accept & add to cast" — the normal Forge flow.
    Multiple pitches (a chapter can yield one per scene) are shown one at a time. */
+/* Location suggestions: the GM proposes BUILDING A NEW PLACE when the story keeps pointing
+   at somewhere that doesn't exist yet. Yes → one call creates the location row, wires the
+   proposed path connections into the world graph, and paints the 16:9 background — then a
+   reveal shows the finished place. Declines are transient (no persistence). */
+function showLocationSuggestion(sug) {
+  const m = document.createElement('div');
+  m.className = 'modal-bg';
+  m.style.zIndex = '92';
+  m.innerHTML = `<div class="modal" style="width:470px"><div class="modal-head violet">
+    <div><b>🗺 A new place for the world</b><small>the storyteller suggests building it</small></div><span class="x">✕</span></div>
+  <div class="modal-body">
+    <p style="font-size:14px;margin-bottom:4px"><b>${esc(sug.name)}</b></p>
+    <p style="font-size:12.5px;color:#3c3763;margin-bottom:6px">${esc(sug.description)}</p>
+    <p style="font-size:11.5px;color:var(--soft);margin-bottom:8px">connects to: ${sug.connect_names.map(esc).join(' · ')}</p>
+    ${sug.reason ? `<p class="serif" style="font-size:13px;font-style:italic;color:#4b4573;border-left:3px solid var(--violet);padding-left:10px;margin-bottom:14px">${esc(sug.reason)}</p>` : ''}
+    <button class="btn btn-primary" id="ls-yes" style="width:100%;margin-bottom:8px">🗺 Build ${esc(sug.name)} (~30s, costs credits)</button>
+    <button class="btn btn-ghost" id="ls-no" style="width:100%">Not now</button>
+  </div></div>`;
+  document.body.appendChild(m);
+  const closeThen = () => { m.remove(); showCastSuggestions(); };
+  m.onclick = (e) => { if (e.target === m) closeThen(); };
+  $('.x', m).onclick = closeThen;
+  $('#ls-no', m).onclick = closeThen;
+  $('#ls-yes', m).onclick = async () => {
+    closeThen();
+    toast(`🗺 Building ${sug.name} — painting the backdrop, ~30s…`);
+    try {
+      const r = await api(`/api/worlds/${S.world}/locations/from-suggestion`, { method: 'POST', body: { name: sug.name, description: sug.description, connectTo: sug.connect_to } });
+      S.worldData = null; refreshMe();
+      locationRevealModal(r.location, r.backgroundId);
+    } catch (e) { fail(e); }
+  };
+}
+// Reveal the freshly built place (also confirms it's on the Atlas now).
+function locationRevealModal(loc, bgId) {
+  const m = document.createElement('div');
+  m.className = 'modal-bg';
+  m.style.zIndex = '93';
+  m.innerHTML = `<div class="modal" style="width:540px"><div class="modal-head violet">
+    <div><b>🗺 ${esc(loc.name)}</b><small>built & connected — find it on the World map</small></div><span class="x">✕</span></div>
+  <div class="modal-body" style="text-align:center">
+    <img src="${assetUrl(bgId)}" alt="${esc(loc.name)}" style="width:100%;border-radius:12px">
+    <button class="btn btn-primary" id="lr-ok" style="width:100%;margin-top:12px">Wonderful!</button>
+  </div></div>`;
+  document.body.appendChild(m);
+  const close = () => m.remove();
+  m.onclick = (e) => { if (e.target === m) close(); };
+  $('.x', m).onclick = close;
+  $('#lr-ok', m).onclick = close;
+}
+
 /* Outfit/skin suggestions: the GM proposes painting a NEW SPRITE when a character's look
    changed significantly this scene (different clothing, or a strong clearly-visible emotion
    no existing sprite captures). Yes → the existing outfits endpoint generates the variant
@@ -1590,18 +1687,39 @@ function showOutfitSuggestion(sug) {
     closeThen();
     toast(`🎨 Painting ${sug.character_name}'s "${sug.name}" sprite — ~30s…`);
     try {
-      await api(`/api/characters/${sug.character_id}/outfits`, { method: 'POST', body: { name: sug.name, description: sug.description, emotion: sug.emotion || undefined } });
-      toast(`${sug.character_name} has a new sprite: ${sug.name} ✨`, 'gold');
+      const r = await api(`/api/characters/${sug.character_id}/outfits`, { method: 'POST', body: { name: sug.name, description: sug.description, emotion: sug.emotion || undefined } });
       S.worldData = null;   // next render picks up the enriched outfit list
       refreshMe();
+      spriteRevealModal(sug.character_name, sug.name, r.outfit.cutout_asset_id);
     } catch (e) { fail(e); }
   };
+}
+
+// The reveal after a sprite is painted: show the actual image so the player SEES that it
+// exists and landed in the character's gallery (it's stored in materialised.outfits, which
+// the Cast profile drawer renders as the outfit strip).
+function spriteRevealModal(charName, spriteName, cutoutId) {
+  const m = document.createElement('div');
+  m.className = 'modal-bg';
+  m.style.zIndex = '93';
+  m.innerHTML = `<div class="modal" style="width:380px"><div class="modal-head teal">
+    <div><b>✨ New sprite: ${esc(spriteName)}</b><small>saved to ${esc(charName)}'s gallery (Cast → ${esc(charName)})</small></div><span class="x">✕</span></div>
+  <div class="modal-body" style="text-align:center">
+    <div class="checker" style="display:inline-block;padding:8px;border-radius:14px"><img src="${assetUrl(cutoutId)}" alt="${esc(spriteName)}" style="max-height:340px;max-width:100%"></div>
+    <button class="btn btn-primary" id="sr-ok" style="width:100%;margin-top:12px">Lovely!</button>
+  </div></div>`;
+  document.body.appendChild(m);
+  const close = () => m.remove();
+  m.onclick = (e) => { if (e.target === m) close(); };
+  $('.x', m).onclick = close;
+  $('#sr-ok', m).onclick = close;
 }
 
 function showCastSuggestions() {
   const sug = (stageState.castSugs || []).shift();
   if (!sug) return;
   if (sug.kind === 'outfit') return showOutfitSuggestion(sug);
+  if (sug.kind === 'location') return showLocationSuggestion(sug);
   const m = document.createElement('div');
   m.className = 'modal-bg';
   m.style.zIndex = '92';
@@ -1698,19 +1816,27 @@ function playSceneNarration(tick, data) {
 }
 // Thought suffix — BYTE-IDENTICAL to server/export_cues.js THOUGHT_SUFFIX (shared cache!)
 const THOUGHT_SUFFIX = ' A private inner thought — half-murmured, intimate, as if speaking only to oneself.';
+// LAIONBox delivery templates — BYTE-IDENTICAL to server/export_cues.js. The two engines
+// need OPPOSITE coaching: Gemini overacts (calm templates rein it in), LAIONBox is
+// naturalistic and emotionally clamped (vivid, emphatic direction or lines come out flat).
+const LAIONBOX_NARRATOR_STYLE = 'An engaged, expressive storyteller: warm and vivid, colouring every sentence with the scene\'s emotion — wonder sounds wondrous, tension tightens the voice, joy lifts it. Clear, articulate speech with dynamic, lively intonation and audible emotional presence throughout.';
+const LAIONBOX_CHARACTER_TEMPLATE = 'In character, feeling {mood} — and SHOWING it vividly in the voice: strong emotional expression, dynamic intonation, audible feelings (a smile you can hear, a tremble of worry, sparkling excitement), natural vocal reactions where they fit. Emotionally rich and alive, expressive enough to be truly felt.';
 // Style builder — at DEFAULT preferences this mirrors server/export_cues.js cueVoiceStyle()
-// byte-for-byte, so a line played live on the Stage and the same line in a story export
-// share ONE cached audio asset (exports never re-bill lines you already listened to).
-// If the player customises the style prompts (Account → Voice), keys diverge — correctly,
-// because that produces genuinely different audio.
+// byte-for-byte per provider, so live playback and story exports share ONE audio cache.
+// A player customisation (Account → Voice) overrides the default for BOTH engines; the
+// engine-specific default only applies while the pref is untouched.
 function ttsStyleFor(ch, emotion = '', mode = '') {
   const p = ttsPrefs();
+  const laion = S.ttsProvider === 'laionbox';
   if (!ch) {
-    // narrator — calm audiobook delivery; the per-line GM emotion is a light touch, never a command
-    const base = p.narratorStyle || DEFAULT_NARRATOR_STYLE;
-    return [`${base}${emotion ? ` A faint touch of ${emotion}.` : ''}`, p.custom].filter(Boolean).join(' ');
+    const customised = p.narratorStyle && p.narratorStyle !== DEFAULT_NARRATOR_STYLE;
+    const base = customised ? p.narratorStyle : (laion ? LAIONBOX_NARRATOR_STYLE : DEFAULT_NARRATOR_STYLE);
+    const hint = emotion ? (laion && !customised ? ` The emotional colour of this passage: ${emotion} — let it be heard.` : ` A faint touch of ${emotion}.`) : '';
+    return [`${base}${hint}`, p.custom].filter(Boolean).join(' ');
   }
-  const base = (p.characterStyle || DEFAULT_CHARACTER_STYLE).replace('{mood}', emotion || 'calm');
+  const customisedC = p.characterStyle && p.characterStyle !== DEFAULT_CHARACTER_STYLE;
+  const tpl = customisedC ? p.characterStyle : (laion ? LAIONBOX_CHARACTER_TEMPLATE : DEFAULT_CHARACTER_STYLE);
+  const base = tpl.replace('{mood}', emotion || 'calm');
   return [`${base}${mode === 'thought' ? THOUGHT_SUFFIX : ''}`, p.custom].filter(Boolean).join(' ');
 }
 const ttsInflight = new Map(); // dedup concurrent + repeated requests within the session

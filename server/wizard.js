@@ -40,7 +40,7 @@ import { db, uid, now, j, pj } from './db.js';
 import { llmJson, llmChat, getTtsProvider } from './providers.js';
 import { profilePromptList } from './voice_profiles.js';
 import { debitCall, preflight, EST, toCredits } from './credits.js';
-import { generatePortrait, generateBackground, GAME_LANGS } from './gm.js';
+import { generatePortrait, generateBackground, GAME_LANGS, DEFAULT_WORLD_DIRECTIVES } from './gm.js';
 import { captureGenesisSnapshot } from './branches.js';
 import { saveAsset } from './assets.js';
 import { logCall } from './telemetry.js';
@@ -211,7 +211,9 @@ async function runWizardBuild(jobId, user, plan, lang) {
               VALUES (?,?,?,?,?,0,?,?,?,?,'authoring',?,?)`)
     .run(wid, user.id, (plan.title || 'Untitled world').slice(0, 80), 'anime',
       new Date('2026-09-15T08:00:00').toISOString(), plan.genre || 'slice-of-life', plan.mood || 'cosy',
-      Math.max(0, Math.min(1, +plan.pacing || 0.4)), (plan.directives || '').slice(0, 500), now(), now());
+      Math.max(0, Math.min(1, +plan.pacing || 0.4)),
+      // scenario-specific directives from the plan, layered over the game-wide defaults
+      [`${(plan.directives || '').slice(0, 500)}`, DEFAULT_WORLD_DIRECTIVES].filter(Boolean).join('\n'), now(), now());
   jobSet(jobId, { world_id: wid });
 
   const locIdByName = {};

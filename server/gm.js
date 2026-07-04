@@ -49,6 +49,27 @@ export function ctxConfig() {
     compressionRatio: Math.max(0.2, Math.min(0.9, +s.compressionRatio || CTX_DEFAULTS.compressionRatio)),
   };
 }
+// ---- storytelling core directives ----
+// Injected into EVERY tick's system prompt (between the GM role line and the JSON schema).
+// Admin-editable on the Prompts page (settings.gm_core_directives, read live per tick);
+// this default encodes the game's narrative-craft philosophy.
+export const GM_CORE_DEFAULT = `NARRATIVE CRAFT (always):
+• Characters are SELF-AWARE and reflective — they notice what they are doing, weigh what it means for the people around them and their world, and sometimes question themselves mid-action.
+• Write every character MULTI-LAYERED: several concurrent thoughts and desires, private doubts, plausible internal conflicts, contradictions they only half-understand. Never one-dimensional, never predictable — yet always sensible, intelligent and emotionally believable.
+• Every time step must MOVE THE STORY: pursue an open plot thread, make tangible progress toward someone's goal, deepen or strain a relationship, or introduce a fresh complication. Avoid emotionally flat small talk — each scene needs at least one of: real conflict (internal or external), meaningful progress, or a new twist that is surprising yet plausible.
+• Aim for scenes that are emotionally interesting, a little unpredictable, creative — the way a great TV episode never wastes a scene.`;
+// Default per-world direction — seeded into new worlds' `directives` (player-editable in
+// the 🎬 Direction modal on the World screen; it rides in every tick's world bible).
+export const DEFAULT_WORLD_DIRECTIVES = `WORLD DIRECTION:
+• Rich social fabric: every character is embedded among real people — family, friends, colleagues, neighbours — who get named, remembered, and woven into scenes over time. Loners exist, but even they brush against other lives. Never neglect the human web.
+• Cinematic amplification: the world runs a notch larger than life — wonderful things shine brighter, tragedies cut deeper, dark moments are darker, warm moments warmer; events are a little more unpredictable than reality while staying plausible and emotionally intelligent.
+• Mature content is permitted when it serves the story or would plausibly occur — depicted with the frankness of a prestige HBO/Netflix drama — but it is never the default focus; it must earn its place through story.`;
+
+export function gmCoreDirectives() {
+  const s = getSetting('gm_core_directives');
+  return (typeof s === 'string' && s.trim()) ? s.trim() : GM_CORE_DEFAULT;
+}
+
 // Back-compat named exports (dev test route reads these); now snapshot the live config.
 export const TICK_WINDOW = ctxConfig().tickWindow;
 export const MEM_CHUNK = ctxConfig().memChunk;
@@ -183,6 +204,44 @@ export function advanceTime(iso, delta) {
 export function deltaMinutes(iso, delta) { return Math.max(0.02, (new Date(advanceTime(iso, delta)) - new Date(iso)) / 60000); }
 
 const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', { weekday: 'long', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+
+// ---------- Auto-bonds for a newly created character ----------
+// When someone joins the cast (Forge accept / GM cast-suggestion), draft how they relate
+// to everyone already there — so the relationship graph updates immediately instead of
+// waiting for story ticks. Best-effort: a failure never blocks character creation.
+// Only meaningful bonds are created (the model may return none for true strangers);
+// ongoing evolution then happens through the per-tick relationship UPSERTs.
+export async function draftBondsForNewCharacter(user, world, newCharId) {
+  const cast = db.prepare('SELECT id,name,base_profile FROM characters WHERE world_id=?').all(world.id)
+    .map(c => ({ id: c.id, name: c.name, ...(({ personality, backstory }) => ({ personality, backstory }))(pj(c.base_profile, {})) }));
+  const newcomer = cast.find(c => c.id === newCharId);
+  const others = cast.filter(c => c.id !== newCharId);
+  if (!newcomer || !others.length) return 0;
+  preflight(user.id, EST.chat());
+  const res = await llmJson([
+    { role: 'system', content: `A new character just joined a life-simulation cast. Draft their DIRECTED relationships to the existing cast — how the newcomer sees each person AND how each person sees the newcomer — but ONLY where a meaningful connection exists or would instantly form given their backstories (family, friends, colleagues, story ties, strong first impressions). True strangers get no entry. ${SYSTEM_CONTRACT}
+JSON: {"bonds":[{"to_id":"existing character id","description":"how the NEWCOMER feels about them, a few words","reverse_description":"how THEY feel about the newcomer","strength":0.1-1.0}]}` },
+    { role: 'user', content: `World directives: ${world.directives}
+NEWCOMER: ${j(newcomer)}
+EXISTING CAST: ${j(others)}` },
+  ], { maxTokens: 2000, temperature: 0.7 });
+  debitCall(user.id, res, 'bond_draft', { worldId: world.id });
+  logCall({ userId: user.id, worldId: world.id, kind: 'llm', surface: 'bond_draft', request: newcomer.name, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
+  let made = 0;
+  for (const b of (res.json?.bonds || []).slice(0, 12)) {
+    if (!others.some(o => o.id === b.to_id)) continue;
+    const s = Math.max(0, Math.min(1, +b.strength || 0.4));
+    if (b.description && !db.prepare('SELECT 1 FROM relationships WHERE world_id=? AND from_id=? AND to_id=?').get(world.id, newCharId, b.to_id)) {
+      db.prepare('INSERT INTO relationships(id,world_id,from_id,to_id,description,strength,history) VALUES (?,?,?,?,?,?,?)')
+        .run(uid('r_'), world.id, newCharId, b.to_id, String(b.description).slice(0, 200), s, '[]'); made++;
+    }
+    if (b.reverse_description && !db.prepare('SELECT 1 FROM relationships WHERE world_id=? AND from_id=? AND to_id=?').get(world.id, b.to_id, newCharId)) {
+      db.prepare('INSERT INTO relationships(id,world_id,from_id,to_id,description,strength,history) VALUES (?,?,?,?,?,?,?)')
+        .run(uid('r_'), world.id, b.to_id, newCharId, String(b.reverse_description).slice(0, 200), s, '[]'); made++;
+    }
+  }
+  return made;
+}
 
 // ---------- The Tick ----------
 // Human names for the game languages the client may request (viv_lang localStorage pref,
@@ -372,7 +431,8 @@ async function runTickInner(user, world, { timeDelta = '+30m', intervention = nu
     : mins <= 300 ? 'PACING: a few hours pass. 10-14 lines. The narrator may bridge the interval with passages of up to 3 sentences (what happened, how they moved), interleaved with character thoughts or remembered lines — then land in a LIVE closing scene with real back-and-forth dialogue at the final location.'
     : 'PACING: a long span passes (a day or more). 12-18 lines. The narrator chronicles the span in several passages (each up to 4 sentences), interleaved with character thoughts and stray spoken moments so it never becomes a lecture — then always land in a LIVE closing scene with dialogue at the final location.';
 
-  const sys = `You are the Game Master of Vivarium, a gentle life-simulation. Advance every character realistically and IN CHARACTER over the given time interval. People move between connected locations, pursue goals, feel things, talk when together. Keep continuity with recent events. Honour story settings. ${SYSTEM_CONTRACT}
+  const sys = `You are the Game Master of Vivarium, a life-simulation. Advance every character realistically and IN CHARACTER over the given time interval. People move between connected locations, pursue goals, feel things, talk when together. Keep continuity with recent events. Honour story settings. ${SYSTEM_CONTRACT}
+${gmCoreDirectives()}
 JSON shape:
 {"characters":[{"id" (existing id),"location_id" (existing location id),"activity" (short present-tense),"mood" (1-3 words),"outfit" (one of the character's outfit names),"thought" (inner monologue, first person, 1-2 sentences),"dialogue" (spoken line if they speak, else null),
    "emotions":[{"name":"one-word emotion","intensity":0.1-1.0}] (2-4 entries, the felt blend right now),
@@ -388,7 +448,8 @@ JSON shape:
  "narration":[{"speaker":"narrator" or a character id,"text","emotion" (delivery hint e.g. "soft", "amused", "anxious"),"mode":"speech"|"thought" (character lines only: speech = said aloud, thought = private inner monologue in first person)}],
  "mood_tag":"cosy|tender|tense|playful|melancholy|eerie","summary":"one line for the archive",
  "cast_suggestion": {"name":"walk-on character's name","reason":"1-2 sentences TO THE PLAYER on why fleshing them out would enrich the story"} or null,
- "outfit_suggestion": {"character_id":"existing cast id","name":"short sprite label e.g. 'rain coat' or 'overjoyed'","description":"ENGLISH image prompt for the look: the dress/clothing AND the facial expression / body language","emotion":"one-word emotion tag if this is an emotion variant, else null","reason":"1-2 sentences TO THE PLAYER on why this new look deserves its own sprite"} or null}
+ "outfit_suggestion": {"character_id":"existing cast id","name":"short sprite label e.g. 'rain coat' or 'overjoyed'","description":"ENGLISH image prompt for the look: the dress/clothing AND the facial expression / body language","emotion":"one-word emotion tag if this is an emotion variant, else null","reason":"1-2 sentences TO THE PLAYER on why this new look deserves its own sprite"} or null,
+ "location_suggestion": {"name":"place name","description":"ENGLISH image prompt for an empty widescreen background of this place","connect_to":["existing location NAMES this place plausibly connects to (1-3)"],"reason":"1-2 sentences TO THE PLAYER on why the world needs this place"} or null}
 Narration is ONE flowing script of the interval, anchored at ${povChar ? `wherever ${povChar.name} ENDS this interval` : povLoc ? `the place "${povLoc.name}"` : 'the main scene'}. Rules — follow strictly:
   • Interleave: 1-3 narrator sentences, then a character speaks or THINKS (1-2 sentences), another reacts, a short narrator beat, and so on. Cover EVERY character present — their words AND their inner thoughts (mode "thought") intermixed into the one script, not just the point-of-view character.
   • Never let any voice run long: narrator lines are normally 1-2 sentences (see PACING for when longer bridging passages are allowed); character lines are 1-2 sentences, then someone else takes over.
@@ -396,9 +457,10 @@ Narration is ONE flowing script of the interval, anchored at ${povChar ? `wherev
   • speaker "narrator" for scene/beat/bridge lines; a character id ONLY for their own speech or thoughts. Use ONLY character ids from the Characters list; unknown walk-ons are voiced inside narrator lines, never with an invented id.
   • ${paceHint}
 ${lang !== 'en' && GAME_LANGS[lang] ? `  • LANGUAGE (hard rule): write ALL player-visible text — every narration line, every spoken line, every thought, activity, mood, summary, and event — in ${GAME_LANGS[lang]}. Character and location NAMES stay as given. JSON keys, ids, and the mode/mood_tag enums stay in English exactly as specified.
-` : ''}relationship_updates only when something actually shifts (attributes evolve slowly). state_patches only for real changes.
+` : ''}relationship_updates only when something actually shifts (attributes evolve slowly) — and you MAY create a bond that does not exist yet by naming both character ids (do this whenever two cast members meaningfully connect for the first time; the graph must never go stale). state_patches only for real changes.
 CAST SUGGESTION (an optional tool you may use): when an UNLISTED walk-on character — someone you have only voiced inside narrator lines — has become genuinely story-relevant (recurring, pivotal to a thread, entangled with the cast; NOT a passing extra), you may fill "cast_suggestion" to ask the player whether to flesh that person out into a full cast member with a portrait and profile. The reason is shown to the player verbatim — make it a warm, concrete 1-2 sentence pitch. STRICT LIMITS: at most ONE suggestion per scene, and most scenes should have none; NEVER suggest an existing cast member; NEVER suggest names on the declined list in the world bible. Set it to null otherwise.
-OUTFIT SUGGESTION (another optional tool): each cast member's current sprites are listed in their state under "outfits" (name + description + emotion tag). When a character's LOOK changes significantly this scene — a genuinely different dress/clothing, or a strong clearly-visible emotion no existing sprite captures — you may fill "outfit_suggestion" to ask the player whether to paint a new sprite for it: either a new outfit (neutral expression) or the current outfit with the new expression. Write the description as a complete ENGLISH image prompt (clothing + expression + posture). STRICT LIMITS: at most ONE per scene and most scenes need none — only for changes a viewer would clearly see; never duplicate an existing sprite's look; the emotion tag only for emotion variants. Set it to null otherwise.`;
+OUTFIT SUGGESTION (another optional tool): each cast member's current sprites are listed in their state under "outfits" (name + description + emotion tag). When a character's LOOK changes significantly this scene — a genuinely different dress/clothing, or a strong clearly-visible emotion no existing sprite captures — you may fill "outfit_suggestion" to ask the player whether to paint a new sprite for it: either a new outfit (neutral expression) or the current outfit with the new expression. Write the description as a complete ENGLISH image prompt (clothing + expression + posture). STRICT LIMITS: at most ONE per scene and most scenes need none — only for changes a viewer would clearly see; never duplicate an existing sprite's look; the emotion tag only for emotion variants. Set it to null otherwise.
+LOCATION SUGGESTION (another optional tool): when the story keeps gesturing at a place that DOESN'T EXIST in the Locations list — somewhere characters talk about going, that a plot thread needs, or that the world clearly lacks — you may fill "location_suggestion" to ask the player whether to build it: give it a name, an evocative but CONCRETE visual description (empty scene, no people — it feeds the background generator), and 1-3 EXISTING location names it plausibly connects to for the world map. STRICT LIMITS: at most ONE per scene, most scenes need none, never suggest a place that already exists. Set it to null otherwise.`;
 
   const userMsg = `WORLD BIBLE
 Story settings: genre=${world.genre}, mood=${world.mood}, pacing=${world.pacing}, directives="${world.directives}"
@@ -424,6 +486,12 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
   for (const c of chars) {
     const upd = (out.characters || []).find(x => x.id === c.id);
     const st = { ...c.state };
+    // SPRITE-LOSS FIX: `c.state` was read BEFORE the (long) LLM call. If the player painted
+    // a new outfit sprite meanwhile (~30 s generation), writing the stale copy back would
+    // silently erase it. Outfits are player-owned gallery content the GM only PICKS from —
+    // always take the freshest list from the DB at write time.
+    const live = pj(db.prepare('SELECT materialised FROM characters WHERE id=?').get(c.id)?.materialised, {});
+    if (live.outfits) st.outfits = live.outfits;
     if (upd) {
       if (upd.location_id && locIds.has(upd.location_id)) st.location_id = upd.location_id;
       if (upd.activity) st.activity = upd.activity;
@@ -453,8 +521,18 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
     }
     states.push({ character_id: c.id, ...st, events: upd?.events || [] });
   }
+  const charIds = new Set(chars.map(c => c.id));
   for (const r of out.relationship_updates || []) {
-    const row = db.prepare('SELECT * FROM relationships WHERE world_id=? AND from_id=? AND to_id=?').get(world.id, r.from_id, r.to_id);
+    let row = db.prepare('SELECT * FROM relationships WHERE world_id=? AND from_id=? AND to_id=?').get(world.id, r.from_id, r.to_id);
+    // UPSERT: the story can FORM brand-new bonds (a stranger becomes a friend, a rival
+    // appears). If both ends are real cast members and no row exists yet, create it — the
+    // relationship graph stays current instead of freezing at genesis.
+    if (!row && charIds.has(r.from_id) && charIds.has(r.to_id) && r.from_id !== r.to_id) {
+      const nid = uid('r_');
+      db.prepare('INSERT INTO relationships(id,world_id,from_id,to_id,description,strength,history) VALUES (?,?,?,?,?,?,?)')
+        .run(nid, world.id, r.from_id, r.to_id, r.description || 'a new connection', Math.max(0, Math.min(1, r.strength ?? 0.3)), '[]');
+      row = db.prepare('SELECT * FROM relationships WHERE id=?').get(nid);
+    }
     if (row) {
       const hist = pj(row.history, []);
       hist.push({ tick: idx, note: r.note || r.description });
@@ -525,7 +603,22 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
       reason: String(osug.reason || '').slice(0, 400),
     };
   }
-  const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion };
+  // Location suggestion (the GM's "build this place?" tool): name must be new; connect_to
+  // resolves to existing location ids (invalid names dropped; at least one must survive).
+  let locationSuggestion = null;
+  const lsug = out.location_suggestion;
+  if (lsug && typeof lsug.name === 'string' && lsug.name.trim() && typeof lsug.description === 'string' && lsug.description.trim()) {
+    const lname = lsug.name.trim().slice(0, 60);
+    const exists = locs.some(l => l.name.toLowerCase() === lname.toLowerCase());
+    const connectIds = (Array.isArray(lsug.connect_to) ? lsug.connect_to : [])
+      .map(n => locs.find(l => l.name.toLowerCase() === String(n).toLowerCase())?.id).filter(Boolean).slice(0, 3);
+    if (!exists && connectIds.length) locationSuggestion = {
+      name: lname, description: String(lsug.description).slice(0, 300),
+      connect_to: connectIds, connect_names: connectIds.map(id => locs.find(l => l.id === id).name),
+      reason: String(lsug.reason || '').slice(0, 400),
+    };
+  }
+  const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion, location_suggestion: locationSuggestion };
   onEvent('tick', tick);
   return tick;
 }

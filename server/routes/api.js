@@ -97,6 +97,12 @@ export default async function apiRoutes(app) {
     return { ledger: rows.map(r => ({ at: r.created_at, credits: toCredits(r.delta), reason: r.reason, model: r.model, meter: pj(r.meter, {}) })) };
   });
 
+  // Default world-direction text (for the 🎬 modal's reset button — single source: gm.js).
+  app.get('/api/world-direction-default', async (req) => {
+    requireUser(req);
+    return { directives: gm.DEFAULT_WORLD_DIRECTIVES };
+  });
+
   // ---------- worlds ----------
   app.get('/api/worlds', async (req) => {
     const u = requireUser(req);
@@ -107,8 +113,8 @@ export default async function apiRoutes(app) {
     const u = requireVerified(req);
     const id = uid('w_');
     const title = (req.body?.title || 'Untitled world').slice(0, 80);
-    db.prepare(`INSERT INTO worlds(id,user_id,title,art_style,sim_time,created_at,updated_at) VALUES (?,?,?,?,?,?,?)`)
-      .run(id, u.id, title, req.body?.artStyle || 'anime', new Date('2026-09-15T07:30:00').toISOString(), now(), now());
+    db.prepare(`INSERT INTO worlds(id,user_id,title,art_style,sim_time,directives,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)`)
+      .run(id, u.id, title, req.body?.artStyle || 'anime', new Date('2026-09-15T07:30:00').toISOString(), gm.DEFAULT_WORLD_DIRECTIVES, now(), now());
     return { world: db.prepare('SELECT * FROM worlds WHERE id=?').get(id) };
   });
   app.get('/api/worlds/:id', async (req) => {
@@ -188,7 +194,11 @@ export default async function apiRoutes(app) {
     // then created them after all), clear the stale entry so the GM's context stays truthful.
     const dismissed = pj(w.cast_dismissed, []).filter(n => String(n).toLowerCase() !== d.name.toLowerCase());
     if (dismissed.length !== pj(w.cast_dismissed, []).length) db.prepare('UPDATE worlds SET cast_dismissed=? WHERE id=?').run(j(dismissed), w.id);
-    return { character: charOut(db.prepare('SELECT * FROM characters WHERE id=?').get(id)) };
+    // Draft the newcomer's bonds to the existing cast right away (best-effort — see gm.js).
+    let bondsCreated = 0;
+    try { bondsCreated = await gm.draftBondsForNewCharacter(u, w, id); }
+    catch (e) { console.error('[bonds] draft for new character failed:', e.message); }
+    return { character: charOut(db.prepare('SELECT * FROM characters WHERE id=?').get(id)), bondsCreated };
   });
   app.patch('/api/characters/:id', async (req) => {
     const u = requireUser(req);
@@ -267,13 +277,17 @@ export default async function apiRoutes(app) {
     // emotion tag. Both ride inside materialised.outfits, which is part of the character
     // state the Game Master reads every tick — so it can pick & reuse existing sprites
     // ("outfit" field by name) that match the scene's dress AND mood.
-    st.outfits = [...(st.outfits || []), {
+    // SPRITE-LOSS FIX: `st` was read BEFORE the ~30 s image generation. A tick finishing
+    // meanwhile rewrites materialised — re-read the freshest state NOW so we append to the
+    // current outfit list instead of resurrecting a stale one (which dropped sprites).
+    const fresh = pj(db.prepare('SELECT materialised FROM characters WHERE id=?').get(c.id).materialised, {});
+    fresh.outfits = [...(fresh.outfits || []), {
       name, cutout_asset_id: cutout.id, portrait_asset_id: portrait.id,
       description: String(req.body?.description || name).slice(0, 200),
       ...(req.body?.emotion ? { emotion: String(req.body.emotion).slice(0, 40) } : {}),
     }];
-    db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(st), c.id);
-    return { outfit: { name, cutout_asset_id: cutout.id } };
+    db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(fresh), c.id);
+    return { outfit: { name, cutout_asset_id: cutout.id, portrait_asset_id: portrait.id } };
   });
 
   // ---------- relationships ----------
@@ -314,6 +328,30 @@ export default async function apiRoutes(app) {
       .run(id, w.id, b.name || 'New place', b.type || 'room', b.placeGroup || '', b.description || '', b.x ?? Math.random() * 600, b.y ?? Math.random() * 400);
     return { location: db.prepare('SELECT * FROM locations WHERE id=?').get(id) };
   });
+  // One-shot accept for a GM location suggestion: create the location, wire the proposed
+  // path connections, and paint the background — all in one call (the overlay's "Yes").
+  app.post('/api/worlds/:id/locations/from-suggestion', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    const b = req.body || {};
+    const name = String(b.name || '').trim().slice(0, 60);
+    if (!name) throw httpErr(400, 'NO_NAME', 'The place needs a name.');
+    if (db.prepare('SELECT 1 FROM locations WHERE world_id=? AND LOWER(name)=LOWER(?)').get(w.id, name)) throw httpErr(409, 'EXISTS', 'A place with that name already exists.');
+    // place it near its first connection on the map so the Atlas stays readable
+    const anchor = b.connectTo?.[0] && db.prepare('SELECT x,y FROM locations WHERE id=? AND world_id=?').get(b.connectTo[0], w.id);
+    const id = uid('l_');
+    db.prepare('INSERT INTO locations(id,world_id,name,type,place_group,description,x,y) VALUES (?,?,?,?,?,?,?,?)')
+      .run(id, w.id, name, 'public', '', String(b.description || '').slice(0, 400),
+        (anchor?.x ?? 300) + 120 + Math.random() * 80, (anchor?.y ?? 300) + 60 + Math.random() * 80);
+    for (const toId of (b.connectTo || []).slice(0, 3)) {
+      if (db.prepare('SELECT 1 FROM locations WHERE id=? AND world_id=?').get(toId, w.id))
+        db.prepare('INSERT INTO paths(id,world_id,from_id,to_id,label) VALUES (?,?,?,?,?)').run(uid('p_'), w.id, id, toId, '');
+    }
+    const loc = db.prepare('SELECT * FROM locations WHERE id=?').get(id);
+    const bg = await gm.generateBackground(u, w, loc);   // metered like any background
+    return { location: db.prepare('SELECT * FROM locations WHERE id=?').get(id), backgroundId: bg.id };
+  });
+
   app.patch('/api/locations/:id', async (req) => {
     const u = requireUser(req);
     const l = db.prepare(`SELECT l.* FROM locations l JOIN worlds w ON w.id=l.world_id WHERE l.id=? AND w.user_id=?`).get(req.params.id, u.id);

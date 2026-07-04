@@ -47,12 +47,12 @@ function render() {
     <button class="glasschip" id="alogout">Sign out</button>
   </div>
   <div class="admin-shell">
-    <div class="admin-tabs">${['overview', 'users', 'models', 'context', 'mailbox', 'audit'].map(t => `<button class="${TAB === t ? 'active' : ''}" data-t="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div>
+    <div class="admin-tabs">${['overview', 'users', 'models', 'context', 'prompts', 'mailbox', 'audit'].map(t => `<button class="${TAB === t ? 'active' : ''}" data-t="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div>
     <div id="tabc"></div>
   </div>`;
   $('#alogout').onclick = async () => { await api('/admin/api/logout', { method: 'POST' }); loginScreen(); };
   $$('.admin-tabs button').forEach(b => b.onclick = () => { TAB = b.dataset.t; render(); });
-  ({ overview, users, models, context, mailbox, audit })[TAB]();
+  ({ overview, users, models, context, prompts, mailbox, audit })[TAB]();
 }
 
 async function overview() {
@@ -393,6 +393,56 @@ async function context() {
   };
   $('#cx-world').onchange = loadBreakdown;
   loadBreakdown();
+}
+
+/* ── Prompts page: full transparency into every template sent to the models, plus an
+   editor for the storytelling core block injected into every tick's system prompt. ── */
+async function prompts() {
+  const d = await api('/admin/api/prompts');
+  const pre = (t) => `<pre style="white-space:pre-wrap;background:var(--ink);color:#dcd6ff;border-radius:12px;padding:12px 14px;font-size:11.5px;line-height:1.5;max-height:340px;overflow:auto">${esc(t || '(none yet)')}</pre>`;
+  $('#tabc').innerHTML = `
+    <div class="panel"><b style="font-size:14px">✍️ Storytelling core (editable)</b>
+      <p style="font-size:12px;color:var(--soft)">Injected into EVERY tick's system prompt. Applies on the next tick — no restart. Clear the box and save to return to the built-in default.</p>
+      <textarea id="pr-core" rows="10" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-family:monospace;font-size:12px;margin-top:8px">${esc(d.gmCore.current)}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <button class="btn btn-primary small" id="pr-save">Save</button>
+        <button class="btn btn-ghost small" id="pr-reset">↺ Reset to default</button>
+        <span id="pr-msg" style="font-size:12px;color:#0d9463"></span>
+        ${d.gmCore.customised ? '<span class="tag g">customised</span>' : '<span class="tag grey">default</span>'}
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:14px"><b style="font-size:14px">🎙 TTS delivery templates (read-only)</b>
+      <p style="font-size:12px;color:var(--soft)">The two engines get OPPOSITE coaching. These are the defaults; players can override per-browser in Account → Voice.</p>
+      <h5 style="margin:10px 0 4px;color:var(--violet);font-size:11px;letter-spacing:.08em">GEMINI — ${esc(d.tts.gemini.note)}</h5>
+      <b style="font-size:12px">Narrator</b>${pre(d.tts.gemini.narrator)}
+      <b style="font-size:12px">Character</b>${pre(d.tts.gemini.character)}
+      <h5 style="margin:12px 0 4px;color:var(--teal);font-size:11px;letter-spacing:.08em">LAIONBOX — ${esc(d.tts.laionbox.note)}</h5>
+      <b style="font-size:12px">Narrator</b>${pre(d.tts.laionbox.narrator)}
+      <b style="font-size:12px">Character</b>${pre(d.tts.laionbox.character)}
+      <b style="font-size:12px">Thought suffix (both engines)</b>${pre(d.tts.thoughtSuffix)}
+    </div>
+
+    <div class="panel" style="margin-top:14px"><b style="font-size:14px">🧾 The most recent REAL tick prompt (from telemetry)</b>
+      <p style="font-size:12px;color:var(--soft)">Exactly what was sent on the last tick — zero documentation drift. The user message is previewed (first 4000 chars).</p>
+      <b style="font-size:12px">System prompt</b>${pre(d.lastTick.system)}
+      <b style="font-size:12px">User message (preview)</b>${pre(d.lastTick.userPreview)}
+    </div>`;
+  $('#pr-save').onclick = async () => {
+    try {
+      await api('/admin/api/prompts', { method: 'PATCH', body: { gmCore: $('#pr-core').value } });
+      $('#pr-msg').textContent = 'saved ✓ — applies next tick';
+      setTimeout(() => $('#pr-msg').textContent = '', 3000);
+    } catch (e) { fail(e); }
+  };
+  $('#pr-reset').onclick = async () => {
+    try {
+      const r = await api('/admin/api/prompts', { method: 'PATCH', body: { gmCore: '' } });
+      $('#pr-core').value = r.gmCore.current;
+      $('#pr-msg').textContent = 'reset to default ✓';
+      setTimeout(() => $('#pr-msg').textContent = '', 3000);
+    } catch (e) { fail(e); }
+  };
 }
 
 async function mailbox() {

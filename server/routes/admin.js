@@ -204,6 +204,36 @@ export default async function adminRoutes(app) {
     audit(a.id, 'update_context_config', 'context', next);
     return { config: next };
   });
+  // ---------- prompt transparency & editing ----------
+  // Shows every prompt template the app sends to models, plus the EXACT system/user prompt
+  // of the most recent real tick (from telemetry — zero doc-drift), and lets the admin edit
+  // the storytelling core block that is injected into every tick.
+  app.get('/admin/api/prompts', async (req) => {
+    requireAdmin(req);
+    const gm = await import('../gm.js');
+    const ec = await import('../export_cues.js');
+    const lastTick = db.prepare(`SELECT request FROM provider_calls WHERE surface='tick' ORDER BY created_at DESC LIMIT 1`).get();
+    let lastSys = null, lastUser = null;
+    try { const msgs = pj(lastTick?.request, []); lastSys = msgs[0]?.content || null; lastUser = (msgs[1]?.content || '').slice(0, 4000); } catch {}
+    return {
+      gmCore: { current: gm.gmCoreDirectives(), default: gm.GM_CORE_DEFAULT, customised: gm.gmCoreDirectives() !== gm.GM_CORE_DEFAULT },
+      lastTick: { system: lastSys, userPreview: lastUser },
+      tts: {
+        gemini: { narrator: ec.NARRATOR_STYLE, character: ec.CHARACTER_STYLE_TEMPLATE, note: 'Gemini overacts by default — these calm/measured templates rein it in (winners of the judged narrator experiment).' },
+        laionbox: { narrator: ec.LAIONBOX_NARRATOR_STYLE, character: ec.LAIONBOX_CHARACTER_TEMPLATE, note: 'LAIONBox is naturalistic and emotionally clamped — these vivid templates push it to make feelings audible.' },
+        thoughtSuffix: ec.THOUGHT_SUFFIX,
+      },
+    };
+  });
+  app.patch('/admin/api/prompts', async (req) => {
+    const a = requireAdmin(req);
+    const text = String(req.body?.gmCore ?? '').slice(0, 4000);
+    setSetting('gm_core_directives', text);   // empty string → gmCoreDirectives() falls back to default
+    audit(a.id, 'update_gm_core', 'prompts', { length: text.length });
+    const gm = await import('../gm.js');
+    return { gmCore: { current: gm.gmCoreDirectives(), default: gm.GM_CORE_DEFAULT } };
+  });
+
   app.get('/admin/api/audit', async (req) => {
     requireAdmin(req);
     return { audit: db.prepare('SELECT * FROM admin_audit ORDER BY created_at DESC LIMIT 200').all().map(r => ({ ...r, payload: pj(r.payload, {}) })) };

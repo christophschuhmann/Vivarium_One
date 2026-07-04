@@ -35,25 +35,35 @@ function describeDelta(delta) {
 }
 const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
 
-// Character delivery template + thought suffix — kept BYTE-IDENTICAL to web/app.js
-// (DEFAULT_CHARACTER_STYLE / THOUGHT_SUFFIX / ttsStyleFor): live Stage playback and the
-// export pipeline must build the exact same style string so they share one audio cache —
-// a line the player already heard is exported for free, never re-billed.
+// Delivery templates — kept BYTE-IDENTICAL to web/app.js (ttsStyleFor at default prefs):
+// live Stage playback and the export pipeline must build the exact same style string so
+// they share one audio cache — a line the player already heard is exported for free.
+//
+// PROVIDER-SPECIFIC: the two engines need OPPOSITE coaching. Gemini TTS overacts by
+// default → the calm/measured templates rein it in (the judged-experiment winners).
+// LAIONBox is naturalistic and emotionally CLAMPED → it needs vivid, emphatic direction
+// (name the emotions, ask for audible feeling) or every line comes out flat.
 export const CHARACTER_STYLE_TEMPLATE = 'In character (currently feeling {mood}). Natural, conversational, believably human delivery with mild, real-feeling emotion — like a real person talking, not a stage performance.';
 export const THOUGHT_SUFFIX = ' A private inner thought — half-murmured, intimate, as if speaking only to oneself.';
+export const LAIONBOX_NARRATOR_STYLE = 'An engaged, expressive storyteller: warm and vivid, colouring every sentence with the scene\'s emotion — wonder sounds wondrous, tension tightens the voice, joy lifts it. Clear, articulate speech with dynamic, lively intonation and audible emotional presence throughout.';
+export const LAIONBOX_CHARACTER_TEMPLATE = 'In character, feeling {mood} — and SHOWING it vividly in the voice: strong emotional expression, dynamic intonation, audible feelings (a smile you can hear, a tremble of worry, sparkling excitement), natural vocal reactions where they fit. Emotionally rich and alive, expressive enough to be truly felt.';
 
 // The exact voice + performance direction a given line cue is voiced with. The preflight
 // hashes (voice|style|text) to look the clip up in the audio cache; synthesis sends the
 // identical triple. THEY MUST STAY IN LOCKSTEP — hence one function (and the client
 // mirror in web/app.js ttsStyleFor, at default preferences).
 export function cueVoiceStyle(cue) {
+  const laion = getTtsProvider() === 'laionbox';
   if (cue.name) {
-    const style = CHARACTER_STYLE_TEMPLATE.replace('{mood}', cue.emotion || 'calm') +
+    const tpl = laion ? LAIONBOX_CHARACTER_TEMPLATE : CHARACTER_STYLE_TEMPLATE;
+    const style = tpl.replace('{mood}', cue.emotion || 'calm') +
       (cue.mode === 'thought' ? THOUGHT_SUFFIX : '');
     return { voice: cue.voice || 'Sulafat', style };
   }
-  // narrator line
-  const style = NARRATOR_STYLE + (cue.emotion ? ` A faint touch of ${cue.emotion}.` : '');
+  // narrator line — emotion hint is a light touch for Gemini, an explicit direction for LAIONBox
+  const style = laion
+    ? LAIONBOX_NARRATOR_STYLE + (cue.emotion ? ` The emotional colour of this passage: ${cue.emotion} — let it be heard.` : '')
+    : NARRATOR_STYLE + (cue.emotion ? ` A faint touch of ${cue.emotion}.` : '');
   return { voice: NARRATOR_VOICE, style };
 }
 

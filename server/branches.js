@@ -97,6 +97,13 @@ export function restoreToTick(world, branchId, targetIdx) {
   const tx = db.transaction(() => {
     for (const [cid, st] of Object.entries(charStates)) {
       const clean = { ...st }; delete clean.character_id; delete clean.events;
+      // Sprites are player-owned GALLERY content, not story state: time travel must never
+      // delete an outfit that was painted after the restored snapshot. Keep the superset
+      // of current + snapshot outfits (deduped by name, current entries win).
+      const cur = pj(db.prepare('SELECT materialised FROM characters WHERE id=?').get(cid)?.materialised, {});
+      const byName = new Map((clean.outfits || []).map(o => [o.name, o]));
+      for (const o of cur.outfits || []) byName.set(o.name, o);
+      clean.outfits = [...byName.values()];
       db.prepare('UPDATE characters SET materialised=? WHERE id=? AND world_id=?').run(j(clean), cid, world.id);
     }
     for (const r of rels) {
