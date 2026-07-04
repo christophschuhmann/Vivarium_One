@@ -1,0 +1,299 @@
+{
+ "_comment": "Voice-profile catalog for the LAIONBox engine. Each profile is a Gemini TTS voice identity with per-language reference clips in assets/voice_profiles/<voice>/<lang>.mp3 (extracted from the laion/gemini-2.5-pro-tts-voice-profiles dataset, judged & selected by scripts/extract_voice_profiles.py + judge_voice_profiles.py). Profile display names are standard human names; `voice` is the original Gemini voice = the folder name. The LLM (wizard/forge) picks profiles using gender/age/timbre.",
+ "profiles": {
+  "Anna": {
+   "voice": "Achernar",
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Bright, expressive voice with medium pitch, warm clear tone and conversational pace.",
+   "style": "Soft",
+   "good_for": "caring characters, bedtime narration, nurses",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Amy": {
+   "voice": "Aoede",
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Soft, gentle female voice with a warm, breathy texture and slow, reflective pace",
+   "style": "Breezy",
+   "good_for": "casual friends, baristas, easy-going characters",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Bella": {
+   "voice": "Autonoe",
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "soft, breathy, warm, mid-pitched, hesitant pace with a gentle and clear texture",
+   "style": "Bright",
+   "good_for": "receptionists, cheerful colleagues",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Chloe": {
+   "voice": "Callirrhoe",
+   "gender": "female",
+   "age": "adult",
+   "timbre": "warm, clear, slightly breathy female voice with moderate pitch and expressive pace",
+   "style": "Easy-going",
+   "good_for": "laid-back roommates, kind neighbours",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Daisy": {
+   "voice": "Despina",
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Warm, moderately pitched, soft texture, relaxed and slightly breathy delivery with reflective pace",
+   "style": "Smooth",
+   "good_for": "elegant characters, evening-scene narration",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Erin": {
+   "voice": "Erinome",
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "low pitch, warm, slightly breathy, measured pace, intimate, soft texture",
+   "style": "Clear",
+   "good_for": "doctors, lecturers, announcements",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Kira": {
+   "voice": "Kore",
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "bright, engaging, slightly breathy tone, conversational pace, natural pitch",
+   "style": "Firm",
+   "good_for": "determined leads, doctors, officials",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Lucy": {
+   "voice": "Laomedeia",
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Soft, warm, low-pitched voice with a slow, contemplative, and clear delivery",
+   "style": "Upbeat",
+   "good_for": "energetic best friends, gym trainers",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Lily": {
+   "voice": "Leda",
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Soft, breathy, youthful female voice with a warm, gentle, and slow-paced delivery",
+   "style": "Youthful",
+   "good_for": "students, gentle protagonists (Vivarium: Alice)",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Zoe": {
+   "voice": "Zephyr",
+   "gender": "female",
+   "age": "adult",
+   "timbre": "soft, slow-paced, slightly breathy, thoughtful, medium pitch, clear pronunciation",
+   "style": "Bright",
+   "good_for": "optimistic young women, upbeat hosts",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Aaron": {
+   "voice": "Algenib",
+   "gender": "male",
+   "age": "adult",
+   "timbre": "deep, warm, resonant, with a gravelly texture and a slow, relaxed pace",
+   "style": "Gravelly",
+   "good_for": "older men, gruff shopkeepers, detectives",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Alec": {
+   "voice": "Algieba",
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Warm, low-pitched voice with a slightly gravelly texture and slow, reflective pace",
+   "style": "Smooth",
+   "good_for": "charming hosts, restaurant owners, romantic leads",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Axel": {
+   "voice": "Alnilam",
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, warm voice with a slightly gravelly texture, slow contemplative pace, breathy delivery",
+   "style": "Firm",
+   "good_for": "coaches, police officers, decisive characters",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Charlie": {
+   "voice": "Charon",
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Warm, low-pitched, slightly breathy, relaxed conversational pace, intimate and clear tone",
+   "style": "Informative",
+   "good_for": "professors, documentary-style narrators, calm mentors",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Ethan": {
+   "voice": "Enceladus",
+   "gender": "male",
+   "age": "adult",
+   "timbre": "deep, resonant, warm, clear, measured pace, steady delivery, smooth texture",
+   "style": "Breathy",
+   "good_for": "shy characters, whispered/late-night scenes",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Finn": {
+   "voice": "Fenrir",
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Soft, gentle pitch, warm and breathy texture, slow contemplative pace",
+   "style": "Excitable",
+   "good_for": "enthusiastic students, sports fans, dramatic moments",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Ian": {
+   "voice": "Iapetus",
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "Warm, relaxed, mid-pitched male voice with a gentle, clear, conversational pace",
+   "style": "Clear",
+   "good_for": "newsreaders, lab scientists, neutral narrators",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Oscar": {
+   "voice": "Orus",
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "low-pitched, warm, breathy texture, slow and deeply reflective pace",
+   "style": "Firm",
+   "good_for": "authority figures, fathers, judges",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Peter": {
+   "voice": "Puck",
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "medium-low pitch, warm, slightly breathy, soft texture, reflective and moderate pace",
+   "style": "Upbeat",
+   "good_for": "cheerful friends, comic relief, mischievous characters",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Ray": {
+   "voice": "Rasalgethi",
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, warm masculine voice with a slightly gravelly texture and slow, contemplative pace",
+   "style": "Informative",
+   "good_for": "teachers, tour guides, radio hosts",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  },
+  "Miles": {
+   "voice": "Umbriel",
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, warm, low-pitched with a slightly raspy, slow-paced, and breathy quality",
+   "style": "Easy-going",
+   "good_for": "relaxed boyfriends, gentle psychologists",
+   "langs": [
+    "de",
+    "en",
+    "es",
+    "fr"
+   ]
+  }
+ }
+}

@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# secrets — the real API key lives here; commit only .env.example
+.env
+CLAUDE.md
+
+# runtime data: SQLite DB, generated assets (images/audio), temp export scratch
+data/
+
+# test artefacts
+e2e/shots/
+*.log
+
+# OS noise
+.DS_Store
+Thumbs.db

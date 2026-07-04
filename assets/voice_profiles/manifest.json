@@ -1,0 +1,800 @@
+{
+ "Achernar": {
+  "en": {
+   "sample": "sample_en_no-bursts__set002289",
+   "emotion_1": "satisfaction",
+   "emotion_2": "mortification",
+   "accent": "US",
+   "text": "Well, what can you do? I finally got that parking spot on Washington Square South, parallel parked like a champ... ... ...and then I realized it was a tiny Smart car I was squeezing next to. ... I mea",
+   "caption": "S1: Adult female expressing mild Amusement and slight Exasperation, speaking in a conversational, narrative tone with natural pitch modulation.",
+   "grade": "B"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set001723",
+   "emotion_1": "concentration",
+   "emotion_2": "honor",
+   "accent": "standard",
+   "text": "Idéalement, je crois, la politique devrait... tendre vers une forme d'honneur. ... C'est naïf, peut-être. Mais cette idée de servir le bien commun... ... ... C'est ce qui devrait nous concentrer, non?",
+   "caption": "S1: Adult female expressing Contemplation and Hope/Optimism with a measured, thoughtful tone.",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set002458",
+   "emotion_1": "contemplation",
+   "emotion_2": "compassion",
+   "accent": "standard",
+   "text": "Womöglich… vielleicht ist das der Grund, warum ich so gerne Weitsprung schaue. Der Moment des Flugs, die Unsicherheit, ob es reicht… ... … ist doch eigentlich ein Spiegelbild unseres Lebens, oder? Wen",
+   "caption": "S1: Adult female expressing moderate contemplation and slight wistfulness, speaking in a soft, reflective tone with a slightly breathy quality.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set002535",
+   "emotion_1": "serenity",
+   "emotion_2": "rage",
+   "accent": "standard",
+   "text": "X **Monologue:** ¿Xenofobia? Bueno, es que a veces uno entiende el miedo, ¿sabes? A la incertidumbre. Pero luego ves los números, la desigualdad… y te das cuenta de que el problema no son los de fuera",
+   "caption": "S1: young adult female, expressing moderate contemplation and mild distress, speaking thoughtfully with a clear, even tone and moderate pace.",
+   "grade": "A"
+  }
+ },
+ "Algenib": {
+  "en": {
+   "sample": "sample_en_no-bursts__set016699",
+   "emotion_1": "gratefulness",
+   "emotion_2": "fury",
+   "accent": "US",
+   "text": "Quite honestly, I'm grateful... genuinely. To think, we used to struggle with maps, lost for hours! Now? Instant directions. It's amazing. Still, I HATE when the GPS reroutes you at the last minute be",
+   "caption": "S1: Adult male, expressing Thankfulness/Gratitude and high Contentment with a calm, sincere tone.",
+   "grade": "B"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set016082",
+   "emotion_1": "determination",
+   "emotion_2": "irritation",
+   "accent": "standard",
+   "text": "Regarde… j'essaie, hein ? J'essaie vraiment de comprendre ce qu'il veut de moi. Mais c'est toujours... comme s'il changeait les règles en plein milieu de la partie. ... C'est usant. Tellement usant. J",
+   "caption": "S1: Adult male, expressing Impatience and Irritability and Distress, speaking with a weary and frustrated tone.",
+   "grade": "B"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set016967",
+   "emotion_1": "calmness",
+   "emotion_2": "joviality",
+   "accent": "standard",
+   "text": "Zumindest... zum Teil verstehe ich ja, warum die Leute sich aufregen. ... Aber dieses ewige Schwarz-Weiß-Denken, das ist doch Quatsch. Manchmal muss man einfach abwarten und Tee trinken. ... . Find ic",
+   "caption": "S1: A male in his 30s-40s speaks with a mix of contemplation and mild exasperation. His delivery is clear and moderately paced, with a reflective tone.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set016028",
+   "emotion_1": "deep focus",
+   "emotion_2": "fascination",
+   "accent": "standard",
+   "text": "Realmente, no hay nada como restaurar radios antiguas. Es... un proceso. Primero, encontrar la pieza, a veces en mercados de pulgas polvorientos. Luego, limpiar cada componente, soldar cables diminuto",
+   "caption": "S1: adult female, expressing contentment and interest, with a soft, reflective tone.",
+   "grade": "A"
+  }
+ },
+ "Algieba": {
+  "en": {
+   "sample": "sample_en_no-bursts__set013980",
+   "emotion_1": "curiosity",
+   "emotion_2": "determination",
+   "accent": "US",
+   "text": "Xavier always said friendships were investments. You put in the time, you see what grows. And, well, some wither. ... I guess I’m just determined to figure out *why* some friendships…fade. It's a puzz",
+   "caption": "S1: adult male, expressing Contemplation (high) and Sadness (moderate), speaking in a reflective, slightly melancholic tone with a steady pace.",
+   "grade": "B"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set014660",
+   "emotion_1": "interest",
+   "emotion_2": "zeal",
+   "accent": "standard",
+   "text": "Formidable, ce nouveau projet ! J'ai vraiment hâte de m'y plonger. J'ai l'impression que ça va être hyper stimulant, plein de défis intéressants... ... Bon, la paperasse, moins... Mais l'équipe a l'ai",
+   "caption": "S1: adult male, high Elation (excitement) and high Hope/Optimism (enthusiasm), speaking with an energetic and positive tone, clear articulation, and a rising intonation.",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set013757",
+   "emotion_1": "affection",
+   "emotion_2": "acerbity",
+   "accent": "standard",
+   "text": "Hoffentlich erinnert er sich noch an mich. ... Es ist ja schon eine Weile her. Ich mag ihn ja, wirklich... aber seine Art, alles besser zu wissen… ... Naja, ist halt ein bisschen anstrengend manchmal.",
+   "caption": "S1: middle-aged male, expressing moderate Contemplation and mild Longing; speaking in a calm, reflective tone with a moderate pace.",
+   "grade": "B"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set014241",
+   "emotion_1": "dignity",
+   "emotion_2": "pleasure/ecstasy",
+   "accent": "standard",
+   "text": "Siempre... siempre recuerdo el sabor de las fresas silvestres que robábamos del jardín de la vecina. La abuela decía que era pecado, pero... ¡ay, qué gusto! Era como probar el mismísimo sol. ... Y sen",
+   "caption": "S1: older adult male, expressing nostalgia and amusement (high Longing, moderate Amusement), in a warm, reflective tone with a slow, deliberate pace.",
+   "grade": "B"
+  }
+ },
+ "Alnilam": {
+  "de": {
+   "sample": "sample_de_no-bursts__set008010",
+   "emotion_1": "apprehension",
+   "emotion_2": "lightness",
+   "accent": "standard",
+   "text": "Jedenfalls, das Gesetz… ist es nicht irgendwie beruhigend, dass es Regeln gibt? Also, meistens. Manchmal denke ich, oh Mann… ... Man kann ja auch erschlagen werden von all dem. Aber es ist… meistens g",
+   "caption": "S1: adult male, contemplative and thoughtful (Contemplation, Doubt), speaking in a measured, slightly questioning tone.",
+   "grade": "B"
+  },
+  "en": {
+   "sample": "sample_en_no-bursts__set007983",
+   "emotion_1": "concentration",
+   "emotion_2": "appreciation",
+   "accent": "US",
+   "text": "Alright, so... Aristotle. He wasn't *wrong*, necessarily. Just... maybe he simplified things a little too much? ... I mean, the beauty's in the mess, isn't it? This tea is nice. ... . Really makes you",
+   "caption": "S1: young adult male, expressing contemplation and contentment with low intensity, speaking in a slow, soft, and low-pitched tone.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set007846",
+   "emotion_1": "meditation",
+   "emotion_2": "acidity",
+   "accent": "standard",
+   "text": "Xilófono... a veces pienso que así suenan mis rodillas después de una hora de crossfit. Quizás debería cambiar a yoga... ... aunque la idea de meditar me da una acidez... terrible. Quizá un té de manz",
+   "caption": "S1: Adult male expressing moderate Contemplation and mild Fatigue/Exhaustion, speaking in a clear, mid-pitched voice with a reflective tone.",
+   "grade": "B"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set007828",
+   "emotion_1": "warmth",
+   "emotion_2": "being drunk",
+   "accent": "standard",
+   "text": "Xavier, tu sais... cette soirée... C'était... *chaleureux*, je crois. Le vin... pas le meilleur, mais il a fait son effet, hein ? ... On a tellement ri. Je me souviens plus de tout, mais... bon, tu vo",
+   "caption": "S1: young adult male, expressing moderate contentment and mild amusement, in a relaxed, reminiscent tone.",
+   "grade": "B"
+  }
+ },
+ "Aoede": {
+  "en": {
+   "sample": "sample_en_no-bursts__set014899",
+   "emotion_1": "affection",
+   "emotion_2": "restlessness",
+   "accent": "US",
+   "text": "Forget-me-nots. Grandma always planted them. I remember wanting to run through the whole garden, chasing butterflies. ... She'd say, \"Careful, dear!\" Now? Just... peace when I see them. ...",
+   "caption": "S1: Young adult female, expressing Longing (nostalgia) and Sadness (melancholy) with a soft, reflective tone.",
+   "grade": "B"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set015345",
+   "emotion_1": "curiosity",
+   "emotion_2": "jealousy & envy",
+   "accent": "standard",
+   "text": "Naturellement, on s'interroge, parfois. N'est-ce pas? Pourquoi Léa avait toujours le dernier jeu vidéo, la plus belle poupée... ... ... et moi... rien. Ou presque. C'était... agaçant, disons. Je crois",
+   "caption": "S1: Young adult female expressing moderate Bitterness and mild Longing, spoken in a contemplative, slightly melancholic tone with a falling intonation.",
+   "grade": "B"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set015549",
+   "emotion_1": "serenity",
+   "emotion_2": "homesickness",
+   "accent": "standard",
+   "text": "Gerne denke ich an die Ruhe zurück. Großstadt ist schon anstrengend, jeden Tag. ... Das Landleben, mit dem Garten... Da war alles so viel einfacher, friedlicher. Aber hier gibt es eben die Arbeit. Und",
+   "caption": "S1: adult female, expressing moderate Longing and Contemplation, in a calm, reflective tone.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set015140",
+   "emotion_1": "affection",
+   "emotion_2": "desire to harm",
+   "accent": "standard",
+   "text": "Words... bueno, Words matter, ¿sabes? Dicen que la ley es justa, que busca el bien común... pero a veces, ... a veces te deja un sabor amargo, como si te hubieran robado algo valioso. ¡Ojalá! Ojalá pu",
+   "caption": "S1: Adult female, expressing strong Sadness and moderate Disappointment, speaking in a slow, contemplative, and somber tone.",
+   "grade": "B"
+  }
+ },
+ "Autonoe": {
+  "en": {
+   "sample": "sample_en_no-bursts__set022090",
+   "emotion_1": "deep focus",
+   "emotion_2": "lightness",
+   "accent": "US",
+   "text": "Zeppelins... fascinating things. Big, improbable, floating monuments to a bygone era. You know, thinking about the Hindenburg, it’s easy to focus on the tragedy, the fiery end. But consider the sheer ",
+   "caption": "S1: young adult female, Contemplation (high), Longing (low), speaking in a calm, reflective tone.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set021585",
+   "emotion_1": "calmness",
+   "emotion_2": "sullenness",
+   "accent": "standard",
+   "text": "Tu sais, toujours... toujours cette toile inachevée. Je la regarde, et je me sens… apaisé, d'une certaine façon. ... Mais en même temps, comme si quelque chose manquait. C'est étrange, non ? ... Laiss",
+   "caption": "S1: young adult female expressing moderate Contemplation and mild Sadness, speaking in a soft, reflective, and slightly melancholic tone.",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set021520",
+   "emotion_1": "alleviation",
+   "emotion_2": "playfulness",
+   "accent": "standard",
+   "text": "Sag mal, stimmt es, dass Spaziergänge wirklich so gut für einen sind? Manchmal fühlt es sich an, als ob die frische Luft und das bisschen Bewegung ... fast wie ein Spiel sind. Ich meine, man entdeckt ",
+   "caption": "S1: A young adult female speaks with moderate Contemplation and Interest, in a clear, thoughtful tone with a moderate pace.",
+   "grade": "B"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set021374",
+   "emotion_1": "gratefulness",
+   "emotion_2": "teasing",
+   "accent": "standard",
+   "text": "Hombre, ¿sabes? A veces, cuando miro fotos de Hawái, me da una cosa… ¡Qué suerte tuve! Y luego pienso en aquella ola gigante… ... …Ay, Dios mío. Menos mal que llevé a mi sobrino a clase de surf antes.",
+   "caption": "S1: Adult female, expressing Contemplation and Longing with a soft, reflective tone.",
+   "grade": "B"
+  }
+ },
+ "Callirrhoe": {
+  "en": {
+   "sample": "sample_en_no-bursts__set008514",
+   "emotion_1": "contentment",
+   "emotion_2": "tartness",
+   "accent": "US",
+   "text": "Eventually, you realize all the effort is worth it. ... There's a certain... *bite*, you know? Like when you finally get those slightly underripe plums from the tree. A little sour, a little sweet. It",
+   "caption": "S1: Young Adult Female, expressing moderate Contemplation and moderate Contentment, in a calm, reflective tone with a moderate pace and clear articulation.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set008917",
+   "emotion_1": "curiosity",
+   "emotion_2": "pain",
+   "accent": "standard",
+   "text": "Sûrement, je me demandais... si je devrais retourner à Séville. C'est magnifique, hein ? ... Mais... l'année dernière, je me suis cassé le bras là-bas. Bêtement, en plus. ... C'est le souvenir qui res",
+   "caption": "S1: Adult female, expressing mild contemplation and wistfulness with a soft, thoughtful tone.",
+   "grade": "B"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set009319",
+   "emotion_1": "contemplation",
+   "emotion_2": "optimism",
+   "accent": "standard",
+   "text": "Computer... die Möglichkeiten, die wir heute haben, sind einfach unglaublich. ... Wer hätte das vor zwanzig Jahren gedacht? Manchmal macht es mir fast Angst, wie schnell sich alles entwickelt. Aber me",
+   "caption": "S1: Adult female, expressing a mix of high awe and moderate contemplation, speaking in a clear, thoughtful tone.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set008445",
+   "emotion_1": "determination",
+   "emotion_2": "rancor",
+   "accent": "standard",
+   "text": "X \"Xenófobo... es lo que son. ¿Qué esperabas? ¿Que de repente les importara que me quemara las pestañas estudiando? ... A ellos les da igual si aprendo o no, solo ven el color de mi piel. Pero mira, t",
+   "caption": "S1: A young adult female expresses high Anger (annoyance) and high Bitterness (resentment) with moderate Contempt (scorn), speaking with a sharp, resentful tone and a fast pace, with stressed syllables emphasizing her fr",
+   "grade": "B"
+  }
+ },
+ "Charon": {
+  "en": {
+   "sample": "sample_en_no-bursts__set019212",
+   "emotion_1": "fondness",
+   "emotion_2": "curiosity",
+   "accent": "US",
+   "text": "Listen, I was just thinking about my grandma Lily. ... Remember how she always collected those little porcelain cats? I never understood *why*, exactly. ... . Always wondered what her story was with t",
+   "caption": "S1: A young adult male speaks with moderate contemplation and nostalgia, in a calm, reflective tone with a gentle pitch contour.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set018896",
+   "emotion_1": "contemplation",
+   "emotion_2": "suspicion",
+   "accent": "standard",
+   "text": "Réfléchissons...à ce que m'a dit le psy. Il m'a dit que je me projetais. ... Me projeter? Sur qui? C'est bizarre, non? Il disait ça parce que je le trouvais un peu... comment dire... intéressé? C'est ",
+   "caption": "S1: middle-aged male, expressing high contemplation and moderate doubt, speaking in a slow, pensive, and low-pitched tone.",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set018686",
+   "emotion_1": "calmness",
+   "emotion_2": "suffering",
+   "accent": "standard",
+   "text": "Verdammt, diese Volatilität. Immer wieder das Auf und Ab. Man gewöhnt sich ja fast dran, oder? ... Aber die Ungewissheit... die nagt. Ich mein, klar, irgendwann wird's besser. Hoffentlich. ... Aber bi",
+   "caption": "S1: middle-aged male, expressing strong Impatience and Irritability and moderate Distress, with a forceful, exasperated tone.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set019231",
+   "emotion_1": "dignity",
+   "emotion_2": "boredom",
+   "accent": "standard",
+   "text": "Vale... otra vez Vivaldi. No es que no me guste, pero... siempre lo mismo en la sala de espera. ... A veces pienso que ponen esto a propósito para que la gente se calme. Ya sé, las cuatro estaciones..",
+   "caption": "S1: Adult male, expressing mild impatience and irritability and some fatigue. Spoken with a resigned, slightly weary tone.",
+   "grade": "B"
+  }
+ },
+ "Despina": {
+  "en": {
+   "sample": "sample_en_no-bursts__set026056",
+   "emotion_1": "contemplation",
+   "emotion_2": "perplexity",
+   "accent": "US",
+   "text": "Ironically, history books never really told *my* story, you know? All the big wars and treaties, ... , but what about the everyday lives? Did they ever think about that? It just feels... incomplete, d",
+   "caption": "S1: Adult female expressing Contemplation and Longing, speaking in a thoughtful, slightly wistful tone.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set025504",
+   "emotion_1": "contemplation",
+   "emotion_2": "suspicion",
+   "accent": "standard",
+   "text": "L'athlétisme, c'est fascinant. On dirait toujours que quelqu'un a quelque chose à cacher, non ? ... Peut-être, c'est juste moi. Mais ces records... comment dire... parfois, ils me laissent un peu... p",
+   "caption": "S1: adult female, expressing Contemplation (moderate) and Doubt (mild), in a conversational and slightly hesitant tone.",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set025247",
+   "emotion_1": "contentment",
+   "emotion_2": "feeling turned on",
+   "accent": "standard",
+   "text": "X \"Xanthippe, stell dir vor... endlich Feierabend. Füße hoch, ein Glas Wein, und dieses Buch hier... ... ...es ist... überraschend gut. Er berührt mich. Irgendwie tief. Macht mich ganz... warm. Verste",
+   "caption": "S1: young adult female expressing strong contentment and gentle affection, speaking in a soft, reflective, and slightly breathy tone.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set026146",
+   "emotion_1": "calmness",
+   "emotion_2": "determination",
+   "accent": "standard",
+   "text": "Perfecto. Pues... permítanme contarles algo. La historia, a veces, parece una línea recta, ¿verdad? Pero no lo es. Para nada. Es un torbellino. Mi abuela siempre decía... ... ...que uno debe seguir ad",
+   "caption": "S1: adult female, high Contemplation, low Sadness, speaking in a calm, narrative tone with steady pitch.",
+   "grade": "A"
+  }
+ },
+ "Enceladus": {
+  "en": {
+   "sample": "sample_en_no-bursts__set023410",
+   "emotion_1": "calmness",
+   "emotion_2": "loathing",
+   "accent": "US",
+   "text": "Perhaps it's just me. The way he chewed... ... ... like a contented cow, all that cud-swallowing. Makes me sick. I tried to ignore it, but, after a while, ugh... ... ... I couldn't even look at him.",
+   "caption": "S1: adult male, neutral emotion, speaking in a clear, instructional tone with even pitch.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set022999",
+   "emotion_1": "curiosity",
+   "emotion_2": "suffering",
+   "accent": "standard",
+   "text": "Wow... cette sculpture. On dirait une femme... qui se débat. C'est étrange, n'est-ce pas ? ... On a envie de savoir pourquoi. Qu'est-ce qui lui arrive ? ... C'est... poignant.",
+   "caption": "S1: adult male, expressing moderate Interest and moderate Contemplation, speaking in a calm, contemplative tone with a moderate pace and inquisitive intonation.",
+   "grade": "B"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set023091",
+   "emotion_1": "interest",
+   "emotion_2": "short-temperedness",
+   "accent": "standard",
+   "text": "Okay, also, Wissenschaft... Offenbar, es gibt da diese neue Studie über Quantenverschränkung. ... Und die Behauptung ist, dass sie schneller ist als das Licht. Aber, ehrlich gesagt, diese Typen wieder",
+   "caption": "S1: male, 30s-40s, expressing moderate skepticism and slight exasperation (Doubt, Impatience and Irritability), speaking in a conversational, slightly rushed pace with a falling, dismissive intonation.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set023554",
+   "emotion_1": "contemplation",
+   "emotion_2": "relaxation",
+   "accent": "standard",
+   "text": "Nunca pensé que la nevera hablaría. O bueno, que tendría una pantalla... y que yo le preguntaría qué cenar. Es raro, ¿no? ... A veces pienso que es demasiado. Demasiado fácil, demasiado... ¿todo? Pero",
+   "caption": "S1: adult male, expressing Contemplation (high) and Longing (moderate), speaking in a thoughtful, slightly melancholic tone with a slow pace and falling intonation.",
+   "grade": "A"
+  }
+ },
+ "Erinome": {
+  "en": {
+   "sample": "sample_en_no-bursts__set002620",
+   "emotion_1": "dignity",
+   "emotion_2": "desperation",
+   "accent": "US",
+   "text": "Listen, I remember begging for scraps at Mrs. Henderson’s bakery. Literally, on my knees. ... She felt sorry for us, I think, but Mom hated it. Said we had *some* pride left. I’d haul those day-old ro",
+   "caption": "S1: adult female, expressing moderate sadness and wistfulness, with a hint of shame; speaking in a reflective, somber tone with a steady, slow pace.",
+   "grade": "B"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set002957",
+   "emotion_1": "satisfaction",
+   "emotion_2": "uncertainty",
+   "accent": "standard",
+   "text": "Génial... cette nouvelle théorie sur la matière noire. ... C'est séduisant, vraiment. Mais est-ce que ça tient la route ? J'ai l'impression qu'il manque toujours un truc. ... Il faut creuser, évidemme",
+   "caption": "S1: adult female, expressing a mix of moderate interest and mild doubt, speaking in a contemplative, mid-pitch tone with a steady pace and falling intonation at phrase ends.",
+   "grade": "B"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set003454",
+   "emotion_1": "determination",
+   "emotion_2": "discomfiture",
+   "accent": "standard",
+   "text": "Tja, das mit dem neuen Job ist... kompliziert. Ich dachte, die Pendelei würde mich nicht so fertig machen, aber... ... Es ist einfach so anders als auf dem Land. Immer diese Menschenmassen. ... Ich we",
+   "caption": "S1: young adult female, expressing moderate disappointment and mild distress, with a weary and slightly exasperated tone.",
+   "grade": "B"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set003782",
+   "emotion_1": "affection",
+   "emotion_2": "engrossment",
+   "accent": "standard",
+   "text": "Vale, entonces... mira la nebulosa. ¿Verdad que parece algodón de azúcar cósmico? Es increíble pensar en la física que hay detrás de todo eso... las reacciones nucleares, la gravedad... ¡Ah! ... Y lue",
+   "caption": "S1: young adult female, Contemplation (moderate), Interest (mild), speaking in a soft, thoughtful tone.",
+   "grade": "B"
+  }
+ },
+ "Fenrir": {
+  "en": {
+   "sample": "sample_en_no-bursts__set007010",
+   "emotion_1": "dignity",
+   "emotion_2": "ease",
+   "accent": "US",
+   "text": "Probably, the best thing we can do is just... pay attention. You know? To the little things. The way the light hits the leaves, or ... the absolute *silence* after it snows. If we appreciate it, maybe",
+   "caption": "S1: Young adult male expressing high contemplation and medium longing, speaking in a calm, soft, and slightly breathy tone with a gentle pace.",
+   "grade": "B"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set006517",
+   "emotion_1": "dignity",
+   "emotion_2": "peevishness",
+   "accent": "standard",
+   "text": "Pourtant, je me demande... ces nouveaux téléphones... ... ... je n'arrive jamais à configurer les notifications correctement. C'est agaçant, hein? ... On dirait que tout le monde comprend, sauf moi.",
+   "caption": "S1: Adult male expressing moderate Impatience and Irritability and some Helplessness, speaking in a slightly exasperated and weary tone at a normal pace.",
+   "grade": "B"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set006483",
+   "emotion_1": "affection",
+   "emotion_2": "enthusiasm",
+   "accent": "standard",
+   "text": "Quasi… so könnte man das nennen, was ich heute geschafft habe. Nicht die Welt, aber ein Anfang! ... Hat Spaß gemacht, dieses kleine Projekt endlich anzugehen. Mal sehen, was morgen so bringt! ... . Ic",
+   "caption": "S1: Young adult male expressing moderate Contentment and mild Hope/Optimism, speaking in a calm, reflective tone with a steady pace and normal pitch.",
+   "grade": "B"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set007329",
+   "emotion_1": "interest",
+   "emotion_2": "irritability",
+   "accent": "standard",
+   "text": "Realmente... no entiendo a los jóvenes con el TikTok. ¿Para qué grabar cada cosa que hacen? ... Me duele la espalda de estar agachado buscando un video de YouTube para mi nieta. ¡Qué complicado! ... ¡",
+   "caption": "S1: elderly male, expressing moderate Impatience and Irritability and mild Confusion, with a complaining tone.",
+   "grade": "A"
+  }
+ },
+ "Iapetus": {
+  "en": {
+   "sample": "sample_en_no-bursts__set020219",
+   "emotion_1": "contentment",
+   "emotion_2": "skepticism",
+   "accent": "US",
+   "text": "Look, I'm learning to be okay with *less* doing. Really. ... All this productivity talk? I'm not convinced it leads to much besides burnout. ... I just want enough, you know? A quiet life.",
+   "caption": "S1: middle-aged male expressing moderate Contemplation and mild Contentment, with a calm, measured, and slightly weary tone.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set020386",
+   "emotion_1": "contemplation",
+   "emotion_2": "homesickness",
+   "accent": "standard",
+   "text": "Juste... juste revoir ces photos, ça me prend toujours. ... Les jardins de mon grand-père… oh là là. ... Presque oubliés, maintenant, mais là… là, ils vivent encore. Ça me manque, ces étés.",
+   "caption": "wistful_sigh",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set020115",
+   "emotion_1": "serenity",
+   "emotion_2": "contemplation",
+   "accent": "standard",
+   "text": "Unaufgeregt… so lässt sich dieser Morgen gut beschreiben. Die Liste ist abgearbeitet, die Sonne scheint. ... Und die Ruhe… Es ist fast, als ob die Welt kurz innehält, um mir Zeit zum Nachdenken zu geb",
+   "caption": "S1: young adult female, expressing mild Concentration and Interest, speaking in a clear, instructional tone with a steady pace and neutral prosody.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set020710",
+   "emotion_1": "calmness",
+   "emotion_2": "foreboding",
+   "accent": "standard",
+   "text": "Quizás... quizás la quietud es la precursora de algo más. ¿No crees? Siempre hay un momento de calma antes de la tempestad. Uno la disfruta, sí, pero... uno sabe. ... Uno sabe que el mundo tiene un eq",
+   "caption": "S1: Adult male, 40s, expressing high Contemplation (thoughtfulness, reflection) and moderate Distress (foreboding). His speech is slow-paced with a low, even pitch and a serious, philosophical tone.",
+   "grade": "A"
+  }
+ },
+ "Kore": {
+  "en": {
+   "sample": "sample_en_no-bursts__set018357",
+   "emotion_1": "interest",
+   "emotion_2": "bantering",
+   "accent": "US",
+   "text": "Q Okay, so… Quantum computing, right? I mean, it's all theoretical still, mostly, but imagine the possibilities! ... Seriously! Cracking all the codes, designing perfect materials… It’s kinda terrifyi",
+   "caption": "chuckle",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set018254",
+   "emotion_1": "concentration",
+   "emotion_2": "homesickness",
+   "accent": "standard",
+   "text": "Probablement… Probablement que je vais plaider coupable. C'est plus simple, hein? Moins de paperasse, moins de temps loin de la maison. ... Maman me manque… et le chien. Mais, bon, la justice, c'est l",
+   "caption": "S1: young adult female, expressing moderate sadness and helplessness, speaking in a quiet, hesitant, and resigned tone with a falling intonation.",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set017424",
+   "emotion_1": "tranquility",
+   "emotion_2": "torment",
+   "accent": "standard",
+   "text": "Ruhe... brauche ich im Moment wirklich. Dieses ganze Auf und Ab der Wirtschaft, es macht einen ja ganz kirre. ... Manchmal denke ich, ich steige einfach aus und ziehe in eine kleine Hütte im Wald. Abe",
+   "caption": "S1: adult female, expressing moderate distress and fatigue/exhaustion, speaking with a weary and slightly complaining tone at a moderate pace.",
+   "grade": "B"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set017612",
+   "emotion_1": "contentment",
+   "emotion_2": "feeling horny",
+   "accent": "standard",
+   "text": "Perfecto. Pues... sí, parece que la ronda de financiación va viento en popa. ... Pensaba irme a casa temprano, quizás pedir algo rico... y relajarme un poco. A lo mejor, no sé, mirar fotos de... ya sa",
+   "caption": "S1: female, adult, neutral emotion (Concentration, Contemplation), speaking clearly and instructively with a steady pace.",
+   "grade": "A"
+  }
+ },
+ "Laomedeia": {
+  "en": {
+   "sample": "sample_en_no-bursts__set012640",
+   "emotion_1": "interest",
+   "emotion_2": "thankfulness/gratitude",
+   "accent": "US",
+   "text": "Perhaps... perhaps what I appreciate most about art, any kind really, is its capacity to *move* you. To make you see something new, some hidden truth. ... It's a gift, truly. And... I'm thankful for i",
+   "caption": "S1: Young adult female, expressing moderate Contemplation and mild Thankfulness/Gratitude, speaking in a soft, thoughtful tone.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set013022",
+   "emotion_1": "affection",
+   "emotion_2": "joviality",
+   "accent": "standard",
+   "text": "Zut alors, cette économie ! On dirait une tartine de pain grillé qui tombe toujours du mauvais côté. ... Bon, au moins, il y a du soleil, et le café est bon. Mais quand même… ... Espérons que ça s'arr",
+   "caption": "S1: Adult female expressing moderate disappointment and high impatience and irritability with a complaining, slightly dramatic tone.",
+   "grade": "B"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set012756",
+   "emotion_1": "alleviation",
+   "emotion_2": "schadenfreude",
+   "accent": "standard",
+   "text": "Rücksichtslos, wie die das alles ignorieren. Echt, denkste, die Klimakatastrophe betrifft nur andere? Na, warte. ... Wenn die steigenden Meeresspiegel erstmal ihre Villen fluten... dann gucken sie blö",
+   "caption": "S1: Young adult female, expressing high Anger and Contempt with a sharp, accusatory tone.",
+   "grade": "B"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set012753",
+   "emotion_1": "interest",
+   "emotion_2": "brooding",
+   "accent": "standard",
+   "text": "Supongo que... supongo que el caso me obsesiona. La idea de que alguien se salga con la suya... ... ...simplemente me carcome. Hay algo tan profundamente injusto... ... ...que no puedo dejarlo ir.",
+   "caption": "S1: young adult female expressing strong Distress (concern) and moderate Anger (annoyance) with a serious, intense tone and a steady, deliberate pace, conveying a sense of obsession and injustice.",
+   "grade": "A"
+  }
+ },
+ "Leda": {
+  "en": {
+   "sample": "sample_en_no-bursts__set005352",
+   "emotion_1": "contentment",
+   "emotion_2": "determination",
+   "accent": "US",
+   "text": "Alright, I think I've finally got the melody right. It's… simple, but it feels good. It feels… complete. ... There's still a long way to go with the lyrics, I know. But hearing it like this… I think I",
+   "caption": "S1: Young adult female expressing high contentment and moderate relief, with a soft, thoughtful tone.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set005337",
+   "emotion_1": "deep focus",
+   "emotion_2": "trust",
+   "accent": "standard",
+   "text": "Understanding... comprendre, c'est ça le plus important, tu sais. Avec Léa, on n'a pas toujours été d'accord, loin de là. Mais il y avait toujours cette... cette base. ... On savait qu'on pouvait comp",
+   "caption": "S1: adult female expressing high Contemplation and moderate Sadness, speaking in a slow, contemplative, and slightly melancholic tone.",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set005801",
+   "emotion_1": "gratefulness",
+   "emotion_2": "discomfiture",
+   "accent": "standard",
+   "text": "Rückblickend... ich bin ja wirklich froh, dass wir diese Wahl jetzt hinter uns haben. ... Es ist schon anstrengend, diese ganze Aufregung. Manchmal... ja, manchmal frage ich mich schon, ob ich alles r",
+   "caption": "S1: adult female expressing high relief and medium contentment, speaking in a calm, reflective tone.",
+   "grade": "B"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set006179",
+   "emotion_1": "alleviation",
+   "emotion_2": "fascination",
+   "accent": "standard",
+   "text": "Naturalmente, me preocupa el futuro. Ver el plástico amontonándose... ... ¿Sabes? Es que es tan evitable... La ingeniería que hay detrás de los nuevos materiales biodegradables es... fascinante. Pero ",
+   "caption": "S1: young adult female, Emotional Numbness (neutral), Contemplation (instructional), speaking with a clear, instructional tone.",
+   "grade": "B"
+  }
+ },
+ "Orus": {
+  "en": {
+   "sample": "sample_en_no-bursts__set003936",
+   "emotion_1": "calmness",
+   "emotion_2": "pensiveness",
+   "accent": "US",
+   "text": "Quietly, I remember sitting on that train, watching the rice paddies blur. It seemed so… ordered. All those tiny squares. ... I guess I thought I could find some order there, too. Maybe find something",
+   "caption": "S1: Young adult male expressing strong contemplation and moderate nostalgia, with a soft, breathy, and slow-paced delivery.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set004927",
+   "emotion_1": "serenity",
+   "emotion_2": "misery",
+   "accent": "standard",
+   "text": "Tiens... La bourse, encore une fois. Ça monte, ça descend. On dit que c'est bon signe, que la reprise est là. Mais pour qui, la reprise? J'ai l'impression que, pour nous, c'est toujours la même rengai",
+   "caption": "S1: young adult male, expressing moderate Distress and Doubt, speaking with a weary, questioning tone and falling intonation.",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set004299",
+   "emotion_1": "curiosity",
+   "emotion_2": "detachment",
+   "accent": "standard",
+   "text": "Rätselhaft, nicht? Warum wir uns so verhalten, wie wir es tun. ... Ich meine, die Neurowissenschaft erklärt ja einiges, aber... ob das wirklich alles ist? ... Interessant, aus der Ferne betrachtet.",
+   "caption": "S1: Adult male expressing moderate Contemplation and Interest, speaking in a clear, reflective tone with a moderate pace.",
+   "grade": "B"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set004612",
+   "emotion_1": "contentment",
+   "emotion_2": "butterflies in the stomach",
+   "accent": "standard",
+   "text": "Zumo de naranja recién exprimido... Sabe a domingo, ¿sabes? La nevera llena, sin agobios... ... Saber que este mes llegamos bien, que incluso sobra algo... no sé, da como... mariposas, ¿verdad? Pero t",
+   "caption": "S1: Adult male expressing moderate Contentment and Contemplation, speaking in a soft, reflective tone with a slow pace.",
+   "grade": "A"
+  }
+ },
+ "Puck": {
+  "en": {
+   "sample": "sample_en_no-bursts__set000833",
+   "emotion_1": "alleviation",
+   "emotion_2": "skepticism",
+   "accent": "US",
+   "text": "Even \"Every day, they tell you more. Every answer just seems to breed ten new questions. Eventually... ... ...you just have to shrug, don't you? I mean, who truly knows *anything*? It's all just guess",
+   "caption": "S1: young adult male. Emotions: high Contemplation, moderate Doubt. Delivery: speaking in a calm, paced, and questioning tone with a slightly melancholic prosody.",
+   "grade": "B"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set000164",
+   "emotion_1": "contemplation",
+   "emotion_2": "adoration",
+   "accent": "standard",
+   "text": "Voilà... encore une photo. Je ne sais pas, tu vois, parfois je me demande si ce n'est pas un peu ridicule. Mais en même temps... ... ...Je ne peux pas m'empêcher de sourire quand je les regarde. Tu ét",
+   "caption": "S1: young adult male, expressing moderate Longing (nostalgia, wistfulness) and mild Sadness (melancholy), speaking in a slow, reflective tone with a soft, low-pitched voice.",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set001114",
+   "emotion_1": "concentration",
+   "emotion_2": "fervor",
+   "accent": "standard",
+   "text": "Sicher, Familie… das ist schon was. Sie ist wie ein Anker, oder? Manchmal zieht sie einen runter, aber meistens gibt sie Halt. ... Und dieses Gefühl, wenn alle zusammen sind… einfach unbezahlbar. Ich ",
+   "caption": "S1: Young adult male expressing moderate Contentment and Affection, speaking in a calm, reflective tone with gentle intonation.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set000710",
+   "emotion_1": "dignity",
+   "emotion_2": "unease",
+   "accent": "standard",
+   "text": "Claro que sí. Aquí tienes un monólogo breve: Claro, el campeonato... Lo vi por televisión. Sabes, verlos ahí, tan jóvenes, con esa presión... da como... ... Un poco de lástima, ¿no? Porque al final, s",
+   "caption": "S1: Adult male expressing moderate contemplation and sympathy, speaking in a calm, reflective tone with a moderate pace.",
+   "grade": "B"
+  }
+ },
+ "Rasalgethi": {
+  "de": {
+   "sample": "sample_de_no-bursts__set011156",
+   "emotion_1": "serenity",
+   "emotion_2": "revulsion",
+   "accent": "standard",
+   "text": "Okay, also… Offen gesagt, diese ewigen Reformen, die sie uns in der Bildung aufzwingen… ... …das ist doch oft nur Augenwischerei. Manchmal frage ich mich, ob die Leute, die das beschließen, überhaupt ",
+   "caption": "S1: adult male, expressing high exasperation and strong disapproval. The delivery is emphatic and critical, with a moderately paced, clear articulation and a weary, falling intonation.",
+   "grade": "A"
+  },
+  "en": {
+   "sample": "sample_en_no-bursts__set011563",
+   "emotion_1": "hope/optimism",
+   "emotion_2": "contentment",
+   "accent": "US",
+   "text": "Yep, another day, another small step. ... Honestly, sometimes I wonder if it'll ever *actually* pay off, this whole startup thing. But then... then you see someone *use* it, *benefit* from it. And wel",
+   "caption": "S1: Young adult male expressing moderate Contemplation and mild Doubt. Delivery is slow-paced with a thoughtful, slightly weary tone and falling intonation.",
+   "grade": "B"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set010879",
+   "emotion_1": "calmness",
+   "emotion_2": "triumph",
+   "accent": "standard",
+   "text": "U Últimamente… he estado pensando mucho en Cleopatra. Mira, después de tantos siglos, todavía la recordamos. ¡Menuda jugada maestra! ... ¡Lo logró! Una reina inmortal. Eso es... eso es algo, ¿no? Sí s",
+   "caption": "S1: Adult female expressing moderate Contemplation and mild Interest, speaking in a thoughtful and calm tone.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set011913",
+   "emotion_1": "contentment",
+   "emotion_2": "mocking playfully",
+   "accent": "standard",
+   "text": "Xylographie... c'est un peu mon truc. Enfin, \"truc,\" c'est gentil, disons que je gribouille des trucs sur du bois. ... C'est pas Picasso, hein, mais ça me calme. Et puis, parfois, je me surprends moi-",
+   "caption": "S1: Adult male, expressing mild amusement and contentment, speaking in a casual, self-deprecating tone with a moderate pace.",
+   "grade": "A"
+  }
+ },
+ "Umbriel": {
+  "en": {
+   "sample": "sample_en_no-bursts__set024001",
+   "emotion_1": "serenity",
+   "emotion_2": "mortification",
+   "accent": "US",
+   "text": "Crowds...everywhere. It's always like this, isn't it? At least I thought I knew the shortcut through the park. ... Turns out, construction. Had to walk all the way back. Now I'm late. Again. Ugh. ... ",
+   "caption": "S1: Adult male, expressing moderate Impatience and Irritability and mild Fatigue/Exhaustion, with a weary, slightly rushed tone.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set024649",
+   "emotion_1": "determination",
+   "emotion_2": "encouragement",
+   "accent": "standard",
+   "text": "Zut, l'université... C'est dur, hein? Mais, tu sais, c'est faisable. Il faut juste s'accrocher, trouver sa méthode. ... Et ne pas avoir peur de demander de l'aide. On va y arriver, tous ensemble. ... ",
+   "caption": "S1: Young adult female expressing strong Hope/Optimism and moderate Affection, speaking in a clear, encouraging, and determined tone with a moderate pace.",
+   "grade": "B"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set023919",
+   "emotion_1": "dignity",
+   "emotion_2": "beatitude",
+   "accent": "standard",
+   "text": "Lasst uns hoffen, dass die Würde jedes Einzelnen geachtet wird. Es ist eine einfache Bitte. ... Manchmal scheint es so fern, unerreichbar. Aber wenn wir uns alle gemeinsam für das Gute einsetzen, viel",
+   "caption": "S1: middle-aged man, speaking with a hopeful and contemplative tone. Emotion: Hope/Optimism (moderate), Contemplation (high).",
+   "grade": "B"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set023924",
+   "emotion_1": "gratefulness",
+   "emotion_2": "insensitivity",
+   "accent": "standard",
+   "text": "Gracias...a esos historiadores que, bueno, que hicieron su trabajo. ... A veces pienso en los campesinos, los soldados...nadie pensaba en ellos, ¿sabes? Que si hubieran tenido, digamos, no sé, mejores",
+   "caption": "S1: adult male, Contemplation (moderate), Sadness (low), speaking in a clear, instructional tone with a neutral pace.",
+   "grade": "B"
+  }
+ },
+ "Zephyr": {
+  "en": {
+   "sample": "sample_en_no-bursts__set010733",
+   "emotion_1": "concentration",
+   "emotion_2": "awestruck",
+   "accent": "US",
+   "text": "Right, so... the sheer scale of global resource allocation is just... ... ... mind-boggling. I mean, think of the logistics, the trade, the manufacturing, all humming along, interconnected… It’s almos",
+   "caption": "S1: Adult female expresses a mix of awe and contemplation with a calm, reflective tone.",
+   "grade": "A"
+  },
+  "fr": {
+   "sample": "sample_fr_no-bursts__set009755",
+   "emotion_1": "fondness",
+   "emotion_2": "tenderness",
+   "accent": "standard",
+   "text": "Généralement, j'aime bien mon travail. C'est... c'est pas toujours facile, hein? Mais les collègues, ils sont chouettes. On rigole bien. ... Oh, hier, je me suis cognée... ... ... contre le bureau. Ça",
+   "caption": "S1: Adult female expressing high-intensity Contentment and moderate Amusement. The delivery is in a casual, conversational tone with a clear, melodic voice.",
+   "grade": "A"
+  },
+  "de": {
+   "sample": "sample_de_no-bursts__set010567",
+   "emotion_1": "contentment",
+   "emotion_2": "confusion",
+   "accent": "standard",
+   "text": "Hier... hier sitz ich nun. War das jetzt wirklich *alles*? Ich mein'... die ganze Aufregung vorher, und dann... das? ... Irgendwie... bin ich jetzt leer. Oder vielleicht auch nur müde. Versteh' ich da",
+   "caption": "S1: adult female expressing moderate Contemplation and Disappointment, with low levels of Fatigue/Exhaustion and Emotional Numbness; speaking in a slow, low-pitched, and melancholic tone.",
+   "grade": "A"
+  },
+  "es": {
+   "sample": "sample_es_no-bursts__set010469",
+   "emotion_1": "concentration",
+   "emotion_2": "loathing",
+   "accent": "standard",
+   "text": "Hombre, a veces... la psicología. Me concentro muchísimo, intento entender, pero hay teorías... ... ...que me dan un repelús, una cosa... Lo siento, es instintivo. ¡Qué se le va a hacer! ... Venga, ha",
+   "caption": "S1: Adult female expressing mild contemplation and exasperation (Contemplation, Impatience and Irritability) in a conversational, slightly resigned tone.",
+   "grade": "A"
+  }
+ }
+}

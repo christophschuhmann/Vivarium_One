@@ -1,0 +1,430 @@
+#!/usr/bin/env python3
+"""Example client for the LAIONBox v0.7 TTS server.
+
+Usage:
+    python client_example.py                       # generate a raw sample -> out_raw.mp3
+    python client_example.py --ref voice.wav       # clone + VC->Sidon -> out_vcsidon.mp3
+"""
+import argparse
+import base64
+import requests
+
+BASE = "http://localhost:8930"
+
+
+def b64(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+
+def save(resp, path):
+    resp.raise_for_status()
+    with open(path, "wb") as f:
+        f.write(resp.content)
+    print("wrote", path, "seed=", resp.headers.get("X-Seed"))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--ref", default=None, help="reference voice wav/mp3 to clone")
+    args = ap.parse_args()
+
+    print("health:", requests.get(f"{BASE}/health").json())
+
+    prompt = ('A weary middle-aged man, voice cracking with grief, almost a whisper: '
+              '"I looked everywhere for you." He stops, then sharper: "Where were you?"')
+
+    # 1) raw generation (auto duration, cfg 2.5 / stg 1.5 by default)
+    save(requests.post(f"{BASE}/generate", json={
+        "prompt": prompt, "seed": 42, "output": "raw"}), "out_raw.mp3")
+
+    # 2) with a fixed duration + longer multiplier, Sidon-restored
+    save(requests.post(f"{BASE}/generate", json={
+        "prompt": prompt, "seed": 42, "duration_multiplier": 1.2,
+        "output": "sidon"}), "out_sidon.mp3")
+
+    # 3) clone a reference and post-process through VC -> Sidon
+    if args.ref:
+        save(requests.post(f"{BASE}/generate", json={
+            "prompt": prompt, "reference_b64": b64(args.ref),
+            "output": "vc_sidon"}), "out_vcsidon.mp3")
+
+        # standalone voice conversion of an existing clip to the reference
+        save(requests.post(f"{BASE}/voice_convert", json={
+            "audio_b64": b64("out_raw.mp3"), "target_voice_b64": b64(args.ref)}),
+            "out_vc_only.mp3")
+
+    # 4) standalone Sidon on an existing clip
+    save(requests.post(f"{BASE}/sidon", json={"audio_b64": b64("out_raw.mp3")}),
+         "out_sidon_only.mp3")
+
+    # 5) DNS-MOS score
+    print("dnsmos(raw):", requests.post(f"{BASE}/dnsmos",
+          json={"audio_b64": b64("out_raw.mp3")}).json())
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+# LAIONBox v0.7 — Expressive TTS Server
+
+A single-GPU **FastAPI** service around the **LAIONBox v0.7 (step-19000)** expressive
+voice-acting model — the fully-trained DramaBox / LTX-2 audio diffusion-transformer with
+a rank-256 LoRA. It keeps the whole pipeline warm and exposes it over HTTP:
+
+| Capability | Endpoint |
+| --- | --- |
+| Text → speech (prompt ± reference voice, seed, CFG/STG, duration control) | `POST /generate` |
+| Sidon speech restoration / denoise | `POST /sidon` |
+| Chatterbox voice conversion | `POST /voice_convert` |
+| Voice conversion **then** Sidon | `POST /vc_sidon` |
+| DNS-MOS P.835 quality score | `POST /dnsmos` |
+| Health / config | `GET /health` |
+
+The model follows the **DramaBox prompt convention**: an *English* description of the
+speaker (age, gender, timbre, emotion) and delivery, with the **spoken line(s) in double
+quotes**. You can interleave stage directions and multiple quoted lines:
+
+```
+A weary middle-aged man, voice cracking with grief, almost a whisper:
+"I looked everywhere for you." He stops, then sharper, almost angry:
+"Where were you?"
+```
+
+---
+
+## What's in the pipeline
+
+* **LAIONBox v0.7 DiT + LoRA** — LTX-2 22B audio DiT (via `ResembleAI/Dramabox`
+  base weights) + the rank-256 LoRA `step19000` from
+  [`laion/LAION-Box-Work-in-Progress-0.7`](https://huggingface.co/laion/LAION-Box-Work-in-Progress-0.7)
+  (`best/step19000/lora.safetensors`), merged at load time.
+* **Gemma-3-12B (bnb-4bit)** prompt encoder.
+* **Chatterbox VC** — S3Gen flow-matching voice conversion.
+* **Sidon** — `sarulab-speech/sidon_raw_weight` (w2v-BERT LoRA encoder + DAC decoder) restoration.
+* **DNS-MOS P.835** — signal / background / overall quality scorer.
+
+All models load once at startup (Chatterbox / Sidon / DNS-MOS are lazy on first use) and
+stay resident on one GPU. GPU work is serialized with a lock, so the server is safe to hit
+concurrently (requests queue).
+
+---
+
+## Installation
+
+### 1. System + Python deps
+```bash
+# ffmpeg must be on PATH
+sudo apt-get install -y ffmpeg          # or: conda install -c conda-forge ffmpeg
+
+pip install -r requirements.txt
+```
+
+### 2. Pipeline repos
+This server orchestrates three existing components. Make them importable and point the
+server at them with environment variables:
+
+| Component | What / where | Env var |
+| --- | --- | --- |
+| DramaBox / LTX-2 audio stack | `ltx2/` core + `src/inference_server.py` (`TTSServer`) | `DRAMABOX_DIR` |
+| Voice-Acting-Pipeline | `dramabox/sidon_enhance.py` (Sidon + Chatterbox VC + DNS-MOS glue) | `VOICE_ACTING_PIPELINE` |
+| Chatterbox + Sidon | `pip install chatterbox-tts` and the Sidon repo used by `sidon_enhance.py` | — |
+
+Base weights (`ResembleAI/Dramabox`) and the Gemma prompt encoder are fetched
+automatically by the DramaBox `model_downloader` on first run.
+
+### 3. The LoRA checkpoint
+By default the server downloads `best/step19000/lora.safetensors` from
+`laion/LAION-Box-Work-in-Progress-0.7`. To use a local copy, drop it next to `server.py`
+as `lora.safetensors`, or set `LORA_PATH=/abs/path/to/lora.safetensors`.
+
+---
+
+## Running
+
+```bash
+# pin to one GPU (leave the rest for other work)
+CUDA_VISIBLE_DEVICES=0 DEVICE=cuda PORT=8930 python server.py
+```
+
+Environment knobs (all optional):
+
+| Var | Default | Meaning |
+| --- | --- | --- |
+| `DEVICE` | `cuda:0` | Torch device |
+| `PORT` / `HOST` | `8930` / `0.0.0.0` | Bind address |
+| `LORA_PATH` | *(download)* | Local LoRA path override |
+| `LORA_HF_REPO` / `LORA_HF_FILE` | `laion/LAION-Box-Work-in-Progress-0.7` / `best/step19000/lora.safetensors` | HF source |
+| `DRAMABOX_DIR` | `/home/deployer/laion/DramaBox` | LTX-2/DramaBox stack |
+| `VOICE_ACTING_PIPELINE` | `/home/deployer/laion/Voice-Acting-Pipeline` | Sidon/VC glue |
+| `MP3_BITRATE` | `96k` | Output MP3 bitrate (mono) |
+
+Check it's up:
+```bash
+curl -s localhost:8930/health | jq
+```
+
+---
+
+## API
+
+All audio in requests is **base64** (any ffmpeg-readable format). Every audio-returning
+endpoint takes `return_format`:
+* `"file"` (default) → binary **mono MP3 @ 96 kbps** (`Content-Type: audio/mpeg`)
+* `"base64"` → JSON `{ audio_base64, format, sample_rate, duration_sec, ... }`
+
+### `POST /generate`  — text → speech
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `prompt` | str | — | DramaBox-style description + quoted spoken line(s) |
+| `reference_b64` | str? | none | Optional reference voice to clone |
+| `seed` | int? | random | Reproducibility |
+| `cfg_scale` | float | `2.5` | Classifier-free guidance |
+| `stg_scale` | float | `1.5` | Spatiotemporal guidance |
+| `duration_multiplier` | float | `1.1` | Scales the **auto** duration (DramaBox estimate). `1.2` = longer/slower budget, `0.8` = shorter |
+| `gen_duration` | float | `0.0` | **Fixed** length in seconds; `>0` overrides the multiplier |
+| `output` | str | `raw` | `raw` \| `sidon` \| `vc` \| `vc_sidon` |
+| `return_format` | str | `file` | `file` \| `base64` |
+
+**Output modes**
+* `raw` — the model output as-is.
+* `sidon` — raw → Sidon restoration (48 kHz).
+* `vc` — raw → Chatterbox VC to `reference_b64`. **No reference** → self-VC (converts the
+  output to itself for consistency/artifact-removal).
+* `vc_sidon` — raw → VC (to reference, or self-VC if none) → Sidon (48 kHz).
+
+The generated seed is echoed in the `X-Seed` response header (file mode).
+
+```bash
+# clone a reference and post-process through VC→Sidon, get MP3 back
+curl -s -X POST localhost:8930/generate -H 'content-type: application/json' -d "{
+  \"prompt\": \"A cheerful young woman, bright and warm: \\\"Bonjour! Ravie de vous voir.\\\"\",
+  \"reference_b64\": \"$(base64 -w0 ref.wav)\",
+  \"cfg_scale\": 2.5, \"stg_scale\": 1.5,
+  \"output\": \"vc_sidon\", \"return_format\": \"file\"
+}" --output out.mp3
+```
+
+### `POST /sidon` — denoise / restore
+```json
+{ "audio_b64": "<base64>", "return_format": "file" }
+```
+
+### `POST /voice_convert` — Chatterbox VC
+```json
+{ "audio_b64": "<base64>", "target_voice_b64": "<base64>", "return_format": "file" }
+```
+`target_voice_b64` omitted → self-VC.
+
+### `POST /vc_sidon` — VC then Sidon
+```json
+{ "audio_b64": "<base64>", "target_voice_b64": "<base64 | omit for self-VC>", "return_format": "file" }
+```
+
+### `POST /dnsmos` — quality score
+```json
+{ "audio_b64": "<base64>" }
+```
+→ `{ "dnsmos": { "sig": 3.5, "bak": 4.0, "ovr": 3.2 } }`
+
+See `client_example.py` for a full Python client (generate + all post-processing + scoring).
+
+---
+
+## Notes
+
+* **Prompt language**: the *instruction* is English; only text inside double quotes is
+  spoken (in whatever language you write it). LAIONBox v0.7 handles EN / DE / FR / ES.
+* **Duration**: leave `gen_duration=0` for DramaBox's automatic, sentence-aware estimate;
+  nudge it with `duration_multiplier`, or force an exact length with `gen_duration`.
+* **CFG headroom**: high `cfg_scale` is auto std-rescaled internally to avoid clipping.
+* **Concurrency**: one GPU, serialized — throughput is one request at a time; run multiple
+  instances on different GPUs behind a load balancer to scale out.
+
+## License
+The model weights follow their source licenses (LTX-2 community license for the DiT;
+see the LAIONBox / DramaBox model cards). This server code: MIT.
+
+
+================================================================================
+ LAIONBox v0.7 (step-19000) — Expressive TTS Server :: PUBLIC API
+================================================================================
+
+PUBLIC ENDPOINT
+    http://45.38.21.39:8930
+
+    Plain HTTP (no TLS). Single GPU, requests are serialized (one at a time).
+    No authentication — anyone who can reach the I:port can use it.
+
+CHECKPOINT
+    laionbox-v0.7-step19000  (DramaBox / LTX-2 audio DiT + rank-256 LoRA, merged)
+    Pipeline also includes: Chatterbox voice conversion, Sidon restoration,
+    DNS-MOS P.835 scorer.
+
+--------------------------------------------------------------------------------
+ PROMPT CONVENTION
+--------------------------------------------------------------------------------
+An ENGLISH description of the speaker (age, gender, timbre, emotion) and delivery,
+with the SPOKEN line(s) in DOUBLE QUOTES. You may interleave stage directions and
+multiple quoted lines. Text inside the quotes may be in any language
+(EN / DE / FR / ES). Example:
+
+    A weary middle-aged man, voice cracking with grief, almost a whisper:
+    "I looked everywhere for you." He stops, then sharper: "Where were you?"
+
+--------------------------------------------------------------------------------
+ AUDIO IN / OUT
+--------------------------------------------------------------------------------
+* All audio SENT in a request is base64-encoded (any ffmpeg-readable format:
+  wav, mp3, flac, ...). Put it in the JSON field named below.
+* All audio RETURNED is mono MP3 @ 96 kbps. Every audio-returning endpoint
+  accepts a "return_format" field:
+      "file"   (default) -> the raw MP3 bytes, Content-Type: audio/mpeg
+      "base64"           -> JSON: { audio_base64, format, bitrate,
+                                    sample_rate, channels, duration_sec }
+* Content-Type for all requests: application/json
+
+================================================================================
+ ENDPOINTS
+================================================================================
+
+--------------------------------------------------------------------------------
+ GET /health
+--------------------------------------------------------------------------------
+    No parameters.
+    RETURNS (JSON):
+        status        "ok" | "loading"
+        device        e.g. "cuda"
+        checkpoint    "laionbox-v0.7-step19000"
+        endpoints     list of available endpoints
+        defaults      { cfg_scale, stg_scale, duration_multiplier, mp3_bitrate }
+
+--------------------------------------------------------------------------------
+ POST /generate   — text -> speech
+--------------------------------------------------------------------------------
+    BODY (JSON):
+      prompt               string    REQUIRED. DramaBox-style description +
+                                     quoted spoken line(s).
+      reference_b64        string    optional. Base64 reference voice to clone /
+                                     to voice-convert toward. Omit for none.
+      seed                 int       optional. Omit -> random. Echoed back in the
+                                     "X-Seed" response header (file mode).
+      cfg_scale            float     default 2.5. Classifier-free guidance
+                                     (prompt adherence). Auto std-rescaled to
+                                     avoid clipping at high values.
+      stg_scale            float     default 1.5. Spatiotemporal guidance.
+      duration_multiplier  float     default 1.1. Multiplies the AUTOMATIC
+                                     duration (DramaBox's own sentence-aware
+                                     estimate). 1.2 = longer/slower budget,
+                                     0.8 = shorter. Ignored if gen_duration > 0.
+      gen_duration         float     default 0.0. If > 0, a FIXED output length
+                                     in seconds; overrides duration_multiplier.
+      output               string    default "raw". One of:
+                                       "raw"      -> model output as-is
+                                       "sidon"    -> raw then Sidon restore (48 kHz)
+                                       "vc"       -> raw then Chatterbox VC to
+                                                     reference_b64. If no reference,
+                                                     self-VC (converts output to
+                                                     itself). No Sidon.
+                                       "vc_sidon" -> raw then VC (to reference, or
+                                                     self-VC if none) then Sidon (48 kHz)
+      return_format        string    default "file". "file" | "base64".
+
+    RETURNS:
+      return_format "file"   -> binary mono MP3 @ 96 kbps (audio/mpeg);
+                                response header "X-Seed" = seed used.
+      return_format "base64" -> JSON { audio_base64, format:"mp3", bitrate:"96k",
+                                       sample_rate, channels:1, duration_sec }
+
+--------------------------------------------------------------------------------
+ POST /sidon   — denoise / restore an audio clip
+--------------------------------------------------------------------------------
+    BODY (JSON):
+      audio_b64       string  REQUIRED. Base64 audio to restore.
+      return_format   string  default "file". "file" | "base64".
+    RETURNS: Sidon-restored audio (48 kHz source), mono MP3 96 kbps or base64 JSON.
+
+--------------------------------------------------------------------------------
+ POST /voice_convert   — Chatterbox voice conversion (no Sidon)
+--------------------------------------------------------------------------------
+    BODY (JSON):
+      audio_b64          string  REQUIRED. Base64 source audio (the speech to convert).
+      target_voice_b64   string  optional. Base64 target voice to convert TOWARD.
+                                 Omit -> self-VC (convert audio to itself).
+      return_format      string  default "file". "file" | "base64".
+    RETURNS: voice-converted audio (24 kHz source), mono MP3 96 kbps or base64 JSON.
+
+--------------------------------------------------------------------------------
+ POST /vc_sidon   — Chatterbox VC then Sidon
+--------------------------------------------------------------------------------
+    BODY (JSON):
+      audio_b64          string  REQUIRED. Base64 source audio.
+      target_voice_b64   string  optional. Base64 target voice. Omit -> self-VC.
+      return_format      string  default "file". "file" | "base64".
+    RETURNS: VC-then-Sidon audio (48 kHz source), mono MP3 96 kbps or base64 JSON.
+
+--------------------------------------------------------------------------------
+ POST /dnsmos   — DNS-MOS P.835 quality score
+--------------------------------------------------------------------------------
+    BODY (JSON):
+      audio_b64   string  REQUIRED. Base64 audio to score.
+    RETURNS (JSON):
+      { "dnsmos": { "sig": <float>, "bak": <float>, "ovr": <float> } }
+        sig = signal quality, bak = background quality, ovr = overall (higher = better)
+
+================================================================================
+ EXAMPLES (curl)
+================================================================================
+
+# Health
+curl http://45.38.21.39:8930/health
+
+# Simple generation (raw), auto duration, cfg 2.5 / stg 1.5 -> out.mp3
+curl -s -X POST http://45.38.21.39:8930/generate \
+  -H 'content-type: application/json' \
+  -d '{"prompt":"A cheerful young woman, bright and warm: \"Bonjour! Ravie de vous voir.\"","seed":42,"output":"raw"}' \
+  --output out.mp3
+
+# Fixed 8-second length, Sidon-restored, returned as base64 JSON
+curl -s -X POST http://45.38.21.39:8930/generate \
+  -H 'content-type: application/json' \
+  -d '{"prompt":"An old sailor, gravelly and slow: \"The sea remembers everything.\"","gen_duration":8.0,"output":"sidon","return_format":"base64"}'
+
+# Clone a reference voice + VC -> Sidon
+curl -s -X POST http://45.38.21.39:8930/generate \
+  -H 'content-type: application/json' \
+  -d "{\"prompt\":\"A weary man, voice cracking: \\\"Where were you?\\\"\",\"reference_b64\":\"$(base64 -w0 ref.wav)\",\"output\":\"vc_sidon\"}" \
+  --output cloned.mp3
+
+# Standalone Sidon on an existing clip
+curl -s -X POST http://45.38.21.39:8930/sidon \
+  -H 'content-type: application/json' \
+  -d "{\"audio_b64\":\"$(base64 -w0 clip.wav)\"}" --output clean.mp3
+
+# Standalone voice conversion of a clip toward a target voice
+curl -s -X POST http://45.38.21.39:8930/voice_convert \
+  -H 'content-type: application/json' \
+  -d "{\"audio_b64\":\"$(base64 -w0 clip.wav)\",\"target_voice_b64\":\"$(base64 -w0 target.wav)\"}" \
+  --output converted.mp3
+
+# DNS-MOS score of a clip
+curl -s -X POST http://45.38.21.39:8930/dnsmos \
+  -H 'content-type: application/json' \
+  -d "{\"audio_b64\":\"$(base64 -w0 clip.wav)\"}"
+
+================================================================================
+ NOTES
+================================================================================
+* Defaults: cfg_scale=2.5, stg_scale=1.5, duration_multiplier=1.1, MP3=96 kbps mono.
+* Duration: leave gen_duration=0 for DramaBox's automatic estimate; nudge with
+  duration_multiplier; or force an exact length with gen_duration.
+* One GPU: calls are processed one at a time. vc / vc_sidon take longer than raw
+  (they run voice conversion and/or Sidon after generation).
+* If a request from outside this network hangs, the host/cloud provider firewall
+  must also allow inbound TCP 8930 (this box's own firewall already does).
+================================================================================

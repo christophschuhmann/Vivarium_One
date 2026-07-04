@@ -1,0 +1,632 @@
+{
+ "Achernar": {
+  "en": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Bright, expressive voice with medium pitch, warm clear tone and conversational pace.",
+   "vocal_bursts": false,
+   "reference_score": 4
+  },
+  "fr": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Soft, gentle, slightly breathy voice with a warm tone, slow pace, and clear delivery.",
+   "vocal_bursts": false,
+   "reference_score": 9
+  },
+  "de": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "warm, soft, breathy female voice, calm pace, moderate pitch",
+   "vocal_bursts": false,
+   "reference_score": 8
+  },
+  "es": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Warm and expressive voice with a medium pitch and reflective, conversational pace",
+   "vocal_bursts": false,
+   "reference_score": 6
+  }
+ },
+ "Algenib": {
+  "en": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "deep, warm, resonant, with a gravelly texture and a slow, relaxed pace",
+   "vocal_bursts": true,
+   "reference_score": 7
+  },
+  "fr": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Low-pitched, warm, raspy and breathy texture, slow and intimate pace",
+   "vocal_bursts": true,
+   "reference_score": 4
+  },
+  "de": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, warm, slightly raspy male voice speaking slowly and contemplatively",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "es": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Warm, medium pitch, slightly breathy texture, slow deliberate pace, clear Spanish articulation",
+   "vocal_bursts": false,
+   "reference_score": 8
+  }
+ },
+ "Algieba": {
+  "en": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Warm, low-pitched voice with a slightly gravelly texture and slow, reflective pace",
+   "vocal_bursts": true,
+   "reference_score": 5
+  },
+  "fr": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Warm, mid-pitched male voice with a friendly tone, clear articulation, and animated pace",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "de": {
+   "gender": "male",
+   "age": "middle-aged",
+   "timbre": "Resonant, low-pitched male voice speaking slowly with a calm and warm texture",
+   "vocal_bursts": false,
+   "reference_score": 7
+  },
+  "es": {
+   "gender": "male",
+   "age": "middle-aged",
+   "timbre": "Warm, resonant male voice with a gentle, raspy texture and slow, expressive pace.",
+   "vocal_bursts": true,
+   "reference_score": 6
+  }
+ },
+ "Alnilam": {
+  "de": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Warm, low-pitched, relaxed, conversational pace, dry texture, calm delivery",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "en": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, warm voice with a slightly gravelly texture, slow contemplative pace, breathy delivery",
+   "vocal_bursts": true,
+   "reference_score": 4
+  },
+  "es": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "warm, low-pitched, relaxed voice, slightly gravelly texture, slow and deliberate pace",
+   "vocal_bursts": true,
+   "reference_score": 6
+  },
+  "fr": {
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "warm, low-pitched, slightly breathy, relaxed, and slow-paced male voice",
+   "vocal_bursts": true,
+   "reference_score": 5
+  }
+ },
+ "Aoede": {
+  "en": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Soft, gentle female voice with a warm, breathy texture and slow, reflective pace",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "fr": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Warm, calm, medium-pitched voice with a gentle, slow-paced, and slightly breathy delivery",
+   "vocal_bursts": false,
+   "reference_score": 8
+  },
+  "de": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "warm, soft, medium-pitched, clear, steady, and gentle pace",
+   "vocal_bursts": false,
+   "reference_score": 9
+  },
+  "es": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "warm, low-pitched, breathy, slow-paced, soft, reflective, intimate tone",
+   "vocal_bursts": true,
+   "reference_score": 4
+  }
+ },
+ "Autonoe": {
+  "en": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "soft, breathy, warm, mid-pitched, hesitant pace with a gentle and clear texture",
+   "vocal_bursts": true,
+   "reference_score": 5
+  },
+  "fr": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "soft, warm, breathy, medium-low pitch, slow pace, gentle, calm, clear pronunciation",
+   "vocal_bursts": false,
+   "reference_score": 7
+  },
+  "de": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Bright, warm, and expressive female voice with clear articulation and natural conversational pace.",
+   "vocal_bursts": false,
+   "reference_score": 7
+  },
+  "es": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Warm and expressive female voice, smooth texture, conversational tone, relaxed and reflective pace",
+   "vocal_bursts": false,
+   "reference_score": 5
+  }
+ },
+ "Callirrhoe": {
+  "en": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "warm, clear, slightly breathy female voice with moderate pitch and expressive pace",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "fr": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Soft, warm, slightly breathy voice with a slow, hesitant, and contemplative pace.",
+   "vocal_bursts": false,
+   "reference_score": 7
+  },
+  "de": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "soft, calm, low pitch, warm and clear with a gentle, steady pace",
+   "vocal_bursts": false,
+   "reference_score": 8
+  },
+  "es": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Clear, expressive female voice with medium-high pitch and a passionate, fast-paced delivery",
+   "vocal_bursts": false,
+   "reference_score": 3
+  }
+ },
+ "Charon": {
+  "en": {
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "Warm, low-pitched, slightly breathy, relaxed conversational pace, intimate and clear tone",
+   "vocal_bursts": false,
+   "reference_score": 8
+  },
+  "fr": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, warm, whispering, slow-paced, hesitant, breathy, intimate, reflective, low-pitched",
+   "vocal_bursts": false,
+   "reference_score": 5
+  },
+  "de": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, resonant, slightly gravelly male voice speaking slowly with a weary, expressive tone",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "es": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, resonant voice with low pitch, warm texture, and slow, relaxed pace",
+   "vocal_bursts": true,
+   "reference_score": 6
+  }
+ },
+ "Despina": {
+  "en": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Warm, moderately pitched, soft texture, relaxed and slightly breathy delivery with reflective pace",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "fr": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "soft, warm, medium-pitched voice with a gentle breathy texture and slow, thoughtful pace",
+   "vocal_bursts": false,
+   "reference_score": 7
+  },
+  "de": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "warm, gentle, slightly breathy, slow-paced, expressive, and clear tone",
+   "vocal_bursts": false,
+   "reference_score": 4
+  },
+  "es": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Warm, soft, medium-pitched female voice, smooth texture, slow and calm delivery",
+   "vocal_bursts": false,
+   "reference_score": 9
+  }
+ },
+ "Enceladus": {
+  "en": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "deep, resonant, warm, clear, measured pace, steady delivery, smooth texture",
+   "vocal_bursts": false,
+   "reference_score": 9
+  },
+  "fr": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Soft, low-pitched voice with a breathy texture, hesitant pace, and intimate warmth.",
+   "vocal_bursts": false,
+   "reference_score": 5
+  },
+  "de": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, warm voice with a slightly dry texture, clear articulation, and conversational pace",
+   "vocal_bursts": false,
+   "reference_score": 5
+  },
+  "es": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "warm, low-pitched, slightly breathy voice with a calm and slow pace",
+   "vocal_bursts": true,
+   "reference_score": 7
+  }
+ },
+ "Erinome": {
+  "en": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "low pitch, warm, slightly breathy, measured pace, intimate, soft texture",
+   "vocal_bursts": false,
+   "reference_score": 4
+  },
+  "fr": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Warm, conversational, expressive, clear French pronunciation, smooth texture, moderate pace.",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "de": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "warm, slightly breathy, moderate pitch, weary texture, slow deliberate pace",
+   "vocal_bursts": true,
+   "reference_score": 5
+  },
+  "es": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "bright and warm female voice with a clear, engaging, and moderate pace",
+   "vocal_bursts": false,
+   "reference_score": 8
+  }
+ },
+ "Fenrir": {
+  "en": {
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "Soft, gentle pitch, warm and breathy texture, slow contemplative pace",
+   "vocal_bursts": false,
+   "reference_score": 5
+  },
+  "fr": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Warm and resonant male voice with a calm, clear, and friendly conversational tone.",
+   "vocal_bursts": false,
+   "reference_score": 7
+  },
+  "de": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "warm, mid-pitched, clear articulation, calm pace, smooth texture, friendly tone",
+   "vocal_bursts": false,
+   "reference_score": 8
+  },
+  "es": {
+   "gender": "male",
+   "age": "elderly",
+   "timbre": "Low-pitched, slightly raspy, slow-paced, weary texture with mild warmth and mature delivery",
+   "vocal_bursts": false,
+   "reference_score": 6
+  }
+ },
+ "Iapetus": {
+  "en": {
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "Warm, relaxed, mid-pitched male voice with a gentle, clear, conversational pace",
+   "vocal_bursts": false,
+   "reference_score": 8
+  },
+  "fr": {
+   "gender": "male",
+   "age": "middle-aged",
+   "timbre": "deep, raspy, low-pitched, slow-paced, warm, intimate, quiet, breathy, textured",
+   "vocal_bursts": true,
+   "reference_score": 3
+  },
+  "de": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "warm, clear, medium-pitched female voice with a smooth, calm, and deliberate pace",
+   "vocal_bursts": false,
+   "reference_score": 9
+  },
+  "es": {
+   "gender": "male",
+   "age": "middle-aged",
+   "timbre": "deep, warm, slightly gravelly, slow-paced, resonant, contemplative, smooth, soft-spoken",
+   "vocal_bursts": false,
+   "reference_score": 6
+  }
+ },
+ "Kore": {
+  "en": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "bright, engaging, slightly breathy tone, conversational pace, natural pitch",
+   "vocal_bursts": true,
+   "reference_score": 4
+  },
+  "fr": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "soft, breathy, low-pitched, hesitant, slow-paced, melancholic, intimate, gentle, clear",
+   "vocal_bursts": false,
+   "reference_score": 4
+  },
+  "de": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "warm, soft, clear, calm delivery with a measured pace and gentle tone",
+   "vocal_bursts": false,
+   "reference_score": 9
+  },
+  "es": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Warm, smooth, medium-low pitch, steady pace, clear, and calm delivery",
+   "vocal_bursts": false,
+   "reference_score": 9
+  }
+ },
+ "Laomedeia": {
+  "en": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Soft, warm, low-pitched voice with a slow, contemplative, and clear delivery",
+   "vocal_bursts": false,
+   "reference_score": 9
+  },
+  "fr": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Medium pitch, clear and slightly raspy, moderate pace, warm yet expressive",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "de": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Medium-high pitch, expressive and intense tone, breathy texture, moderate pace, clear pronunciation",
+   "vocal_bursts": true,
+   "reference_score": 3
+  },
+  "es": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Soft and breathy female voice, medium pitch, gentle, slow-paced, with a melancholic undertone.",
+   "vocal_bursts": false,
+   "reference_score": 6
+  }
+ },
+ "Leda": {
+  "en": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Soft, breathy, youthful female voice with a warm, gentle, and slow-paced delivery",
+   "vocal_bursts": false,
+   "reference_score": 5
+  },
+  "fr": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "soft, warm, medium-pitched female voice with a calm and hesitant pace",
+   "vocal_bursts": false,
+   "reference_score": 7
+  },
+  "de": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Soft, warm, medium-pitched female voice, steady and clear with a thoughtful pace",
+   "vocal_bursts": false,
+   "reference_score": 8
+  },
+  "es": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "high-pitched, clear, crisp, rhythmic Spanish speaker, steady pacing with a bright tone",
+   "vocal_bursts": false,
+   "reference_score": 8
+  }
+ },
+ "Orus": {
+  "en": {
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "low-pitched, warm, breathy texture, slow and deeply reflective pace",
+   "vocal_bursts": true,
+   "reference_score": 4
+  },
+  "fr": {
+   "gender": "male",
+   "age": "middle-aged",
+   "timbre": "Low-pitched, slightly gravelly tone with a weary warmth and slow, contemplative pace",
+   "vocal_bursts": true,
+   "reference_score": 4
+  },
+  "de": {
+   "gender": "male",
+   "age": "middle-aged",
+   "timbre": "Low-pitched, warm, slightly gravelly, slow and contemplative pace, clear German speech",
+   "vocal_bursts": false,
+   "reference_score": 9
+  },
+  "es": {
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "warm, medium-pitched, smooth texture, relaxed pace, intimate and natural delivery",
+   "vocal_bursts": true,
+   "reference_score": 6
+  }
+ },
+ "Puck": {
+  "en": {
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "medium-low pitch, warm, slightly breathy, soft texture, reflective and moderate pace",
+   "vocal_bursts": false,
+   "reference_score": 7
+  },
+  "fr": {
+   "gender": "male",
+   "age": "young adult",
+   "timbre": "Deep, warm, slightly breathy voice with a slow, intimate, and reflective pace.",
+   "vocal_bursts": true,
+   "reference_score": 4
+  },
+  "de": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, warm, slightly gravelly, resonant voice, delivering calm, slow, and intimate speech.",
+   "vocal_bursts": false,
+   "reference_score": 8
+  },
+  "es": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Low pitch, warm tone, gravelly texture, slow and contemplative pace.",
+   "vocal_bursts": false,
+   "reference_score": 7
+  }
+ },
+ "Rasalgethi": {
+  "de": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "resonant, medium-low pitch, clear texture, steady yet expressive pace",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "en": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, warm masculine voice with a slightly gravelly texture and slow, contemplative pace",
+   "vocal_bursts": false,
+   "reference_score": 8
+  },
+  "es": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "Warm, breathy and soft voice with slow pace and gentle pitch",
+   "vocal_bursts": true,
+   "reference_score": 6
+  },
+  "fr": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "warm, low-pitched, slightly breathy voice with a dry texture and slow, hesitant pace",
+   "vocal_bursts": true,
+   "reference_score": 6
+  }
+ },
+ "Umbriel": {
+  "en": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Deep, warm, low-pitched with a slightly raspy, slow-paced, and breathy quality",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "fr": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Warm and bright voice with a clear, gentle, and highly encouraging conversational pace",
+   "vocal_bursts": false,
+   "reference_score": 5
+  },
+  "de": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "Warm and deep male voice with a calm, gentle, and slightly breathy delivery",
+   "vocal_bursts": false,
+   "reference_score": 8
+  },
+  "es": {
+   "gender": "male",
+   "age": "adult",
+   "timbre": "deep, warm, clear, dry texture, steady and slow pace, calm delivery",
+   "vocal_bursts": false,
+   "reference_score": 9
+  }
+ },
+ "Zephyr": {
+  "en": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "soft, slow-paced, slightly breathy, thoughtful, medium pitch, clear pronunciation",
+   "vocal_bursts": true,
+   "reference_score": 6
+  },
+  "fr": {
+   "gender": "female",
+   "age": "young adult",
+   "timbre": "Soft, slightly breathy female voice, mid-pitched, warm, with a relaxed and conversational pace",
+   "vocal_bursts": true,
+   "reference_score": 6.5
+  },
+  "de": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "low-pitched, soft, breathy, slow-paced, melancholic, flat tone, intimate texture",
+   "vocal_bursts": false,
+   "reference_score": 6
+  },
+  "es": {
+   "gender": "female",
+   "age": "adult",
+   "timbre": "warm, clear, medium-pitched voice with a casual, friendly, and conversational pace",
+   "vocal_bursts": false,
+   "reference_score": 6
+  }
+ }
+}
