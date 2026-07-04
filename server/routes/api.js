@@ -403,6 +403,8 @@ export default async function apiRoutes(app) {
       send('done', { credits: Math.floor(toCredits(db.prepare('SELECT credit_balance FROM users WHERE id=?').get(u.id).credit_balance) * 10) / 10, tick_idx: tick.idx, branch_id: tick.branch_id, branched: tick.branched });
       setImmediate(() => gm.runMemoryMaintenance(u, w).catch(() => {}));   // background summarisation
     } catch (e) {
+      // also log server-side — SSE errors are otherwise invisible in the server logs
+      console.error(`[tick] world=${w.id} delta=${req.body?.timeDelta} failed:`, e.code || '', e.message);
       send('error', { code: e.code || 'TICK_FAILED', message: e.message });
     } finally { clearInterval(hb); reply.raw.end(); }
   });

@@ -61,8 +61,13 @@ export async function llmJson(messages, opts = {}) {
   let res = await llmChat(messages, opts);
   try { return { ...res, json: parseJsonLoose(res.content) }; }
   catch (e) {
+    // Invalid JSON is usually TRUNCATION: reasoning models spend a variable share of
+    // max_tokens thinking, and a long think cuts the JSON off mid-stream. The repair
+    // re-ask therefore gets a 1.5× budget — retrying with the same cap would truncate
+    // identically (this exact failure killed time-skips intermittently).
+    const retryOpts = { ...opts, maxTokens: Math.ceil((opts.maxTokens || 6000) * 1.5) };
     const retry = await llmChat([...messages, { role: 'assistant', content: res.content },
-      { role: 'user', content: `Your previous reply was not valid JSON (${e.message}). Reply again with ONLY the corrected valid JSON object, no prose, no fences.` }], opts);
+      { role: 'user', content: `Your previous reply was not valid JSON (${e.message}). Reply again with ONLY the corrected valid JSON object, no prose, no fences.` }], retryOpts);
     retry.rawUsd += res.rawUsd;
     retry.usage = { prompt_tokens: (res.usage.prompt_tokens || 0) + (retry.usage.prompt_tokens || 0), completion_tokens: (res.usage.completion_tokens || 0) + (retry.usage.completion_tokens || 0) };
     return { ...retry, json: parseJsonLoose(retry.content) };

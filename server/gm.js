@@ -208,13 +208,23 @@ export async function runChapter(user, world, { timeDelta = '+30m', intervention
       const directive = `CHAPTER SCENE ${k + 1} of ${events.length} (one event inside a larger ${timeDelta} skip): ${ev.premise}
 Set THIS scene at "${ev.location}"${ev.participants?.length ? `; it centres on ${ev.participants.join(', ')}` : ''}. Earlier scenes of this skip are already in RECENT TICKS — do NOT re-narrate them, continue forward. Only the characters present at this scene speak; others act off-screen.`;
       // each mini-tick advances the clock by its share of the interval; the last one
-      // was normalised in planChapter so the chapter lands exactly on the target time
-      last = await runTickInner(user, world, {
+      // was normalised in planChapter so the chapter lands exactly on the target time.
+      // One retry per scene: a transient LLM failure (truncation, 5xx) shouldn't kill a
+      // whole chapter — especially not after earlier scenes already committed.
+      const sceneOpts = {
         timeDelta: `+${ev.offsetMinutes}m`,
         intervention: k === 0 ? intervention : null,   // the player's nudge seeds the first scene only
         perspective: loc ? { type: 'location', id: loc.id } : perspective,
         lang, directive,
-      }, onEvent);
+      };
+      try {
+        last = await runTickInner(user, world, sceneOpts, onEvent);
+      } catch (e) {
+        if (e.code === 'INSUFFICIENT_CREDITS' || e.code === 'DAILY_CAP') throw e;  // money errors: no retry
+        console.error(`[chapter] scene ${k + 1}/${events.length} failed (${e.message}) — retrying once`);
+        onEvent('status', { message: `scene ${k + 1} stumbled — retrying…` });
+        last = await runTickInner(user, world, sceneOpts, onEvent);
+      }
       // runTickInner mutates the DB; refresh the in-memory world row for the next pass
       const fresh = db.prepare('SELECT * FROM worlds WHERE id=?').get(world.id);
       world.sim_time = fresh.sim_time; world.tick_index = fresh.tick_index; world.active_branch_id = fresh.active_branch_id;
@@ -346,7 +356,9 @@ ${pj(world.cast_dismissed, []).length ? `Cast suggestions the player DECLINED (d
 CLOCK: it is now ${fmtClock(world.sim_time)}; advance ${timeDelta} to ${fmtClock(newTime)} (tick #${idx}).
 ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervention.target || 'the whole world'}): "${intervention.text}" — weave this in as cause; characters react in character.` : 'No intervention this tick.'}${directive ? `\n${directive}` : ''}`;
 
-  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: userMsg }], { maxTokens: 5000 });
+  // 9000: the tick JSON itself is ~3-4k tokens, but reasoning models burn a VARIABLE share
+  // of the budget thinking first — 5000 intermittently truncated the JSON mid-stream.
+  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: userMsg }], { maxTokens: 9000 });
   const micro = debitCall(user.id, res, 'tick_llm', { worldId: world.id, tickRef: idx });
   logCall({ userId: user.id, worldId: world.id, tickRef: idx, kind: 'llm', surface: 'tick', request: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }], response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const out = res.json;
