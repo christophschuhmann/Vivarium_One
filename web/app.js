@@ -174,6 +174,7 @@ function chrome(active, { worldTitle = null, sub = null, showDock = true } = {})
   <div id="topbar">
     <div class="glasschip"><div class="logo-dot"></div><div class="chip-title"><b>${esc(worldTitle || 'Vivarium')}</b><span>${esc(sub || t('your_studio', 'your studio'))}</span></div></div>
     <div style="display:flex;gap:9px">
+      ${S.world ? '<button class="glasschip" id="gm-chip" title="Talk to the Game Master — ask anything, change anything">💬 GM</button>' : ''}
       <button class="glasschip" id="lang-chip" title="Language / Sprache / Langue / Idioma">🌐 ${getLang().toUpperCase()}</button>
       <div class="glasschip" id="credits-chip" title="Your credits"><div class="coin"></div><span id="credits-num">${S.user?.credits ?? '–'}</span></div>
       <button class="glasschip" id="avatar-chip" title="Account & usage">${esc((S.user?.displayName || '?')[0].toUpperCase())}</button>
@@ -193,6 +194,7 @@ function bindChrome() {
     nav(`#/${{ cast: 'cast', bonds: 'bonds', world: 'atlas' }[k]}?w=${S.world}`);
   });
   const av = $('#avatar-chip'); if (av) av.onclick = accountModal;
+  const gmc = $('#gm-chip'); if (gmc) gmc.onclick = gmChatOverlay;
   // 🌐 chip cycles EN→DE→FR→ES and re-renders the current screen. From the next tick on,
   // the Game Master also writes the story in the chosen language (lang rides in tick calls).
   const lc = $('#lang-chip');
@@ -1295,6 +1297,7 @@ async function stageScreen() {
     </div>
   </div>
   <div id="topbar" style="justify-content:flex-end"><div style="display:flex;gap:9px">
+    <button class="glasschip" id="gm-chip" title="Talk to the Game Master — ask anything, change anything">💬 GM</button>
     <button class="glasschip" id="lang-chip" title="Language / Sprache / Langue / Idioma">🌐 ${getLang().toUpperCase()}</button>
     <div class="glasschip" id="credits-chip"><div class="coin"></div><span id="credits-num">${S.user?.credits ?? '–'}</span></div>
     <button class="glasschip" id="avatar-chip">${esc((S.user?.displayName || '?')[0].toUpperCase())}</button></div></div>
@@ -1620,6 +1623,104 @@ async function playCinema(cinema) {
        player iterates in chat (look, profile, more outfits via the drawer)
        until they hit "Accept & add to cast" — the normal Forge flow.
    Multiple pitches (a chapter can yield one per scene) are shown one at a time. */
+/* ── 💬 GAME MASTER CHAT ─────────────────────────────────────────────────────
+   An out-of-character assistant overlay (💬 GM chip in the top bar). The player
+   talks ABOUT the game: ask anything about the story (the GM sees the same
+   context the tick engine does) or request changes — new characters with bonds,
+   sprites, places, attribute patches, bond edits, world direction. The GM
+   PROPOSES actions; the player Applies or Discards them (server: gmChat /
+   gmApplyActions in gm.js). This conversation never enters tick generation;
+   approved changes reach the story as ordinary world state. History persists
+   per world (the model itself only remembers the newest ~20k tokens).        */
+const GM_ACTION_LABELS = {
+  create_character: (a) => `🎭 Create character “${a.draft?.name}”${a.bonds?.length ? ` with ${a.bonds.length} bonds` : ' (bonds auto-drafted)'} — paints a portrait (~30s)`,
+  patch_character: (a) => `🧬 ${(a.patches || []).length} attribute change(s) for a character (persistent)`,
+  update_state: (a) => `📍 Update a character's immediate state (place/activity/mood)`,
+  new_outfit: (a) => `🎨 Paint new sprite “${a.name}” (~30s)`,
+  update_relationship: (a) => `🕸 Bond: ${(a.description || '').slice(0, 60)}`,
+  create_location: (a) => `🗺 Build “${a.name}” + background (~30s)`,
+  update_location: (a) => `🗺 Update a location${a.regenerate_background ? ' + repaint background' : ''}`,
+  set_direction: () => `🎬 Rewrite the world direction`,
+};
+async function gmChatOverlay() {
+  if ($('#gmchat')) { $('#gmchat').remove(); return; }   // toggle
+  const panel = document.createElement('div');
+  panel.id = 'gmchat';
+  panel.innerHTML = `
+    <div class="gmc-head"><b>💬 Game Master</b><span style="font-size:10.5px;opacity:.8">out of character · sees the whole story · changes need your approval</span><button class="gmc-x">✕</button></div>
+    <div class="gmc-log" id="gmc-log"><div class="msg status">loading our conversation…</div></div>
+    <div class="chat-inputrow"><div class="field" id="gmc-field" style="background:#fff"><input id="gmc-in" placeholder="Ask or command the Game Master…"><button class="btn btn-primary small" id="gmc-send">Send</button></div></div>`;
+  document.body.appendChild(panel);
+  panel.querySelector('.gmc-x').onclick = () => panel.remove();
+  const log = $('#gmc-log');
+  const scroll = () => { log.scrollTop = log.scrollHeight; };
+  const addMsg = (cls, text) => { const d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = text; log.appendChild(d); scroll(); return d; };
+
+  // Render one assistant turn: the reply plus (optionally) an approval card for its actions.
+  const addAssistant = (reply, actions) => {
+    addMsg('assistant', reply);
+    if (!actions || !actions.length) return;
+    const card = document.createElement('div');
+    card.className = 'gmc-card';
+    card.innerHTML = `<b style="font-size:12px">Proposed changes</b>
+      ${actions.map(a => `<div class="gmc-act">${esc((GM_ACTION_LABELS[a.type] || (() => a.type))(a))}</div>`).join('')}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-teal small" data-apply style="flex:1">✨ Apply</button>
+        <button class="btn btn-ghost small" data-discard>Discard</button>
+      </div><div class="gmc-res" style="display:none"></div>`;
+    log.appendChild(card); scroll();
+    card.querySelector('[data-discard]').onclick = () => { card.querySelector('[data-apply]').remove(); card.querySelector('[data-discard]').textContent = 'discarded'; card.querySelector('[data-discard]').disabled = true; };
+    card.querySelector('[data-apply]').onclick = async (e) => {
+      const btn = e.target;
+      if (btn.disabled) return;
+      btn.disabled = true; card.querySelector('[data-discard]').remove();
+      const slow = actions.some(a => ['create_character', 'new_outfit', 'create_location'].includes(a.type) || a.regenerate_background);
+      btn.textContent = slow ? '⏳ Applying… image generation takes ~30s each' : '⏳ Applying…';
+      try {
+        const { results } = await api(`/api/worlds/${S.world}/gm-apply`, { method: 'POST', body: { actions } });
+        const res = card.querySelector('.gmc-res');
+        res.style.display = 'block';
+        res.innerHTML = results.map(r => `<div style="font-size:11.5px;color:${r.ok ? '#0d7e83' : '#d92e66'}">${r.ok ? '✓' : '✗'} ${esc(r.summary)}</div>` +
+          (r.cutoutId ? `<div class="checker" style="display:inline-block;padding:5px;border-radius:10px;margin:4px 0"><img src="${assetUrl(r.cutoutId)}" style="max-height:160px"></div>` : '') +
+          (r.backgroundId ? `<img src="${assetUrl(r.backgroundId)}" style="width:100%;border-radius:9px;margin:4px 0">` : '')).join('');
+        btn.textContent = '✓ Applied';
+        S.worldData = null; refreshMe();   // world state changed — next screen render picks it up
+        scroll();
+      } catch (e2) { btn.disabled = false; btn.textContent = '✨ Apply'; fail(e2); }
+    };
+  };
+
+  // load persisted history (assistant turns are stored as {reply, actions} JSON)
+  try {
+    const { history } = await api(`/api/worlds/${S.world}/gm-chat`);
+    log.innerHTML = history.length ? '' : '<div class="msg assistant">I\u2019m your Game Master — I see everything in this world and can change anything in it, with your approval. Ask me about the story, or tell me what to create. 🎭</div>';
+    for (const h of history) {
+      if (h.role === 'user') { if (!h.content.startsWith('[SYSTEM:')) addMsg('user', h.content); }
+      else { try { const p = JSON.parse(h.content); addMsg('assistant', p.reply || h.content); } catch { addMsg('assistant', h.content); } }
+    }
+    scroll();
+  } catch (e) { log.innerHTML = ''; addMsg('assistant', '😔 could not load our history: ' + e.message); }
+  attachMic($('#gmc-field'), $('#gmc-in'));
+
+  let busy = false;
+  const send = async () => {
+    const text = $('#gmc-in').value.trim(); if (!text || busy) return;
+    $('#gmc-in').value = ''; busy = true;
+    addMsg('user', text);
+    const status = addMsg('status', '🎭 the Game Master is thinking…');
+    try {
+      const out = await api(`/api/worlds/${S.world}/gm-chat`, { method: 'POST', body: { message: text, lang: getLang() } });
+      status.remove();
+      addAssistant(out.reply, out.actions);
+      refreshMe();
+    } catch (e) { status.remove(); addMsg('assistant', '😔 ' + e.message); }
+    busy = false;
+  };
+  $('#gmc-send').onclick = send;
+  $('#gmc-in').onkeydown = (e) => { if (e.key === 'Enter') send(); };
+  $('#gmc-in').focus();
+}
+
 /* Location suggestions: the GM proposes BUILDING A NEW PLACE when the story keeps pointing
    at somewhere that doesn't exist yet. Yes → one call creates the location row, wires the
    proposed path connections into the world graph, and paints the 16:9 background — then a

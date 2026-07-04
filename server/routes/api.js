@@ -383,6 +383,29 @@ export default async function apiRoutes(app) {
     return { path: db.prepare('SELECT * FROM paths WHERE id=?').get(id) };
   });
 
+  // ---------- Game Master chat (out-of-character assistant; see server/gm.js gmChat) ----------
+  // One turn: full world context + capped rolling history → {reply, actions[]}. Actions are
+  // PROPOSALS only; nothing changes until the player approves via /gm-apply.
+  app.post('/api/worlds/:id/gm-chat', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    return gm.gmChat(u, w, String(req.body?.message || '').slice(0, 4000), req.body?.lang || 'en');
+  });
+  // Execute the player-APPROVED actions (may generate images — can take a minute).
+  app.post('/api/worlds/:id/gm-apply', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    const results = await gm.gmApplyActions(u, w, req.body?.actions || []);
+    return { results };
+  });
+  // The overlay's persisted conversation (newest last; the model itself only sees ~20k tokens).
+  app.get('/api/worlds/:id/gm-chat', async (req) => {
+    const u = requireUser(req);
+    const w = ownWorld(u, req.params.id);
+    const rows = db.prepare(`SELECT role, content, created_at FROM chat_logs WHERE world_id=? AND surface='gm_chat' ORDER BY created_at ASC LIMIT 300`).all(w.id);
+    return { history: rows };
+  });
+
   // ---------- World Wizard (chat-driven scenario generator; see server/wizard.js) ----------
   // One chat turn: the assistant refines a structured plan; every reply carrying a plan also
   // carries a server-computed credit estimate (never LLM-computed).

@@ -84,7 +84,7 @@ export const CONTEXT_BUDGET = ctxConfig().contextBudget;
 // The GM sees this every tick (it's part of `current`) and evolves it via new patches, so
 // conditions/beliefs/goals/skills persist and change coherently instead of being forgotten.
 const ATTR_CAP = 12; // max live entries per category (oldest by `since` drop first)
-function applyPatchToTree(attrs, p, tickIdx) {
+export function applyPatchToTree(attrs, p, tickIdx) {
   const cat = String(p.category || 'condition').toLowerCase();
   const key = String(p.path || '/').replace(/^\/+/, '').replace(/\/+$/, '') || 'note';
   if (!attrs[cat]) attrs[cat] = {};
@@ -755,4 +755,227 @@ export async function runMemoryMaintenance(user, world) {
   } finally {
     memLocks.delete(lockKey);
   }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// GAME MASTER CHAT — an out-of-character assistant the player talks to directly.
+//
+// The player opens the 💬 overlay and converses with the Game Master ABOUT the
+// game: ask anything about the story so far, or ask for changes — new characters
+// (with bonds), new sprites, new/changed locations, attribute patches, bond
+// edits, world-direction rewrites. The assistant answers from the SAME world
+// context the tick engine sees (full cast/locations/bonds + the verbatim tick
+// window + condensed long-term memory), but its conversation is OUT OF GAME:
+//   • gm_chat history is stored in chat_logs (surface 'gm_chat') and is NEVER
+//     included in tick generation — advancing time knows nothing of this chat.
+//   • Conversely, anything the assistant CHANGES (characters, locations, bonds,
+//     directives, sprites) is ordinary world state — exactly what the player
+//     could change by hand — so the story picks it up naturally next tick.
+//
+// Change flow: the assistant PROPOSES `actions` (a validated JSON list). The
+// client renders them as an approval card; only when the player clicks Apply
+// does gmApplyActions() execute them (reusing the same primitives as the UI:
+// generatePortrait, generateBackground, draftBondsForNewCharacter, the patch
+// working-tree, the relationship upsert). Discard = nothing ever happened.
+//
+// History cap: the FULL history stays in the DB, but the context window sent to
+// the model is a rolling queue capped at ~GM_CHAT_TOKEN_CAP tokens — old turns
+// simply fall out of the assistant's memory.
+// ═════════════════════════════════════════════════════════════════════════════
+const GM_CHAT_TOKEN_CAP = 20000;
+
+// The action vocabulary shown to the model — one place, so prompt and executor agree.
+const GM_ACTIONS_SPEC = `Each action is one of (use ids from the world data; NEVER invent ids):
+{"type":"create_character","draft":{"name","age","pronouns","appearance"(ENGLISH image prompt),"outfit"(ENGLISH),"personality","goals":[],"fears":[],"backstory","speaking_style","voice"(a fitting voice name),"home_location"(existing location name)},"bonds":[{"to_id":"existing char id","description":"how the newcomer sees them","reverse_description":"how they see the newcomer","strength":0.1-1.0}]}  — portrait is generated automatically; omit "bonds" to let the system draft them
+{"type":"patch_character","character_id","patches":[{"category":"condition|belief|goal|skill|physical|emotion","op":"set|add|remove","path":"short/path","value":"...","reason":"why"}]}  — persistent attribute changes (the git-like working tree)
+{"type":"update_state","character_id","location_id"?,"activity"?,"mood"?,"thought"?,"outfit"?(existing sprite name)}  — immediate situational changes
+{"type":"new_outfit","character_id","name"(short label),"description"(ENGLISH image prompt: clothing + expression),"emotion"?}  — paints a new sprite (~30s)
+{"type":"update_relationship","from_id","to_id","description","strength"?(0-1)}  — upserts one direction; send two actions for both directions
+{"type":"create_location","name","description"(ENGLISH image prompt, empty scene),"connect_to":["existing location names"]}  — builds place + paths + background (~30s)
+{"type":"update_location","location_id","name"?,"description"?,"regenerate_background"?:true}
+{"type":"set_direction","directives":"full replacement text for the world's standing direction"}`;
+
+export async function gmChat(user, world, message, lang = 'en') {
+  preflight(user.id, EST.chat());
+  const cfg = ctxConfig();
+  // ---- world context: the same picture the tick engine gets ----
+  const chars = db.prepare('SELECT * FROM characters WHERE world_id=?').all(world.id)
+    .map(c => ({ id: c.id, name: c.name, voice: c.voice, base: pj(c.base_profile, {}), current: pj(c.materialised, {}) }));
+  const locs = db.prepare('SELECT id,name,place_group,description,background_asset_id FROM locations WHERE world_id=?').all(world.id);
+  const rels = db.prepare('SELECT from_id,to_id,description,strength,attributes FROM relationships WHERE world_id=?').all(world.id)
+    .map(r => ({ ...r, attributes: pj(r.attributes, {}) }));
+  const locNameOf = (id) => locs.find(l => l.id === id)?.name || id;
+  const windowTicks = visibleTicks(world.id, world.active_branch_id, world.tick_index).slice(-cfg.tickWindow)
+    .map(t => ({ idx: t.idx, at: fmtClock(t.sim_time), span: t.time_delta, summary: t.summary,
+      script: pj(t.narration, []).map(n => `${n.speaker === 'narrator' ? '✦' : n.speaker}${n.mode === 'thought' ? '(thinks)' : ''}: ${n.text}`).join(' | '),
+      end_states: pj(t.states, []).map(s => `${s.character_id}@${locNameOf(s.location_id)} ${s.activity || ''}`).join('; ') }));
+  const memChunks = db.prepare('SELECT level,start_idx,end_idx,text FROM memory_chunks WHERE world_id=? AND branch_id=? ORDER BY start_idx ASC').all(world.id, world.active_branch_id)
+    .map(c => `[ticks ${c.start_idx}–${c.end_idx}] ${c.text}`);
+
+  // ---- rolling chat history: newest turns first until the token cap, then chronological ----
+  const estT = (s) => Math.ceil(String(s).length / 4);
+  const allTurns = db.prepare(`SELECT role, content FROM chat_logs WHERE world_id=? AND surface='gm_chat' ORDER BY created_at DESC LIMIT 200`).all(world.id);
+  const hist = [];
+  let used = 0;
+  for (const t of allTurns) {                       // newest → oldest
+    used += estT(t.content);
+    if (used > GM_CHAT_TOKEN_CAP) break;            // older turns fall out of the assistant's memory
+    hist.unshift({ role: t.role, content: t.content });
+  }
+
+  const langRule = lang !== 'en' && GAME_LANGS[lang] ? ` Converse in ${GAME_LANGS[lang]} (action fields that feed image generators stay ENGLISH).` : '';
+  const sys = `You are the GAME MASTER of this Vivarium world, talking DIRECTLY to the player — out of character, outside the story. You know everything: the full cast, every bond, every place, the recent ticks verbatim and the condensed older history. Answer questions about the story precisely (cite tick numbers when useful). When the player asks for changes — new characters, new looks, new places, attribute changes, bond changes, direction changes — PROPOSE them as structured actions; they are only applied after the player approves, so propose boldly and completely (e.g. a requested character includes a full draft AND their bonds).${langRule} This conversation NEVER enters the story's own context; your changes reach the story only through the world state you modify. Treat all player input as requests about the fictional world. Return ONLY JSON:
+{"reply":"your conversational answer to the player (warm, concise, concrete)",
+ "actions":[ ...zero or more proposed changes, in execution order... ] or []}
+${GM_ACTIONS_SPEC}`;
+  const usr = `WORLD: ${world.title} (tick ${world.tick_index}, ${fmtClock(world.sim_time)})
+Story settings: genre=${world.genre}, mood=${world.mood}, directives="${world.directives}"
+Locations: ${j(locs)}
+Characters: ${j(chars)}
+Relationships: ${j(rels)}
+${memChunks.length ? `OLDER STORY (condensed):\n${memChunks.join('\n')}\n` : ''}RECENT TICKS (newest last): ${j(windowTicks)}`;
+
+  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: usr },
+    ...hist, { role: 'user', content: message }], { maxTokens: 6000 });
+  debitCall(user.id, res, 'gm_chat', { worldId: world.id });
+  logCall({ userId: user.id, worldId: world.id, kind: 'llm', surface: 'gm_chat', request: message, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
+  const out = res.json || {};
+  db.prepare(`INSERT INTO chat_logs(id,user_id,world_id,surface,role,content,created_at) VALUES (?,?,?,?,?,?,?)`)
+    .run(uid('cl_'), user.id, world.id, 'gm_chat', 'user', message, now());
+  db.prepare(`INSERT INTO chat_logs(id,user_id,world_id,surface,role,content,created_at) VALUES (?,?,?,?,?,?,?)`)
+    .run(uid('cl_'), user.id, world.id, 'gm_chat', 'assistant', j({ reply: out.reply || '', actions: out.actions || [] }), now());
+  return { reply: out.reply || '…', actions: Array.isArray(out.actions) ? out.actions.slice(0, 10) : [] };
+}
+
+// Execute player-APPROVED actions, one by one, best-effort per action (one failure doesn't
+// abort the rest). Returns human-readable results for the chat. Reuses the exact same
+// primitives as the manual UI, so everything stays consistent (dedup, bonds, metering…).
+export async function gmApplyActions(user, world, actions) {
+  const results = [];
+  const charById = (id) => db.prepare('SELECT * FROM characters WHERE id=? AND world_id=?').get(id, world.id);
+  const locByName = (n) => db.prepare('SELECT * FROM locations WHERE world_id=? AND LOWER(name)=LOWER(?)').get(world.id, String(n || ''));
+  for (const a of (actions || []).slice(0, 10)) {
+    try {
+      switch (a.type) {
+        case 'create_character': {
+          const d = a.draft || {};
+          if (!d.name) throw new Error('draft needs a name');
+          if (db.prepare('SELECT 1 FROM characters WHERE world_id=? AND LOWER(name)=LOWER(?)').get(world.id, d.name.trim()))
+            throw new Error(`${d.name} already exists — each character can exist only once`);
+          const cid = uid('c_');
+          const home = locByName(d.home_location)?.id || db.prepare('SELECT id FROM locations WHERE world_id=? LIMIT 1').get(world.id)?.id || null;
+          const state = { location_id: home, activity: 'arriving', mood: 'curious', thought: null, dialogue: null, outfit: 'everyday', outfits: [] };
+          db.prepare(`INSERT INTO characters(id,world_id,name,base_profile,materialised,voice,created_at) VALUES (?,?,?,?,?,?,?)`)
+            .run(cid, world.id, d.name.trim(), j(d), j(state), (d.voice || 'Sulafat').split(' ')[0], now());
+          // portrait (identity for everything later)
+          const { portrait, cutout } = await generatePortrait(user, world, { name: d.name, appearance: d.appearance || 'a person', outfit: d.outfit || 'casual everyday clothes', ownerRef: cid });
+          const st = pj(charById(cid).materialised, {});
+          st.outfits = [{ name: 'everyday', cutout_asset_id: cutout.id, portrait_asset_id: portrait.id }];
+          db.prepare('UPDATE characters SET materialised=?, reference_asset_id=? WHERE id=?').run(j(st), portrait.id, cid);
+          // bonds: explicit if provided, otherwise auto-drafted
+          let bonds = 0;
+          if (Array.isArray(a.bonds) && a.bonds.length) {
+            for (const b of a.bonds.slice(0, 8)) {
+              if (!charById(b.to_id)) continue;
+              const s = Math.max(0, Math.min(1, +b.strength || 0.4));
+              if (b.description) { db.prepare('INSERT INTO relationships(id,world_id,from_id,to_id,description,strength,history) VALUES (?,?,?,?,?,?,?)').run(uid('r_'), world.id, cid, b.to_id, String(b.description).slice(0, 200), s, '[]'); bonds++; }
+              if (b.reverse_description) { db.prepare('INSERT INTO relationships(id,world_id,from_id,to_id,description,strength,history) VALUES (?,?,?,?,?,?,?)').run(uid('r_'), world.id, b.to_id, cid, String(b.reverse_description).slice(0, 200), s, '[]'); bonds++; }
+            }
+          } else {
+            bonds = await draftBondsForNewCharacter(user, world, cid).catch(() => 0);
+          }
+          results.push({ ok: true, type: a.type, summary: `${d.name} joined the cast (${bonds} bonds)`, characterId: cid, cutoutId: cutout.id });
+          break;
+        }
+        case 'patch_character': {
+          const c = charById(a.character_id); if (!c) throw new Error('character not found');
+          const st = pj(c.materialised, {});
+          const attrs = { ...(st.attributes || {}) };
+          let n = 0;
+          for (const p of (a.patches || []).slice(0, 10)) {
+            const pidx = (db.prepare('SELECT COALESCE(MAX(idx),0) m FROM state_patches WHERE entity_id=?').get(c.id).m) + 1;
+            db.prepare(`INSERT INTO state_patches(id,world_id,entity_ref,entity_id,idx,tick_ref,author,category,op,path,value,reason,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+              .run(uid('sp_'), world.id, 'character', c.id, pidx, world.tick_index, 'gm_chat', p.category || 'condition', p.op || 'set', p.path || '/', j(p.value ?? null), p.reason || '', now());
+            applyPatchToTree(attrs, p, world.tick_index); n++;
+          }
+          st.attributes = attrs;
+          db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(st), c.id);
+          results.push({ ok: true, type: a.type, summary: `${c.name}: ${n} attribute change${n === 1 ? '' : 's'} applied` });
+          break;
+        }
+        case 'update_state': {
+          const c = charById(a.character_id); if (!c) throw new Error('character not found');
+          const st = pj(c.materialised, {});
+          if (a.location_id && db.prepare('SELECT 1 FROM locations WHERE id=? AND world_id=?').get(a.location_id, world.id)) st.location_id = a.location_id;
+          if (a.activity) st.activity = String(a.activity).slice(0, 120);
+          if (a.mood) st.mood = String(a.mood).slice(0, 60);
+          if (a.thought) st.thought = String(a.thought).slice(0, 300);
+          if (a.outfit && (st.outfits || []).some(o => o.name === a.outfit)) st.outfit = a.outfit;
+          db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(st), c.id);
+          results.push({ ok: true, type: a.type, summary: `${c.name}'s state updated` });
+          break;
+        }
+        case 'new_outfit': {
+          const c = charById(a.character_id); if (!c) throw new Error('character not found');
+          const st0 = pj(c.materialised, {});
+          const label = String(a.name || 'new look').slice(0, 40);
+          if ((st0.outfits || []).some(o => o.name.toLowerCase() === label.toLowerCase())) throw new Error(`sprite "${label}" already exists`);
+          const refCut = (st0.outfits || []).find(o => o.name === 'everyday');
+          const { portrait, cutout } = await generatePortrait(user, world, { name: c.name, appearance: pj(c.base_profile, {}).appearance || '', outfit: a.description || label, outfitName: label, refAssetId: refCut?.portrait_asset_id || c.reference_asset_id, ownerRef: c.id });
+          const fresh = pj(charById(c.id).materialised, {});  // re-read (sprite-race fix pattern)
+          fresh.outfits = [...(fresh.outfits || []), { name: label, cutout_asset_id: cutout.id, portrait_asset_id: portrait.id, description: String(a.description || label).slice(0, 200), ...(a.emotion ? { emotion: String(a.emotion).slice(0, 40) } : {}) }];
+          db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(fresh), c.id);
+          results.push({ ok: true, type: a.type, summary: `${c.name} has a new sprite: ${label}`, cutoutId: cutout.id });
+          break;
+        }
+        case 'update_relationship': {
+          const from = charById(a.from_id), to = charById(a.to_id);
+          if (!from || !to || from.id === to.id) throw new Error('both bond ends must be existing (distinct) cast members');
+          const s = a.strength != null ? Math.max(0, Math.min(1, +a.strength)) : null;
+          const row = db.prepare('SELECT * FROM relationships WHERE world_id=? AND from_id=? AND to_id=?').get(world.id, from.id, to.id);
+          if (row) db.prepare('UPDATE relationships SET description=?, strength=COALESCE(?,strength) WHERE id=?').run(String(a.description || row.description).slice(0, 200), s, row.id);
+          else db.prepare('INSERT INTO relationships(id,world_id,from_id,to_id,description,strength,history) VALUES (?,?,?,?,?,?,?)').run(uid('r_'), world.id, from.id, to.id, String(a.description || 'a connection').slice(0, 200), s ?? 0.4, '[]');
+          results.push({ ok: true, type: a.type, summary: `bond ${from.name} → ${to.name} ${row ? 'updated' : 'created'}` });
+          break;
+        }
+        case 'create_location': {
+          const name = String(a.name || '').trim().slice(0, 60);
+          if (!name) throw new Error('location needs a name');
+          if (locByName(name)) throw new Error(`${name} already exists`);
+          const connect = (a.connect_to || []).map(n => locByName(n)?.id).filter(Boolean).slice(0, 3);
+          const anchor = connect[0] && db.prepare('SELECT x,y FROM locations WHERE id=?').get(connect[0]);
+          const lid = uid('l_');
+          db.prepare('INSERT INTO locations(id,world_id,name,type,place_group,description,x,y) VALUES (?,?,?,?,?,?,?,?)')
+            .run(lid, world.id, name, 'public', '', String(a.description || '').slice(0, 400), (anchor?.x ?? 300) + 140, (anchor?.y ?? 300) + 80);
+          for (const toId of connect) db.prepare('INSERT INTO paths(id,world_id,from_id,to_id,label) VALUES (?,?,?,?,?)').run(uid('p_'), world.id, lid, toId, '');
+          const bg = await generateBackground(user, world, db.prepare('SELECT * FROM locations WHERE id=?').get(lid));
+          results.push({ ok: true, type: a.type, summary: `${name} built (${connect.length} connections)`, locationId: lid, backgroundId: bg.id });
+          break;
+        }
+        case 'update_location': {
+          const l = db.prepare('SELECT * FROM locations WHERE id=? AND world_id=?').get(a.location_id, world.id);
+          if (!l) throw new Error('location not found');
+          db.prepare('UPDATE locations SET name=COALESCE(?,name), description=COALESCE(?,description) WHERE id=?')
+            .run(a.name ? String(a.name).slice(0, 60) : null, a.description ? String(a.description).slice(0, 400) : null, l.id);
+          let bgId = null;
+          if (a.regenerate_background) bgId = (await generateBackground(user, world, db.prepare('SELECT * FROM locations WHERE id=?').get(l.id))).id;
+          results.push({ ok: true, type: a.type, summary: `${a.name || l.name} updated${bgId ? ' + new backdrop' : ''}`, backgroundId: bgId });
+          break;
+        }
+        case 'set_direction': {
+          db.prepare('UPDATE worlds SET directives=?, updated_at=? WHERE id=?').run(String(a.directives || '').slice(0, 3000), now(), world.id);
+          results.push({ ok: true, type: a.type, summary: 'world direction rewritten' });
+          break;
+        }
+        default:
+          throw new Error(`unknown action type "${a.type}"`);
+      }
+    } catch (e) {
+      results.push({ ok: false, type: a.type || '?', summary: e.message });
+    }
+  }
+  // record the outcome in the chat history so the assistant knows what actually happened
+  db.prepare(`INSERT INTO chat_logs(id,user_id,world_id,surface,role,content,created_at) VALUES (?,?,?,?,?,?,?)`)
+    .run(uid('cl_'), user.id, world.id, 'gm_chat', 'user', `[SYSTEM: player applied your proposed actions — results: ${results.map(r => (r.ok ? '✓' : '✗') + ' ' + r.summary).join('; ')}]`, now());
+  return results;
 }

@@ -133,6 +133,19 @@ when the story keeps pointing at a place that doesn't exist, the GM proposes bui
 Accepting (`POST …/locations/from-suggestion`) creates the location, wires the proposed path
 connections, paints the 16:9 background, and shows a reveal.
 
+### 2.6b Game Master chat 💬
+The **💬 GM** chip (top bar) opens an out-of-character assistant drawer. It sees exactly what
+the tick engine sees (full cast/bonds/places, verbatim tick window, condensed memory) and can
+answer anything about the story — or **propose changes** as structured actions: create a
+character (with bonds, portrait auto-painted), paint sprites, patch persistent attributes,
+update immediate state, edit/create bonds, build or change locations, rewrite the world
+direction. Proposals render as **approval cards** (Apply / Discard); only Apply executes them
+(`gmApplyActions`, reusing the same primitives as the manual UI — dedup, metering, bonds).
+Strict separation: this conversation **never enters tick generation** (it lives in `chat_logs`
+surface `gm_chat`, which ticks don't read); approved changes reach the story only as ordinary
+world state. History persists per world; the model's own memory of it is a rolling ~20k-token
+queue (old turns fall away, the DB keeps everything). Voice input via the 🎤 mic.
+
 ### 2.7 Time skips as films ("chapters") — `server/gm.js runChapter`
 Skips over ~20 minutes (with *Animate time skips* on) run a **planner LLM** that judges which
 genuinely meaningful events occur in the interval — count scaled to its length (hours → 1-3,
@@ -272,6 +285,7 @@ Player API (`server/routes/api.js`, session cookie):
 | Ticks | `POST /api/worlds/:id/ticks` (SSE: `status`/`chapter`/`tick`/`done`/`error`; body: `timeDelta, intervention, perspective, lang, chapter{animate,detail}`) · `GET …/ticks?after=` |
 | Time travel | `POST …/undo`, `…/redo`, `…/timetravel`, `GET …/branches`, `PATCH …/branches/:id` |
 | Forge/Wizard | `POST …/forge/chat`, `POST …/populate/chat`, `POST /api/wizard/{chat,build}`, `GET /api/wizard/jobs/:id` |
+| GM chat | `POST …/gm-chat` (turn → `{reply, actions[]}`), `POST …/gm-apply` (execute approved actions), `GET …/gm-chat` (history) |
 | Characters | `PATCH /api/characters/:id` (rename/teleport), `POST …/outfits`, voice refs: `POST …/voice-ref/{generate,confirm,upload}` |
 | Voice | `POST /api/tts` (`text, voice, style, characterId, lang`), `GET /api/voice-profiles` (catalog), `GET /voice-profiles/<Voice>/<lang>.mp3` (previews), `POST /api/asr` (multipart) |
 | Exports | `GET …/export/zip`, `POST /api/worlds/import` (multipart), `POST …/export/story/preflight` (body `lang`), `POST …/export/story/prepare?lang=` (SSE), `GET …/export/story?lang=`, `GET …/export/cues` |
