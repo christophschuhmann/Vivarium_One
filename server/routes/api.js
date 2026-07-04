@@ -173,6 +173,11 @@ export default async function apiRoutes(app) {
     const w = ownWorld(u, req.params.id);
     const d = req.body?.draft || {};
     if (!d.name) throw httpErr(400, 'DRAFT_INCOMPLETE', 'Character needs a name.');
+    // HARD DEDUP by name (case-insensitive): a slow accept once let repeated clicks create
+    // the same character five times. The client also guards its button, but this assertion
+    // is the guarantee — one name, one cast member, per world.
+    if (db.prepare('SELECT 1 FROM characters WHERE world_id=? AND LOWER(name)=LOWER(?)').get(w.id, String(d.name).trim()))
+      throw httpErr(409, 'CHAR_EXISTS', `${String(d.name).trim()} is already in the cast — each character can exist only once. (If the first click seemed stuck: adding takes ~15s while their bonds are drafted.)`);
     const id = uid('c_');
     // Spawn location: the client sends the player-approved choice (body.homeLocationId,
     // pre-suggested by the Forge assistant via draft.home_location). Falls back to a

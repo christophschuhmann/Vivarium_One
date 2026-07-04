@@ -494,6 +494,7 @@ async function forgeScreen() {
   // location in the draft (home_location, a location name); the player confirms or picks
   // another before the character enters the world.
   $('#accept').onclick = async () => {
+    if ($('#spawn-go')) return;   // spawn modal already open — never stack a second one
     const locs = S.worldData?.locations || [];
     const suggested = locs.find(l => l.name.toLowerCase() === String(F.draft.home_location || '').toLowerCase());
     const m = document.createElement('div');
@@ -511,13 +512,24 @@ async function forgeScreen() {
     m.onclick = (e) => { if (e.target === m) m.remove(); };
     $('.x', m).onclick = () => m.remove();
     $('#spawn-go', m).onclick = async () => {
+      // Adding takes a while (bond drafting is an LLM call, ~10-20s) — lock the button and
+      // SAY SO, or impatient clicks fire duplicate requests (the server also 409s repeats,
+      // but the player should never get that far).
+      const btn = $('#spawn-go', m);
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.textContent = `⏳ Adding ${F.draft.name}… weaving their bonds to the cast (~15s)`;
       try {
-        await api(`/api/worlds/${S.world}/characters`, { method: 'POST', body: { draft: F.draft, portraitId: F.portraitId, cutoutId: F.cutoutId, homeLocationId: $('#spawn-loc', m).value } });
-        toast(`${F.draft.name} joined the cast 🎉`);
+        const r = await api(`/api/worlds/${S.world}/characters`, { method: 'POST', body: { draft: F.draft, portraitId: F.portraitId, cutoutId: F.cutoutId, homeLocationId: $('#spawn-loc', m).value } });
+        toast(`${F.draft.name} joined the cast 🎉${r.bondsCreated ? ` — ${r.bondsCreated} bonds formed` : ''}`, 'gold');
         m.remove();
         S.forge = { worldId: S.world, history: [], draft: null, portraitId: null, cutoutId: null };
         S.worldData = null; nav(`#/cast?w=${S.world}`);
-      } catch (e) { fail(e); }
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = `✓ Add ${esc(F.draft.name)} here`;
+        fail(e);   // a duplicate shows the server's clear "already in the cast" message
+      }
     };
   };
 }

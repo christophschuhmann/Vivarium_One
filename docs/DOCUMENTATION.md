@@ -76,6 +76,9 @@ reset-to-default served from the single source in `gm.js`).
 
 ### 2.5 Cast · Bonds · Atlas
 Cast: profile drawer (rename, teleport, outfit commissioning, voice management, hear-voice).
+Characters are **deduplicated by name** (case-insensitive, per world): creation 409s on a
+repeat, and the accept button locks with a progress label while bonds are drafted (~15 s) so
+impatient clicks can't fire duplicate requests.
 **The bond graph stays current**: creating a character (Forge or cast-suggestion) immediately
 drafts their directed bonds to the existing cast (`gm.draftBondsForNewCharacter`, best-effort),
 and during ticks `relationship_updates` UPSERT — the GM can form brand-new bonds when cast
