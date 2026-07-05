@@ -282,6 +282,29 @@ function innerVoiceBlock(world, chars) {
   return parts.length ? `INNER DIALOGUE THIS MOMENT (private self-talk inside characters' heads — the player spoke as an inner voice. It may plausibly influence that character's thoughts, feelings and choices this tick (only where it fits who they are); it is NEVER spoken aloud, never referenced by others, never quoted in narration):\n${parts.join('\n')}\n` : '';
 }
 
+// ---------- Background music (laion-tunes-rpg-music search server) ----------
+// The GM's music tool: when a scene's vibe changes, the tick LLM writes a situation query +
+// genre + emotions; we search the local RPG-music server (BM25/FAISS over 2,580 annotated
+// instrumental tracks) and attach the best AVAILABLE track (falling to 2nd/3rd result when a
+// file is missing). Non-fatal: no music server → the story just plays without music.
+export const MUSIC_API = process.env.MUSIC_API_URL || 'http://127.0.0.1:8930';
+export const MUSIC_GENRES = ['high_fantasy', 'low_fantasy', 'dark_fantasy', 'mythic_ancient', 'medieval', 'renaissance_pirate', 'wild_west', 'gothic_horror', 'cosmic_horror', 'modern_supernatural', 'modern_realistic', 'superhero', 'post_apocalyptic', 'cyberpunk', 'hard_scifi', 'space_opera', 'science_fantasy', 'alt_history'];
+export async function searchMusic({ query, genre, emotion }) {
+  const g = MUSIC_GENRES.includes(genre) ? genre : '';
+  const body = { query: [query, emotion].filter(Boolean).join(', '), genre: g, search_field: 'situation', top_k: 6, singing_filter: 'no_singing', nsfw_filter: 'sfw_only', rank_by: 'similarity' };
+  const r = await fetch(`${MUSIC_API}/api/search`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000) });
+  if (!r.ok) throw new Error(`music search ${r.status}`);
+  const { results } = await r.json();
+  // take the best result whose audio file is actually AVAILABLE locally (2nd/3rd otherwise)
+  for (const t of results || []) {
+    try {
+      const h = await fetch(`${MUSIC_API}/api/audio/${t.row_id}`, { method: 'HEAD', signal: AbortSignal.timeout(4000) });
+      if (h.ok) return { row_id: t.row_id, title: t.title, url: `/api/music/audio/${t.row_id}`, query, genre: g, emotion: emotion || '' };
+    } catch { /* try the next one */ }
+  }
+  return null;
+}
+
 // ---------- The Tick ----------
 // Human names for the game languages the client may request (viv_lang localStorage pref,
 // passed per tick as `lang`). All player-visible model output (narration, dialogue,
@@ -495,7 +518,8 @@ JSON shape:
  "mood_tag":"cosy|tender|tense|playful|melancholy|eerie","summary":"one line for the archive",
  "cast_suggestion": {"name":"walk-on character's name","reason":"1-2 sentences TO THE PLAYER on why fleshing them out would enrich the story"} or null,
  "outfit_suggestion": {"character_id":"existing cast id","name":"short sprite label e.g. 'rain coat' or 'overjoyed'","description":"ENGLISH image prompt for the look: the dress/clothing AND the facial expression / body language","emotion":"one-word emotion tag if this is an emotion variant, else null","reason":"1-2 sentences TO THE PLAYER on why this new look deserves its own sprite"} or null,
- "location_suggestion": {"name":"place name","description":"ENGLISH image prompt for an empty widescreen background of this place","connect_to":["existing location NAMES this place plausibly connects to (1-3)"],"reason":"1-2 sentences TO THE PLAYER on why the world needs this place"} or null${factDue ? `,
+ "location_suggestion": {"name":"place name","description":"ENGLISH image prompt for an empty widescreen background of this place","connect_to":["existing location NAMES this place plausibly connects to (1-3)"],"reason":"1-2 sentences TO THE PLAYER on why the world needs this place"} or null,
+ "music": {"query":"ENGLISH situation description for background music search, e.g. 'cozy evening cooking together, warm domestic calm'","genre":"closest RPG genre key: high_fantasy|low_fantasy|dark_fantasy|mythic_ancient|medieval|renaissance_pirate|wild_west|gothic_horror|cosmic_horror|modern_supernatural|modern_realistic|superhero|post_apocalyptic|cyberpunk|hard_scifi|space_opera|science_fantasy|alt_history","emotion":"2-4 mood words e.g. 'tender, hopeful, quiet'"} or null${factDue ? `,
  "fact": {"topic":"which curiosity theme this draws on","title":"a short, inviting 'Did you know…'-style headline","body":"3-8 sentences"}` : ''}}
 Narration is ONE flowing script of the interval, anchored at ${povChar ? `wherever ${povChar.name} ENDS this interval` : povLoc ? `the place "${povLoc.name}"` : 'the main scene'}. Rules — follow strictly:
   • Interleave: 1-3 narrator sentences, then a character speaks or THINKS (1-2 sentences), another reacts, a short narrator beat, and so on. Cover EVERY character present — their words AND their inner thoughts (mode "thought") intermixed into the one script, not just the point-of-view character.
@@ -507,11 +531,13 @@ ${lang !== 'en' && GAME_LANGS[lang] ? `  • LANGUAGE (hard rule): write ALL pla
 ` : ''}relationship_updates only when something actually shifts (attributes evolve slowly) — and you MAY create a bond that does not exist yet by naming both character ids (do this whenever two cast members meaningfully connect for the first time; the graph must never go stale). state_patches only for real changes.
 CAST SUGGESTION (an optional tool you may use): when an UNLISTED walk-on character — someone you have only voiced inside narrator lines — has become genuinely story-relevant (recurring, pivotal to a thread, entangled with the cast; NOT a passing extra), you may fill "cast_suggestion" to ask the player whether to flesh that person out into a full cast member with a portrait and profile. The reason is shown to the player verbatim — make it a warm, concrete 1-2 sentence pitch. STRICT LIMITS: at most ONE suggestion per scene, and most scenes should have none; NEVER suggest an existing cast member; NEVER suggest names on the declined list in the world bible. Set it to null otherwise.
 OUTFIT SUGGESTION (another optional tool): each cast member's current sprites are listed in their state under "outfits" (name + description + emotion tag). When a character's LOOK changes significantly this scene — a genuinely different dress/clothing, or a strong clearly-visible emotion no existing sprite captures — you may fill "outfit_suggestion" to ask the player whether to paint a new sprite for it: either a new outfit (neutral expression) or the current outfit with the new expression. Write the description as a complete ENGLISH image prompt (clothing + expression + posture). STRICT LIMITS: at most ONE per scene and most scenes need none — only for changes a viewer would clearly see; never duplicate an existing sprite's look; the emotion tag only for emotion variants. Set it to null otherwise.
-LOCATION SUGGESTION (another optional tool): when the story keeps gesturing at a place that DOESN'T EXIST in the Locations list — somewhere characters talk about going, that a plot thread needs, or that the world clearly lacks — you may fill "location_suggestion" to ask the player whether to build it: give it a name, an evocative but CONCRETE visual description (empty scene, no people — it feeds the background generator), and 1-3 EXISTING location names it plausibly connects to for the world map. STRICT LIMITS: at most ONE per scene, most scenes need none, never suggest a place that already exists. Set it to null otherwise.${factDue ? `
+LOCATION SUGGESTION (another optional tool): when the story keeps gesturing at a place that DOESN'T EXIST in the Locations list — somewhere characters talk about going, that a plot thread needs, or that the world clearly lacks — you may fill "location_suggestion" to ask the player whether to build it: give it a name, an evocative but CONCRETE visual description (empty scene, no people — it feeds the background generator), and 1-3 EXISTING location names it plausibly connects to for the world map. STRICT LIMITS: at most ONE per scene, most scenes need none, never suggest a place that already exists. Set it to null otherwise.
+MUSIC (background score): the world bible shows the CURRENTLY PLAYING track. Fill "music" ONLY when this scene's mood/energy/location vibe differs meaningfully from what the current track expresses (or when nothing plays yet) — a fitting track should simply KEEP LOOPING across scenes, so most scenes set null. When you do change it, describe the scene's atmosphere as a music-search situation (query + genre + emotions).${factDue ? `
 FACT CARD (required this tick): the player wants to LEARN while playing. Fill "fact" with one genuinely TRUE, well-established piece of knowledge drawn from these interests: ${curioThemes}. Make it curiosity-evoking and inspiring — the kind of fact one retells at dinner — and let it resonate SUBTLY with what is happening in the story right now (a mirrored theme, not a lecture). Cite the researcher/era/place when it makes the fact more vivid. 3-8 sentences, warm 'Did you know' tone, in the same language as the narration. NEVER invent or embellish facts.` : ''}${ratingBlock(user)}`;
 
   const userMsg = `WORLD BIBLE
 Story settings: genre=${world.genre}, mood=${world.mood}, pacing=${world.pacing}, directives="${world.directives}"
+${pj(world.current_music, null) ? `Currently playing music: "${pj(world.current_music, {}).title}" (chosen for: ${pj(world.current_music, {}).query} · ${pj(world.current_music, {}).emotion})` : 'No music playing yet.'}
 ${curioThemes ? `Player's curiosity themes (weave these SUBTLY into the world — a character's interest or profession, a book on a table, a passing conversation topic; organic and occasional, never forced, never interrupting the drama): ${curioThemes}` : ''}
 Locations: ${j(locs)}
 Characters: ${j(chars.map(c => ({ id: c.id, name: c.name, base: c.base, current: c.state })))}
@@ -520,9 +546,10 @@ ${pj(world.cast_dismissed, []).length ? `Cast suggestions the player DECLINED (d
 CLOCK: it is now ${fmtClock(world.sim_time)}; advance ${timeDelta} to ${fmtClock(newTime)} (tick #${idx}).
 ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervention.target || 'the whole world'}): "${intervention.text}" — weave this in as cause; characters react in character.` : 'No intervention this tick.'}${directive ? `\n${directive}` : ''}`;
 
-  // 9000: the tick JSON itself is ~3-4k tokens, but reasoning models burn a VARIABLE share
-  // of the budget thinking first — 5000 intermittently truncated the JSON mid-stream.
-  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: userMsg }], { maxTokens: 9000 });
+  // 14000: the tick JSON itself is ~3-4k tokens, but reasoning models (esp. glm-5.2) burn a
+  // VARIABLE — sometimes huge — share of the budget thinking first; 9000 exhausted entirely
+  // on reasoning once the schema grew (music/fact/location tools). Output is cheap; be generous.
+  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: userMsg }], { maxTokens: 14000 });
   const micro = debitCall(user.id, res, 'tick_llm', { worldId: world.id, tickRef: idx });
   logCall({ userId: user.id, worldId: world.id, tickRef: idx, kind: 'llm', surface: 'tick', request: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }], response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const out = res.json;
@@ -674,7 +701,16 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
     db.prepare('INSERT INTO facts(id,world_id,tick_ref,topic,title,body,created_at) VALUES (?,?,?,?,?,?,?)')
       .run(fact.id, world.id, idx, fact.topic, fact.title, fact.body, now());
   }
-  const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion, location_suggestion: locationSuggestion, fact };
+  // Background music: resolve the GM's request against the music server (best available of
+  // the top results); persists per world so a fitting track keeps looping across scenes.
+  let music = null;
+  if (out.music && typeof out.music.query === 'string' && out.music.query.trim()) {
+    try {
+      music = await searchMusic({ query: out.music.query.slice(0, 200), genre: out.music.genre, emotion: String(out.music.emotion || '').slice(0, 80) });
+      if (music) db.prepare('UPDATE worlds SET current_music=? WHERE id=?').run(j(music), world.id);
+    } catch (e) { console.error('[music] search failed:', e.message); }
+  }
+  const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion, location_suggestion: locationSuggestion, fact, music };
   onEvent('tick', tick);
   return tick;
 }

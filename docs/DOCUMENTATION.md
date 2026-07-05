@@ -312,6 +312,21 @@ Stage rail, sprites, Atlas and location pickers, excluded from tick simulation (
 act nor appear in new scenes), and their Cast tile dims to "⏳ joins at scene N". They return
 automatically once the timeline passes their introduction again.
 
+### 2.9e Background music 🎵
+Scenes get a looping instrumental score chosen by the storyteller from the **laion-tunes
+RPG-music search server** (2,580 Gemini-annotated instrumental tracks, BM25 + FAISS situation
+search; runs separately — see `rpg-music/`, `MUSIC_API_URL`, default `http://127.0.0.1:8930`).
+The tick LLM's music tool fills `{query, genre, emotion}` ONLY when a scene's vibe meaningfully
+changes (otherwise the current track keeps looping); the Vivarium server searches top-6, takes
+the best track whose audio is actually available (falls to 2nd/3rd), persists it as
+`worlds.current_music`, and ships it on the tick payload. The client streams exactly ONE track
+at a time (lazy, kind to slow connections), fades in ~1.5 s, loops with a breathing seam (last
+~2 s fade out → restart fade in), crossfades on change, keeps playing across same-vibe scenes,
+and fades out when leaving the world. Audio is proxied same-origin
+(`/api/music/audio/:rowId`) so HTTPS tunnels work. Settings (Account → Voice): music on/off +
+music-vs-voices volume slider (default 35%). Stage bottom controls are now collapsible on ALL
+screen sizes (📖 handle) so the scene art can be admired full-frame.
+
 ### 2.10 Time travel & replay
 Undo/redo arrows + the Timeline (🕰 chip in the top bar on every screen, or the stage button):
 a **graphical filmstrip** — earlier ⟵ left · right ⟶ later — where every scene is a thumbnail

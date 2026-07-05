@@ -954,6 +954,19 @@ export default async function apiRoutes(app) {
   });
 
   // ---------- assets ----------
+  // ---------- background music (proxied same-origin so it works through HTTPS tunnels) ----------
+  // Streams a track from the local RPG-music search server (see server/gm.js MUSIC_API).
+  app.get('/api/music/audio/:rowId', async (req, reply) => {
+    requireUser(req);
+    const rid = String(req.params.rowId).replace(/[^0-9]/g, '');
+    const up = await fetch(`${gm.MUSIC_API}/api/audio/${rid}`, { signal: AbortSignal.timeout(30000) }).catch(() => null);
+    if (!up || !up.ok) throw httpErr(404, 'NO_TRACK', 'That track is not available.');
+    reply.header('Cache-Control', 'private, max-age=31536000, immutable');
+    reply.type(up.headers.get('content-type') || 'audio/mpeg');
+    const { Readable } = await import('node:stream');
+    return reply.send(Readable.fromWeb(up.body));
+  });
+
   app.get('/api/assets/:id', async (req, reply) => {
     const u = requireUser(req);
     const a = getAsset(req.params.id);

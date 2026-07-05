@@ -392,18 +392,17 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 #cine-hud{position:absolute;top:64px;right:14px;z-index:45;display:flex;gap:8px}
 #cine-hud .glasschip{cursor:pointer}
 
-/* ── mobile stage: collapsible bottom panels ──
-   Desktop is untouched (the handle is hidden and no other rule applies above 760px).
-   On phones the controls + storybook can swallow the whole scene, so they collapse
-   behind a 📖 handle (state persisted in localStorage 'viv_panel'; default collapsed). */
-.panel-toggle{display:none}
+/* ── collapsible stage bottom panels (all screen sizes) ──
+   The 📖 handle hides the controls + storybook so the scene art can be admired
+   full-frame, and brings them back on demand (state persisted in localStorage
+   'viv_panel'; phones default to collapsed, desktop to open). */
+.panel-toggle{display:flex;align-items:center;justify-content:center;width:44px;height:32px;
+  border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(34,31,69,.72);
+  color:#efeaff;font-size:15px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35);align-self:center}
+.stage-bottom.collapsed .stage-controls,
+.stage-bottom.collapsed .storybox{display:none}
 @media(max-width:760px){
   .stage-bottom{bottom:76px;gap:6px}
-  .panel-toggle{display:flex;align-items:center;justify-content:center;width:44px;height:32px;
-    border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(34,31,69,.72);
-    color:#efeaff;font-size:15px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)}
-  .stage-bottom.collapsed .stage-controls,
-  .stage-bottom.collapsed .storybox{display:none}
   /* compact the panels when open */
   .stage-controls{padding:7px 9px;gap:5px}
   .stage-controls .tchip{padding:4px 8px;font-size:11px}

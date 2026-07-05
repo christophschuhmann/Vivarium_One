@@ -1,0 +1,4 @@
+data/
+audio/
+venv/
+*.log

@@ -314,6 +314,7 @@ function authScreen() {
 
 /* ───────── home / dashboard ───────── */
 async function homeScreen() {
+  stopMusic();   // the score belongs to a world — leaving it fades the music out
   app.innerHTML = chrome('home') + `<div class="screen"><div class="container" id="home-c"><div class="shimmer" style="height:220px"></div></div></div>`;
   bindChrome();
   try {
@@ -1539,7 +1540,7 @@ async function stageScreen() {
     ${present.map(c => `<div class="rail-face ${c.id === povChar?.id ? 'active' : ''}" data-pov="${c.id}" style="background-image:url(${assetUrl(cutoutFor(c))})" title="See through ${esc(c.name)}'s eyes"><span>${esc(c.name)}</span></div>`).join('')}
     <div class="rail-face places" data-places title="Watch a place instead">🗺</div>
   </div>
-  <div class="stage-bottom${(localStorage.getItem('viv_panel') ?? (innerWidth <= 760 ? 'collapsed' : '')) === 'collapsed' && innerWidth <= 760 ? ' collapsed' : ''}" id="stage-bottom">
+  <div class="stage-bottom${(localStorage.getItem('viv_panel') ?? (innerWidth <= 760 ? 'collapsed' : 'open')) === 'collapsed' ? ' collapsed' : ''}" id="stage-bottom">
     <!-- mobile-only handle: collapses the controls+storybook so sprites own the small screen -->
     <button class="panel-toggle" id="panel-toggle">📖</button>
     <div class="stage-controls">
@@ -1565,6 +1566,8 @@ async function stageScreen() {
     <button class="dock-btn ${k === 'play' ? 'active' : ''}" data-nav="${k}">${ICONS[k]}<span>${dockLabel(k)}</span></button>`).join('')}</nav>`;
   bindChrome();
   initFactBubble();
+  // resume this world's looping score (worlds.current_music) — lazy: only this ONE track loads
+  try { const cm = world.current_music && JSON.parse(world.current_music); if (cm) playMusic(cm); } catch {}
   // Timeline handoff: a ▶ Replay click stashes the target; play it now that the stage exists.
   if (S.replay) { const r = S.replay; S.replay = null; playReplay(r.branchId, r.idx); return; }
   // Mobile panel collapse (the handle is display:none on desktop). Preference persists.
@@ -1645,6 +1648,7 @@ async function stageScreen() {
             if (data.outfit_suggestion) stageState.castSugs.push({ kind: 'outfit', ...data.outfit_suggestion });
             if (data.location_suggestion) stageState.castSugs.push({ kind: 'location', ...data.location_suggestion });
             if (data.fact) { const fb = $('#fact-bubble'); if (fb) { fb.style.display = 'flex'; fb.classList.add('unread'); } }
+            if (data.music) playMusic(data.music);        // vibe changed → crossfade to the new track
             if (cinema) {
               cinema.scenes.push(data);
               if (cinema.scenes.length === 1) playCinema(cinema); // roll film on the first scene — rest streams in behind
@@ -1693,6 +1697,53 @@ function renderNarration(lines, characters) {
     return `<p class="sline${th ? ' thought' : ''}" data-line="${i}">${nm ? `<span class="spk">${esc(nm)}${th ? ' 💭' : ''}</span>` : '<span class="spk" style="color:#8f88bd">✦</span>'}<span class="say" data-text="${esc(n.text)}" data-spk="${esc(nm ? n.speaker : 'narrator')}" data-emo="${esc(n.emotion || '')}" data-mode="${esc(n.mode || '')}">${th ? '<i>' + esc(n.text) + '</i>' : esc(n.text)}</span></p>`;
   }).join('');
 }
+
+/* ── 🎵 BACKGROUND MUSIC ─────────────────────────────────────────────────────
+   One looping track per world, chosen by the GM's music tool when a scene's
+   vibe changes (tick payload .music / worlds.current_music). Streamed lazily —
+   exactly ONE track is ever loaded; a change fades the old one out (1.2s) and
+   the new one in (1.5s). The loop itself breathes: the last ~2s fade out, then
+   the track restarts with a fade-in (no hard seam). Volume rides WELL below
+   the voices (default 35%) — both the on/off switch and the music-vs-voice
+   balance live in Account → Voice. Replays/scene changes at the same vibe
+   just keep the loop running.                                               */
+const music = { audio: null, url: null, meta: null, fade: null };
+function musicPrefs() { const p = ttsPrefs(); return { on: p.musicOn !== false, vol: Math.max(0, Math.min(1, p.musicVol ?? 0.35)) }; }
+function musicFade(a, to, ms, done) {
+  clearInterval(music.fade);
+  const from = a.volume, steps = Math.max(1, Math.round(ms / 50));
+  let k = 0;
+  music.fade = setInterval(() => {
+    k++;
+    a.volume = Math.max(0, Math.min(1, from + (to - from) * (k / steps)));
+    if (k >= steps) { clearInterval(music.fade); done?.(); }
+  }, 50);
+}
+function playMusic(meta) {
+  const { on, vol } = musicPrefs();
+  music.meta = meta || music.meta;
+  if (!on || !music.meta?.url) return;
+  const url = music.meta.url;
+  if (music.url === url && music.audio) return;          // same track — keep looping untouched
+  const begin = () => {
+    const a = new Audio(url);                            // streamed, not decoded — light on slow connections
+    a.preload = 'auto'; a.volume = 0;
+    music.audio = a; music.url = url;
+    a.play().then(() => musicFade(a, musicPrefs().vol, 1500)).catch(() => { /* autoplay gate — retried on next gesture */ });
+    // breathing loop: fade the tail, restart with a fade-in
+    a.ontimeupdate = () => {
+      if (a.duration && a.duration - a.currentTime < 2.2 && !a._tail) { a._tail = true; musicFade(a, 0, 1800); }
+    };
+    a.onended = () => { a._tail = false; a.currentTime = 0; a.volume = 0; a.play().then(() => musicFade(a, musicPrefs().vol, 1500)).catch(() => {}); };
+  };
+  if (music.audio) { const old = music.audio; music.audio = null; musicFade(old, 0, 1200, () => { old.pause(); old.src = ''; begin(); }); }
+  else begin();
+}
+function stopMusic() {
+  music.meta = null; music.url = null;
+  if (music.audio) { const old = music.audio; music.audio = null; musicFade(old, 0, 800, () => { old.pause(); old.src = ''; }); }
+}
+function setMusicVolume(v) { if (music.audio && !music.audio._tail) music.audio.volume = v; }
 
 /* ── WebAudio clip engine ────────────────────────────────────────────────────
    Sequential narration chunks used to play through fresh HTMLAudio elements —
@@ -3050,6 +3101,12 @@ async function accountModal() {
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-prepare" ${ttsPrefs().prepare ? 'checked' : ''}> Prepare the first spoken line in the background (instant playback)</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-auto" ${ttsPrefs().autoplay ? 'checked' : ''}> Read each new moment aloud automatically</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-inner" ${ttsPrefs().innerVoice !== false ? 'checked' : ''}> 🕯 Read inner-voice replies aloud (the character's voice)</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-music" ${ttsPrefs().musicOn !== false ? 'checked' : ''}> 🎵 Background music (scene-matched, chosen by the storyteller)</label>
+        <div style="display:flex;align-items:center;gap:10px;margin:2px 0 0 26px">
+          <span style="font-size:11.5px;color:var(--soft)">music volume vs voices</span>
+          <input type="range" id="tp-musicvol" min="0" max="100" step="5" value="${Math.round((ttsPrefs().musicVol ?? 0.35) * 100)}" style="flex:1;max-width:180px">
+          <b id="tp-musicvol-n" style="font-size:11.5px;width:36px">${Math.round((ttsPrefs().musicVol ?? 0.35) * 100)}%</b>
+        </div>
         <label style="display:flex;flex-direction:column;gap:4px">
           <span style="display:flex;justify-content:space-between;align-items:center">📖 Storyteller (narrator) direction <button class="btn btn-ghost small" id="tp-narr-reset" style="padding:2px 9px;font-size:10.5px">↺ reset to default</button></span>
           <textarea id="tp-narr-style" rows="3" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-family:inherit;resize:vertical">${esc(ttsPrefs().narratorStyle)}</textarea>
@@ -3081,8 +3138,13 @@ async function accountModal() {
   document.body.appendChild(m);
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   $('.x', m).onclick = () => m.remove();
-  const savePrefs = () => saveTtsPrefs({ narrator: $('#tp-narr', m).value, prepare: $('#tp-prepare', m).checked, autoplay: $('#tp-auto', m).checked, innerVoice: $('#tp-inner', m).checked, narratorStyle: $('#tp-narr-style', m).value, characterStyle: $('#tp-char-style', m).value, custom: $('#tp-custom', m).value });
-  ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); });
+  const savePrefs = () => {
+    saveTtsPrefs({ narrator: $('#tp-narr', m).value, prepare: $('#tp-prepare', m).checked, autoplay: $('#tp-auto', m).checked, innerVoice: $('#tp-inner', m).checked, musicOn: $('#tp-music', m).checked, musicVol: (+$('#tp-musicvol', m).value) / 100, narratorStyle: $('#tp-narr-style', m).value, characterStyle: $('#tp-char-style', m).value, custom: $('#tp-custom', m).value });
+    // apply live: volume ramps immediately; toggling off fades the score out, on resumes it
+    if (!$('#tp-music', m).checked) stopMusic(); else setMusicVolume((+$('#tp-musicvol', m).value) / 100);
+  };
+  $('#tp-musicvol', m).oninput = () => { $('#tp-musicvol-n', m).textContent = $('#tp-musicvol', m).value + '%'; setMusicVolume((+$('#tp-musicvol', m).value) / 100); };
+  ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-inner', '#tp-music', '#tp-musicvol', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); if (el) { el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); } });
   $('#tp-narr-reset', m).onclick = () => { $('#tp-narr-style', m).value = DEFAULT_NARRATOR_STYLE; savePrefs(); };
   $('#tp-char-reset', m).onclick = () => { $('#tp-char-style', m).value = DEFAULT_CHARACTER_STYLE; savePrefs(); };
   const saveSkip = () => saveSkipPrefs({ animate: $('#sk-animate', m).checked, detail: $('#sk-detail', m).value });
