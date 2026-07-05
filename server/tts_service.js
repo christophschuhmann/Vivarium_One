@@ -37,6 +37,42 @@ import { referenceFor } from './voice_profiles.js';
 
 const httpErr = (statusCode, code, message) => Object.assign(new Error(message), { statusCode, code });
 
+// ── Engine-tolerant audio reuse ──────────────────────────────────────────────
+// Every generated clip is kept forever (assets are never auto-deleted), but the
+// exact cache key embeds the ENGINE identity (`Leda` vs `laionbox:profile:Leda:de`
+// vs `laionbox:<uploadId>`) and the style template, both of which change when the
+// admin switches TTS providers. That once made replays REGENERATE lines that were
+// already voiced under the other engine (the reported bug).
+//
+// This lookup runs after an exact-key miss: find ANY existing clip of the SAME
+// TEXT spoken by one of this speaker's known identities across engines/languages.
+// The candidate set is built from the speaker's CURRENT voice, so deliberately
+// recasting a character still regenerates (candidates change with the voice),
+// while provider flips and style-template evolution reuse the stored audio.
+export function findReusableAudio({ text, voice, characterId = null }) {
+  const cands = [];
+  let vname = voice;
+  if (characterId) {
+    const c = db.prepare('SELECT voice, voice_ref_asset_id FROM characters WHERE id=?').get(characterId);
+    if (c) {
+      vname = c.voice || voice;
+      if (c.voice_ref_asset_id) cands.push(`laionbox:${c.voice_ref_asset_id}`);
+    }
+  }
+  if (vname) {
+    cands.push(vname);                                                   // gemini key
+    const profTok = referenceFor(vname, 'en').cacheToken.replace(/:[a-z]{2}$/, '');
+    cands.push(`laionbox:${profTok}:%`);                                 // profile key, any language
+  }
+  if (!cands.length) return null;
+  const conds = [], args = [String(text)];
+  for (const cd of cands) {
+    conds.push(cd.endsWith('%') ? `json_extract(meta,'$.voice') LIKE ?` : `json_extract(meta,'$.voice')=?`);
+    args.push(cd);
+  }
+  return db.prepare(`SELECT * FROM assets WHERE kind='audio' AND json_extract(meta,'$.text')=? AND (${conds.join(' OR ')}) ORDER BY created_at DESC LIMIT 1`).get(...args) || null;
+}
+
 // Synthesise (or fetch from cache) one line of speech for `user`.
 // Returns { assetId, cached, genMs, seconds }.
 export async function synthesizeLine(user, { text, voice = 'Sulafat', style = '', characterId = null, lang = 'en', surface = 'tts' }) {
@@ -72,12 +108,17 @@ export async function synthesizeLine(user, { text, voice = 'Sulafat', style = ''
   const cached = findCached('audio', cacheKey);
   if (cached) return { assetId: cached.id, cached: true, genMs: 0, seconds: pj(cached.meta, {}).seconds || null };
 
+  // exact miss → reuse a clip of the same line by the same speaker from another
+  // engine/style era before paying for regeneration (see findReusableAudio)
+  const reusable = findReusableAudio({ text, voice, characterId });
+  if (reusable) return { assetId: reusable.id, cached: true, reused: true, genMs: 0, seconds: pj(reusable.meta, {}).seconds || null };
+
   preflight(user.id, EST.tts());
   const t0 = Date.now();
   const res = await tts(String(text).slice(0, 600), { voice, style, referenceB64 });
   const genMs = Date.now() - t0;
   debitCall(user.id, res, 'tts');
-  const a = saveAsset({ userId: user.id, kind: 'audio', prompt: cacheKey, buffer: res.buffer, mime: 'audio/mpeg', meta: { seconds: res.meter?.seconds, genMs, voice: cacheVoice, style, text } });
+  const a = saveAsset({ userId: user.id, kind: 'audio', prompt: cacheKey, buffer: res.buffer, mime: 'audio/mpeg', meta: { seconds: res.meter?.seconds, genMs, voice: cacheVoice, style, text, speaker: characterId || 'narrator', lang } });
   logCall({ userId: user.id, kind: 'tts', surface, request: { text, voice: cacheVoice, style, provider }, response: { seconds: res.meter?.seconds }, assetId: a.id, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.meter });
   return { assetId: a.id, cached: false, genMs, seconds: res.meter?.seconds ?? null };
 }

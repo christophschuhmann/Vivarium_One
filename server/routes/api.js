@@ -13,7 +13,7 @@ import { getAsset, assetPath, saveAsset, findCached } from '../assets.js';
 import { logCall } from '../telemetry.js';
 import * as branches from '../branches.js';
 import { assembleCues, cueVoiceStyle, ttsCacheKey, cueCacheVoice } from '../export_cues.js';
-import { synthesizeLine } from '../tts_service.js';
+import { synthesizeLine, findReusableAudio } from '../tts_service.js';
 import { PROFILES } from '../voice_profiles.js';
 import { buildWorldManifest, worldAssetFiles, importWorldManifest } from '../world_io.js';
 import { wizardChat, estimatePlan, startWizardBuild, getWizardJob } from '../wizard.js';
@@ -685,6 +685,16 @@ export default async function apiRoutes(app) {
   //      first so the download itself is fast and can't stall behind generation.
   //   3. GET  …/export/story           — builds the zip from whatever audio is cached
   //      NOW (missing lines stay silent and are counted in story.json), deflate -9.
+  // Cache lookup for one cue's audio: exact engine-aware key first, then the
+  // engine-tolerant fallback (same text + same speaker identity under a previous
+  // provider/style era — see tts_service.findReusableAudio). Keeps preflight,
+  // prepare and the ZIP builder agreeing on what counts as "already voiced".
+  const lookupCueAudio = (cue, lang) => {
+    const { voice, style } = cueVoiceStyle(cue);
+    return findCached('audio', ttsCacheKey(cueCacheVoice(cue, lang), style, cue.text))
+      || findReusableAudio({ text: cue.text, voice, characterId: cue.name ? cue.speaker : null });
+  };
+
   app.post('/api/worlds/:id/export/story/preflight', async (req) => {
     const u = requireUser(req);
     const w = ownWorld(u, req.params.id);
@@ -694,9 +704,7 @@ export default async function apiRoutes(app) {
     const lines = cues.filter(c => c.type === 'line' && c.text && c.text.trim());
     let cached = 0, missing = 0;
     for (const cue of lines) {
-      // cueCacheVoice is provider- AND language-aware (profile:<Voice>:<lang> under LAIONBox)
-      const { style } = cueVoiceStyle(cue);
-      if (findCached('audio', ttsCacheKey(cueCacheVoice(cue, lang), style, cue.text))) cached++; else missing++;
+      if (lookupCueAudio(cue, lang)) cached++; else missing++;
     }
     const estMicro = missing * EST.tts();        // conservative per-line ceiling
     return {
@@ -723,7 +731,7 @@ export default async function apiRoutes(app) {
       let done = 0, generated = 0, skipped = 0;
       for (const cue of lines) {
         const { voice, style } = cueVoiceStyle(cue);
-        if (!findCached('audio', ttsCacheKey(cueCacheVoice(cue, lang), style, cue.text))) {
+        if (!lookupCueAudio(cue, lang)) {
           try {
             const r = await synthesizeLine(u, { text: cue.text, voice, style, characterId: cue.name ? cue.speaker : null, lang, surface: 'story_export' });
             if (!r.cached) generated++;
@@ -772,8 +780,7 @@ export default async function apiRoutes(app) {
         // line cue: attach its cached audio (re-encoded to 64 kbps mono for size), else silent
         let audio = null, audioSeconds = null;
         if (cue.text && cue.text.trim()) {
-          const { style } = cueVoiceStyle(cue);
-          const cachedA = findCached('audio', ttsCacheKey(cueCacheVoice(cue, lang), style, cue.text));
+          const cachedA = lookupCueAudio(cue, lang);
           if (cachedA) {
             audio = `media/line_${i}.mp3`;
             audioSeconds = pj(cachedA.meta, {}).seconds || null;

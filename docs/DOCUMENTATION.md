@@ -209,6 +209,15 @@ naturalistic and emotionally clamped, so its templates (`LAIONBOX_NARRATOR_STYLE
 `LAIONBOX_CHARACTER_TEMPLATE`) demand vivid, audible emotion. A player customisation overrides
 both engines; all templates are visible on the admin **Prompts** page.
 
+**Engine-tolerant reuse:** every generated clip is kept forever (assets are never deleted;
+`meta` records voice identity, style, text, speaker and language for analysis). When an exact
+cache key misses — typically after the admin switches TTS engines or a style template evolves —
+`findReusableAudio` returns any stored clip of the same text by the same speaker identity
+(candidates span the character's Gemini voice, its LAIONBox profile in any language, and any
+uploaded reference). Replays, live playback and story exports (preflight/prepare/ZIP) all use
+this, so previously voiced lines never regenerate or re-bill. Deliberately recasting a
+character's voice still regenerates, because the candidate set follows the current voice.
+
 **The style/cache contract (important):** `server/tts_service.js synthesizeLine()` is the only
 path from text to audio. Cache keys are `<engineVoice>|<style>|<text>` — **never truncated**
 (a sliced key once dropped the text entirely for long styles, making every same-style narrator
