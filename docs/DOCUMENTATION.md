@@ -231,9 +231,11 @@ the new language cleanly (Whisper-verified round-trips in DE and EN).
 
 ### 2.10 Time travel & replay
 Undo/redo arrows + the Timeline (🕰 chip in the top bar on every screen, or the stage button):
-a scrollable, branch-aware list of every scene with temporal markers that keep fast-forward
-chapters readable ("⟲ meanwhile" for same-clock scenes, "↳ moments later", "↓ about 5 hours
-later"). Each tick offers two actions — **▶ Replay** runs the cinema renderer over the stored
+a **graphical filmstrip** — earlier ⟵ left · right ⟶ later — where every scene is a thumbnail
+card (location backdrop with the characters standing in it, as they looked at the time), the
+selected card enlarges, and temporal markers between cards keep fast-forward chapters readable
+("⟲ meanwhile", "moments later", "≈5h later"). Branch chips above the strip; a detail bar shows
+the selected scene's summary. Each tick offers two actions — **▶ Replay** runs the cinema renderer over the stored
 history from that point to the branch head (transition cards, backdrops, sprites in their
 outfits-of-the-time, narration with audio; cached lines play free) as PURE playback, never
 touching world state; **⤴ Jump** rewinds the world there (advancing then forks a branch).

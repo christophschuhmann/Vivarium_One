@@ -2112,88 +2112,126 @@ async function voiceRefModal(charId, onDone) {
 }
 
 /* ── time travel: undo/redo history & branches ── */
-async function timelineModal(world) {
+/* ── 🕰 TIMELINE — a graphical, scrollable filmstrip of the whole story ──────
+   Horizontal strip, earlier ⟵ left · right ⟶ later. Every scene is a CARD:
+   the location backdrop as thumbnail, the characters present as little cut-out
+   figures standing in it, tick number + clock, and temporal markers between
+   cards ("⟲ meanwhile", "moments later", "≈5h later") that keep fast-forward
+   chapter scenes readable. Clicking a card ENLARGES it and opens the detail
+   bar (full summary + ▶ Replay / ⤴ Jump). Branches are chips above the strip.
+   Replay = pure playback (playReplay); Jump = rewind & branch (timetravel).  */
+async function timelineModal() {
   const info = await api(`/api/worlds/${S.world}/branches`);
+  const data = await loadWorld();
   const m = document.createElement('div');
   m.className = 'modal-bg';
-  m.innerHTML = `<div class="modal big"><div class="modal-head violet"><div><b>🌿 Timeline</b><small>undo, redo, or jump anywhere — branching off keeps every path alive</small></div><span class="x">✕</span></div>
-  <div class="modal-body" style="display:grid;grid-template-columns:230px 1fr;gap:16px">
-    <div id="tl-branches"></div>
-    <div id="tl-ticks"><div class="empty-hint" style="padding:30px">Pick a timeline on the left.</div></div>
+  m.innerHTML = `<div class="modal tl-modal"><div class="modal-head violet"><div><b>🕰 Timeline</b><small>scroll through every scene — replay it, or branch off from it</small></div><span class="x">✕</span></div>
+  <div class="modal-body" style="padding:14px 0 10px">
+    <div id="tl-branches" class="tl-branchrow"></div>
+    <div id="tl-strip" class="tl-strip"><div class="empty-hint" style="padding:30px;width:100%"><span class="spinner dark"></span></div></div>
+    <div id="tl-detail" class="tl-detail"><span style="color:var(--soft);font-size:12px">Pick a scene above.</span></div>
   </div></div>`;
   document.body.appendChild(m);
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   $('.x', m).onclick = () => m.remove();
 
   let selected = info.activeBranchId;
+  let selTick = null;                 // currently enlarged card (tick idx)
+  let ticksCache = [];
+
   const renderBranches = () => {
     $('#tl-branches', m).innerHTML = info.branches.map(b => `
-      <div class="jump-loc ${b.id === selected ? 'current' : ''}" data-b="${b.id}" style="padding:11px 13px;margin-bottom:9px;cursor:pointer">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <b style="font-size:12.5px">${esc(b.label)}</b>
-          ${b.id === info.activeBranchId ? '<span class="tag g" style="font-size:9px">active</span>' : ''}
-        </div>
-        <div style="font-size:10.5px;color:var(--soft);margin-top:3px">${b.own_tick_count} tick${b.own_tick_count === 1 ? '' : 's'}${b.parent_branch_id ? ` · forked @ tick ${b.fork_tick_idx}` : ' · from the start'}</div>
-        <button class="btn btn-ghost small" data-rename="${b.id}" style="margin-top:6px;padding:2px 8px;font-size:10px">✏️ rename</button>
-      </div>`).join('');
-    $$('#tl-branches [data-b]', m).forEach(el => el.onclick = (e) => { if (e.target.closest('[data-rename]')) return; selected = el.dataset.b; renderBranches(); renderTicks(); });
-    $$('#tl-branches [data-rename]', m).forEach(el => el.onclick = async (e) => {
-      e.stopPropagation();
-      const b = info.branches.find(x => x.id === el.dataset.rename);
+      <button class="tl-bchip ${b.id === selected ? 'sel' : ''}" data-b="${b.id}" title="${b.own_tick_count} ticks${b.parent_branch_id ? ` · forked @ ${b.fork_tick_idx}` : ''}">
+        ${b.id === info.activeBranchId ? '🌿 ' : ''}${esc(b.label)}
+      </button>`).join('') +
+      `<button class="tl-bchip ghost" id="tl-rename" title="Rename the selected timeline">✏️</button>`;
+    $$('#tl-branches [data-b]', m).forEach(el => el.onclick = () => { selected = el.dataset.b; selTick = null; renderBranches(); renderTicks(); });
+    $('#tl-rename', m).onclick = async () => {
+      const b = info.branches.find(x => x.id === selected);
       const label = prompt('Name this timeline:', b.label); if (!label) return;
       await api(`/api/worlds/${S.world}/branches/${b.id}`, { method: 'PATCH', body: { label } }).catch(fail);
       b.label = label; renderBranches();
-    });
-  };
-  const renderTicks = async () => {
-    const b = info.branches.find(x => x.id === selected);
-    $('#tl-ticks', m).innerHTML = '<div class="empty-hint" style="padding:30px"><span class="spinner dark"></span></div>';
-    const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${selected}&toIdx=${b.head_idx}`);
-    const data = await loadWorld();
-    const locName = (id) => data.locations.find(l => l.id === id)?.name || '';
-    const rows = [{ idx: 0, sim_time: null, summary: 'The beginning — genesis', time_delta: '' }, ...ticks];
-    // Temporal markers keep fast-forward scenes readable: chapter scenes share (or barely
-    // advance) the sim clock — consecutive ticks with the same clock render as "⟲ meanwhile",
-    // small offsets as "moments later", real jumps with their full delta.
-    const marker = (t, prev) => {
-      if (!prev || !t.sim_time) return '';
-      if (prev.sim_time && t.sim_time === prev.sim_time) return '⟲ meanwhile';
-      const mn = /^\+(\d+)m$/.exec(t.time_delta || '');
-      if (mn && +mn[1] <= 2) return '↳ moments later';
-      if (mn && +mn[1] >= 120) {   // chapter offsets come in raw minutes — humanise big ones
-        const h = Math.round(+mn[1] / 60);
-        return `↓ about ${h} hour${h === 1 ? '' : 's'} later`;
-      }
-      return '↓ ' + cineDelta(t.time_delta);
     };
-    $('#tl-ticks', m).innerHTML = `<div style="max-height:60vh;overflow-y:auto">${rows.map((t, i) => `
-      ${i > 0 ? `<div style="font-size:9.5px;color:var(--soft);padding:1px 0 3px 46px;letter-spacing:.05em">${esc(marker(t, rows[i - 1]))}</div>` : ''}
-      <div class="place-row" style="align-items:flex-start;${t.idx === info.tickIndex && selected === info.activeBranchId ? 'border-color:var(--gold);background:#fffaf0' : ''}">
-        <div style="flex:none;width:40px;text-align:center"><b style="font-size:11px;color:var(--violet)">#${t.idx}</b></div>
-        <div style="flex:1">
-          <div style="font-size:12px">${esc(t.summary || '—')}</div>
-          <div style="font-size:10px;color:var(--soft);margin-top:2px">${t.sim_time ? fmtClock(t.sim_time) : ''}${t.pov_location_id ? ' · ' + esc(locName(t.pov_location_id)) : ''}</div>
-        </div>
-        <div style="display:flex;gap:5px;flex:none">
-          ${t.idx > 0 ? `<button class="btn btn-ghost small" data-replay="${t.idx}" title="Watch again from here — does not change the story" style="padding:4px 9px">▶ Replay</button>` : ''}
-          ${t.idx === info.tickIndex && selected === info.activeBranchId
-            ? '<span class="tag g">here</span>'
-            : `<button class="btn btn-soft small" data-jump="${t.idx}" title="Rewind the world to here — advancing then forks a new branch" style="padding:4px 12px">⤴ Jump</button>`}
-        </div>
-      </div>`).join('')}</div>`;
-    // ▶ Replay: pure playback of history (cinema renderer over stored ticks) — no state change
-    $$('#tl-ticks [data-replay]', m).forEach(el => el.onclick = () => {
+  };
+
+  const locOf = (id) => data.locations.find(l => l.id === id);
+  // marker between two consecutive scenes — same clock = simultaneous chapter scenes
+  const marker = (t, prev) => {
+    if (!prev || !t.sim_time) return '';
+    if (prev.sim_time && t.sim_time === prev.sim_time) return '⟲ meanwhile';
+    const mn = /^\+(\d+)m$/.exec(t.time_delta || '');
+    if (mn && +mn[1] <= 2) return 'moments later';
+    if (mn && +mn[1] >= 120) return `≈${Math.round(+mn[1] / 60)}h later`;
+    return cineDelta(t.time_delta).replace(' later', '') + ' later';
+  };
+
+  const renderDetail = () => {
+    const t = ticksCache.find(x => x.idx === selTick);
+    if (!t) { $('#tl-detail', m).innerHTML = '<span style="color:var(--soft);font-size:12px">Pick a scene above.</span>'; return; }
+    const here = t.idx === info.tickIndex && selected === info.activeBranchId;
+    $('#tl-detail', m).innerHTML = `
+      <div style="flex:1;min-width:0">
+        <b style="font-size:12.5px">#${t.idx} · ${esc(locOf(t.pov_location_id)?.name || '')}</b>
+        <span style="font-size:10.5px;color:var(--soft);margin-left:6px">${t.sim_time ? fmtClock(t.sim_time) : ''}</span>
+        <div style="font-size:12px;color:#3c3763;margin-top:3px">${esc(t.summary || '—')}</div>
+      </div>
+      <div style="display:flex;gap:7px;flex:none;align-items:center">
+        ${t.idx > 0 ? `<button class="btn btn-primary small" id="tl-replay" title="Watch again from here — does not change the story">▶ Replay</button>` : ''}
+        ${here ? '<span class="tag g">you are here</span>' : `<button class="btn btn-soft small" id="tl-jump" title="Rewind the world to here — advancing then forks a new branch">⤴ Jump</button>`}
+      </div>`;
+    const rp = $('#tl-replay', m);
+    if (rp) rp.onclick = () => {
       m.remove();
-      S.replay = { branchId: selected, idx: +el.dataset.replay };
+      S.replay = { branchId: selected, idx: t.idx };
       if (location.hash.includes('stage')) stageScreen(); else nav(`#/stage?w=${S.world}`);
-    });
-    $$('#tl-ticks [data-jump]', m).forEach(el => el.onclick = async () => {
+    };
+    const jp = $('#tl-jump', m);
+    if (jp) jp.onclick = async () => {
       try {
         stopNarration();
-        await api(`/api/worlds/${S.world}/timetravel`, { method: 'POST', body: { branchId: selected, tickIdx: +el.dataset.jump } });
-        toast('🌿 Jumped to that moment'); m.remove(); S.worldData = null; stageScreen();
+        await api(`/api/worlds/${S.world}/timetravel`, { method: 'POST', body: { branchId: selected, tickIdx: t.idx } });
+        toast('🌿 Jumped to that moment'); m.remove(); S.worldData = null;
+        if (location.hash.includes('stage')) stageScreen(); else nav(`#/stage?w=${S.world}`);
       } catch (e) { fail(e); }
+    };
+  };
+
+  const renderTicks = async () => {
+    const b = info.branches.find(x => x.id === selected);
+    $('#tl-strip', m).innerHTML = '<div class="empty-hint" style="padding:30px;width:100%"><span class="spinner dark"></span></div>';
+    const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${selected}&toIdx=${b.head_idx}`);
+    ticksCache = [{ idx: 0, sim_time: null, summary: 'The beginning — genesis', time_delta: '', states: [], pov_location_id: data.locations[0]?.id }, ...ticks];
+    if (selTick == null) selTick = (selected === info.activeBranchId) ? info.tickIndex : (ticks[ticks.length - 1]?.idx ?? 0);
+    $('#tl-strip', m).innerHTML = ticksCache.map((t, i) => {
+      const loc = locOf(t.pov_location_id);
+      // little cut-out figures of everyone present at the scene location, as they looked then
+      const present = (t.states || []).filter(s => s.location_id === t.pov_location_id).slice(0, 4);
+      const figs = present.map((s, k) => {
+        const o = (s.outfits || []).find(x => x.name === s.outfit) || (s.outfits || [])[0];
+        return o ? `<img class="tl-fig" style="left:${18 + k * 22}%" src="${assetUrl(o.cutout_asset_id)}">` : '';
+      }).join('');
+      const here = t.idx === info.tickIndex && selected === info.activeBranchId;
+      return `${i > 0 ? `<div class="tl-gap"><span>${esc(marker(t, ticksCache[i - 1]))}</span></div>` : ''}
+      <div class="tl-card ${t.idx === selTick ? 'sel' : ''} ${here ? 'here' : ''}" data-t="${t.idx}" title="${esc(t.summary || '')}">
+        <div class="tl-thumb" style="${loc?.background_asset_id ? `background-image:url(${assetUrl(loc.background_asset_id)})` : ''}">${figs}
+          ${here ? '<span class="tl-herechip">now</span>' : ''}
+        </div>
+        <div class="tl-cap"><b>#${t.idx}</b><span>${t.sim_time ? fmtClock(t.sim_time).replace(/^\w+ /, '') : 'genesis'}</span></div>
+      </div>`;
+    }).join('');
+    $$('#tl-strip .tl-card', m).forEach(el => el.onclick = () => {
+      selTick = +el.dataset.t;
+      $$('#tl-strip .tl-card', m).forEach(x => x.classList.toggle('sel', +x.dataset.t === selTick));
+      renderDetail();
+      el.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
     });
+    // vertical wheel scrolls the strip horizontally (feels like scrubbing)
+    const strip = $('#tl-strip', m);
+    strip.onwheel = (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { strip.scrollLeft += e.deltaY; e.preventDefault(); } };
+    renderDetail();
+    // open centred on the selected scene
+    const selEl = strip.querySelector('.tl-card.sel');
+    if (selEl) setTimeout(() => selEl.scrollIntoView({ inline: 'center', block: 'nearest' }), 30);
   };
   renderBranches(); renderTicks();
 }

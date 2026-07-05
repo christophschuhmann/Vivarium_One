@@ -39,10 +39,10 @@ require('fs').mkdirSync(SHOT, { recursive: true });
 
   // timeline modal
   await page.click('#timelinebtn');
-  await page.waitForSelector('#tl-branches .jump-loc');
+  await page.waitForSelector('#tl-branches .tl-bchip');
   await page.waitForTimeout(500);
   await shot('41_timeline_modal');
-  const branchCount = await page.locator('#tl-branches .jump-loc').count();
+  const branchCount = await page.locator('#tl-branches .tl-bchip:not(.ghost)').count();
   ok(`Timeline modal: ${branchCount} branch(es) listed`);
   await page.click('.modal-head .x');
 

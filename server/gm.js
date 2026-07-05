@@ -57,7 +57,9 @@ export const GM_CORE_DEFAULT = `NARRATIVE CRAFT (always):
 • Characters are SELF-AWARE and reflective — they notice what they are doing, weigh what it means for the people around them and their world, and sometimes question themselves mid-action.
 • Write every character MULTI-LAYERED: several concurrent thoughts and desires, private doubts, plausible internal conflicts, contradictions they only half-understand. Never one-dimensional, never predictable — yet always sensible, intelligent and emotionally believable.
 • Every time step must MOVE THE STORY: pursue an open plot thread, make tangible progress toward someone's goal, deepen or strain a relationship, or introduce a fresh complication. Avoid emotionally flat small talk — each scene needs at least one of: real conflict (internal or external), meaningful progress, or a new twist that is surprising yet plausible.
-• Aim for scenes that are emotionally interesting, a little unpredictable, creative — the way a great TV episode never wastes a scene.`;
+• Aim for scenes that are emotionally interesting, a little unpredictable, creative — the way a great TV episode never wastes a scene.
+- The story should be very emotional and emotionally intelligent at the same time, never just black and white, always complicated shades of grey. Sweet things are sweeter than in reality, dark things are darker than in reality, scary things are scarier than in reality, and hopeful things are even more hopeful and promising than in reality.Adult contents are welcomed, but not necessary. If they occur, they occur, and then it's fine to narrate them in details. They might become organically an important part of the story, but they don't have to. The overall age rating of the storiy is for adults.
+- Do NOT HESITATE to INTRODUCE new charcaters, new locations and new outfits, whenever this would SUPPORT the STORY and the PLAYERS PREFERENCES and his VIVID IMMERSION.`;
 // Default per-world direction — seeded into new worlds' `directives` (player-editable in
 // the 🎬 Direction modal on the World screen; it rides in every tick's world bible).
 export const DEFAULT_WORLD_DIRECTIVES = `WORLD DIRECTION:

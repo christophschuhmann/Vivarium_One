@@ -424,3 +424,54 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .gmc-card{background:#fff;border:1.5px solid #bfeff1;border-radius:14px;padding:10px 12px;max-width:95%}
 .gmc-act{font-size:12px;color:#3c3763;padding:3px 0;border-bottom:1px dashed var(--line)}
 #gmchat .chat-inputrow{border-top:1px solid var(--line);padding:10px}
+
+/* ── 🕰 graphical timeline (filmstrip) ── */
+.tl-modal{width:min(1060px,96vw)}
+.tl-branchrow{display:flex;gap:7px;flex-wrap:wrap;padding:0 18px 12px}
+.tl-bchip{border:1.5px solid #d9d2f5;background:#fff;border-radius:999px;padding:5px 14px;font-size:12px;
+  font-weight:500;color:#3c3763;cursor:pointer;font-family:inherit}
+.tl-bchip.sel{border-color:var(--violet);background:var(--tint);color:#4b32c4;font-weight:600}
+.tl-bchip.ghost{border-style:dashed;color:var(--soft)}
+.tl-strip{display:flex;align-items:flex-end;gap:0;overflow-x:auto;overflow-y:hidden;padding:16px 18px 10px;
+  scroll-behavior:smooth;background:linear-gradient(180deg,transparent 0,transparent calc(100% - 34px),#e9e4fa calc(100% - 33px),#e9e4fa calc(100% - 32px),transparent calc(100% - 31px));}
+.tl-card{flex:none;width:132px;cursor:pointer;transition:transform .18s ease,width .18s ease;transform-origin:bottom center}
+.tl-card .tl-thumb{position:relative;height:80px;border-radius:12px;background:#efecfb center/cover;overflow:hidden;
+  border:2px solid #e2dcf6;box-shadow:0 5px 14px rgba(34,31,69,.12);transition:inherit}
+.tl-card.sel{width:190px;transform:translateY(-8px)}
+.tl-card.sel .tl-thumb{height:118px;border-color:var(--violet);box-shadow:0 14px 32px rgba(109,74,255,.3)}
+.tl-card.here .tl-thumb{border-color:var(--gold)}
+.tl-fig{position:absolute;bottom:-4px;height:78%;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+.tl-herechip{position:absolute;top:5px;right:6px;background:var(--gold);color:#fff;font-size:8.5px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;border-radius:99px;padding:2px 7px}
+.tl-cap{display:flex;justify-content:space-between;align-items:center;padding:5px 4px 0;font-size:10px;color:var(--soft)}
+.tl-cap b{color:var(--violet);font-size:10.5px}
+.tl-gap{flex:none;width:58px;display:flex;align-items:center;justify-content:center;align-self:center;margin-bottom:26px}
+.tl-gap span{font-size:8.8px;color:#9a92c7;text-align:center;line-height:1.25;letter-spacing:.03em;white-space:normal}
+.tl-detail{display:flex;gap:12px;align-items:center;margin:12px 18px 0;padding:11px 14px;background:#fff;
+  border:1.5px solid #e7e2f7;border-radius:14px;min-height:56px}
+@media(max-width:760px){
+  .tl-modal{width:100vw;max-height:96vh}
+  .tl-card{width:104px}
+  .tl-card.sel{width:150px}
+  .tl-card .tl-thumb{height:64px}
+  .tl-card.sel .tl-thumb{height:94px}
+  .tl-gap{width:44px}
+  .tl-detail{flex-direction:column;align-items:flex-start;gap:8px}
+}
+
+/* ── mobile: compact the fixed topbar (six chips must fit 390px without
+   overlapping page content) + breathing room for screen headers ── */
+@media(max-width:760px){
+  #topbar{top:8px;padding:0 8px;gap:6px}
+  #topbar>div{gap:5px !important}
+  .glasschip{padding:6px 9px;font-size:11px;gap:5px;border-radius:12px}
+  .glasschip .chip-title span{display:none}       /* subtitle: too wide for phones */
+  .glasschip .chip-title b{font-size:11px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .glasschip .logo-dot{width:16px;height:16px}
+  .glasschip .coin{width:12px;height:12px}
+  #lang-chip{font-size:10px;padding:6px 7px}
+  #tl-chip{padding:6px 8px}
+  .screen{padding:64px 14px 104px}                /* clear the compact topbar */
+  .title{font-size:26px}
+  .floating-toolbar{top:56px;flex-wrap:wrap}      /* atlas tools below the chips */
+}
