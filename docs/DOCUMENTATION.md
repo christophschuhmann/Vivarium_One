@@ -143,7 +143,10 @@ moves them only when plausible. A turn may return state patches + mood/thought u
 immediately (the stats panel refreshes with a golden pulse). The current moment's dialogue is
 fed into the **next tick's context** as private self-talk (never spoken aloud, never in
 narration — replays show nothing); 🗑 clear deletes it so nothing reaches the story. Replies
-play in the character's own voice (thought delivery); the input has the usual 🎤 ASR mic.
+play in the character's own voice (thought delivery) — **read aloud automatically by default**
+(Account → Voice → "Read inner-voice replies aloud" to disable), chunked sentence-by-sentence
+(≥8-word chunks, 500 ms staggered generation, seamless WebAudio playback, 🔊 toggles ⏹); the
+input has the usual 🎤 ASR mic.
 Server: `gm.innerVoiceChat` + `innerVoiceBlock`; routes GET/POST/DELETE
 `/api/characters/:id/inner-voice`; storage `chat_logs` surface `inner:<charId>`.
 

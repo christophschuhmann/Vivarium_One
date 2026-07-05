@@ -518,3 +518,11 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .iv-speak:hover{opacity:1}
 .mind-cols{display:grid;grid-template-columns:1fr 340px;gap:16px}
 @media(max-width:800px){.mind-cols{grid-template-columns:1fr}}
+
+/* inner-voice input row: mic + recording controls must fit INSIDE the panel */
+.mind-cols{grid-template-columns:1fr 400px}
+.iv-panel .field{display:flex;align-items:center;gap:5px;padding:5px 7px 5px 12px}
+.iv-panel .field input{flex:1 1 40px;min-width:40px}
+.iv-panel .field .micbtn{width:30px;height:30px;flex:none}
+.iv-panel .field .cancelrec{flex:none;width:26px;height:26px}
+.iv-panel .field .btn{flex:none;padding:6px 12px}

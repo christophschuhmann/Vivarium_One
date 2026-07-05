@@ -104,7 +104,7 @@ const OLD_NARRATOR_DEFAULTS = [
 const ttsPrefs = () => {
   const stored = JSON.parse(localStorage.getItem('viv_tts') || '{}');
   if (OLD_NARRATOR_DEFAULTS.includes(stored.narratorStyle)) delete stored.narratorStyle;
-  return { narrator: 'Iapetus', prepare: true, autoplay: true, narratorStyle: DEFAULT_NARRATOR_STYLE, characterStyle: DEFAULT_CHARACTER_STYLE, custom: '', ...stored };
+  return { narrator: 'Iapetus', prepare: true, autoplay: true, innerVoice: true, narratorStyle: DEFAULT_NARRATOR_STYLE, characterStyle: DEFAULT_CHARACTER_STYLE, custom: '', ...stored };
 };
 // Time-skip settings (Account → Time skips). animate: large skips play as a scene-by-scene
 // FILM (the server plans the events; see server/gm.js runChapter) — off = classic single
@@ -651,6 +651,33 @@ function innerVoiceHtml(c) {
     <div class="chat-inputrow" style="padding:8px 0 0"><div class="field" id="iv-field" style="background:#fff;margin:0"><input id="iv-in" placeholder="whisper to ${esc(c.name)}…"><button class="btn btn-primary small" id="iv-send">Send</button></div></div>
     <p style="font-size:10px;color:var(--soft);margin:6px 0 0">an inner dialogue — they\'re used to voices like yours. It may colour their next scene; clearing it removes every trace.</p>`;
 }
+// Chunked read-aloud for inner-voice replies: sentence chunks (≥8 words, short ones merge —
+// factChunks), first chunk requested immediately, the rest staggered 500 ms apart, played
+// seamlessly through the WebAudio engine. One reply speaks at a time; the 🔊 toggles ⏹.
+let ivSpeakRun = null;
+async function speakTextChunks(text, ch, btnEl, emotion = '', mode = 'thought') {
+  if (ivSpeakRun) { const r = ivSpeakRun; ivSpeakRun = null; r.stop(); }
+  const run = { cancelled: false, handle: null };
+  run.stop = () => { run.cancelled = true; run.handle?.stop(); btnEl?.classList.remove('playing'); if (btnEl) btnEl.textContent = '🔊'; };
+  ivSpeakRun = run;
+  if (btnEl) { btnEl.classList.add('playing'); btnEl.textContent = '⏹'; }
+  const chunks = factChunks(text);
+  const proms = chunks.map((t, k) => new Promise(res => setTimeout(() => res(fetchTts(t, ch, emotion, mode).catch(() => null)), k * 500)));
+  try {
+    for (let k = 0; k < chunks.length && !run.cancelled; k++) {
+      const r = await proms[k];
+      if (!r || run.cancelled) continue;
+      if (proms[k + 1]) proms[k + 1].then(n => n && loadClip(n.assetId)).catch(() => {});   // pre-decode next
+      const buf = await loadClip(r.assetId).catch(() => null);
+      if (buf && !run.cancelled) await new Promise(res => { run.handle = playClip(buf, res); });
+    }
+  } finally {
+    if (btnEl) { btnEl.classList.remove('playing'); btnEl.textContent = '🔊'; }
+    if (ivSpeakRun === run) ivSpeakRun = null;
+    refreshMe();
+  }
+}
+
 function bindInnerVoice(root, c, { onStateChange } = {}) {
   const log = $('#iv-log', root);
   if (!log) return;
@@ -660,8 +687,11 @@ function bindInnerVoice(root, c, { onStateChange } = {}) {
     d.className = 'msg ' + cls;
     if (cls === 'assistant') {
       d.innerHTML = `<span class="serif" style="font-style:italic">${esc(text)}</span> <button class="iv-speak" title="hear it in ${esc(c.name)}\'s voice">🔊</button>`;
-      // the reply reads aloud in THIS character\'s voice, delivered as a private thought
-      $('.iv-speak', d).onclick = (e) => speak(text, c, e.target, c.state.mood || '', 'thought');
+      // the reply reads aloud in THIS character's voice, chunk by chunk (click again = stop)
+      $('.iv-speak', d).onclick = (e) => {
+        if (e.target.classList.contains('playing')) { ivSpeakRun?.stop(); ivSpeakRun = null; return; }
+        speakTextChunks(text, c, e.target, c.state.mood || '', 'thought');
+      };
     } else d.textContent = text;
     log.appendChild(d); scroll(); return d;
   };
@@ -682,8 +712,10 @@ function bindInnerVoice(root, c, { onStateChange } = {}) {
     try {
       const r = await api(`/api/characters/${c.id}/inner-voice`, { method: 'POST', body: { message: text, lang: getLang() } });
       status.remove();
-      addMsg('assistant', r.reply);
+      const bubble = addMsg('assistant', r.reply);
       if (r.changed) { c.state = r.state; S.worldData = null; onStateChange?.(r.state); }
+      // by default the character speaks their reply (Account → Voice to turn off)
+      if (ttsPrefs().innerVoice !== false) speakTextChunks(r.reply, c, $('.iv-speak', bubble), c.state.mood || '', 'thought');
       refreshMe();
     } catch (e) { status.remove(); addMsg('assistant', '…the thought slips away. (' + e.message + ')'); }
     busy = false;
@@ -2725,7 +2757,7 @@ async function mindModal(charId) {
   const st = c.state, per = st.perceptions || {};
   const m = document.createElement('div');
   m.className = 'modal-bg';
-  m.innerHTML = `<div class="modal" style="width:980px"><div class="modal-head violet"><div><b>🧠 Inside ${esc(c.name)}'s mind</b><small>right now · <span id="mm-mood">${esc(st.mood || '')}</span> · at ${esc(locations.find(l => l.id === st.location_id)?.name || '?')}</small></div><span class="x">✕</span></div>
+  m.innerHTML = `<div class="modal" style="width:min(1120px,97vw)"><div class="modal-head violet"><div><b>🧠 Inside ${esc(c.name)}'s mind</b><small>right now · <span id="mm-mood">${esc(st.mood || '')}</span> · at ${esc(locations.find(l => l.id === st.location_id)?.name || '?')}</small></div><span class="x">✕</span></div>
   <div class="modal-body mind-cols">
   <div>
     <div class="mind-head">
@@ -3010,6 +3042,7 @@ async function accountModal() {
           </select></label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-prepare" ${ttsPrefs().prepare ? 'checked' : ''}> Prepare the first spoken line in the background (instant playback)</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-auto" ${ttsPrefs().autoplay ? 'checked' : ''}> Read each new moment aloud automatically</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-inner" ${ttsPrefs().innerVoice !== false ? 'checked' : ''}> 🕯 Read inner-voice replies aloud (the character's voice)</label>
         <label style="display:flex;flex-direction:column;gap:4px">
           <span style="display:flex;justify-content:space-between;align-items:center">📖 Storyteller (narrator) direction <button class="btn btn-ghost small" id="tp-narr-reset" style="padding:2px 9px;font-size:10.5px">↺ reset to default</button></span>
           <textarea id="tp-narr-style" rows="3" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-family:inherit;resize:vertical">${esc(ttsPrefs().narratorStyle)}</textarea>
@@ -3041,7 +3074,7 @@ async function accountModal() {
   document.body.appendChild(m);
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   $('.x', m).onclick = () => m.remove();
-  const savePrefs = () => saveTtsPrefs({ narrator: $('#tp-narr', m).value, prepare: $('#tp-prepare', m).checked, autoplay: $('#tp-auto', m).checked, narratorStyle: $('#tp-narr-style', m).value, characterStyle: $('#tp-char-style', m).value, custom: $('#tp-custom', m).value });
+  const savePrefs = () => saveTtsPrefs({ narrator: $('#tp-narr', m).value, prepare: $('#tp-prepare', m).checked, autoplay: $('#tp-auto', m).checked, innerVoice: $('#tp-inner', m).checked, narratorStyle: $('#tp-narr-style', m).value, characterStyle: $('#tp-char-style', m).value, custom: $('#tp-custom', m).value });
   ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); });
   $('#tp-narr-reset', m).onclick = () => { $('#tp-narr-style', m).value = DEFAULT_NARRATOR_STYLE; savePrefs(); };
   $('#tp-char-reset', m).onclick = () => { $('#tp-char-style', m).value = DEFAULT_CHARACTER_STYLE; savePrefs(); };
