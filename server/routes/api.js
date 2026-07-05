@@ -43,6 +43,7 @@ function ownWorld(user, id) {
 }
 const charOut = (c) => ({
   id: c.id, name: c.name, voice: c.voice, base: pj(c.base_profile, {}), state: pj(c.materialised, {}),
+  intro_tick_idx: c.intro_tick_idx || 0,   // when they joined — the client hides them below this
   reference_asset_id: c.reference_asset_id,
   // LAIONBox cloned-voice state (null under Gemini): the assigned reference clip + the
   // DramaBox description it was generated from (players can view/edit it in the voice popup)
@@ -218,8 +219,9 @@ export default async function apiRoutes(app) {
       thought: null, dialogue: null, outfit: 'everyday',
       outfits: req.body?.cutoutId ? [{ name: 'everyday', cutout_asset_id: req.body.cutoutId, portrait_asset_id: req.body?.portraitId || null }] : [],
     };
-    db.prepare(`INSERT INTO characters(id,world_id,name,base_profile,materialised,reference_asset_id,voice,created_at) VALUES (?,?,?,?,?,?,?,?)`)
-      .run(id, w.id, d.name, j(d), j(state), req.body?.portraitId || null, d.voice && d.voice.split(' ')[0] || 'Sulafat', now());
+    // intro_tick_idx: they JOIN THE STORY now — rewinding below this hides them (consistency)
+    db.prepare(`INSERT INTO characters(id,world_id,name,base_profile,materialised,reference_asset_id,voice,intro_tick_idx,created_at) VALUES (?,?,?,?,?,?,?,?,?)`)
+      .run(id, w.id, d.name, j(d), j(state), req.body?.portraitId || null, d.voice && d.voice.split(' ')[0] || 'Sulafat', w.tick_index, now());
     db.prepare(`INSERT INTO state_patches(id,world_id,entity_ref,entity_id,idx,tick_ref,author,category,op,path,value,reason,created_at)
                 VALUES (?,?,?,?,1,0,'player','physical','set','/created',?,?,?)`)
       .run(uid('sp_'), w.id, 'character', id, j('time-zero base'), 'character created in the Forge', now());

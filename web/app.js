@@ -567,11 +567,13 @@ async function castScreen() {
     </div>
     <div class="cast-grid" style="margin-top:22px">
       ${characters.map(c => `
-        <div class="cast-tile" data-id="${c.id}">
+        <div class="cast-tile" data-id="${c.id}" ${(c.intro_tick_idx || 0) > world.tick_index ? 'style="opacity:.55"' : ''}>
           <div class="ring"><div style="background-image:url(${assetUrl(cutoutFor(c))})"></div></div>
           <b>${esc(c.name)}</b>
           <div class="mood">${esc(c.state.mood || '—')}</div>
-          <span class="tag t">${esc(locName(c.state.location_id))}</span>
+          ${(c.intro_tick_idx || 0) > world.tick_index
+            ? `<span class="tag g" title="You rewound to before they joined — they return when the story reaches scene ${c.intro_tick_idx}">⏳ joins at scene ${c.intro_tick_idx}</span>`
+            : `<span class="tag t">${esc(locName(c.state.location_id))}</span>`}
         </div>`).join('')}
       <div class="cast-tile" id="addtile"><div class="ring" style="background:#ded7f5"><div style="display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--violet)">+</div></div><b style="color:var(--soft)">Add someone</b></div>
     </div>
@@ -1196,7 +1198,7 @@ async function atlasScreen() {
     return { name, x: Math.min(...xs) - 26, y: Math.min(...ys) - 40, w: Math.max(...xs) - Math.min(...xs) + NW + 52, h: Math.max(...ys) - Math.min(...ys) + NH + 66 };
   });
   const center = (l) => ({ x: l.x + NW / 2, y: l.y + NH / 2 });
-  const who = (lid) => characters.filter(c => c.state.location_id === lid);
+  const who = (lid) => characters.filter(c => c.state.location_id === lid && (c.intro_tick_idx || 0) <= world.tick_index);
   vp.innerHTML =
     groupRects.map(g => `<g class="lgroup" data-g="${esc(g.name)}"><rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="18"/><text x="${g.x + 14}" y="${g.y + 22}">${esc(g.name)}</text></g>`).join('') +
     paths.map(p => { const a = locations.find(l => l.id === p.from_id), b = locations.find(l => l.id === p.to_id); if (!a || !b) return ''; const ca = center(a), cb = center(b); return `<path class="lpath" d="M${ca.x},${ca.y} L${cb.x},${cb.y}"/>`; }).join('') +
@@ -1391,7 +1393,8 @@ async function stageScreen() {
   const povChar = stageState.pov.type === 'character' ? characters.find(c => c.id === stageState.pov.id) : null;
   const locId = stageState.pov.type === 'location' ? stageState.pov.id : povChar?.state.location_id;
   const loc = locations.find(l => l.id === locId) || locations[0];
-  const present = characters.filter(c => c.state.location_id === loc?.id);
+  // not-yet-introduced characters (rewound below their intro tick) don't exist in this era
+  const present = characters.filter(c => c.state.location_id === loc?.id && (c.intro_tick_idx || 0) <= world.tick_index);
   const scene = buildScene(lastTick, loc, present, povChar);
 
   app.innerHTML = `
@@ -2560,7 +2563,8 @@ async function timelineModal() {
 function locationPickerModal(locations, characters, currentId, onPick, opts = {}) {
   const groups = {};
   locations.forEach(l => (groups[l.place_group || 'Elsewhere'] = groups[l.place_group || 'Elsewhere'] || []).push(l));
-  const who = (lid) => characters.filter(c => c.state.location_id === lid);
+  const nowTick = S.worldData?.world?.tick_index ?? Infinity;   // hide not-yet-introduced characters
+  const who = (lid) => characters.filter(c => c.state.location_id === lid && (c.intro_tick_idx || 0) <= nowTick);
   const m = document.createElement('div');
   m.className = 'modal-bg';
   m.innerHTML = `<div class="modal big"><div class="modal-head violet"><div><b>${esc(opts.title || '🗺 Jump to a place')}</b><small>${esc(opts.sub || 'watch any location — thumbnails from your Atlas')}</small></div><span class="x">✕</span></div>

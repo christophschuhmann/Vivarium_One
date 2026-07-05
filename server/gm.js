@@ -414,7 +414,10 @@ The skip: ${timeDelta} starting ${fmtClock(world.sim_time)}.`;
 async function runTickInner(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en', directive = null }, onEvent = () => {}) {
   preflight(user.id, EST.tick());
   ensureRootBranch(world);
-  const chars = db.prepare('SELECT * FROM characters WHERE world_id=?').all(world.id)
+  // Characters who join the story LATER (intro_tick_idx > current position) don't exist yet
+  // from this point of view — after a rewind they must neither act nor appear in scenes.
+  // They return automatically once the timeline passes their introduction again.
+  const chars = db.prepare('SELECT * FROM characters WHERE world_id=? AND COALESCE(intro_tick_idx,0) <= ?').all(world.id, world.tick_index)
     .map(c => ({ id: c.id, name: c.name, voice: c.voice, base: pj(c.base_profile, {}), state: pj(c.materialised, {}) }));
   if (!chars.length) throw Object.assign(new Error('world has no characters'), { statusCode: 400, code: 'EMPTY_WORLD' });
   const locs = db.prepare('SELECT id,name,place_group,description FROM locations WHERE world_id=?').all(world.id);

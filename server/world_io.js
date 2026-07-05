@@ -129,6 +129,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir) {
     materialised: remapJsonCol(c.materialised, idMap),
     reference_asset_id: remapId(c.reference_asset_id, idMap),
     voice: c.voice, created_at: c.created_at,
+    intro_tick_idx: c.intro_tick_idx || 0,   // when they joined (old saves: genesis)
     // LAIONBox cloned-voice reference (clip asset id + the DramaBox prompt it came from);
     // null in bundles exported before the LAIONBox feature or under the Gemini engine.
     voice_ref_asset_id: remapId(c.voice_ref_asset_id ?? null, idMap),
@@ -183,8 +184,8 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir) {
     db.prepare(`INSERT INTO worlds(id,user_id,title,art_style,sim_time,tick_index,genre,mood,pacing,directives,status,cover_asset_id,active_branch_id,genesis_state,created_at,updated_at)
       VALUES (@id,@user_id,@title,@art_style,@sim_time,@tick_index,@genre,@mood,@pacing,@directives,@status,@cover_asset_id,@active_branch_id,@genesis_state,@created_at,@updated_at)`).run(worldRow);
     const ins = (sql, rows) => { const st = db.prepare(sql); for (const r of rows) st.run(r); };
-    ins(`INSERT INTO characters(id,world_id,name,base_profile,materialised,reference_asset_id,voice,created_at,voice_ref_asset_id,voice_ref_prompt)
-         VALUES (@id,@world_id,@name,@base_profile,@materialised,@reference_asset_id,@voice,@created_at,@voice_ref_asset_id,@voice_ref_prompt)`, chars);
+    ins(`INSERT INTO characters(id,world_id,name,base_profile,materialised,reference_asset_id,voice,created_at,voice_ref_asset_id,voice_ref_prompt,intro_tick_idx)
+         VALUES (@id,@world_id,@name,@base_profile,@materialised,@reference_asset_id,@voice,@created_at,@voice_ref_asset_id,@voice_ref_prompt,@intro_tick_idx)`, chars);
     ins(`INSERT INTO locations(id,world_id,name,type,place_group,description,background_asset_id,x,y)
          VALUES (@id,@world_id,@name,@type,@place_group,@description,@background_asset_id,@x,@y)`, locs);
     ins(`INSERT INTO paths(id,world_id,from_id,to_id,label) VALUES (@id,@world_id,@from_id,@to_id,@label)`, paths);

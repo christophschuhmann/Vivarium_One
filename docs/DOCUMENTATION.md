@@ -277,6 +277,15 @@ away; dark themes may exist but are handled with restraint. Admin: the Users tab
 toggles 🧑 adult / 🌱 teen per account; the Prompts page has an editable teen-safety block
 (`settings.teen_safety_prompt`, reset-to-default).
 
+### 2.9d Character introduction consistency
+Every character records `intro_tick_idx` — the scene at which they joined the story (genesis
+cast = 0; set automatically on Forge accept, GM-chat creation, and cast suggestions; preserved
+through save export/import; backfilled for old worlds from first appearance). Rewinding the
+timeline below a character's introduction makes them **not exist yet**: they're hidden from the
+Stage rail, sprites, Atlas and location pickers, excluded from tick simulation (they neither
+act nor appear in new scenes), and their Cast tile dims to "⏳ joins at scene N". They return
+automatically once the timeline passes their introduction again.
+
 ### 2.10 Time travel & replay
 Undo/redo arrows + the Timeline (🕰 chip in the top bar on every screen, or the stage button):
 a **graphical filmstrip** — earlier ⟵ left · right ⟶ later — where every scene is a thumbnail

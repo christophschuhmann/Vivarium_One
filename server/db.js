@@ -140,6 +140,10 @@ try { db.exec(`ALTER TABLE worlds ADD COLUMN curiosity TEXT DEFAULT '{}'`); } ca
 // Account content rating: 'adult' (default) or 'teen' — teen accounts get a PG fade-to-black
 // safety block appended to every story-generating prompt (see server/gm.js teenSafetyPrompt).
 try { db.exec(`ALTER TABLE users ADD COLUMN rating TEXT DEFAULT 'adult'`); } catch { /* exists */ }
+// When a character JOINED the story (the world's tick_index at creation). Rewinding the
+// timeline below this hides them from scenes and excludes them from simulation — a
+// character can't linger in scenes from before they were introduced. Genesis cast = 0.
+try { db.exec(`ALTER TABLE characters ADD COLUMN intro_tick_idx INTEGER DEFAULT 0`); } catch { /* exists */ }
 // "Did you know" fact cards generated every Nth tick; read_at drives the unread shimmer.
 db.exec(`CREATE TABLE IF NOT EXISTS facts (
   id TEXT PRIMARY KEY, world_id TEXT NOT NULL, tick_ref INTEGER, topic TEXT DEFAULT '',
