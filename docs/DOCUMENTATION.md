@@ -244,6 +244,9 @@ shift together, persisted): **desktop** — hold the right mouse button on a gro
 drag; **mobile** — press and hold a frame ~1 s until it lights up gold, then drag. A short
 touch-drag still pans the map.
 
+Locations can be (re)assigned to a group after creation: select the location → GROUP dropdown
+(existing groups, "no group", or "＋ new group…").
+
 ### 2.5c Sprite manager
 In a character's profile drawer, clicking any sprite thumbnail previews it AND opens a manage
 bar: edit the caption and 🔁 regenerate the image in place (same name, new look), or 🗑 delete
@@ -261,8 +264,8 @@ itself — a character's interest, a book on a table — organically, never a le
 Stage a golden bulb (top right, mirroring the character rail) shimmers while unread cards wait;
 the overlay shows all cards in large serif type with 🔊 sentence-by-sentence storyteller
 read-aloud — chunks of ≥8 words (short sentences merge into the next), first chunk immediate,
-the rest staggered 500 ms apart, the spoken passage highlighted live; opening marks cards read
-(bulb dims).
+the rest staggered 500 ms apart, the spoken passage highlighted live (read-aloud starts directly at the body's
+first sentence — no headline preamble); opening marks cards read (bulb dims).
 Data: `worlds.curiosity` JSON + `facts` table; routes PATCH …/curiosity, GET …/facts,
 POST /api/facts/:id/read.
 
@@ -278,7 +281,11 @@ toggles 🧑 adult / 🌱 teen per account; the Prompts page has an editable tee
 Undo/redo arrows + the Timeline (🕰 chip in the top bar on every screen, or the stage button):
 a **graphical filmstrip** — earlier ⟵ left · right ⟶ later — where every scene is a thumbnail
 card (location backdrop with the characters standing in it, as they looked at the time), the
-selected card enlarges, and temporal markers between cards keep fast-forward chapters readable
+selected card enlarges, and temporal markers between cards keep fast-forward chapters readable;
+thumbnails stream through a sliding window (IntersectionObserver loads ~20 near-viewport cards
+and unloads far ones) and use server-side downscaled variants (`/api/assets/:id?w=320` — ffmpeg,
+disk-cached; JPEG ≈15KB for backgrounds, PNG for cut-outs to keep alpha), so 60-70-scene stories
+stay smooth
 ("⟲ meanwhile", "moments later", "≈5h later"). Branch chips above the strip; a detail bar shows
 the selected scene's summary. Each tick offers two actions — **▶ Replay** runs the cinema renderer over the stored
 history from that point to the branch head (transition cards, backdrops, sprites in their

@@ -699,15 +699,15 @@ async function profileDrawer(charId) {
     const o = (c.state.outfits || []).find(x => x.name === oname);
     if (manageBar) manageBar.remove();
     manageBar = document.createElement('div');
-    manageBar.style.cssText = 'margin-top:8px;padding:9px 11px;background:#f7f5fe;border:1.5px dashed #d9d2f5;border-radius:12px;text-align:left';
+    manageBar.style.cssText = 'margin-top:9px;padding:9px 11px;background:#f7f5fe;border:1.5px dashed #d9d2f5;border-radius:12px;text-align:left;width:100%;box-sizing:border-box';
     manageBar.innerHTML = `
       <div style="font-size:11px;font-weight:700;margin-bottom:5px">🎨 Sprite “${esc(oname)}”</div>
       <input id="sm-cap" value="${esc(o?.description || oname)}" placeholder="new caption / instruction for the image" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:6px 9px;font-size:12px">
-      <div style="display:flex;gap:7px;margin-top:7px">
-        <button class="btn btn-soft small" id="sm-regen" style="flex:1">🔁 Regenerate (~30s)</button>
-        <button class="btn btn-ghost small" id="sm-del" style="color:#d92e66">🗑 Delete</button>
+      <div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap">
+        <button class="btn btn-soft small" id="sm-regen" style="flex:1 1 auto;min-width:0;white-space:nowrap">🔁 Regenerate</button>
+        <button class="btn btn-ghost small" id="sm-del" style="flex:none;color:#d92e66" title="Delete this sprite">🗑</button>
       </div>`;
-    $('#bigportrait', bg).closest('.checker').after(manageBar);
+    $('.outfit-strip', bg).after(manageBar);   // sits inside the column, right under the sprite strip
     $('#sm-regen', manageBar).onclick = async (e) => {
       const btn = e.target; if (btn.disabled) return;
       btn.disabled = true; btn.textContent = '⏳ painting…';
@@ -715,7 +715,7 @@ async function profileDrawer(charId) {
         await api(`/api/characters/${c.id}/outfits`, { method: 'POST', body: { name: oname, description: $('#sm-cap', manageBar).value, replace: true, ...(o?.emotion ? { emotion: o.emotion } : {}) } });
         toast(`“${oname}” repainted ✨`, 'gold');
         S.worldData = null; bg.remove(); profileDrawer(charId); refreshMe();
-      } catch (e2) { btn.disabled = false; btn.textContent = '🔁 Regenerate (~30s)'; fail(e2); }
+      } catch (e2) { btn.disabled = false; btn.textContent = '🔁 Regenerate'; fail(e2); }
     };
     $('#sm-del', manageBar).onclick = async () => {
       if (!confirm(`Delete the “${oname}” sprite? (The image stays in your asset archive.)`)) return;
@@ -1272,6 +1272,12 @@ async function atlasScreen() {
       <h4 style="margin-top:10px">${esc(l.name)}</h4>
       <p style="font-size:12px;color:#4b4573">${esc(l.description || '')}</p>
       <button class="btn btn-teal small" id="genbg" style="width:100%;margin:4px 0 12px">${l.background_asset_id ? '↻ Regenerate background' : '🎨 Generate background'}</button>
+      <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:0 0 5px">GROUP</h5>
+      <select id="locgroup" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:7px 9px;font-family:inherit;font-size:12px;margin-bottom:12px">
+        <option value="">— no group —</option>
+        ${[...new Set(locations.map(x => x.place_group).filter(Boolean))].map(g => `<option ${g === l.place_group ? 'selected' : ''}>${esc(g)}</option>`).join('')}
+        <option value="__new__">＋ new group…</option>
+      </select>
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:0 0 5px">CONNECTS TO</h5>
       <div>${conns.map(n => `<span class="tag t" style="margin:0 4px 4px 0">${esc(n)}</span>`).join('') || '<small style="color:var(--soft)">nothing yet</small>'}</div>
       <div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-soft small" id="editloc">✏️ Edit</button></div>
@@ -1279,6 +1285,19 @@ async function atlasScreen() {
     $('#genbg').onclick = async () => {
       $('#genbg').disabled = true; $('#genbg').innerHTML = '<span class="spinner"></span> painting…';
       try { await api(`/api/locations/${l.id}/background`, { method: 'POST' }); S.worldData = null; refreshMe(); atlasScreen(); } catch (e) { fail(e); $('#genbg').disabled = false; $('#genbg').textContent = '🎨 Generate background'; }
+    };
+    // Assign this location to a cluster after the fact (its frame on the map updates live).
+    $('#locgroup').onchange = async () => {
+      let g = $('#locgroup').value;
+      if (g === '__new__') {
+        g = (prompt('Name the new group:', '') || '').trim();
+        if (!g) { $('#locgroup').value = l.place_group || ''; return; }
+      }
+      try {
+        await api(`/api/locations/${l.id}`, { method: 'PATCH', body: { placeGroup: g } });
+        toast(g ? `${l.name} → ${g}` : `${l.name} removed from its group`);
+        S.worldData = null; atlasScreen();
+      } catch (e) { fail(e); }
     };
     $('#editloc').onclick = async () => {
       const name = prompt('Location name:', l.name); if (name == null) return;
@@ -1844,7 +1863,8 @@ async function factOverlay() {
       const f = facts.find(x => x.id === btn.dataset.speak);
       const card = m.querySelector(`[data-fid="${f.id}"]`);
       const chunkEls = $$('.fact-chunk', card);
-      const chunks = [`${f.title}.`, ...chunkEls.map(el => el.textContent.trim())];
+      // read the BODY only, from its first sentence — no headline preamble
+      const chunks = chunkEls.map(el => el.textContent.trim());
       const state = { cancelled: false, audio: null };
       factPlayer = { stop: () => { state.cancelled = true; playing = false; if (state.audio) state.audio.pause(); $$('.fact-chunk.speaking', m).forEach(el => el.classList.remove('speaking')); btn.textContent = '🔊 Read to me'; } };
       btn.textContent = '⏹ Stop';
@@ -1855,7 +1875,7 @@ async function factOverlay() {
         for (let k = 0; k < chunks.length && !state.cancelled; k++) {
           const r = await proms[k];
           if (!r || state.cancelled) continue;
-          const el = chunkEls[k - 1];                      // k=0 is the title (no span)
+          const el = chunkEls[k];
           if (el) { el.classList.add('speaking'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
           await new Promise((res) => {
             state.audio = new Audio(assetUrl(r.assetId));
@@ -2469,23 +2489,48 @@ async function timelineModal() {
     const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${selected}&toIdx=${b.head_idx}`);
     ticksCache = [{ idx: 0, sim_time: null, summary: 'The beginning — genesis', time_delta: '', states: [], pov_location_id: data.locations[0]?.id }, ...ticks];
     if (selTick == null) selTick = (selected === info.activeBranchId) ? info.tickIndex : (ticks[ticks.length - 1]?.idx ?? 0);
+    // PERFORMANCE: long stories mean 60-70 cards. Images load through a SLIDING WINDOW —
+    // card shells render for every tick (cheap DOM), but the backdrop + figures of a card
+    // only load while it is near the viewport (IntersectionObserver below) and UNLOAD when
+    // scrolled far away, so only ~20 thumbnails are ever resident. All images are ?w=
+    // downscaled server-side variants (a fraction of the full-res bytes).
     $('#tl-strip', m).innerHTML = ticksCache.map((t, i) => {
       const loc = locOf(t.pov_location_id);
-      // little cut-out figures of everyone present at the scene location, as they looked then
       const present = (t.states || []).filter(s => s.location_id === t.pov_location_id).slice(0, 4);
       const figs = present.map((s, k) => {
         const o = (s.outfits || []).find(x => x.name === s.outfit) || (s.outfits || [])[0];
-        return o ? `<img class="tl-fig" style="left:${18 + k * 22}%" src="${assetUrl(o.cutout_asset_id)}">` : '';
-      }).join('');
+        return o ? `${assetUrl(o.cutout_asset_id)}?w=160@${18 + k * 22}` : '';
+      }).filter(Boolean).join('|');
       const here = t.idx === info.tickIndex && selected === info.activeBranchId;
       return `${i > 0 ? `<div class="tl-gap"><span>${esc(marker(t, ticksCache[i - 1]))}</span></div>` : ''}
       <div class="tl-card ${t.idx === selTick ? 'sel' : ''} ${here ? 'here' : ''}" data-t="${t.idx}" title="${esc(t.summary || '')}">
-        <div class="tl-thumb" style="${loc?.background_asset_id ? `background-image:url(${assetUrl(loc.background_asset_id)})` : ''}">${figs}
+        <div class="tl-thumb" data-bg="${loc?.background_asset_id ? `${assetUrl(loc.background_asset_id)}?w=320` : ''}" data-figs="${figs}">
           ${here ? '<span class="tl-herechip">now</span>' : ''}
         </div>
         <div class="tl-cap"><b>#${t.idx}</b><span>${t.sim_time ? fmtClock(t.sim_time).replace(/^\w+ /, '') : 'genesis'}</span></div>
       </div>`;
     }).join('');
+    // sliding-window loader: load near-viewport cards, unload far ones
+    const io = new IntersectionObserver((entries) => {
+      for (const en of entries) {
+        const th = en.target;
+        if (en.isIntersecting) {
+          if (th.dataset.bg && !th.style.backgroundImage) th.style.backgroundImage = `url(${th.dataset.bg})`;
+          if (th.dataset.figs && !th.querySelector('.tl-fig')) {
+            for (const f of th.dataset.figs.split('|')) {
+              const [url, left] = f.split('@');
+              const img = document.createElement('img');
+              img.className = 'tl-fig'; img.style.left = left + '%'; img.decoding = 'async'; img.src = url;
+              th.appendChild(img);
+            }
+          }
+        } else {          // scrolled far away → free the memory
+          th.style.backgroundImage = '';
+          th.querySelectorAll('.tl-fig').forEach(x => x.remove());
+        }
+      }
+    }, { root: $('#tl-strip', m), rootMargin: '0px 900px' });   // ±900px ≈ a window of ~20 cards
+    $$('#tl-strip .tl-thumb', m).forEach(th => io.observe(th));
     $$('#tl-strip .tl-card', m).forEach(el => el.onclick = () => {
       selTick = +el.dataset.t;
       $$('#tl-strip .tl-card', m).forEach(x => x.classList.toggle('sel', +x.dataset.t === selTick));

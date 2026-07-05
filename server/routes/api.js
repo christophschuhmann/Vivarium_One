@@ -931,6 +931,24 @@ export default async function apiRoutes(app) {
     const a = getAsset(req.params.id);
     if (!a || a.user_id !== u.id) throw httpErr(404, 'NOT_FOUND', 'Asset not found.');
     reply.header('Cache-Control', 'private, max-age=31536000, immutable');
+    // ?w=320 → downscaled variant for thumbnails (timeline filmstrip). Generated once with
+    // ffmpeg, cached on disk next to the original as <file>_w<N>.<ext>. PNG stays PNG
+    // (cut-out sprites need their transparency); everything else becomes the original mime.
+    const w = Math.min(1024, Math.max(0, parseInt(req.query?.w, 10) || 0));
+    if (w && a.mime.startsWith('image/')) {
+      const orig = assetPath(a);
+      // only cut-out sprites need their alpha channel — everything else compresses to a
+      // small JPEG (a 320px background is ~20KB as JPEG vs ~150KB as PNG)
+      const alpha = a.kind === 'cutout';
+      const ext = alpha ? 'png' : 'jpg';
+      const thumb = `${orig}_w${w}.${ext}`;
+      if (!fs.existsSync(thumb)) {
+        try { await runCmd('ffmpeg', ['-y', '-i', orig, '-vf', `scale=${w}:-1`, ...(alpha ? [] : ['-q:v', '5']), thumb]); }
+        catch { reply.type(a.mime); return reply.send(fs.createReadStream(orig)); }   // fall back to full size
+      }
+      reply.type(alpha ? 'image/png' : 'image/jpeg');
+      return reply.send(fs.createReadStream(thumb));
+    }
     reply.type(a.mime);
     return reply.send(fs.createReadStream(assetPath(a)));
   });

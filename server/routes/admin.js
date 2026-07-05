@@ -1,5 +1,6 @@
 // Admin API — separate realm, fully audited.
 import fs from 'node:fs';
+import path from 'node:path';
 import { db, uid, now, j, pj, getSetting, setSetting } from '../db.js';
 import * as auth from '../auth.js';
 import { requireAdmin, httpErr } from '../auth.js';
@@ -24,7 +25,15 @@ function deleteUserCompletely(userId) {
     db.prepare('DELETE FROM users WHERE id=?').run(userId); // cascades sessions, auth_tokens, worlds (-> characters, locations, ticks)
   });
   tx();
-  for (const a of assets) fs.rmSync(assetPath({ file: a.file }), { force: true });
+  for (const a of assets) {
+    const p = assetPath({ file: a.file });
+    fs.rmSync(p, { force: true });
+    // downscaled ?w= thumbnail variants live next to the original as <file>_w<N>.<ext>
+    try {
+      for (const f of fs.readdirSync(path.dirname(p)).filter(f => f.startsWith(a.file + '_w')))
+        fs.rmSync(path.join(path.dirname(p), f), { force: true });
+    } catch { /* dir gone */ }
+  }
 }
 
 function audit(adminId, action, target, payload = {}) {
