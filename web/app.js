@@ -634,6 +634,75 @@ function setupCastDragConnect(characters) {
 const locName = (id) => S.worldData?.locations.find(l => l.id === id)?.name || 'nowhere yet';
 
 /* ───────── profile drawer ───────── */
+/* ── 🕯 INNER VOICE (reusable component) ─────────────────────────────────────
+   Chat inside a character's head — the player speaks as another inner voice
+   (angel/devil on the shoulder, a self-reflecting aspect). Mounted in BOTH
+   places a character opens: the 🧠 mind overlay (stage sprite click) and the
+   full profile drawer. Server: gm.innerVoiceChat — short in-character replies,
+   optional live state changes; current-moment turns colour the next tick;
+   clearing deletes every trace. Replies play in the character's own voice.  */
+function innerVoiceHtml(c) {
+  return `<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+      <b style="font-size:14px">🕯 Inner voice</b>
+      <small style="color:var(--soft);flex:1">speak inside ${esc(c.name)}'s head — this moment</small>
+      <button class="btn btn-ghost small" id="iv-clear" title="Clear — the dialogue never happened; nothing reaches the story" style="padding:3px 8px">🗑</button>
+    </div>
+    <div class="iv-log" id="iv-log"><div class="msg status">…</div></div>
+    <div class="chat-inputrow" style="padding:8px 0 0"><div class="field" id="iv-field" style="background:#fff;margin:0"><input id="iv-in" placeholder="whisper to ${esc(c.name)}…"><button class="btn btn-primary small" id="iv-send">Send</button></div></div>
+    <p style="font-size:10px;color:var(--soft);margin:6px 0 0">an inner dialogue — they\'re used to voices like yours. It may colour their next scene; clearing it removes every trace.</p>`;
+}
+function bindInnerVoice(root, c, { onStateChange } = {}) {
+  const log = $('#iv-log', root);
+  if (!log) return;
+  const scroll = () => { log.scrollTop = log.scrollHeight; };
+  const addMsg = (cls, text) => {
+    const d = document.createElement('div');
+    d.className = 'msg ' + cls;
+    if (cls === 'assistant') {
+      d.innerHTML = `<span class="serif" style="font-style:italic">${esc(text)}</span> <button class="iv-speak" title="hear it in ${esc(c.name)}\'s voice">🔊</button>`;
+      // the reply reads aloud in THIS character\'s voice, delivered as a private thought
+      $('.iv-speak', d).onclick = (e) => speak(text, c, e.target, c.state.mood || '', 'thought');
+    } else d.textContent = text;
+    log.appendChild(d); scroll(); return d;
+  };
+  const hello = () => { log.innerHTML = `<div class="msg assistant"><span class="serif" style="font-style:italic">…a familiar presence settles at the edge of ${esc(c.name)}\'s thoughts, listening.</span></div>`; };
+  api(`/api/characters/${c.id}/inner-voice`).then(({ history }) => {
+    log.innerHTML = '';
+    if (!history.length) hello();
+    for (const h of history) addMsg(h.role === 'user' ? 'user' : 'assistant', h.content);
+    scroll();
+  }).catch(() => { log.innerHTML = ''; hello(); });
+  attachMic($('#iv-field', root), $('#iv-in', root));
+  let busy = false;
+  const send = async () => {
+    const text = $('#iv-in', root).value.trim(); if (!text || busy) return;
+    busy = true; $('#iv-in', root).value = '';
+    addMsg('user', text);
+    const status = addMsg('status', `…${c.name} turns the thought over…`);
+    try {
+      const r = await api(`/api/characters/${c.id}/inner-voice`, { method: 'POST', body: { message: text, lang: getLang() } });
+      status.remove();
+      addMsg('assistant', r.reply);
+      if (r.changed) { c.state = r.state; S.worldData = null; onStateChange?.(r.state); }
+      refreshMe();
+    } catch (e) { status.remove(); addMsg('assistant', '…the thought slips away. (' + e.message + ')'); }
+    busy = false;
+  };
+  $('#iv-send', root).onclick = send;
+  $('#iv-in', root).onkeydown = (e) => { if (e.key === 'Enter') send(); };
+  $('#iv-clear', root).onclick = async () => {
+    if (!confirm(`Forget this whole inner dialogue? ${c.name} keeps any changes it already caused, but nothing of the conversation will reach the story.`)) return;
+    try { await api(`/api/characters/${c.id}/inner-voice`, { method: 'DELETE' }); log.innerHTML = ''; hello(); toast('Inner dialogue forgotten'); } catch (e) { fail(e); }
+  };
+}
+
+// The "Now · materialised state" body — extracted so the inner-voice chat can refresh it
+// live when a dialogue turn changes mood/thought/attributes (insights become visible).
+function nowStateHtml(st) {
+  return `<p>${esc(st.mood || '')} · ${esc(st.activity || '')}${st.thought ? ` · <i>"${esc(st.thought)}"</i>` : ''}${(st.conditions || []).length ? ' · ' + st.conditions.map(esc).join(', ') : ''}</p>
+    ${(st.emotions || []).length ? `<p style="margin-top:5px">${st.emotions.map(e => `<span class="tag c" style="margin:0 3px 3px 0">${esc(e.name)} ${Math.round((e.intensity ?? 0.5) * 100)}%</span>`).join('')}</p>` : ''}
+    ${(st.intentions || []).length ? `<p style="margin-top:4px">${st.intentions.map(i => `<span class="intent-chip">→ ${esc(i)}</span>`).join('')}</p>` : ''}`;
+}
 async function profileDrawer(charId) {
   const { characters, world } = await loadWorld();
   const c = characters.find(x => x.id === charId); if (!c) return;
@@ -668,12 +737,10 @@ async function profileDrawer(charId) {
       <div style="display:flex;flex-direction:column;gap:9px">
         ${['personality', 'goals', 'fears', 'coping', 'backstory', 'speaking_style'].map(k => c.base[k] ? `
           <div class="attr"><h5>${k.replace('_', ' ')}</h5><p>${esc(Array.isArray(c.base[k]) ? c.base[k].join(' · ') : c.base[k])}</p></div>` : '').join('')}
-        <div class="attr" style="border:1.5px dashed #9fdfe2;background:#f2fbfc"><h5 style="color:#0d7e83">Now · materialised state</h5>
-          <p>${esc(c.state.mood || '')} · ${esc(c.state.activity || '')}${c.state.thought ? ` · <i>"${esc(c.state.thought)}"</i>` : ''}${(c.state.conditions || []).length ? ' · ' + c.state.conditions.map(esc).join(', ') : ''}</p>
-          ${(c.state.emotions || []).length ? `<p style="margin-top:5px">${c.state.emotions.map(e => `<span class="tag c" style="margin:0 3px 3px 0">${esc(e.name)} ${Math.round((e.intensity ?? 0.5) * 100)}%</span>`).join('')}</p>` : ''}
-          ${(c.state.intentions || []).length ? `<p style="margin-top:4px">${c.state.intentions.map(i => `<span class="intent-chip">→ ${esc(i)}</span>`).join('')}</p>` : ''}</div>
+        <div class="attr" id="now-state" style="border:1.5px dashed #9fdfe2;background:#f2fbfc"><h5 style="color:#0d7e83">Now · materialised state</h5>${nowStateHtml(c.state)}</div>
         <div style="display:flex;gap:8px"><button class="btn btn-coral small" id="godedit">⚡ God-edit</button><button class="btn btn-soft small" id="openmind">🧠 Mind</button></div>
       </div>
+      <div class="panel iv-panel">${innerVoiceHtml(c)}</div>
       <div class="panel">
         <b style="font-size:14px">Life so far</b>
         <div style="font-size:10.5px;color:var(--soft);margin-bottom:10px">git-like history · newest first</div>
@@ -728,6 +795,11 @@ async function profileDrawer(charId) {
       } catch (e2) { fail(e2); }
     };
   });
+  bindInnerVoice(bg, c, { onStateChange: (st) => {
+    // insights become visible: refresh the live-state box with a brief golden pulse
+    const ns = $('#now-state', bg);
+    if (ns) { ns.innerHTML = `<h5 style="color:#0d7e83">Now · materialised state</h5>${nowStateHtml(st)}`; ns.style.boxShadow = '0 0 0 3px rgba(240,169,46,.35)'; setTimeout(() => ns.style.boxShadow = '', 1200); }
+  } });
   $('#hearvoice', bg).onclick = async () => {
     try {
       const { assetId } = await api('/api/tts', { method: 'POST', body: { text: c.state.thought || `Hello. I'm ${c.name}.`, voice: c.voice, style: `in character: ${c.state.mood || 'calm'}`, characterId: c.id, lang: getLang() } });
@@ -2653,8 +2725,9 @@ async function mindModal(charId) {
   const st = c.state, per = st.perceptions || {};
   const m = document.createElement('div');
   m.className = 'modal-bg';
-  m.innerHTML = `<div class="modal" style="width:600px"><div class="modal-head violet"><div><b>🧠 Inside ${esc(c.name)}'s mind</b><small>right now · ${esc(st.mood || '')} · at ${esc(locations.find(l => l.id === st.location_id)?.name || '?')}</small></div><span class="x">✕</span></div>
-  <div class="modal-body">
+  m.innerHTML = `<div class="modal" style="width:980px"><div class="modal-head violet"><div><b>🧠 Inside ${esc(c.name)}'s mind</b><small>right now · <span id="mm-mood">${esc(st.mood || '')}</span> · at ${esc(locations.find(l => l.id === st.location_id)?.name || '?')}</small></div><span class="x">✕</span></div>
+  <div class="modal-body mind-cols">
+  <div>
     <div class="mind-head">
       <div class="face"><div style="background-image:url(${assetUrl(cutoutFor(c))})"></div></div>
       <div><b style="font-size:16px">${esc(c.name)}</b><div style="font-size:12px;color:var(--soft)">${esc(st.activity || '')}</div>
@@ -2686,8 +2759,16 @@ async function mindModal(charId) {
       <button class="btn btn-soft small" id="mm-profile">📖 Full profile</button>
       <button class="btn btn-primary small" id="mm-pov">👁 See through their eyes</button>
     </div>
+  </div>
+  <div class="panel iv-panel" style="margin:0">${innerVoiceHtml(c)}</div>
   </div></div>`;
   document.body.appendChild(m);
+  bindInnerVoice(m, c, { onStateChange: (stNew) => {
+    // reflect insights immediately in the mind panels (mood chip + thought box)
+    const md = $('#mm-mood', m); if (md) md.textContent = stNew.mood || '';
+    const tb = $('.mind-box.thoughts p', m);
+    if (tb) { tb.innerHTML = stNew.thought ? '"' + esc(stNew.thought) + '"' : tb.innerHTML; tb.closest('.mind-box').style.boxShadow = '0 0 0 3px rgba(240,169,46,.35)'; setTimeout(() => tb.closest('.mind-box').style.boxShadow = '', 1200); }
+  } });
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   $('.x', m).onclick = () => m.remove();
   $('#mm-hear', m).onclick = (e) => speak(st.thought || `...`, c, e.target, st.mood || 'calm', 'thought');

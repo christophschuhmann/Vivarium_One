@@ -267,6 +267,21 @@ EXISTING CAST: ${j(others)}` },
   return made;
 }
 
+// Inner-voice context for the tick: each character's PRIVATE self-dialogue from the
+// current moment (turns newer than the latest visible tick — see innerVoiceChat at the
+// bottom of this file). It plausibly colours their thoughts and choices this tick; it is
+// never quoted aloud and never appears in narration. Cleared chat = empty = no influence.
+function innerVoiceBlock(world, chars) {
+  const last = visibleTicks(world.id, world.active_branch_id, world.tick_index).slice(-1)[0];
+  const since = last?.created_at || '1970';
+  const parts = [];
+  for (const c of chars) {
+    const turns = innerVoiceSince(world.id, c.id, since);
+    if (turns.length) parts.push(`${c.name}: ${turns.map(t => `${t.role === 'user' ? 'inner voice' : c.name}: "${t.content}"`).join(' / ')}`);
+  }
+  return parts.length ? `INNER DIALOGUE THIS MOMENT (private self-talk inside characters' heads — the player spoke as an inner voice. It may plausibly influence that character's thoughts, feelings and choices this tick (only where it fits who they are); it is NEVER spoken aloud, never referenced by others, never quoted in narration):\n${parts.join('\n')}\n` : '';
+}
+
 // ---------- The Tick ----------
 // Human names for the game languages the client may request (viv_lang localStorage pref,
 // passed per tick as `lang`). All player-visible model output (narration, dialogue,
@@ -501,7 +516,7 @@ ${curioThemes ? `Player's curiosity themes (weave these SUBTLY into the world �
 Locations: ${j(locs)}
 Characters: ${j(chars.map(c => ({ id: c.id, name: c.name, base: c.base, current: c.state })))}
 Relationships: ${j(rels)}
-${pj(world.cast_dismissed, []).length ? `Cast suggestions the player DECLINED (do not suggest these again): ${pj(world.cast_dismissed, []).join(', ')}\n` : ''}${memChunks.length ? `LONG-TERM MEMORY (older story, condensed):\n${memChunks.join('\n')}\n` : ''}RECENT TICKS (newest last, verbatim): ${j(windowTicks)}
+${pj(world.cast_dismissed, []).length ? `Cast suggestions the player DECLINED (do not suggest these again): ${pj(world.cast_dismissed, []).join(', ')}\n` : ''}${innerVoiceBlock(world, chars)}${memChunks.length ? `LONG-TERM MEMORY (older story, condensed):\n${memChunks.join('\n')}\n` : ''}RECENT TICKS (newest last, verbatim): ${j(windowTicks)}
 CLOCK: it is now ${fmtClock(world.sim_time)}; advance ${timeDelta} to ${fmtClock(newTime)} (tick #${idx}).
 ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervention.target || 'the whole world'}): "${intervention.text}" — weave this in as cause; characters react in character.` : 'No intervention this tick.'}${directive ? `\n${directive}` : ''}`;
 
@@ -1019,4 +1034,103 @@ export async function gmApplyActions(user, world, actions) {
   db.prepare(`INSERT INTO chat_logs(id,user_id,world_id,surface,role,content,created_at) VALUES (?,?,?,?,?,?,?)`)
     .run(uid('cl_'), user.id, world.id, 'gm_chat', 'user', `[SYSTEM: player applied your proposed actions — results: ${results.map(r => (r.ok ? '✓' : '✗') + ' ' + r.summary).join('; ')}]`, now());
   return results;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// INNER VOICE — the player talks INSIDE a character's head.
+//
+// From the profile drawer the player chats as "another inner voice" — the angel
+// or devil on the shoulder, a self-reflecting aspect, a subpersonality. The
+// character answers AS THEMSELVES, mid-scene, from their current state:
+//   • People in Vivarium are ACCUSTOMED to inner voices — no one freaks out.
+//   • They are honest with themselves (a lie only ever hides something from
+//     themselves), they self-reflect, and they DON'T have to obey — the voice
+//     can only influence what is plausible for who they are.
+//   • Replies stay SHORT (1-4 sentences) unless explicitly asked to go deeper.
+//   • The dialogue may genuinely shift them: the model can return state_patches
+//     (the same git-like working tree ticks use) plus immediate mood/thought
+//     updates, applied at once so the stats panel changes live.
+//
+// Persistence: chat_logs surface 'inner:<charId>'. The CURRENT MOMENT's turns
+// (those newer than the latest tick) are fed into the next tick's context as
+// that character's private inner dialogue — clearing the chat deletes them and
+// nothing reaches the story. Replays never show any of this (it is not part of
+// tick narration).
+// ═════════════════════════════════════════════════════════════════════════════
+export async function innerVoiceChat(user, world, c, message, lang = 'en') {
+  preflight(user.id, EST.chat());
+  const base = pj(c.base_profile, {});
+  const st = pj(c.materialised, {});
+  const locName = db.prepare('SELECT name FROM locations WHERE id=?').get(st.location_id)?.name || 'somewhere';
+  const rels = db.prepare('SELECT * FROM relationships WHERE world_id=? AND (from_id=? OR to_id=?)').all(world.id, c.id, c.id)
+    .map(r => {
+      const other = db.prepare('SELECT name FROM characters WHERE id=?').get(r.from_id === c.id ? r.to_id : r.from_id)?.name;
+      return `${r.from_id === c.id ? `feels about ${other}` : `${other} feels about them`}: ${r.description}`;
+    });
+  const lastTicks = visibleTicks(world.id, world.active_branch_id, world.tick_index).slice(-3)
+    .map(t => `#${t.idx} ${t.summary}`);
+  const nowTick = visibleTicks(world.id, world.active_branch_id, world.tick_index).slice(-1)[0];
+  const scene = nowTick ? pj(nowTick.narration, []).map(n => `${n.speaker === 'narrator' ? '✦' : n.speaker}${n.mode === 'thought' ? '(thinks)' : ''}: ${n.text}`).join('\n') : '';
+
+  // rolling history (whole conversation for continuity; the TICK only sees current-moment turns)
+  const hist = db.prepare(`SELECT role, content FROM chat_logs WHERE world_id=? AND surface=? ORDER BY created_at DESC LIMIT 24`).all(world.id, `inner:${c.id}`)
+    .reverse().map(t => ({ role: t.role, content: t.content }));
+
+  const langRule = lang !== 'en' && GAME_LANGS[lang] ? ` Speak ${GAME_LANGS[lang]} (the language of this story).` : '';
+  const sys = `You ARE ${c.name}, mid-scene, answering a voice inside your own head. The player speaks as ANOTHER INNER VOICE of yours — a self-reflecting aspect, an angel or devil on the shoulder, a subpersonality. This is completely normal for you; people here are accustomed to their inner voices and never find them strange.
+HOW TO ANSWER:
+• First person, fully in character, from exactly where you are right now (place, mood, what just happened). Your voice is intimate, half-murmured — a private inner dialogue, not a speech.
+• SHORT: 1-4 sentences. Only go longer when the voice explicitly asks for depth.
+• Honest with yourself — you self-reflect and admit real feelings; if you ever distort the truth it is only self-deception (hiding something from yourself), and even then the seams may show.
+• You DON'T have to do what the voice suggests. Let it move you only when it is plausible for who you are; you may push back, doubt, bargain, or be persuaded.
+• If the dialogue genuinely shifts something in you — a new intention, a changed feeling, a realisation — record it in state_patches (persistent attributes) and/or the immediate fields, so your visible state changes. Most turns change nothing: empty patches are the norm.${langRule} ${SYSTEM_CONTRACT}
+JSON: {"reply":"your inner-voice answer",
+ "state_patches":[{"category":"emotion|belief|goal|strategy|condition","op":"set|add|remove","path":"short/path","value":"...","reason":"why"}] or [],
+ "mood": "new one-or-two-word mood" or null,
+ "thought": "new current inner thought (one line)" or null}`;
+  const usr = `WHO YOU ARE: ${j({ name: c.name, ...base })}
+YOUR STATE RIGHT NOW: ${j({ location: locName, mood: st.mood, activity: st.activity, thought: st.thought, emotions: st.emotions, intentions: st.intentions, attributes: st.attributes })}
+YOUR BONDS: ${rels.join(' | ') || 'none'}
+RECENT STORY: ${lastTicks.join(' · ')}
+THE SCENE HAPPENING RIGHT NOW:
+${scene || '(the story has not started yet)'}`;
+
+  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: usr },
+    ...hist, { role: 'user', content: message }], { maxTokens: 1500 });
+  debitCall(user.id, res, 'inner_voice', { worldId: world.id });
+  logCall({ userId: user.id, worldId: world.id, kind: 'llm', surface: 'inner_voice', request: message, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
+  const out = res.json || {};
+  const reply = String(out.reply || '…').slice(0, 2000);
+
+  // apply any shifts the dialogue produced — same machinery as ticks / GM chat
+  let changed = false;
+  const fresh = pj(db.prepare('SELECT materialised FROM characters WHERE id=?').get(c.id).materialised, {});
+  if (Array.isArray(out.state_patches) && out.state_patches.length) {
+    const attrs = { ...(fresh.attributes || {}) };
+    for (const p of out.state_patches.slice(0, 6)) {
+      const pidx = (db.prepare('SELECT COALESCE(MAX(idx),0) m FROM state_patches WHERE entity_id=?').get(c.id).m) + 1;
+      db.prepare(`INSERT INTO state_patches(id,world_id,entity_ref,entity_id,idx,tick_ref,author,category,op,path,value,reason,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(uid('sp_'), world.id, 'character', c.id, pidx, world.tick_index, 'inner_voice', p.category || 'emotion', p.op || 'set', p.path || '/', j(p.value ?? null), p.reason || '', now());
+      applyPatchToTree(attrs, p, world.tick_index);
+      changed = true;
+    }
+    fresh.attributes = attrs;
+  }
+  if (out.mood && typeof out.mood === 'string') { fresh.mood = out.mood.slice(0, 60); changed = true; }
+  if (out.thought && typeof out.thought === 'string') { fresh.thought = out.thought.slice(0, 300); changed = true; }
+  if (changed) db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(fresh), c.id);
+
+  db.prepare(`INSERT INTO chat_logs(id,user_id,world_id,surface,role,content,created_at) VALUES (?,?,?,?,?,?,?)`)
+    .run(uid('cl_'), user.id, world.id, `inner:${c.id}`, 'user', message, now());
+  db.prepare(`INSERT INTO chat_logs(id,user_id,world_id,surface,role,content,created_at) VALUES (?,?,?,?,?,?,?)`)
+    .run(uid('cl_'), user.id, world.id, `inner:${c.id}`, 'assistant', reply, now());
+  return { reply, changed, state: fresh };
+}
+
+// The CURRENT MOMENT's inner dialogue for a character — turns newer than the latest
+// tick (i.e. spoken "now", between scenes). Fed into the next tick's context; an
+// empty array (nothing said, or the player cleared the chat) adds nothing.
+export function innerVoiceSince(worldId, charId, sinceIso) {
+  return db.prepare(`SELECT role, content FROM chat_logs WHERE world_id=? AND surface=? AND created_at > ? ORDER BY created_at ASC LIMIT 16`)
+    .all(worldId, `inner:${charId}`, sinceIso || '1970');
 }

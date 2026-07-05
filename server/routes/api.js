@@ -329,6 +329,32 @@ export default async function apiRoutes(app) {
     db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(fresh), c.id);
     return { outfit: { name, cutout_asset_id: cutout.id, portrait_asset_id: portrait.id } };
   });
+  // ---------- Inner voice (talk inside a character's head; see gm.innerVoiceChat) ----------
+  const ownChar = (u, id) => {
+    const c = db.prepare(`SELECT c.*, w.user_id uid FROM characters c JOIN worlds w ON w.id=c.world_id WHERE c.id=? AND w.user_id=?`).get(id, u.id);
+    if (!c) throw httpErr(404, 'NOT_FOUND', 'Character not found.');
+    return c;
+  };
+  app.post('/api/characters/:id/inner-voice', async (req) => {
+    const u = requireVerified(req);
+    const c = ownChar(u, req.params.id);
+    const w = db.prepare('SELECT * FROM worlds WHERE id=?').get(c.world_id);
+    return gm.innerVoiceChat(u, w, c, String(req.body?.message || '').slice(0, 2000), req.body?.lang || 'en');
+  });
+  app.get('/api/characters/:id/inner-voice', async (req) => {
+    const u = requireUser(req);
+    const c = ownChar(u, req.params.id);
+    const rows = db.prepare(`SELECT role, content, created_at FROM chat_logs WHERE world_id=? AND surface=? ORDER BY created_at ASC LIMIT 200`).all(c.world_id, `inner:${c.id}`);
+    return { history: rows };
+  });
+  // Clear = the dialogue never happened: rows deleted, nothing reaches the next tick.
+  app.delete('/api/characters/:id/inner-voice', async (req) => {
+    const u = requireUser(req);
+    const c = ownChar(u, req.params.id);
+    db.prepare(`DELETE FROM chat_logs WHERE world_id=? AND surface=?`).run(c.world_id, `inner:${c.id}`);
+    return { ok: true };
+  });
+
   // Sprite manager: remove one sprite from the gallery. The generated images stay in the
   // asset store (kept for analysis / possible re-attachment); only the gallery entry goes.
   app.delete('/api/characters/:id/outfits/:name', async (req) => {

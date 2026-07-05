@@ -133,6 +133,20 @@ when the story keeps pointing at a place that doesn't exist, the GM proposes bui
 Accepting (`POST …/locations/from-suggestion`) creates the location, wires the proposed path
 connections, paints the 16:9 background, and shows a reveal.
 
+### 2.6a Inner voice 🕯
+Click a character on the Stage (or open their profile) and a chat sits beside their mind panel:
+the player speaks as **another inner voice** — an angel/devil on the shoulder, a self-reflecting
+aspect. Characters are accustomed to inner voices (nobody freaks out), answer **in first person,
+mid-scene, from their current state**, stay short (1-4 sentences unless asked for depth), are
+honest with themselves (lies only as self-deception), and **don't have to obey** — the voice
+moves them only when plausible. A turn may return state patches + mood/thought updates, applied
+immediately (the stats panel refreshes with a golden pulse). The current moment's dialogue is
+fed into the **next tick's context** as private self-talk (never spoken aloud, never in
+narration — replays show nothing); 🗑 clear deletes it so nothing reaches the story. Replies
+play in the character's own voice (thought delivery); the input has the usual 🎤 ASR mic.
+Server: `gm.innerVoiceChat` + `innerVoiceBlock`; routes GET/POST/DELETE
+`/api/characters/:id/inner-voice`; storage `chat_logs` surface `inner:<charId>`.
+
 ### 2.6b Game Master chat 💬
 The **💬 GM** chip (top bar) opens an out-of-character assistant drawer. It sees exactly what
 the tick engine sees (full cast/bonds/places, verbatim tick window, condensed memory) and can
