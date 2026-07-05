@@ -222,7 +222,10 @@ Demo casting: Alice = Lily (Leda), Bob = Peter (Puck), narrator = Ian (Iapetus).
 
 **Click-free playback:** narration chunks play as decoded AudioBuffers through one shared
 WebAudio context with 12 ms gain ramps at both ends (web/app.js `playClip`) — boundary clicks
-are impossible by construction. Server-side 200 ms tail fades are still baked into every
+are impossible by construction. LAIONBox clips additionally carry real room tone, so their
+edges get **film-style fades** (60 ms in / 400 ms out, `fadeTail`; a short fade of audible
+ambience still reads as a cut) and the scene player **crossfades** — the next chunk starts
+~180 ms under the previous one's fading tail, so the ambience never slams shut. Server-side 200 ms tail fades are still baked into every
 generated file (`pcmToMp3` / `fadeTail`), and the player pre-decodes the next chunk while the
 current one plays. The ⏸ button suspends/resumes the audio context.
 

@@ -180,14 +180,18 @@ export async function laionboxGenerate({ prompt, referenceB64 = null, output = '
   };
 }
 
-// Fade the LAST 200 ms of an MP3 clip to silence. The areverse/afade-in/areverse trick
+// Fade the edges of an MP3 clip: 60 ms in, `ms` out (default 400). LAIONBox clips carry a
+// REAL room tone (~-25 dB) to the very end — a short 200 ms fade of that ambience still
+// reads as an abrupt cut ("click") to the ear, while Gemini's digital silence never did.
+// 400 ms melts the tone away like a film dialogue edit; the 60 ms fade-in stops the tone
+// popping in at chunk starts. The areverse/afade-in/areverse trick
 // applies an end-fade without knowing the clip's duration up front (clips are ≤60 s, so
 // the whole-file buffering that areverse implies is fine). Used on every generated line —
 // abrupt clip ends (cut-off room tone) click audibly when lines play back-to-back.
-export function fadeTail(mp3Buffer, ms = 200) {
+export function fadeTail(mp3Buffer, ms = 400) {
   return new Promise((resolve, reject) => {
     const ff = spawn('ffmpeg', ['-f', 'mp3', '-i', 'pipe:0',
-      '-af', `areverse,afade=t=in:st=0:d=${ms / 1000},areverse`,
+      '-af', `afade=t=in:st=0:d=0.06,areverse,afade=t=in:st=0:d=${ms / 1000},areverse`,
       '-b:a', '96k', '-f', 'mp3', 'pipe:1']);
     const chunks = [], errs = [];
     ff.stdout.on('data', c => chunks.push(c));

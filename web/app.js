@@ -1721,7 +1721,7 @@ function loadClip(assetId) {
 }
 // Play one decoded buffer with anti-click ramps. Handle mimics the old HTMLAudio
 // surface (pause/play for the ⏸ button, stop for ⏹) so callers stay unchanged.
-function playClip(buf, onended) {
+function playClip(buf, onended, { earlySec = 0, onEarly = null } = {}) {
   const ctx = waCtx();
   const src = ctx.createBufferSource(); src.buffer = buf;
   const g = ctx.createGain();
@@ -1731,13 +1731,16 @@ function playClip(buf, onended) {
   g.gain.setValueAtTime(1, Math.max(t0 + R, t0 + d - R));
   g.gain.linearRampToValueAtTime(0.0001, t0 + d);
   src.connect(g); g.connect(ctx.destination);
-  let dead = false;
-  src.onended = () => { if (!dead) { dead = true; try { g.disconnect(); } catch {} onended?.(); } };
+  let dead = false, earlyT = null;
+  // crossfade hook: fire shortly BEFORE the buffer ends (while only the faded tail remains)
+  // so the caller can start the next chunk overlapping — ambience never slams shut.
+  if (earlySec > 0 && onEarly && d > earlySec * 3) earlyT = setTimeout(() => { if (!dead) onEarly(); }, Math.max(0, (d - earlySec) * 1000));
+  src.onended = () => { if (!dead) { dead = true; clearTimeout(earlyT); try { g.disconnect(); } catch {} onended?.(); } };
   src.start();
   return {
     pause: () => ctx.suspend().catch(() => {}),
     play: () => ctx.resume().catch(() => {}),
-    stop: () => { dead = true; src.onended = null; try { src.stop(); } catch {} try { g.disconnect(); } catch {} },
+    stop: () => { dead = true; clearTimeout(earlyT); src.onended = null; try { src.stop(); } catch {} try { g.disconnect(); } catch {} },
   };
 }
 
@@ -1800,7 +1803,11 @@ function setupNarrationPlayer(sceneLines, characters) {
       const buf = await loadClip(assetId);
       if (tok !== player.token) return;
       highlight(i, true);
-      player.audio = playClip(buf, () => { highlight(i, false); if (tok === player.token) playFrom(i + 1); });
+      // advance ~180ms early: the next chunk starts under this one's fading tail (crossfade) —
+      // guard so early + natural end can't both advance
+      let advanced = false;
+      const next = () => { if (advanced || tok !== player.token) return; advanced = true; playFrom(i + 1); };
+      player.audio = playClip(buf, () => { highlight(i, false); next(); }, { earlySec: 0.18, onEarly: next });
       refreshMe();
     } catch (e) {
       if (tok !== player.token) return;
