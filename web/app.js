@@ -1590,12 +1590,60 @@ function renderNarration(lines, characters) {
   }).join('');
 }
 
+/* ── WebAudio clip engine ────────────────────────────────────────────────────
+   Sequential narration chunks used to play through fresh HTMLAudio elements —
+   even with server-side tail fades baked into every file, element/decoder
+   churn at each boundary produced a tiny audible click. Chunks now play as
+   decoded AudioBuffers through ONE shared AudioContext, wrapped in explicit
+   12 ms gain ramps at both ends: boundary clicks are impossible by
+   construction. decoded buffers are cached (sliding window) and the player
+   pre-decodes the next chunk while the current one plays, so transitions
+   stay seamless even on slow connections.                                   */
+const WA = { ctx: null, cache: new Map() };
+function waCtx() {
+  if (!WA.ctx) WA.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (WA.ctx.state === 'suspended') WA.ctx.resume().catch(() => {});
+  return WA.ctx;
+}
+function loadClip(assetId) {
+  if (!WA.cache.has(assetId)) {
+    WA.cache.set(assetId, fetch(assetUrl(assetId), { credentials: 'same-origin' })
+      .then(r => { if (!r.ok) throw new Error('audio fetch ' + r.status); return r.arrayBuffer(); })
+      .then(b => waCtx().decodeAudioData(b))
+      .catch(e => { WA.cache.delete(assetId); throw e; }));
+    if (WA.cache.size > 48) WA.cache.delete(WA.cache.keys().next().value);   // sliding cache
+  }
+  return WA.cache.get(assetId);
+}
+// Play one decoded buffer with anti-click ramps. Handle mimics the old HTMLAudio
+// surface (pause/play for the ⏸ button, stop for ⏹) so callers stay unchanged.
+function playClip(buf, onended) {
+  const ctx = waCtx();
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const g = ctx.createGain();
+  const t0 = ctx.currentTime, d = buf.duration, R = Math.min(0.012, d / 4);
+  g.gain.setValueAtTime(0, t0);
+  g.gain.linearRampToValueAtTime(1, t0 + R);
+  g.gain.setValueAtTime(1, Math.max(t0 + R, t0 + d - R));
+  g.gain.linearRampToValueAtTime(0.0001, t0 + d);
+  src.connect(g); g.connect(ctx.destination);
+  let dead = false;
+  src.onended = () => { if (!dead) { dead = true; try { g.disconnect(); } catch {} onended?.(); } };
+  src.start();
+  return {
+    pause: () => ctx.suspend().catch(() => {}),
+    play: () => ctx.resume().catch(() => {}),
+    stop: () => { dead = true; src.onended = null; try { src.stop(); } catch {} try { g.disconnect(); } catch {} },
+  };
+}
+
 /* ── the narration player: sentence-by-sentence, prefetching, pausable ── */
 const player = { active: false, paused: false, idx: 0, audio: null, cache: [], lines: [], chars: [], token: 0 };
 function stopNarration() {
   player.token++;
   player.active = false; player.paused = false;
-  if (player.audio) { player.audio.pause(); player.audio = null; }
+  if (player.audio) { (player.audio.stop || player.audio.pause).call(player.audio); player.audio = null; }
+  waCtx().resume().catch(() => {});   // a ⏸-suspended context must not stay suspended for the next scene
   $$('.bubble.speaking').forEach(b => b.classList.remove('speaking'));
   $$('.sline.playing-line').forEach(l => l.classList.remove('playing-line'));
   const pb = $('#tts-play'); if (pb) { pb.textContent = '▶'; pb.classList.remove('on'); }
@@ -1643,14 +1691,12 @@ function setupNarrationPlayer(sceneLines, characters) {
     try {
       const { assetId } = await prefetch(i);
       if (tok !== player.token) return;                            // stopped while fetching
-      prefetch(i + 1)?.catch(() => {});                            // stream ahead while this one plays
+      prefetch(i + 1)?.then(r => r && loadClip(r.assetId)).catch(() => {});  // generate AND pre-decode ahead
       prefetch(i + 2)?.catch(() => {});                            // (gen ≈ playback time, so keep two in flight)
+      const buf = await loadClip(assetId);
+      if (tok !== player.token) return;
       highlight(i, true);
-      const a = new Audio(assetUrl(assetId));
-      player.audio = a;
-      a.onended = () => { highlight(i, false); if (tok === player.token) playFrom(i + 1); };
-      a.onerror = () => { highlight(i, false); if (tok === player.token) playFrom(i + 1); };
-      await a.play();
+      player.audio = playClip(buf, () => { highlight(i, false); if (tok === player.token) playFrom(i + 1); });
       refreshMe();
     } catch (e) {
       if (tok !== player.token) return;
@@ -1877,7 +1923,7 @@ async function factOverlay() {
       // read the BODY only, from its first sentence — no headline preamble
       const chunks = chunkEls.map(el => el.textContent.trim());
       const state = { cancelled: false, audio: null };
-      factPlayer = { stop: () => { state.cancelled = true; playing = false; if (state.audio) state.audio.pause(); $$('.fact-chunk.speaking', m).forEach(el => el.classList.remove('speaking')); btn.textContent = '🔊 Read to me'; } };
+      factPlayer = { stop: () => { state.cancelled = true; playing = false; if (state.audio) state.audio.stop(); $$('.fact-chunk.speaking', m).forEach(el => el.classList.remove('speaking')); btn.textContent = '🔊 Read to me'; } };
       btn.textContent = '⏹ Stop';
       // fire the requests with the 500ms stagger; the array keeps them in order
       const proms = chunks.map((text, k) => new Promise(res => setTimeout(() =>
@@ -1886,13 +1932,12 @@ async function factOverlay() {
         for (let k = 0; k < chunks.length && !state.cancelled; k++) {
           const r = await proms[k];
           if (!r || state.cancelled) continue;
+          if (proms[k + 1]) proms[k + 1].then(n => n && loadClip(n.assetId)).catch(() => {});  // pre-decode next
           const el = chunkEls[k];
           if (el) { el.classList.add('speaking'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
-          await new Promise((res) => {
-            state.audio = new Audio(assetUrl(r.assetId));
-            state.audio.onended = res; state.audio.onerror = res;
-            state.audio.play().catch(res);
-          });
+          // WebAudio playback with 12ms anti-click ramps (see the clip engine)
+          const buf = await loadClip(r.assetId).catch(() => null);
+          if (buf && !state.cancelled) await new Promise((res) => { state.audio = playClip(buf, res); });
           if (el) el.classList.remove('speaking');
         }
       } finally {

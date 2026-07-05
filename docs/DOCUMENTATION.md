@@ -203,6 +203,12 @@ voices without a profile fall back to a same-gender default (`server/voice_profi
 
 Demo casting: Alice = Lily (Leda), Bob = Peter (Puck), narrator = Ian (Iapetus).
 
+**Click-free playback:** narration chunks play as decoded AudioBuffers through one shared
+WebAudio context with 12 ms gain ramps at both ends (web/app.js `playClip`) — boundary clicks
+are impossible by construction. Server-side 200 ms tail fades are still baked into every
+generated file (`pcmToMp3` / `fadeTail`), and the player pre-decodes the next chunk while the
+current one plays. The ⏸ button suspends/resumes the audio context.
+
 **Provider-aware delivery coaching:** the two engines get OPPOSITE default styles — Gemini
 overacts, so its templates are calm/measured (the judged-experiment winners); LAIONBox is
 naturalistic and emotionally clamped, so its templates (`LAIONBOX_NARRATOR_STYLE` /
