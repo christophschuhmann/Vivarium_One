@@ -249,6 +249,11 @@ function authScreen() {
         ${mode === 'signup' ? `<div class="field"><input id="f-name" placeholder="What should we call you?"></div>` : ''}
         <div class="field"><input id="f-email" type="email" placeholder="you@somewhere.com"></div>
         <div class="field"><input id="f-pw" type="password" placeholder="${mode === 'signup' ? 'Choose a password (8+ chars)' : 'Password'}"></div>
+        ${mode === 'signup' ? `<div style="display:flex;gap:8px;margin:2px 0 4px">
+          <button type="button" class="tchip sel" id="r-adult" style="flex:1">🧑 Adult account</button>
+          <button type="button" class="tchip" id="r-teen" style="flex:1">🌱 Teen account</button>
+        </div>
+        <p style="font-size:10.5px;color:var(--soft);margin:0 0 6px" id="r-hint">Full stories, rated for adults.</p>` : ''}
         <div class="err" id="autherr"></div>
         <button class="btn btn-primary" style="width:100%" id="go">${mode === 'signup' ? 'Create my account' : 'Step inside'}</button>
         ${mode === 'signup' ? '<p style="font-size:11px;color:var(--soft);margin:12px 0 0">New accounts get a <b style="color:#a86f0d">200-credit</b> welcome gift ✨</p>' : ''}`}
@@ -276,11 +281,21 @@ function authScreen() {
       return;
     }
     $('#google').onclick = async () => { try { await api('/api/auth/google'); } catch (e) { err(e.message); } };
-    $('#go').onclick = async () => {
+    const rAdult = $('#r-adult'), rTeen = $('#r-teen');
+  if (rAdult && rTeen) {
+    // account content rating: teen keeps every story PG (fade-to-black prompts server-side)
+    const pick = (r) => {
+      window.__signupRating = r;
+      rAdult.classList.toggle('sel', r === 'adult'); rTeen.classList.toggle('sel', r === 'teen');
+      $('#r-hint').textContent = r === 'teen' ? 'PG-rated stories — romance & kisses fine, everything explicit fades to black.' : 'Full stories, rated for adults.';
+    };
+    rAdult.onclick = () => pick('adult'); rTeen.onclick = () => pick('teen');
+  }
+  $('#go').onclick = async () => {
       const email = $('#f-email').value, password = $('#f-pw').value;
       try {
         if (mode === 'signup') {
-          await api('/api/auth/signup', { method: 'POST', body: { email, password, displayName: $('#f-name').value } });
+          await api('/api/auth/signup', { method: 'POST', body: { email, password, displayName: $('#f-name').value, rating: window.__signupRating || 'adult' } });
           pendingEmail = email; mode = 'verify'; render();
         } else {
           const { user } = await api('/api/auth/login', { method: 'POST', body: { email, password } });
@@ -1131,10 +1146,11 @@ async function atlasScreen() {
   const { world, locations, paths, characters } = await loadWorld(true);
   app.innerHTML = chrome('world', { worldTitle: 'The Atlas', sub: 'world · places & paths' }) + `
   <div class="screen bare"><div class="canvas-wrap" id="wrap"><svg id="asvg"><g id="vp"></g></svg></div></div>
-  <div class="floating-toolbar"><button class="btn btn-primary small" id="newloc">+ Location</button><button class="btn btn-soft small" id="newpath">🔗 Connect</button><button class="btn btn-teal small" id="direction">🎬 Direction</button><button class="btn btn-soft small" id="zin">+</button><button class="btn btn-soft small" id="zout">-</button></div>
+  <div class="floating-toolbar"><button class="btn btn-primary small" id="newloc">+ Location</button><button class="btn btn-soft small" id="newpath">🔗 Connect</button><button class="btn btn-teal small" id="direction">🎬 Direction</button><button class="btn btn-soft small" id="curiosity">💡 Curiosity</button><button class="btn btn-soft small" id="zin">+</button><button class="btn btn-soft small" id="zout">-</button></div>
   <div class="side-panel" id="locpanel" style="display:none"></div>`;
   bindChrome();
   $('#direction').onclick = () => worldDirectionModal(world);
+  $('#curiosity').onclick = curiosityModal;
   const vp = $('#vp');
   const NW = 130, NH = 92;
   const groups = {};
@@ -1303,6 +1319,7 @@ async function stageScreen() {
     <button class="glasschip" id="lang-chip" title="Language / Sprache / Langue / Idioma">🌐 ${getLang().toUpperCase()}</button>
     <div class="glasschip" id="credits-chip"><div class="coin"></div><span id="credits-num">${S.user?.credits ?? '–'}</span></div>
     <button class="glasschip" id="avatar-chip">${esc((S.user?.displayName || '?')[0].toUpperCase())}</button></div></div>
+  <button id="fact-bubble" title="Did you know? — curiosity cards" style="display:none">💡</button>
   <div class="here-rail"><span class="hlabel">HERE</span>
     ${present.map(c => `<div class="rail-face ${c.id === povChar?.id ? 'active' : ''}" data-pov="${c.id}" style="background-image:url(${assetUrl(cutoutFor(c))})" title="See through ${esc(c.name)}'s eyes"><span>${esc(c.name)}</span></div>`).join('')}
     <div class="rail-face places" data-places title="Watch a place instead">🗺</div>
@@ -1332,6 +1349,7 @@ async function stageScreen() {
   <nav id="dock">${['home', 'cast', 'bonds', 'world', 'play', 'share'].map(k => `
     <button class="dock-btn ${k === 'play' ? 'active' : ''}" data-nav="${k}">${ICONS[k]}<span>${dockLabel(k)}</span></button>`).join('')}</nav>`;
   bindChrome();
+  initFactBubble();
   // Timeline handoff: a ▶ Replay click stashes the target; play it now that the stage exists.
   if (S.replay) { const r = S.replay; S.replay = null; playReplay(r.branchId, r.idx); return; }
   // Mobile panel collapse (the handle is display:none on desktop). Preference persists.
@@ -1411,6 +1429,7 @@ async function stageScreen() {
             if (data.cast_suggestion) stageState.castSugs.push({ kind: 'cast', ...data.cast_suggestion });
             if (data.outfit_suggestion) stageState.castSugs.push({ kind: 'outfit', ...data.outfit_suggestion });
             if (data.location_suggestion) stageState.castSugs.push({ kind: 'location', ...data.location_suggestion });
+            if (data.fact) { const fb = $('#fact-bubble'); if (fb) { fb.style.display = 'flex'; fb.classList.add('unread'); } }
             if (cinema) {
               cinema.scenes.push(data);
               if (cinema.scenes.length === 1) playCinema(cinema); // roll film on the first scene — rest streams in behind
@@ -1662,6 +1681,122 @@ async function playReplay(branchId, startIdx) {
   stopNarration();
   S.worldData = null;
   if (location.hash.includes('stage')) await stageScreen();   // settle back on the live present
+}
+
+/* ── 💡 CURIOSITY: "Did you know" fact cards ────────────────────────────────
+   Every Nth tick (💡 Curiosity settings on the Atlas: topics + frequency) the
+   storyteller also writes one TRUE, curiosity-evoking fact subtly related to
+   the story (psychology, philosophy, science, history, cultures…). The bulb
+   on the RIGHT edge of the stage shimmers while something unread waits;
+   opening the overlay marks everything read and the bulb goes quiet. Each
+   card can be read aloud by the storyteller voice (cached like all audio). */
+async function initFactBubble() {
+  const fb = $('#fact-bubble');
+  if (!fb) return;
+  fb.onclick = factOverlay;
+  try {
+    const { facts, unread } = await api(`/api/worlds/${S.world}/facts`);
+    if (facts.length) {
+      fb.style.display = 'flex';
+      fb.classList.toggle('unread', unread > 0);
+    }
+  } catch { /* bubble stays hidden */ }
+}
+let factAudio = null;
+async function factOverlay() {
+  const { facts } = await api(`/api/worlds/${S.world}/facts`);
+  if (!facts.length) return;
+  const m = document.createElement('div');
+  m.className = 'modal-bg';
+  m.innerHTML = `<div class="modal" style="width:560px"><div class="modal-head gold">
+    <div><b>💡 Did you know?</b><small>little pieces of the real world, tucked into your story</small></div><span class="x">✕</span></div>
+  <div class="modal-body" style="max-height:65vh;overflow-y:auto">
+    ${facts.map(f => `
+      <div class="fact-card ${f.read_at ? '' : 'fresh'}">
+        <div style="display:flex;align-items:center;gap:8px">
+          ${f.topic ? `<span class="tag t" style="font-size:9.5px">${esc(f.topic)}</span>` : ''}
+          <span style="font-size:10px;color:var(--soft)">scene #${f.tick_ref}</span>
+          <button class="btn btn-ghost small" data-speak="${f.id}" style="margin-left:auto;padding:3px 10px" title="Have the storyteller read it">🔊</button>
+        </div>
+        <b style="display:block;font-size:13.5px;margin:6px 0 4px">${esc(f.title)}</b>
+        <div class="serif" style="font-size:13px;line-height:1.55;color:#3c3763">${esc(f.body)}</div>
+      </div>`).join('')}
+  </div></div>`;
+  document.body.appendChild(m);
+  const close = () => { m.remove(); if (factAudio) { factAudio.pause(); factAudio = null; } };
+  m.onclick = (e) => { if (e.target === m) close(); };
+  $('.x', m).onclick = close;
+  // storyteller read-aloud (narrator voice/style → shares the normal audio cache)
+  $$('[data-speak]', m).forEach(btn => btn.onclick = async () => {
+    const f = facts.find(x => x.id === btn.dataset.speak);
+    btn.textContent = '⏳';
+    try {
+      const { assetId } = await fetchTts(`${f.title}. ${f.body}`, null, 'curious');
+      if (factAudio) factAudio.pause();
+      factAudio = new Audio(assetUrl(assetId));
+      factAudio.play();
+      btn.textContent = '🔊';
+    } catch (e) { btn.textContent = '🔊'; fail(e); }
+  });
+  // opening counts as reading: clear the unread state, quiet the bulb
+  const unreadIds = facts.filter(f => !f.read_at).map(f => f.id);
+  for (const id of unreadIds) api(`/api/facts/${id}/read`, { method: 'POST' }).catch(() => {});
+  $('#fact-bubble')?.classList.remove('unread');
+}
+
+/* ── 🎓 Curiosity topic picker (Atlas toolbar) ──────────────────────────────
+   A rich, grouped menu of learning interests + freeform wishes + frequency.
+   Saved per world; the storyteller weaves the topics subtly into the story
+   AND writes a fact card every Nth tick.                                    */
+const CURIO_GROUPS = [
+  { name: '🧠 Mind & Psychology', topics: ['Positive psychology', 'Cognitive psychology', 'Social psychology', 'Personality psychology', 'Motivation & habits', 'Emotional intelligence', 'Empathy & compassion', 'Memory & learning'] },
+  { name: '🤔 Philosophy', topics: ['Philosophy of mind', 'Consciousness', 'Ethics & moral dilemmas', 'Meaning & purpose', 'Stoicism', 'Existentialism', 'Free will', 'Beauty & aesthetics'] },
+  { name: '🔭 Science & Technology', topics: ['Physics', 'Quantum physics', 'Astronomy & space', 'The brain & neuroscience', 'Biology & evolution', 'Mathematics', 'Technology & AI', 'Medicine'] },
+  { name: '🌍 World & History', topics: ['History', 'Geography', 'Cultures of the world', 'Languages', 'Art & music history', 'Archaeology', 'Economics'] },
+  { name: '💞 Life & Us', topics: ['Friendship', 'Romance & love', 'Social relationships', 'Gratitude', 'Mortality & legacy', 'Resilience', 'Creativity', 'Happiness research'] },
+];
+async function curiosityModal() {
+  const { curiosity } = await api(`/api/worlds/${S.world}/facts`);
+  const sel = new Set(curiosity.topics || []);
+  const m = document.createElement('div');
+  m.className = 'modal-bg';
+  m.innerHTML = `<div class="modal" style="width:680px"><div class="modal-head gold">
+    <div><b>💡 Curiosity</b><small>what would you love to learn while you play?</small></div><span class="x">✕</span></div>
+  <div class="modal-body" style="max-height:70vh;overflow-y:auto">
+    ${CURIO_GROUPS.map(g => `
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--soft);margin-bottom:7px">${g.name}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px">
+          ${g.topics.map(t0 => `<button class="curio-chip ${sel.has(t0) ? 'sel' : ''}" data-topic="${esc(t0)}">${esc(t0)}</button>`).join('')}
+        </div>
+      </div>`).join('')}
+    <div style="margin:16px 0 12px">
+      <label style="font-size:12px;font-weight:600">✍️ Your own topics (freeform)</label>
+      <input id="cu-custom" value="${esc(curiosity.custom || '')}" placeholder="e.g. the physics of sound, Japanese aesthetics, bird migration…" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:8px 11px;margin-top:5px">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600">📬 A new card every</label>
+      <select id="cu-freq" style="border:1.5px solid var(--line);border-radius:9px;padding:6px 9px;font-family:inherit">
+        ${[1, 2, 3, 4, 6, 8].map(n => `<option value="${n}" ${n === (curiosity.frequency || 4) ? 'selected' : ''}>${n === 1 ? 'scene' : n + ' scenes'}</option>`).join('')}
+      </select>
+    </div>
+    <p style="font-size:11.5px;color:var(--soft);margin-bottom:12px">Your picks also colour the story itself — subtly: a character's interest, a book on a table, a passing conversation. Never a lecture.</p>
+    <button class="btn btn-primary" id="cu-save" style="width:100%">Save curiosity</button>
+  </div></div>`;
+  document.body.appendChild(m);
+  m.onclick = (e) => { if (e.target === m) m.remove(); };
+  $('.x', m).onclick = () => m.remove();
+  $$('.curio-chip', m).forEach(ch => ch.onclick = () => {
+    const t0 = ch.dataset.topic;
+    if (sel.has(t0)) { sel.delete(t0); ch.classList.remove('sel'); } else { sel.add(t0); ch.classList.add('sel'); }
+  });
+  $('#cu-save', m).onclick = async () => {
+    try {
+      await api(`/api/worlds/${S.world}/curiosity`, { method: 'PATCH', body: { topics: [...sel], custom: $('#cu-custom', m).value, frequency: +$('#cu-freq', m).value } });
+      toast('💡 Curiosity saved — new cards will start appearing', 'gold');
+      m.remove();
+    } catch (e) { fail(e); }
+  };
 }
 
 /* ── 💬 GAME MASTER CHAT ─────────────────────────────────────────────────────

@@ -34,7 +34,7 @@ function runCmd(cmd, args, opts = {}) {
   });
 }
 
-const publicUser = (u) => ({ id: u.id, email: u.email, displayName: u.display_name, verified: !!u.email_verified_at, credits: Math.floor(toCredits(u.credit_balance) * 10) / 10, role: u.role });
+const publicUser = (u) => ({ id: u.id, email: u.email, displayName: u.display_name, verified: !!u.email_verified_at, credits: Math.floor(toCredits(u.credit_balance) * 10) / 10, role: u.role, rating: u.rating || 'adult' });
 
 function ownWorld(user, id) {
   const w = db.prepare('SELECT * FROM worlds WHERE id=? AND user_id=?').get(id, user.id);
@@ -53,8 +53,8 @@ const charOut = (c) => ({
 export default async function apiRoutes(app) {
   // ---------- auth ----------
   app.post('/api/auth/signup', async (req, reply) => {
-    const { email, password, displayName } = req.body || {};
-    const u = auth.signup({ email, password, displayName });
+    const { email, password, displayName, rating } = req.body || {};
+    const u = auth.signup({ email, password, displayName, rating });
     return { ok: true, userId: u.id, message: 'Check your email for a 6-digit verification code.' };
   });
   app.post('/api/auth/verify', async (req, reply) => {
@@ -101,6 +101,34 @@ export default async function apiRoutes(app) {
   app.get('/api/world-direction-default', async (req) => {
     requireUser(req);
     return { directives: gm.DEFAULT_WORLD_DIRECTIVES };
+  });
+
+  // ---------- curiosity ("Did you know" learning cards) ----------
+  // Per-world preferences: which topics to learn about, how often a fact is due.
+  app.patch('/api/worlds/:id/curiosity', async (req) => {
+    const u = requireUser(req);
+    const w = ownWorld(u, req.params.id);
+    const b = req.body || {};
+    const cfg = {
+      topics: (Array.isArray(b.topics) ? b.topics : []).map(t => String(t).slice(0, 60)).slice(0, 20),
+      custom: String(b.custom || '').slice(0, 300),
+      frequency: Math.max(1, Math.min(20, +b.frequency || 4)),
+    };
+    db.prepare('UPDATE worlds SET curiosity=?, updated_at=? WHERE id=?').run(j(cfg), now(), w.id);
+    return { curiosity: cfg };
+  });
+  app.get('/api/worlds/:id/facts', async (req) => {
+    const u = requireUser(req);
+    const w = ownWorld(u, req.params.id);
+    const rows = db.prepare('SELECT * FROM facts WHERE world_id=? ORDER BY created_at DESC LIMIT 50').all(w.id);
+    return { facts: rows, unread: rows.filter(r => !r.read_at).length, curiosity: gm.curiosityCfg(w) };
+  });
+  app.post('/api/facts/:id/read', async (req) => {
+    const u = requireUser(req);
+    const f = db.prepare('SELECT f.* FROM facts f JOIN worlds w ON w.id=f.world_id WHERE f.id=? AND w.user_id=?').get(req.params.id, u.id);
+    if (!f) throw httpErr(404, 'NOT_FOUND', 'Fact not found.');
+    if (!f.read_at) db.prepare('UPDATE facts SET read_at=? WHERE id=?').run(now(), f.id);
+    return { ok: true };
   });
 
   // ---------- worlds ----------

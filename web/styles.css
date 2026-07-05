@@ -475,3 +475,21 @@ input[type=range]{width:100%;accent-color:var(--violet)}
   .title{font-size:26px}
   .floating-toolbar{top:56px;flex-wrap:wrap}      /* atlas tools below the chips */
 }
+
+/* ── 💡 curiosity ── */
+#fact-bubble{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:40;width:52px;height:52px;
+  border-radius:50%;border:2px solid #e2dcf6;background:rgba(251,250,255,.92);backdrop-filter:blur(10px);
+  font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 18px rgba(34,31,69,.18);opacity:.55;transition:opacity .3s,box-shadow .3s}
+#fact-bubble:hover{opacity:1}
+#fact-bubble.unread{opacity:1;border-color:var(--gold);animation:bulbglow 2.2s ease-in-out infinite}
+@keyframes bulbglow{
+  0%,100%{box-shadow:0 6px 18px rgba(34,31,69,.18),0 0 0 0 rgba(240,169,46,.0)}
+  50%{box-shadow:0 6px 22px rgba(34,31,69,.2),0 0 24px 6px rgba(240,169,46,.55)}}
+.fact-card{background:#fff;border:1.5px solid #eee7d2;border-radius:14px;padding:12px 14px;margin-bottom:11px}
+.fact-card.fresh{border-color:var(--gold);background:#fffdf6}
+.curio-chip{border:1.5px solid #d9d2f5;background:#fff;border-radius:999px;padding:6px 13px;font-size:12px;
+  color:#3c3763;cursor:pointer;font-family:inherit;transition:all .12s}
+.curio-chip:hover{border-color:var(--violet)}
+.curio-chip.sel{background:linear-gradient(135deg,var(--violet),#8f6bff);border-color:var(--violet);color:#fff;font-weight:600}
+@media(max-width:760px){#fact-bubble{right:8px;width:44px;height:44px;font-size:18px}}

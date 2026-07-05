@@ -134,6 +134,18 @@ try { db.exec(`ALTER TABLE worlds ADD COLUMN genesis_state TEXT`); } catch { /* 
 // Cast suggestions the player DECLINED (JSON array of names, capped at ~10). Fed back into
 // the Game Master's context so it doesn't keep re-suggesting the same walk-on character.
 try { db.exec(`ALTER TABLE worlds ADD COLUMN cast_dismissed TEXT DEFAULT '[]'`); } catch { /* exists */ }
+// Curiosity feature: per-world learning preferences {topics:[], custom:'', frequency:4}
+// (topic picker on the Atlas). Facts the storyteller generates land in the `facts` table.
+try { db.exec(`ALTER TABLE worlds ADD COLUMN curiosity TEXT DEFAULT '{}'`); } catch { /* exists */ }
+// Account content rating: 'adult' (default) or 'teen' — teen accounts get a PG fade-to-black
+// safety block appended to every story-generating prompt (see server/gm.js teenSafetyPrompt).
+try { db.exec(`ALTER TABLE users ADD COLUMN rating TEXT DEFAULT 'adult'`); } catch { /* exists */ }
+// "Did you know" fact cards generated every Nth tick; read_at drives the unread shimmer.
+db.exec(`CREATE TABLE IF NOT EXISTS facts (
+  id TEXT PRIMARY KEY, world_id TEXT NOT NULL, tick_ref INTEGER, topic TEXT DEFAULT '',
+  title TEXT NOT NULL, body TEXT NOT NULL, read_at TEXT, created_at TEXT NOT NULL
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_facts_world ON facts(world_id, created_at)`);
 try { db.exec(`ALTER TABLE memory_chunks ADD COLUMN branch_id TEXT`); } catch { /* exists */ }
 // Video export: which lines get voiced ('generate' = synthesise missing audio & bill the user;
 // 'silent' = only reuse already-cached audio, leave the rest quiet & free). silent_lines records

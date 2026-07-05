@@ -238,6 +238,26 @@ the story-export flow, so under LAIONBox each line clones the **language-matched
 reference** (see 2.8) — switch 🌐 mid-game and the same characters keep their voices, now speaking
 the new language cleanly (Whisper-verified round-trips in DE and EN).
 
+### 2.9b Curiosity 💡 ("Did you know" learning cards)
+The 💡 Curiosity button on the Atlas opens a grouped topic picker (Mind & Psychology,
+Philosophy, Science & Technology, World & History, Life & Us — 39 chips) plus freeform topics
+and a frequency (default: every 4th scene). Every Nth tick the storyteller writes one TRUE,
+curiosity-evoking fact card (3-8 sentences, "Did you know" tone, player's language) drawn from
+those interests and subtly resonant with the current story. Topics also flavour the story
+itself — a character's interest, a book on a table — organically, never a lecture. On the
+Stage a bulb on the right edge shimmers while unread cards wait; the overlay shows all cards
+with 🔊 storyteller read-aloud (cached audio), and opening it marks them read (bulb dims).
+Data: `worlds.curiosity` JSON + `facts` table; routes PATCH …/curiosity, GET …/facts,
+POST /api/facts/:id/read.
+
+### 2.9c Account content rating 🌱
+Sign-up offers **Adult** (default) or **Teen**. Teen accounts get a PG fade-to-black safety
+block appended to every story-generating prompt (ticks, chapter planner, GM chat) that
+OVERRIDES world direction: romance/kisses fine, anything explicit or graphically violent cuts
+away; dark themes may exist but are handled with restraint. Admin: the Users table shows and
+toggles 🧑 adult / 🌱 teen per account; the Prompts page has an editable teen-safety block
+(`settings.teen_safety_prompt`, reset-to-default).
+
 ### 2.10 Time travel & replay
 Undo/redo arrows + the Timeline (🕰 chip in the top bar on every screen, or the stage button):
 a **graphical filmstrip** — earlier ⟵ left · right ⟶ later — where every scene is a thumbnail

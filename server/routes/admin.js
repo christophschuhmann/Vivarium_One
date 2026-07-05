@@ -70,7 +70,7 @@ export default async function adminRoutes(app) {
     const q = `%${(req.query.q || '').toLowerCase()}%`;
     const rows = db.prepare(`SELECT * FROM users WHERE email LIKE ? OR lower(display_name) LIKE ? ORDER BY created_at DESC LIMIT 200`).all(q, q);
     return { users: rows.map(u => ({
-      id: u.id, email: u.email, displayName: u.display_name, role: u.role, status: u.status,
+      id: u.id, email: u.email, displayName: u.display_name, role: u.role, status: u.status, rating: u.rating || 'adult',
       verified: !!u.email_verified_at, credits: toCredits(u.credit_balance), dailyCap: toCredits(u.daily_cap),
       worlds: db.prepare('SELECT COUNT(*) n FROM worlds WHERE user_id=?').get(u.id).n,
       lifetimeSpend: toCredits(db.prepare('SELECT COALESCE(SUM(-delta),0) s FROM credit_ledger WHERE user_id=? AND delta<0').get(u.id).s),
@@ -107,6 +107,8 @@ export default async function adminRoutes(app) {
     if (b.status) db.prepare('UPDATE users SET status=? WHERE id=?').run(b.status === 'suspended' ? 'suspended' : 'active', target.id);
     if (b.dailyCapCredits != null) db.prepare('UPDATE users SET daily_cap=? WHERE id=?').run(toMicro(Number(b.dailyCapCredits)), target.id);
     if (b.verify) db.prepare('UPDATE users SET email_verified_at=? WHERE id=?').run(now(), target.id);
+    // content rating: teen accounts get the PG fade-to-black block in every story prompt
+    if (b.rating) db.prepare('UPDATE users SET rating=? WHERE id=?').run(b.rating === 'teen' ? 'teen' : 'adult', target.id);
     audit(a.id, 'update_user', target.email, b);
     return { ok: true };
   });
@@ -217,6 +219,7 @@ export default async function adminRoutes(app) {
     try { const msgs = pj(lastTick?.request, []); lastSys = msgs[0]?.content || null; lastUser = (msgs[1]?.content || '').slice(0, 4000); } catch {}
     return {
       gmCore: { current: gm.gmCoreDirectives(), default: gm.GM_CORE_DEFAULT, customised: gm.gmCoreDirectives() !== gm.GM_CORE_DEFAULT },
+      teenSafety: { current: gm.teenSafetyPrompt(), default: gm.TEEN_SAFETY_DEFAULT, customised: gm.teenSafetyPrompt() !== gm.TEEN_SAFETY_DEFAULT },
       lastTick: { system: lastSys, userPreview: lastUser },
       tts: {
         gemini: { narrator: ec.NARRATOR_STYLE, character: ec.CHARACTER_STYLE_TEMPLATE, note: 'Gemini overacts by default — these calm/measured templates rein it in (winners of the judged narrator experiment).' },
@@ -227,11 +230,19 @@ export default async function adminRoutes(app) {
   });
   app.patch('/admin/api/prompts', async (req) => {
     const a = requireAdmin(req);
-    const text = String(req.body?.gmCore ?? '').slice(0, 4000);
-    setSetting('gm_core_directives', text);   // empty string → gmCoreDirectives() falls back to default
-    audit(a.id, 'update_gm_core', 'prompts', { length: text.length });
     const gm = await import('../gm.js');
-    return { gmCore: { current: gm.gmCoreDirectives(), default: gm.GM_CORE_DEFAULT } };
+    if (req.body?.gmCore !== undefined) {
+      const text = String(req.body.gmCore ?? '').slice(0, 4000);
+      setSetting('gm_core_directives', text);   // empty string → falls back to default
+      audit(a.id, 'update_gm_core', 'prompts', { length: text.length });
+    }
+    if (req.body?.teenSafety !== undefined) {
+      const text = String(req.body.teenSafety ?? '').slice(0, 4000);
+      setSetting('teen_safety_prompt', text);   // empty string → falls back to default
+      audit(a.id, 'update_teen_safety', 'prompts', { length: text.length });
+    }
+    return { gmCore: { current: gm.gmCoreDirectives(), default: gm.GM_CORE_DEFAULT },
+             teenSafety: { current: gm.teenSafetyPrompt(), default: gm.TEEN_SAFETY_DEFAULT } };
   });
 
   app.get('/admin/api/audit', async (req) => {

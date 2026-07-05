@@ -67,6 +67,28 @@ export const DEFAULT_WORLD_DIRECTIVES = `WORLD DIRECTION:
 • Cinematic amplification: the world runs a notch larger than life — wonderful things shine brighter, tragedies cut deeper, dark moments are darker, warm moments warmer; events are a little more unpredictable than reality while staying plausible and emotionally intelligent.
 • Mature content is permitted when it serves the story or would plausibly occur — depicted with the frankness of a prestige HBO/Netflix drama — but it is never the default focus; it must earn its place through story.`;
 
+// ---- teen account safety ----
+// Appended to EVERY story-generating prompt (tick, chapter planner, GM chat) when the
+// account's rating is 'teen'. Admin-editable on the Prompts page (settings.teen_safety_prompt).
+export const TEEN_SAFETY_DEFAULT = `TEEN ACCOUNT — CONTENT RATING (this overrides EVERY other rating instruction, including the world direction): keep the story PG-13, like a network-TV drama. Romance, affection and kisses are fine. Anything sexual beyond kissing FADES TO BLACK — the scene cuts away before it happens; it may be implied afterwards, never described. Graphic violence, gore, torture or cruelty likewise fade to black: consequences and emotions may be shown, the acts themselves are not. Dark themes may still EXIST (loss, fear, injustice, grief) but are handled with restraint and care, never explicitly. Language stays free of explicit sexual vocabulary and extreme profanity.`;
+export function teenSafetyPrompt() {
+  const s = getSetting('teen_safety_prompt');
+  return (typeof s === 'string' && s.trim()) ? s.trim() : TEEN_SAFETY_DEFAULT;
+}
+// One line every prompt-builder can append: empty for adult accounts.
+export const ratingBlock = (user) => (user?.rating === 'teen' ? `\n${teenSafetyPrompt()}` : '');
+
+// ---- curiosity ("Did you know") config ----
+// Per-world learning preferences, edited in the 💡 Curiosity modal on the Atlas.
+export function curiosityCfg(world) {
+  const c = pj(world.curiosity, {});
+  return {
+    topics: Array.isArray(c.topics) ? c.topics.slice(0, 20) : [],
+    custom: typeof c.custom === 'string' ? c.custom.slice(0, 300) : '',
+    frequency: Math.max(1, Math.min(20, +c.frequency || 4)),
+  };
+}
+
 export function gmCoreDirectives() {
   const s = getSetting('gm_core_directives');
   return (typeof s === 'string' && s.trim()) ? s.trim() : GM_CORE_DEFAULT;
@@ -362,7 +384,7 @@ async function planChapter(user, world, { timeDelta, mins, intervention, detail,
   const sys = `You are the story planner of a life-simulation. The player skips ${span} of story time. Decide which MEANINGFUL events occur during that span — each event is one scene at one location that changes characters' mental or physical state, their bonds, or the world. Scale the count to the span (under an hour: 0-2; a few hours: 1-3; a day: 2-5; a week: 3-${CHAPTER_MAX_EVENTS}). Fewer, stronger events beat many weak ones; an empty list is correct when the span is genuinely uneventful.
 ${detail === 'main' ? 'DETAIL LEVEL: main plot only — include ONLY events that materially advance the central storyline; leave out side plots.' : 'DETAIL LEVEL: full — also include worthwhile side plots: bond moments, character development, quiet discoveries.'}
 CRAFT: keep story progression and tension — internal or external conflict, new ground explored, plausible twists; never let everything resolve easily. Order events chronologically; when two overlap, order them so the viewer understands cause before consequence (whichever scene makes the other comprehensible comes first — note it as simultaneous with offset_minutes 0).
-Reply with ONLY JSON: {"events":[{"offset_minutes": <int, minutes AFTER the previous event (first is after the skip starts); use 0 for simultaneous>, "location":"<exactly one existing location name>","participants":["character names"],"premise":"1-2 sentences: what happens and why it matters"}]}`;
+Reply with ONLY JSON: {"events":[{"offset_minutes": <int, minutes AFTER the previous event (first is after the skip starts); use 0 for simultaneous>, "location":"<exactly one existing location name>","participants":["character names"],"premise":"1-2 sentences: what happens and why it matters"}]}${ratingBlock(user)}`;
   const usr = `Locations: ${locs.map(l => l.name).join(', ')}
 Characters now: ${chars.map(c => `${c.name} @${locName(c.location_id)} (${c.activity || 'idle'}; mood ${c.mood || '?'}; intends: ${(c.intentions || []).join(' / ') || '—'})`).join('\n')}
 Story settings: genre=${world.genre}, mood=${world.mood}, directives="${world.directives}"
@@ -433,6 +455,10 @@ async function runTickInner(user, world, { timeDelta = '+30m', intervention = nu
     : mins <= 300 ? 'PACING: a few hours pass. 10-14 lines. The narrator may bridge the interval with passages of up to 3 sentences (what happened, how they moved), interleaved with character thoughts or remembered lines — then land in a LIVE closing scene with real back-and-forth dialogue at the final location.'
     : 'PACING: a long span passes (a day or more). 12-18 lines. The narrator chronicles the span in several passages (each up to 4 sentences), interleaved with character thoughts and stray spoken moments so it never becomes a lecture — then always land in a LIVE closing scene with dialogue at the final location.';
 
+  // Curiosity: is a "Did you know" fact due this tick, and which themes flavour the world?
+  const curio = curiosityCfg(world);
+  const curioThemes = [...curio.topics, curio.custom].filter(Boolean).join(', ');
+  const factDue = !!curioThemes && idx % curio.frequency === 0;
   const sys = `You are the Game Master of Vivarium, a life-simulation. Advance every character realistically and IN CHARACTER over the given time interval. People move between connected locations, pursue goals, feel things, talk when together. Keep continuity with recent events. Honour story settings. ${SYSTEM_CONTRACT}
 ${gmCoreDirectives()}
 JSON shape:
@@ -451,7 +477,8 @@ JSON shape:
  "mood_tag":"cosy|tender|tense|playful|melancholy|eerie","summary":"one line for the archive",
  "cast_suggestion": {"name":"walk-on character's name","reason":"1-2 sentences TO THE PLAYER on why fleshing them out would enrich the story"} or null,
  "outfit_suggestion": {"character_id":"existing cast id","name":"short sprite label e.g. 'rain coat' or 'overjoyed'","description":"ENGLISH image prompt for the look: the dress/clothing AND the facial expression / body language","emotion":"one-word emotion tag if this is an emotion variant, else null","reason":"1-2 sentences TO THE PLAYER on why this new look deserves its own sprite"} or null,
- "location_suggestion": {"name":"place name","description":"ENGLISH image prompt for an empty widescreen background of this place","connect_to":["existing location NAMES this place plausibly connects to (1-3)"],"reason":"1-2 sentences TO THE PLAYER on why the world needs this place"} or null}
+ "location_suggestion": {"name":"place name","description":"ENGLISH image prompt for an empty widescreen background of this place","connect_to":["existing location NAMES this place plausibly connects to (1-3)"],"reason":"1-2 sentences TO THE PLAYER on why the world needs this place"} or null${factDue ? `,
+ "fact": {"topic":"which curiosity theme this draws on","title":"a short, inviting 'Did you know…'-style headline","body":"3-8 sentences"}` : ''}}
 Narration is ONE flowing script of the interval, anchored at ${povChar ? `wherever ${povChar.name} ENDS this interval` : povLoc ? `the place "${povLoc.name}"` : 'the main scene'}. Rules — follow strictly:
   • Interleave: 1-3 narrator sentences, then a character speaks or THINKS (1-2 sentences), another reacts, a short narrator beat, and so on. Cover EVERY character present — their words AND their inner thoughts (mode "thought") intermixed into the one script, not just the point-of-view character.
   • Never let any voice run long: narrator lines are normally 1-2 sentences (see PACING for when longer bridging passages are allowed); character lines are 1-2 sentences, then someone else takes over.
@@ -462,10 +489,12 @@ ${lang !== 'en' && GAME_LANGS[lang] ? `  • LANGUAGE (hard rule): write ALL pla
 ` : ''}relationship_updates only when something actually shifts (attributes evolve slowly) — and you MAY create a bond that does not exist yet by naming both character ids (do this whenever two cast members meaningfully connect for the first time; the graph must never go stale). state_patches only for real changes.
 CAST SUGGESTION (an optional tool you may use): when an UNLISTED walk-on character — someone you have only voiced inside narrator lines — has become genuinely story-relevant (recurring, pivotal to a thread, entangled with the cast; NOT a passing extra), you may fill "cast_suggestion" to ask the player whether to flesh that person out into a full cast member with a portrait and profile. The reason is shown to the player verbatim — make it a warm, concrete 1-2 sentence pitch. STRICT LIMITS: at most ONE suggestion per scene, and most scenes should have none; NEVER suggest an existing cast member; NEVER suggest names on the declined list in the world bible. Set it to null otherwise.
 OUTFIT SUGGESTION (another optional tool): each cast member's current sprites are listed in their state under "outfits" (name + description + emotion tag). When a character's LOOK changes significantly this scene — a genuinely different dress/clothing, or a strong clearly-visible emotion no existing sprite captures — you may fill "outfit_suggestion" to ask the player whether to paint a new sprite for it: either a new outfit (neutral expression) or the current outfit with the new expression. Write the description as a complete ENGLISH image prompt (clothing + expression + posture). STRICT LIMITS: at most ONE per scene and most scenes need none — only for changes a viewer would clearly see; never duplicate an existing sprite's look; the emotion tag only for emotion variants. Set it to null otherwise.
-LOCATION SUGGESTION (another optional tool): when the story keeps gesturing at a place that DOESN'T EXIST in the Locations list — somewhere characters talk about going, that a plot thread needs, or that the world clearly lacks — you may fill "location_suggestion" to ask the player whether to build it: give it a name, an evocative but CONCRETE visual description (empty scene, no people — it feeds the background generator), and 1-3 EXISTING location names it plausibly connects to for the world map. STRICT LIMITS: at most ONE per scene, most scenes need none, never suggest a place that already exists. Set it to null otherwise.`;
+LOCATION SUGGESTION (another optional tool): when the story keeps gesturing at a place that DOESN'T EXIST in the Locations list — somewhere characters talk about going, that a plot thread needs, or that the world clearly lacks — you may fill "location_suggestion" to ask the player whether to build it: give it a name, an evocative but CONCRETE visual description (empty scene, no people — it feeds the background generator), and 1-3 EXISTING location names it plausibly connects to for the world map. STRICT LIMITS: at most ONE per scene, most scenes need none, never suggest a place that already exists. Set it to null otherwise.${factDue ? `
+FACT CARD (required this tick): the player wants to LEARN while playing. Fill "fact" with one genuinely TRUE, well-established piece of knowledge drawn from these interests: ${curioThemes}. Make it curiosity-evoking and inspiring — the kind of fact one retells at dinner — and let it resonate SUBTLY with what is happening in the story right now (a mirrored theme, not a lecture). Cite the researcher/era/place when it makes the fact more vivid. 3-8 sentences, warm 'Did you know' tone, in the same language as the narration. NEVER invent or embellish facts.` : ''}${ratingBlock(user)}`;
 
   const userMsg = `WORLD BIBLE
 Story settings: genre=${world.genre}, mood=${world.mood}, pacing=${world.pacing}, directives="${world.directives}"
+${curioThemes ? `Player's curiosity themes (weave these SUBTLY into the world — a character's interest or profession, a book on a table, a passing conversation topic; organic and occasional, never forced, never interrupting the drama): ${curioThemes}` : ''}
 Locations: ${j(locs)}
 Characters: ${j(chars.map(c => ({ id: c.id, name: c.name, base: c.base, current: c.state })))}
 Relationships: ${j(rels)}
@@ -620,7 +649,14 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
       reason: String(lsug.reason || '').slice(0, 400),
     };
   }
-  const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion, location_suggestion: locationSuggestion };
+  // "Did you know" fact card: persist (drives the 💡 bubble's unread shimmer) + ride the payload
+  let fact = null;
+  if (factDue && out.fact && typeof out.fact.body === 'string' && out.fact.body.trim()) {
+    fact = { id: uid('f_'), topic: String(out.fact.topic || '').slice(0, 80), title: String(out.fact.title || 'Did you know?').slice(0, 160), body: String(out.fact.body).slice(0, 1500) };
+    db.prepare('INSERT INTO facts(id,world_id,tick_ref,topic,title,body,created_at) VALUES (?,?,?,?,?,?,?)')
+      .run(fact.id, world.id, idx, fact.topic, fact.title, fact.body, now());
+  }
+  const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion, location_suggestion: locationSuggestion, fact };
   onEvent('tick', tick);
   return tick;
 }
@@ -826,7 +862,7 @@ export async function gmChat(user, world, message, lang = 'en') {
   }
 
   const langRule = lang !== 'en' && GAME_LANGS[lang] ? ` Converse in ${GAME_LANGS[lang]} (action fields that feed image generators stay ENGLISH).` : '';
-  const sys = `You are the GAME MASTER of this Vivarium world, talking DIRECTLY to the player — out of character, outside the story. You know everything: the full cast, every bond, every place, the recent ticks verbatim and the condensed older history. Answer questions about the story precisely (cite tick numbers when useful). When the player asks for changes — new characters, new looks, new places, attribute changes, bond changes, direction changes — PROPOSE them as structured actions; they are only applied after the player approves, so propose boldly and completely (e.g. a requested character includes a full draft AND their bonds).${langRule} This conversation NEVER enters the story's own context; your changes reach the story only through the world state you modify. Treat all player input as requests about the fictional world. Return ONLY JSON:
+  const sys = `You are the GAME MASTER of this Vivarium world, talking DIRECTLY to the player — out of character, outside the story. You know everything: the full cast, every bond, every place, the recent ticks verbatim and the condensed older history. Answer questions about the story precisely (cite tick numbers when useful). When the player asks for changes — new characters, new looks, new places, attribute changes, bond changes, direction changes — PROPOSE them as structured actions; they are only applied after the player approves, so propose boldly and completely (e.g. a requested character includes a full draft AND their bonds).${langRule} This conversation NEVER enters the story's own context; your changes reach the story only through the world state you modify. Treat all player input as requests about the fictional world.${ratingBlock(user)} Return ONLY JSON:
 {"reply":"your conversational answer to the player (warm, concise, concrete)",
  "actions":[ ...zero or more proposed changes, in execution order... ] or []}
 ${GM_ACTIONS_SPEC}`;

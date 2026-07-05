@@ -23,7 +23,7 @@ export function sendMail(to, subject, body, code) {
   console.log(`[mail] to=${to} subject="${subject}" code=${code ?? '-'}`);
 }
 
-export function signup({ email, password, displayName }) {
+export function signup({ email, password, displayName, rating }) {
   email = String(email || '').trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw httpErr(400, 'INVALID_EMAIL', 'Please enter a valid email address.');
   if (!password || password.length < 8) throw httpErr(400, 'WEAK_PASSWORD', 'Password needs at least 8 characters.');
@@ -31,9 +31,10 @@ export function signup({ email, password, displayName }) {
   if (db.prepare('SELECT id FROM users WHERE email=?').get(email)) throw httpErr(409, 'EMAIL_TAKEN', 'That email is already registered — try signing in.');
   const id = uid('u_');
   const pricing = getSetting('pricing');
-  db.prepare(`INSERT INTO users(id,email,password_hash,display_name,role,status,credit_balance,daily_cap,created_at)
-              VALUES (?,?,?,?,'player','active',0,?,?)`)
-    .run(id, email, hashPassword(password), displayName.trim(), toMicro(pricing.default_daily_cap_credits), now());
+  db.prepare(`INSERT INTO users(id,email,password_hash,display_name,role,status,credit_balance,daily_cap,rating,created_at)
+              VALUES (?,?,?,?,'player','active',0,?,?,?)`)
+    .run(id, email, hashPassword(password), displayName.trim(), toMicro(pricing.default_daily_cap_credits),
+      rating === 'teen' ? 'teen' : 'adult', now());   // content rating: teen = PG fade-to-black prompts
   record(id, { delta: toMicro(pricing.signup_bonus_credits), reason: 'signup_bonus', createdBy: 'system' });
   issueVerification(id, email);
   return { id, email };

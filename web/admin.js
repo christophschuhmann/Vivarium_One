@@ -111,6 +111,12 @@ async function users() {
     $$('#u-table tr[data-id]').forEach(tr => {
       const id = tr.dataset.id;
       const u = users.find(x => x.id === id);
+      const rt = $('[data-rating]', tr);
+      if (rt) rt.onclick = async () => {
+        const next = u.rating === 'teen' ? 'adult' : 'teen';
+        if (!confirm(`Switch ${u.email} to a ${next.toUpperCase()} account?${next === 'teen' ? ' Stories become PG (explicit content fades to black).' : ' Stories become adult-rated.'}`)) return;
+        await api(`/admin/api/users/${id}`, { method: 'PATCH', body: { rating: next } }).then(() => { toast(`${u.email} → ${next}`); draw($('#u-q').value); }).catch(fail);
+      };
       $('[data-topup]', tr).onclick = async () => {
         const amt = prompt(`Credits to grant to ${u.email} (negative to revoke):`, '100'); if (!amt) return;
         const reason = prompt('Reason (for the audit log):', 'manual top-up') || '';
