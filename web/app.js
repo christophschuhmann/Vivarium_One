@@ -655,7 +655,7 @@ async function profileDrawer(charId) {
           ? (c.voice_ref_asset_id ? 'custom voice 🎙 (uploaded)' : 'voice profile 🎙 ' + esc(c.voice))
           : 'voice ' + esc(c.voice)}</div>
         <div class="outfit-strip" style="justify-content:center">
-          ${(c.state.outfits || []).map(o => `<div class="outfit-thumb ${o.name === c.state.outfit ? 'sel' : ''}" title="${esc(o.name)}" data-cut="${o.cutout_asset_id}" style="background-image:url(${assetUrl(o.cutout_asset_id)})"></div>`).join('')}
+          ${(c.state.outfits || []).map(o => `<div class="outfit-thumb ${o.name === c.state.outfit ? 'sel' : ''}" title="${esc(o.name)} — click to view & manage" data-cut="${o.cutout_asset_id}" data-oname="${esc(o.name)}" style="background-image:url(${assetUrl(o.cutout_asset_id)})"></div>`).join('')}
           <div class="outfit-thumb add" id="addoutfit" title="Commission a new outfit">+</div>
         </div>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
@@ -689,7 +689,43 @@ async function profileDrawer(charId) {
     if (!confirm(`Remove ${c.name} from the cast? This also deletes their bonds and history.`)) return;
     try { await api(`/api/characters/${c.id}`, { method: 'DELETE' }); toast(`${c.name} left the cast`); S.worldData = null; bg.remove(); if (location.hash.includes('cast')) castScreen(); } catch (e) { fail(e); }
   };
-  $$('.outfit-thumb[data-cut]', bg).forEach(t => t.onclick = () => { $('#bigportrait', bg).src = assetUrl(t.dataset.cut); $$('.outfit-thumb', bg).forEach(x => x.classList.remove('sel')); t.classList.add('sel'); });
+  // Sprite manager: clicking a thumb previews it AND offers regenerate/delete for it.
+  let manageBar = null;
+  $$('.outfit-thumb[data-cut]', bg).forEach(t => t.onclick = () => {
+    $('#bigportrait', bg).src = assetUrl(t.dataset.cut);
+    $$('.outfit-thumb', bg).forEach(x => x.classList.remove('sel'));
+    t.classList.add('sel');
+    const oname = t.dataset.oname;
+    const o = (c.state.outfits || []).find(x => x.name === oname);
+    if (manageBar) manageBar.remove();
+    manageBar = document.createElement('div');
+    manageBar.style.cssText = 'margin-top:8px;padding:9px 11px;background:#f7f5fe;border:1.5px dashed #d9d2f5;border-radius:12px;text-align:left';
+    manageBar.innerHTML = `
+      <div style="font-size:11px;font-weight:700;margin-bottom:5px">🎨 Sprite “${esc(oname)}”</div>
+      <input id="sm-cap" value="${esc(o?.description || oname)}" placeholder="new caption / instruction for the image" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:6px 9px;font-size:12px">
+      <div style="display:flex;gap:7px;margin-top:7px">
+        <button class="btn btn-soft small" id="sm-regen" style="flex:1">🔁 Regenerate (~30s)</button>
+        <button class="btn btn-ghost small" id="sm-del" style="color:#d92e66">🗑 Delete</button>
+      </div>`;
+    $('#bigportrait', bg).closest('.checker').after(manageBar);
+    $('#sm-regen', manageBar).onclick = async (e) => {
+      const btn = e.target; if (btn.disabled) return;
+      btn.disabled = true; btn.textContent = '⏳ painting…';
+      try {
+        await api(`/api/characters/${c.id}/outfits`, { method: 'POST', body: { name: oname, description: $('#sm-cap', manageBar).value, replace: true, ...(o?.emotion ? { emotion: o.emotion } : {}) } });
+        toast(`“${oname}” repainted ✨`, 'gold');
+        S.worldData = null; bg.remove(); profileDrawer(charId); refreshMe();
+      } catch (e2) { btn.disabled = false; btn.textContent = '🔁 Regenerate (~30s)'; fail(e2); }
+    };
+    $('#sm-del', manageBar).onclick = async () => {
+      if (!confirm(`Delete the “${oname}” sprite? (The image stays in your asset archive.)`)) return;
+      try {
+        await api(`/api/characters/${c.id}/outfits/${encodeURIComponent(oname)}`, { method: 'DELETE' });
+        toast(`“${oname}” removed`);
+        S.worldData = null; bg.remove(); profileDrawer(charId);
+      } catch (e2) { fail(e2); }
+    };
+  });
   $('#hearvoice', bg).onclick = async () => {
     try {
       const { assetId } = await api('/api/tts', { method: 'POST', body: { text: c.state.thought || `Hello. I'm ${c.name}.`, voice: c.voice, style: `in character: ${c.state.mood || 'calm'}`, characterId: c.id, lang: getLang() } });
@@ -904,7 +940,7 @@ function panZoom(wrap, viewport, opts = {}) {
   const apply = () => viewport.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`);
   apply();
   let drag = null;
-  wrap.addEventListener('pointerdown', (e) => { if (e.target.closest('.gnode,.lnode,.gedge,.gedge-label')) return; drag = { x: e.clientX - tx, y: e.clientY - ty }; wrap.setPointerCapture(e.pointerId); });
+  wrap.addEventListener('pointerdown', (e) => { if (e.button === 2 || e.target.closest('.gnode,.lnode,.gedge,.gedge-label')) return; drag = { x: e.clientX - tx, y: e.clientY - ty }; wrap.setPointerCapture(e.pointerId); });
   wrap.addEventListener('pointermove', (e) => { if (drag) { tx = e.clientX - drag.x; ty = e.clientY - drag.y; apply(); } });
   wrap.addEventListener('pointerup', () => drag = null);
   wrap.addEventListener('wheel', (e) => {
@@ -914,7 +950,7 @@ function panZoom(wrap, viewport, opts = {}) {
     const r = wrap.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
     tx = mx - (mx - tx) * (ns / scale); ty = my - (my - ty) * (ns / scale); scale = ns; apply();
   }, { passive: false });
-  return { zoom: (f) => { scale = Math.min(2.5, Math.max(0.3, scale * f)); apply(); } };
+  return { zoom: (f) => { scale = Math.min(2.5, Math.max(0.3, scale * f)); apply(); }, getScale: () => scale, cancelDrag: () => { drag = null; } };
 }
 
 /* ───────── bonds (the Web) ───────── */
@@ -1162,7 +1198,7 @@ async function atlasScreen() {
   const center = (l) => ({ x: l.x + NW / 2, y: l.y + NH / 2 });
   const who = (lid) => characters.filter(c => c.state.location_id === lid);
   vp.innerHTML =
-    groupRects.map(g => `<g class="lgroup"><rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="18"/><text x="${g.x + 14}" y="${g.y + 22}">${esc(g.name)}</text></g>`).join('') +
+    groupRects.map(g => `<g class="lgroup" data-g="${esc(g.name)}"><rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="18"/><text x="${g.x + 14}" y="${g.y + 22}">${esc(g.name)}</text></g>`).join('') +
     paths.map(p => { const a = locations.find(l => l.id === p.from_id), b = locations.find(l => l.id === p.to_id); if (!a || !b) return ''; const ca = center(a), cb = center(b); return `<path class="lpath" d="M${ca.x},${ca.y} L${cb.x},${cb.y}"/>`; }).join('') +
     locations.map(l => `<g class="lnode" data-id="${l.id}" transform="translate(${l.x},${l.y})" style="cursor:pointer">
       <rect class="frame" width="${NW}" height="${NH}" rx="14"/>
@@ -1172,6 +1208,59 @@ async function atlasScreen() {
     </g>`).join('');
   const pz = panZoom($('#wrap'), vp, { x: 30, y: 60, scale: 0.9 });
   $('#zin').onclick = () => pz.zoom(1.2); $('#zout').onclick = () => pz.zoom(0.84);
+
+  /* ── Group unclutter-drag ────────────────────────────────────────────────
+     Place groups sometimes overlap. Two ways to move a whole group (all its
+     member locations shift together; positions persist):
+       desktop — hold the RIGHT mouse button on a group frame and drag;
+       mobile  — press and HOLD a group frame ~1s until it lights up, then
+                 drag. (A short touch-drag still pans the map as usual.)   */
+  const wrapEl = $('#wrap');
+  wrapEl.addEventListener('contextmenu', (e) => { if (e.target.closest('.lgroup')) e.preventDefault(); });
+  let gdrag = null;      // { name, members, startX, startY, dx, dy, el }
+  let holdTimer = null;
+  const startGroupDrag = (gEl, e) => {
+    const name = gEl.dataset.g;
+    gdrag = { name, members: groups[name] || [], startX: e.clientX, startY: e.clientY, dx: 0, dy: 0, el: gEl };
+    gEl.classList.add('grabbed');
+    pz.cancelDrag();     // if a pan had started on this touch, stop it
+  };
+  const moveGroupDrag = (e) => {
+    if (!gdrag) return;
+    const s = pz.getScale();
+    gdrag.dx = (e.clientX - gdrag.startX) / s;
+    gdrag.dy = (e.clientY - gdrag.startY) / s;
+    gdrag.el.setAttribute('transform', `translate(${gdrag.dx},${gdrag.dy})`);
+    for (const l of gdrag.members) {
+      const node = vp.querySelector(`.lnode[data-id="${l.id}"]`);
+      if (node) node.setAttribute('transform', `translate(${l.x + gdrag.dx},${l.y + gdrag.dy})`);
+    }
+  };
+  const endGroupDrag = async () => {
+    if (!gdrag) return;
+    const { members, dx, dy, el } = gdrag;
+    gdrag = null;
+    el.classList.remove('grabbed');
+    if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return;                    // just a tap
+    await Promise.all(members.map(l => api(`/api/locations/${l.id}`, { method: 'PATCH', body: { x: l.x + dx, y: l.y + dy } }).catch(fail)));
+    S.worldData = null; atlasScreen();                                    // re-render paths cleanly
+  };
+  wrapEl.addEventListener('pointerdown', (e) => {
+    const gEl = e.target.closest('.lgroup');
+    if (!gEl) return;
+    if (e.button === 2) { e.preventDefault(); e.stopPropagation(); startGroupDrag(gEl, e); return; }
+    if (e.pointerType === 'touch') {
+      // long-press to grab; any early movement > 12px means the user is panning
+      const sx = e.clientX, sy = e.clientY;
+      holdTimer = setTimeout(() => { startGroupDrag(gEl, { clientX: sx, clientY: sy }); if (navigator.vibrate) navigator.vibrate(30); }, 900);
+      const cancel = (ev) => { if (Math.hypot(ev.clientX - sx, ev.clientY - sy) > 12) { clearTimeout(holdTimer); wrapEl.removeEventListener('pointermove', cancel); } };
+      wrapEl.addEventListener('pointermove', cancel);
+      wrapEl.addEventListener('pointerup', () => { clearTimeout(holdTimer); wrapEl.removeEventListener('pointermove', cancel); }, { once: true });
+    }
+  }, true);
+  wrapEl.addEventListener('pointermove', moveGroupDrag);
+  wrapEl.addEventListener('pointerup', endGroupDrag);
+  wrapEl.addEventListener('pointercancel', () => { clearTimeout(holdTimer); endGroupDrag(); });
   const openLoc = (id) => {
     const l = locations.find(x => x.id === id); if (!l) return;
     $$('.lnode').forEach(n => n.classList.toggle('sel', n.dataset.id === id));
@@ -1702,41 +1791,84 @@ async function initFactBubble() {
     }
   } catch { /* bubble stays hidden */ }
 }
-let factAudio = null;
+let factPlayer = { stop: () => {} };
+// Split a fact into speakable chunks: sentence boundaries, but never shorter than
+// 8 words — short sentences merge into the next one (tiny TTS calls aren't worth it).
+function factChunks(text) {
+  const sentences = String(text).match(/[^.!?…]+[.!?…]+["')\]]?\s*/g) || [String(text)];
+  const chunks = [];
+  let buf = '';
+  for (const s of sentences) {
+    buf += s;
+    if (buf.trim().split(/\s+/).length >= 8) { chunks.push(buf.trim()); buf = ''; }
+  }
+  if (buf.trim()) {
+    if (chunks.length && buf.trim().split(/\s+/).length < 8) chunks[chunks.length - 1] += ' ' + buf.trim();
+    else chunks.push(buf.trim());
+  }
+  return chunks;
+}
 async function factOverlay() {
   const { facts } = await api(`/api/worlds/${S.world}/facts`);
   if (!facts.length) return;
   const m = document.createElement('div');
   m.className = 'modal-bg';
-  m.innerHTML = `<div class="modal" style="width:560px"><div class="modal-head gold">
+  m.innerHTML = `<div class="modal" style="width:680px"><div class="modal-head gold">
     <div><b>💡 Did you know?</b><small>little pieces of the real world, tucked into your story</small></div><span class="x">✕</span></div>
-  <div class="modal-body" style="max-height:65vh;overflow-y:auto">
+  <div class="modal-body" style="max-height:70vh;overflow-y:auto;padding:20px 22px">
     ${facts.map(f => `
-      <div class="fact-card ${f.read_at ? '' : 'fresh'}">
-        <div style="display:flex;align-items:center;gap:8px">
-          ${f.topic ? `<span class="tag t" style="font-size:9.5px">${esc(f.topic)}</span>` : ''}
-          <span style="font-size:10px;color:var(--soft)">scene #${f.tick_ref}</span>
-          <button class="btn btn-ghost small" data-speak="${f.id}" style="margin-left:auto;padding:3px 10px" title="Have the storyteller read it">🔊</button>
+      <div class="fact-card ${f.read_at ? '' : 'fresh'}" data-fid="${f.id}" style="padding:16px 18px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:9px">
+          ${f.topic ? `<span class="tag t" style="font-size:10px">${esc(f.topic)}</span>` : ''}
+          <span style="font-size:10.5px;color:var(--soft)">scene #${f.tick_ref}</span>
+          <button class="btn btn-soft small" data-speak="${f.id}" style="margin-left:auto;padding:4px 13px" title="Have the storyteller read it">🔊 Read to me</button>
         </div>
-        <b style="display:block;font-size:13.5px;margin:6px 0 4px">${esc(f.title)}</b>
-        <div class="serif" style="font-size:13px;line-height:1.55;color:#3c3763">${esc(f.body)}</div>
+        <b class="serif" style="display:block;font-size:17px;margin:9px 0 7px;line-height:1.35">${esc(f.title)}</b>
+        <div class="serif fact-body" style="font-size:15px;line-height:1.7;color:#3c3763">${factChunks(f.body).map((ch, k) => `<span class="fact-chunk" data-k="${k}">${esc(ch)} </span>`).join('')}</div>
       </div>`).join('')}
   </div></div>`;
   document.body.appendChild(m);
-  const close = () => { m.remove(); if (factAudio) { factAudio.pause(); factAudio = null; } };
+  const close = () => { m.remove(); factPlayer.stop(); };
   m.onclick = (e) => { if (e.target === m) close(); };
   $('.x', m).onclick = close;
-  // storyteller read-aloud (narrator voice/style → shares the normal audio cache)
-  $$('[data-speak]', m).forEach(btn => btn.onclick = async () => {
-    const f = facts.find(x => x.id === btn.dataset.speak);
-    btn.textContent = '⏳';
-    try {
-      const { assetId } = await fetchTts(`${f.title}. ${f.body}`, null, 'curious');
-      if (factAudio) factAudio.pause();
-      factAudio = new Audio(assetUrl(assetId));
-      factAudio.play();
-      btn.textContent = '🔊';
-    } catch (e) { btn.textContent = '🔊'; fail(e); }
+
+  // Storyteller read-aloud, chunk by chunk: chunk 1 requested immediately, the rest
+  // staggered 500ms apart (same pipelining as scene audio — the API gets room to
+  // breathe while chunk 1 already plays). The chunk being spoken highlights live.
+  $$('[data-speak]', m).forEach(btn => {
+    let playing = false;
+    btn.onclick = async () => {
+      if (playing) { factPlayer.stop(); return; }          // button doubles as ⏹ Stop
+      factPlayer.stop();                                   // stop any other card first
+      playing = true;
+      const f = facts.find(x => x.id === btn.dataset.speak);
+      const card = m.querySelector(`[data-fid="${f.id}"]`);
+      const chunkEls = $$('.fact-chunk', card);
+      const chunks = [`${f.title}.`, ...chunkEls.map(el => el.textContent.trim())];
+      const state = { cancelled: false, audio: null };
+      factPlayer = { stop: () => { state.cancelled = true; playing = false; if (state.audio) state.audio.pause(); $$('.fact-chunk.speaking', m).forEach(el => el.classList.remove('speaking')); btn.textContent = '🔊 Read to me'; } };
+      btn.textContent = '⏹ Stop';
+      // fire the requests with the 500ms stagger; the array keeps them in order
+      const proms = chunks.map((text, k) => new Promise(res => setTimeout(() =>
+        res(fetchTts(text, null, 'curious').catch(() => null)), k * 500)));
+      try {
+        for (let k = 0; k < chunks.length && !state.cancelled; k++) {
+          const r = await proms[k];
+          if (!r || state.cancelled) continue;
+          const el = chunkEls[k - 1];                      // k=0 is the title (no span)
+          if (el) { el.classList.add('speaking'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+          await new Promise((res) => {
+            state.audio = new Audio(assetUrl(r.assetId));
+            state.audio.onended = res; state.audio.onerror = res;
+            state.audio.play().catch(res);
+          });
+          if (el) el.classList.remove('speaking');
+        }
+      } finally {
+        if (!state.cancelled) { playing = false; btn.textContent = '🔊 Read to me'; }
+        refreshMe();
+      }
+    };
   });
   // opening counts as reading: clear the unread state, quiet the bulb
   const unreadIds = facts.filter(f => !f.read_at).map(f => f.id);

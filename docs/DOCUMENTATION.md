@@ -238,6 +238,19 @@ the story-export flow, so under LAIONBox each line clones the **language-matched
 reference** (see 2.8) — switch 🌐 mid-game and the same characters keep their voices, now speaking
 the new language cleanly (Whisper-verified round-trips in DE and EN).
 
+### 2.5b Atlas group repositioning
+Location-group frames can overlap when worlds grow. Move a whole group (all member locations
+shift together, persisted): **desktop** — hold the right mouse button on a group frame and
+drag; **mobile** — press and hold a frame ~1 s until it lights up gold, then drag. A short
+touch-drag still pans the map.
+
+### 2.5c Sprite manager
+In a character's profile drawer, clicking any sprite thumbnail previews it AND opens a manage
+bar: edit the caption and 🔁 regenerate the image in place (same name, new look), or 🗑 delete
+the sprite from the gallery (the generated images stay in the asset archive; the last remaining
+sprite can't be deleted; if the character was wearing it, they fall back to the first sprite).
+Endpoints: POST …/outfits with `replace:true`, DELETE …/outfits/:name.
+
 ### 2.9b Curiosity 💡 ("Did you know" learning cards)
 The 💡 Curiosity button on the Atlas opens a grouped topic picker (Mind & Psychology,
 Philosophy, Science & Technology, World & History, Life & Us — 39 chips) plus freeform topics
@@ -245,8 +258,11 @@ and a frequency (default: every 4th scene). Every Nth tick the storyteller write
 curiosity-evoking fact card (3-8 sentences, "Did you know" tone, player's language) drawn from
 those interests and subtly resonant with the current story. Topics also flavour the story
 itself — a character's interest, a book on a table — organically, never a lecture. On the
-Stage a bulb on the right edge shimmers while unread cards wait; the overlay shows all cards
-with 🔊 storyteller read-aloud (cached audio), and opening it marks them read (bulb dims).
+Stage a golden bulb (top right, mirroring the character rail) shimmers while unread cards wait;
+the overlay shows all cards in large serif type with 🔊 sentence-by-sentence storyteller
+read-aloud — chunks of ≥8 words (short sentences merge into the next), first chunk immediate,
+the rest staggered 500 ms apart, the spoken passage highlighted live; opening marks cards read
+(bulb dims).
 Data: `worlds.curiosity` JSON + `facts` table; routes PATCH …/curiosity, GET …/facts,
 POST /api/facts/:id/read.
 

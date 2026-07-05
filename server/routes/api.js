@@ -314,13 +314,36 @@ export default async function apiRoutes(app) {
     // meanwhile rewrites materialised — re-read the freshest state NOW so we append to the
     // current outfit list instead of resurrecting a stale one (which dropped sprites).
     const fresh = pj(db.prepare('SELECT materialised FROM characters WHERE id=?').get(c.id).materialised, {});
-    fresh.outfits = [...(fresh.outfits || []), {
+    const entry = {
       name, cutout_asset_id: cutout.id, portrait_asset_id: portrait.id,
       description: String(req.body?.description || name).slice(0, 200),
       ...(req.body?.emotion ? { emotion: String(req.body.emotion).slice(0, 40) } : {}),
-    }];
+    };
+    // replace mode (sprite manager "regenerate with a new caption"): swap the entry in
+    // place under the same name instead of appending a duplicate
+    const ix = req.body?.replace ? (fresh.outfits || []).findIndex(o => o.name.toLowerCase() === name.toLowerCase()) : -1;
+    if (ix >= 0) fresh.outfits[ix] = entry;
+    else fresh.outfits = [...(fresh.outfits || []), entry];
     db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(fresh), c.id);
     return { outfit: { name, cutout_asset_id: cutout.id, portrait_asset_id: portrait.id } };
+  });
+  // Sprite manager: remove one sprite from the gallery. The generated images stay in the
+  // asset store (kept for analysis / possible re-attachment); only the gallery entry goes.
+  app.delete('/api/characters/:id/outfits/:name', async (req) => {
+    const u = requireUser(req);
+    const c = db.prepare(`SELECT c.* FROM characters c JOIN worlds w ON w.id=c.world_id WHERE c.id=? AND w.user_id=?`).get(req.params.id, u.id);
+    if (!c) throw httpErr(404, 'NOT_FOUND', 'Character not found.');
+    const st = pj(c.materialised, {});
+    const name = decodeURIComponent(req.params.name);
+    const list = st.outfits || [];
+    if (list.length <= 1) throw httpErr(400, 'LAST_SPRITE', 'A character needs at least one sprite — regenerate it instead of deleting.');
+    const ix = list.findIndex(o => o.name.toLowerCase() === name.toLowerCase());
+    if (ix < 0) throw httpErr(404, 'NOT_FOUND', 'No sprite with that name.');
+    list.splice(ix, 1);
+    st.outfits = list;
+    if ((st.outfit || '') .toLowerCase() === name.toLowerCase()) st.outfit = list[0].name;   // they were wearing it
+    db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(st), c.id);
+    return { ok: true, outfits: list.map(o => o.name) };
   });
 
   // ---------- relationships ----------
