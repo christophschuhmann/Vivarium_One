@@ -106,9 +106,15 @@ export function assembleCues(worldId, branchId, toIdx) {
 
   const locById = Object.fromEntries(locations.map(l => [l.id, l]));
   const charById = Object.fromEntries(characters.map(c => [c.id, c]));
-  const cutoutUrl = (c) => {
-    const st = c.state || {};
-    const o = (st.outfits || []).find(x => x.name === st.outfit) || (st.outfits || [])[0];
+  // Sprite AT THE TIME of a tick: every tick's `states` snapshot embeds the character's
+  // outfit name AND outfit list as they were in that scene — resolve from there, falling
+  // back to the character's current state only for very old ticks that predate outfit
+  // snapshots. (Resolving from current state was the exported-player bug: every scene
+  // showed whatever the character wears TODAY, e.g. rain gear in the opening breakfast.)
+  const cutoutAt = (tickState, c) => {
+    const list = (tickState?.outfits?.length ? tickState.outfits : c.state?.outfits) || [];
+    const want = tickState?.outfit || c.state?.outfit;
+    const o = list.find(x => x.name === want) || list[0];
     return o ? `/api/assets/${o.cutout_asset_id}` : '';
   };
   const bgUrl = (loc) => loc?.background_asset_id ? `/api/assets/${loc.background_asset_id}` : '';
@@ -125,12 +131,12 @@ export function assembleCues(worldId, branchId, toIdx) {
     } else {
       cues.push({ type: 'transition', kind: 'time', label: describeDelta(t.time_delta), sub: fmtClock(t.sim_time), bgUrl: bgUrl(loc), fromBgUrl: bgUrl(loc) });
     }
-    const present = (t.states || []).filter(s => loc && s.location_id === loc.id).map(s => s.character_id).filter(id => charById[id]);
+    const presentStates = (t.states || []).filter(s => loc && s.location_id === loc.id && charById[s.character_id]);
     (t.narration || []).forEach((n) => {
       const isNarrator = n.speaker === 'narrator' || !charById[n.speaker];
       cues.push({
         type: 'line', tickIdx: t.idx, bgUrl: bgUrl(loc),
-        present: present.map(id => ({ id, name: charById[id].name, cutout: cutoutUrl(charById[id]) })),
+        present: presentStates.map(s => ({ id: s.character_id, name: charById[s.character_id].name, cutout: cutoutAt(s, charById[s.character_id]) })),
         speaker: isNarrator ? 'narrator' : n.speaker,
         name: isNarrator ? null : charById[n.speaker].name,
         voice: isNarrator ? null : (charById[n.speaker].voice || 'Sulafat'),

@@ -288,7 +288,8 @@ disk-cached; JPEG ≈15KB for backgrounds, PNG for cut-outs to keep alpha), so 6
 stay smooth
 ("⟲ meanwhile", "moments later", "≈5h later"). Branch chips above the strip; a detail bar shows
 the selected scene's summary. Each tick offers two actions — **▶ Replay** runs the cinema renderer over the stored
-history from that point to the branch head (transition cards, backdrops, sprites in their
+history from that point to the branch head (single-run guarded: starting a replay cancels any
+already-running one, so double-clicks can never layer two scenes) (transition cards, backdrops, sprites in their
 outfits-of-the-time, narration with audio; cached lines play free) as PURE playback, never
 touching world state; **⤴ Jump** rewinds the world there (advancing then forks a branch).
 Branches can be renamed.

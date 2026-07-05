@@ -1762,12 +1762,18 @@ async function playCinema(cinema) {
    play free; unplayed ones generate now and stay cached). Pure playback — the
    world's actual position, branch and state are never modified. ⏹ skips a
    scene; ✕ returns to the live present.                                       */
+let REPLAY_RUN = null;   // the one active replay — starting a new one cancels it (no double-play)
 async function playReplay(branchId, startIdx) {
+  // GUARD: accidental double-clicks (or replaying while a replay runs) must never layer
+  // two loops playing scenes over each other — cancel the previous run completely first.
+  if (REPLAY_RUN) { REPLAY_RUN.cancelled = true; stopNarration(); $('#cine-hud')?.remove(); }
+  const rep = { cancelled: false };
+  REPLAY_RUN = rep;
   const data = await loadWorld();
   const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${encodeURIComponent(branchId)}&toIdx=999999999`);
   const start = ticks.findIndex(t => t.idx === startIdx);
-  if (start < 0) return toast('That moment is no longer on this timeline', 'err');
-  const rep = { cancelled: false };
+  if (start < 0) { if (REPLAY_RUN === rep) REPLAY_RUN = null; return toast('That moment is no longer on this timeline', 'err'); }
+  if (rep.cancelled) return;   // superseded while we were fetching
   const hud = document.createElement('div');
   hud.id = 'cine-hud';
   hud.innerHTML = `<span class="glasschip" id="rep-pos" style="color:#efeaff;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">⏪ replay</span>
@@ -1786,6 +1792,8 @@ async function playReplay(branchId, startIdx) {
     prevLoc = tick.pov_location_id;
   }
   hud.remove();
+  if (REPLAY_RUN === rep) REPLAY_RUN = null;
+  if (rep.cancelled && REPLAY_RUN) return;   // superseded by a newer replay — it owns the stage now
   stopNarration();
   S.worldData = null;
   if (location.hash.includes('stage')) await stageScreen();   // settle back on the live present
