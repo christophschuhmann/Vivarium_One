@@ -1706,6 +1706,13 @@ async function stageScreen() {
       if (lm || cm) playMusic(lm || cm);
     } catch {}
   }
+  // 📖 collapse/expand — wired BEFORE the film handoff so the storybook text can be
+  // maximized/minimized DURING intro/time-skip sequences too. Preference persists.
+  const sb = $('#stage-bottom');
+  $('#panel-toggle').onclick = () => {
+    sb.classList.toggle('collapsed');
+    localStorage.setItem('viv_panel', sb.classList.contains('collapsed') ? 'collapsed' : 'open');
+  };
   // Timeline handoff: a ▶ Replay click stashes the target; play it now that the stage exists.
   if (S.replay) {
     const r = S.replay; S.replay = null;
@@ -1713,12 +1720,6 @@ async function stageScreen() {
     playReplay(r.branchId, r.idx, r.endIdx ?? null);
     return;
   }
-  // Mobile panel collapse (the handle is display:none on desktop). Preference persists.
-  const sb = $('#stage-bottom');
-  $('#panel-toggle').onclick = () => {
-    sb.classList.toggle('collapsed');
-    localStorage.setItem('viv_panel', sb.classList.contains('collapsed') ? 'collapsed' : 'open');
-  };
   stageState.delta = stageState.delta || '+1m';
   $('#customdelta').onclick = () => customDeltaModal((d) => {
     stageState.delta = d;
