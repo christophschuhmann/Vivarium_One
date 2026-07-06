@@ -45,6 +45,19 @@ def cutout(src, dst):
     tealish = (alpha < 0.98) & (img[:, :, 1] > img[:, :, 0] + 20) & (img[:, :, 2] > img[:, :, 0] + 20)
     img[:, :, 1] = np.where(tealish, img[:, :, 0], img[:, :, 1])
     img[:, :, 2] = np.where(tealish, img[:, :, 0], img[:, :, 2])
+    # GHOST-KILL: the green key leaves faint despilled-green (now teal) pixels at PARTIAL
+    # alpha across the background region — invisible on a light preview, but a floating teal
+    # watermark over a real scene backdrop (and it follows the sprite's transparent canvas on
+    # resize). Any low-alpha pixel that is still green/teal-leaning is background residue:
+    # force it fully transparent. Real subject content is opaque (alpha~1), so it is untouched.
+    gd = img[:, :, 1] - np.maximum(img[:, :, 0], img[:, :, 2])
+    residue = (alpha < 0.5) & (gd > -8)
+    alpha = np.where(residue, 0.0, alpha)
+    # Zero the RGB of every (near-)transparent pixel so no non-premultiplied renderer can show
+    # its colour as a ghost, and so ffmpeg ?w= scaling can't bleed it into neighbours.
+    clearRGB = alpha < 0.06
+    for ch in range(3):
+        img[:, :, ch] = np.where(clearRGB, 0, img[:, :, ch])
     out = np.dstack([img.clip(0, 255).astype(np.uint8), (alpha * 255).astype(np.uint8)])
     Image.fromarray(out, "RGBA").save(dst)
     solid = (alpha > 0.99).mean()

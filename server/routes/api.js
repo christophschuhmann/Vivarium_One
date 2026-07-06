@@ -1208,7 +1208,7 @@ export default async function apiRoutes(app) {
       const ext = alpha ? 'png' : 'jpg';
       const thumb = `${orig}_w${w}.${ext}`;
       if (!fs.existsSync(thumb)) {
-        try { await runCmd('ffmpeg', ['-y', '-i', orig, '-vf', `scale=${w}:-1`, ...(alpha ? [] : ['-q:v', '5']), thumb]); }
+        try { await runCmd('ffmpeg', ['-y', '-i', orig, '-vf', alpha ? `premultiply=inplace=1,scale=${w}:-1,unpremultiply=inplace=1` : `scale=${w}:-1`, ...(alpha ? [] : ['-q:v', '5']), thumb]); }
         catch { reply.type(a.mime); return reply.send(fs.createReadStream(orig)); }   // fall back to full size
       }
       reply.type(alpha ? 'image/png' : 'image/jpeg');
