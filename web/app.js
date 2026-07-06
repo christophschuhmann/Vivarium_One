@@ -104,8 +104,9 @@ const OLD_NARRATOR_DEFAULTS = [
 const ttsPrefs = () => {
   const stored = JSON.parse(localStorage.getItem('viv_tts') || '{}');
   if (OLD_NARRATOR_DEFAULTS.includes(stored.narratorStyle)) delete stored.narratorStyle;
-  const p = { narrator: 'Iapetus', prepare: true, autoplay: true, innerVoice: true, musicOn: true, musicVol: 0.08, voiceVol: 1, voiceRate: 1, narratorStyle: DEFAULT_NARRATOR_STYLE, characterStyle: DEFAULT_CHARACTER_STYLE, custom: '', ...stored };
-  if (stored.musicVol === 0.35) p.musicVol = 0.08;   // remap the short-lived old default
+  const p = { narrator: 'Iapetus', prepare: true, autoplay: true, innerVoice: true, musicOn: true, musicVol: 0.10, voiceVol: 1, voiceRate: 1.05, narratorStyle: DEFAULT_NARRATOR_STYLE, characterStyle: DEFAULT_CHARACTER_STYLE, custom: '', ...stored };
+  if (stored.musicVol === 0.35 || stored.musicVol === 0.08) p.musicVol = 0.10;   // remap old defaults
+  if (stored.voiceRate === 1) p.voiceRate = 1.05;                                 // new default pace
   return p;
 };
 // Time-skip settings (Account → Time skips). animate: large skips play as a scene-by-scene
@@ -1850,7 +1851,7 @@ function renderNarration(lines, characters) {
    balance live in Account → Voice. Replays/scene changes at the same vibe
    just keep the loop running.                                               */
 const music = { audio: null, url: null, meta: null, fade: null };
-function musicPrefs() { const p = ttsPrefs(); return { on: p.musicOn !== false, vol: Math.max(0, Math.min(1, p.musicVol ?? 0.08)) }; }
+function musicPrefs() { const p = ttsPrefs(); return { on: p.musicOn !== false, vol: Math.max(0, Math.min(1, p.musicVol ?? 0.10)) }; }
 // voice playback preferences: separate volume + a pitch-preserving speed (50-150%)
 function voicePrefs() { const p = ttsPrefs(); return { vol: Math.max(0, Math.min(1, p.voiceVol ?? 1)), rate: Math.max(0.5, Math.min(1.5, p.voiceRate ?? 1)) }; }
 function musicFade(a, to, ms, done) {
@@ -3436,13 +3437,13 @@ async function accountModal() {
           <input type="range" id="tp-voicevol" min="0" max="100" step="1" value="${Math.round((ttsPrefs().voiceVol ?? 1) * 100)}">
           <b id="tp-voicevol-n" style="font-size:11.5px">${Math.round((ttsPrefs().voiceVol ?? 1) * 100)}%</b>
           <span style="font-size:11.5px;color:var(--soft)">⏩ voice speed</span>
-          <input type="range" id="tp-voicerate" min="50" max="150" step="1" value="${Math.round((ttsPrefs().voiceRate ?? 1) * 100)}">
-          <b id="tp-voicerate-n" style="font-size:11.5px">${Math.round((ttsPrefs().voiceRate ?? 1) * 100)}%</b>
+          <input type="range" id="tp-voicerate" min="50" max="150" step="1" value="${Math.round((ttsPrefs().voiceRate ?? 1.05) * 100)}">
+          <b id="tp-voicerate-n" style="font-size:11.5px">${Math.round((ttsPrefs().voiceRate ?? 1.05) * 100)}%</b>
           <span style="font-size:11.5px;color:var(--soft)">🎵 music volume</span>
-          <input type="range" id="tp-musicvol" min="0" max="100" step="1" value="${Math.round((ttsPrefs().musicVol ?? 0.08) * 100)}">
-          <b id="tp-musicvol-n" style="font-size:11.5px">${Math.round((ttsPrefs().musicVol ?? 0.08) * 100)}%</b>
+          <input type="range" id="tp-musicvol" min="0" max="100" step="1" value="${Math.round((ttsPrefs().musicVol ?? 0.10) * 100)}">
+          <b id="tp-musicvol-n" style="font-size:11.5px">${Math.round((ttsPrefs().musicVol ?? 0.10) * 100)}%</b>
         </div>
-        <p style="font-size:10.5px;color:var(--soft);margin:3px 0 0 26px">speed is pitch-preserving (50-150%) · music sits far beneath the voices by default (8%)</p>
+        <p style="font-size:10.5px;color:var(--soft);margin:3px 0 0 26px">speed is pitch-preserving (50-150%) · music sits far beneath the voices by default (10%)</p>
         <label style="display:flex;flex-direction:column;gap:4px">
           <span style="display:flex;justify-content:space-between;align-items:center">📖 Storyteller (narrator) direction <button class="btn btn-ghost small" id="tp-narr-reset" style="padding:2px 9px;font-size:10.5px">↺ reset to default</button></span>
           <textarea id="tp-narr-style" rows="3" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-family:inherit;resize:vertical">${esc(ttsPrefs().narratorStyle)}</textarea>
