@@ -1031,6 +1031,33 @@ export default async function apiRoutes(app) {
     return { ok: true };
   });
 
+  // Re-pick the score (the 🎶 widget): persist the player's choice as the world's current
+  // track, the given location's remembered track, and the most recent music-bearing tick on
+  // the active lineage (so sequence replays honour the choice too). Non-picked candidates
+  // stay attached for future re-picks.
+  app.post('/api/worlds/:id/music-choice', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    const b = req.body || {};
+    if (!b.music?.url) throw httpErr(400, 'NO_TRACK', 'Pick a track.');
+    const cur = pj(w.current_music, {}) || {};
+    const music = {
+      row_id: b.music.row_id ?? null, title: String(b.music.title || 'track').slice(0, 120),
+      url: String(b.music.url).slice(0, 300),
+      query: cur.query || '', genre: cur.genre || '', emotion: cur.emotion || '',
+      candidates: Array.isArray(b.candidates) ? b.candidates.slice(0, 5) : (cur.candidates || []),
+    };
+    db.prepare('UPDATE worlds SET current_music=?, updated_at=? WHERE id=?').run(j(music), now(), w.id);
+    if (b.locationId && db.prepare('SELECT 1 FROM locations WHERE id=? AND world_id=?').get(b.locationId, w.id))
+      db.prepare('UPDATE locations SET music=? WHERE id=?').run(j(music), b.locationId);
+    // the tick that carries the currently-active score: explicit idx, else newest with music
+    const t = b.tickIdx != null
+      ? db.prepare('SELECT id FROM ticks WHERE world_id=? AND idx=?').get(w.id, +b.tickIdx)
+      : db.prepare('SELECT id FROM ticks WHERE world_id=? AND music IS NOT NULL ORDER BY idx DESC LIMIT 1').get(w.id);
+    if (t) db.prepare('UPDATE ticks SET music=? WHERE id=?').run(j(music), t.id);
+    return { ok: true, music };
+  });
+
   // ---------- background music (proxied same-origin so it works through HTTPS tunnels) ----------
   // Streams a track from the local RPG-music search server (see server/gm.js MUSIC_API).
   app.get('/api/music/audio/:rowId', async (req, reply) => {

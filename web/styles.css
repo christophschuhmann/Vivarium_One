@@ -527,3 +527,7 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .iv-panel .field .btn{flex:none;padding:6px 12px}
 .tl-seqchip{position:absolute;top:5px;left:6px;background:rgba(13,126,131,.88);color:#fff;font-size:8.5px;
   font-weight:700;border-radius:99px;padding:2px 7px;letter-spacing:.04em}
+
+/* 🎶 music widget dropdown */
+#music-panel{position:fixed;top:64px;right:14px;z-index:70;width:min(460px,94vw);box-shadow:0 18px 50px rgba(34,31,69,.3)}
+@media(max-width:760px){#music-panel{top:52px;right:6px}}

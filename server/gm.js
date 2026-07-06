@@ -295,14 +295,18 @@ export async function searchMusic({ query, genre, emotion }) {
   const r = await fetch(`${MUSIC_API}/api/search`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000) });
   if (!r.ok) throw new Error(`music search ${r.status}`);
   const { results } = await r.json();
-  // take the best result whose audio file is actually AVAILABLE locally (2nd/3rd otherwise)
+  // collect the top AVAILABLE candidates (the best plays; the rest are kept in the music
+  // JSON so the player can preview and re-pick later via the 🎶 widget)
+  const candidates = [];
   for (const t of results || []) {
+    if (candidates.length >= 5) break;
     try {
       const h = await fetch(`${MUSIC_API}/api/audio/${t.row_id}`, { method: 'HEAD', signal: AbortSignal.timeout(4000) });
-      if (h.ok) return { row_id: t.row_id, title: t.title, url: `/api/music/audio/${t.row_id}`, query, genre: g, emotion: emotion || '' };
-    } catch { /* try the next one */ }
+      if (h.ok) candidates.push({ row_id: t.row_id, title: t.title, url: `/api/music/audio/${t.row_id}`, tags: (t.tags_text || '').slice(0, 60) });
+    } catch { /* skip unavailable */ }
   }
-  return null;
+  if (!candidates.length) return null;
+  return { ...candidates[0], query, genre: g, emotion: emotion || '', candidates };
 }
 
 // ---------- Opening sequence ("cold open") ----------

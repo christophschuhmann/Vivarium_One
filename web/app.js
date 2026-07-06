@@ -198,6 +198,7 @@ function bindChrome() {
   const av = $('#avatar-chip'); if (av) av.onclick = accountModal;
   const gmc = $('#gm-chip'); if (gmc) gmc.onclick = gmChatOverlay;
   const tlc = $('#tl-chip'); if (tlc) tlc.onclick = () => timelineModal();
+  const mc = $('#music-chip'); if (mc) mc.onclick = musicWidget;
   // 🌐 chip cycles EN→DE→FR→ES and re-renders the current screen. From the next tick on,
   // the Game Master also writes the story in the chosen language (lang rides in tick calls).
   const lc = $('#lang-chip');
@@ -1634,6 +1635,7 @@ async function stageScreen() {
     </div>
   </div>
   <div id="topbar" style="justify-content:flex-end"><div style="display:flex;gap:9px">
+    <button class="glasschip" id="music-chip" title="Scene music — preview the suggested tracks, pick another, or mute">🎶</button>
     <button class="glasschip" id="tl-chip" title="Timeline — scroll through every scene, replay or branch">🕰</button>
     <button class="glasschip" id="gm-chip" title="Talk to the Game Master — ask anything, change anything">💬 GM</button>
     <button class="glasschip" id="lang-chip" title="Language / Sprache / Langue / Idioma">🌐 ${getLang().toUpperCase()}</button>
@@ -1864,6 +1866,91 @@ function stopMusic() {
   if (music.audio) { const old = music.audio; music.audio = null; musicFade(old, 0, 800, () => { old.pause(); old.src = ''; }); }
 }
 function setMusicVolume(v) { if (music.audio && !music.audio._tail) music.audio.volume = v; }
+// Preview ducking: while a candidate preview plays, the background score fades out and
+// pauses; when previews stop, it resumes with a smooth fade-in.
+function duckMusic() {
+  if (music.audio && !music.audio.paused) { music._ducked = true; musicFade(music.audio, 0, 600, () => music.audio?.pause()); }
+}
+function unduckMusic() {
+  if (music._ducked && music.audio && !music._muted) {
+    music._ducked = false;
+    music.audio.play().then(() => musicFade(music.audio, musicPrefs().vol, 1000)).catch(() => {});
+  }
+}
+// Mute toggle (the 🎶 widget's stop button): keeps the track + position, just silences it.
+function toggleMuteMusic() {
+  if (!music.audio) return false;
+  if (music._muted) { music._muted = false; music.audio.play().then(() => musicFade(music.audio, musicPrefs().vol, 900)).catch(() => {}); }
+  else { music._muted = true; musicFade(music.audio, 0, 600, () => music.audio?.pause()); }
+  return music._muted;
+}
+
+/* ── 🎶 MUSIC WIDGET ─────────────────────────────────────────────────────────
+   Expands from the 🎶 chip: shows the currently playing track with a mute
+   toggle, plus the top suggested candidates (stored with the track, or fetched
+   live via the stored search query) as inline preview players — playing a
+   preview fades the background score out and pauses it; when previews stop it
+   resumes with a smooth fade-in. "Use this" persists the choice (world +
+   scene location + the tick that carries the score, so replays honour it).  */
+async function musicWidget() {
+  const existing = $('#music-panel');
+  if (existing) { existing.remove(); return; }             // toggle
+  const meta = music.meta;
+  const panel = document.createElement('div');
+  panel.id = 'music-panel';
+  panel.className = 'panel';
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px">
+      <b style="font-size:13px">🎶 ${meta ? esc(meta.title) : 'No music in this scene yet'}</b>
+      <span style="flex:1"></span>
+      ${music.audio ? `<button class="btn btn-soft small" id="mw-mute">${music._muted ? '🔊 Resume' : '🔇 Mute'}</button>` : ''}
+      <button class="btn btn-ghost small" id="mw-close">✕</button>
+    </div>
+    ${meta?.query ? `<div style="font-size:10.5px;color:var(--soft);margin-top:2px">chosen for: ${esc(meta.query)}</div>` : ''}
+    <div id="mw-cands" style="margin-top:10px"><div class="empty-hint" style="padding:12px"><span class="spinner dark"></span> fetching suggestions…</div></div>`;
+  document.body.appendChild(panel);
+  $('#mw-close', panel).onclick = () => panel.remove();
+  const muteBtn = $('#mw-mute', panel);
+  if (muteBtn) muteBtn.onclick = () => { const m = toggleMuteMusic(); muteBtn.textContent = m ? '🔊 Resume' : '🔇 Mute'; };
+
+  // candidates: stored with the track, else a live re-search via the stored query
+  let cands = meta?.candidates || [];
+  if (!cands.length && meta?.query) {
+    try { cands = (await api('/api/music/search', { method: 'POST', body: { query: meta.query, genre: meta.genre, emotion: meta.emotion } })).candidates; } catch {}
+  }
+  const box = $('#mw-cands', panel);
+  if (!box) return;
+  if (!cands.length) { box.innerHTML = '<p style="font-size:11.5px;color:var(--soft)">No suggestions available — the storyteller picks music as scenes change vibe.</p>'; return; }
+  box.innerHTML = `<div style="font-size:10px;letter-spacing:.08em;color:var(--violet);font-weight:700;margin-bottom:6px">SUGGESTED TRACKS — PREVIEW & PICK</div>` +
+    cands.map((c, i) => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">
+          ${meta && c.url === meta.url ? '▸ ' : ''}<b>${esc(c.title)}</b> <small style="color:var(--soft)">${esc(c.tags || '')}</small></span>
+        <audio controls preload="none" src="${c.url}" style="height:26px;max-width:190px"></audio>
+        ${meta && c.url === meta.url ? '<span class="tag t">current</span>' : `<button class="btn btn-teal small" data-use="${i}" style="padding:4px 10px">✓ use</button>`}
+      </div>`).join('');
+  // preview ducking: background score fades out while a preview plays, resumes after
+  const previews = $$('audio', box);
+  previews.forEach(a => {
+    a.onplay = () => { previews.forEach(o => { if (o !== a) o.pause(); }); duckMusic(); };
+    a.onpause = () => { if (!previews.some(o => !o.paused)) unduckMusic(); };
+    a.onended = () => { if (!previews.some(o => !o.paused)) unduckMusic(); };
+  });
+  $$('[data-use]', box).forEach(btn => btn.onclick = async () => {
+    const c = cands[+btn.dataset.use];
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      previews.forEach(o => o.pause());
+      const locId = (() => { try { const pov = stageState.pov; const chars = S.worldData?.characters || []; return pov.type === 'location' ? pov.id : chars.find(x => x.id === pov.id)?.state.location_id; } catch { return null; } })();
+      const { music: saved } = await api(`/api/worlds/${S.world}/music-choice`, { method: 'POST', body: { music: c, candidates: cands, locationId: locId } });
+      music._muted = false; music._ducked = false;
+      music.url = null;                                    // force the crossfade to the new pick
+      playMusic(saved);
+      toast(`🎶 now scoring: ${c.title}`, 'gold');
+      panel.remove();
+    } catch (e) { btn.disabled = false; btn.textContent = '✓ use'; fail(e); }
+  });
+}
 
 /* ── WebAudio clip engine ────────────────────────────────────────────────────
    Sequential narration chunks used to play through fresh HTMLAudio elements —

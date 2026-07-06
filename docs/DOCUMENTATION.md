@@ -235,6 +235,14 @@ naturalistic and emotionally clamped, so its templates (`LAIONBOX_NARRATOR_STYLE
 `LAIONBOX_CHARACTER_TEMPLATE`) demand vivid, audible emotion. A player customisation overrides
 both engines; all templates are visible on the admin **Prompts** page.
 
+**The 🎶 music widget** (stage top bar): shows the current track with a mute toggle, plus the
+top-5 suggested candidates (stored with every chosen track; older tracks re-search live via
+their stored query) as inline preview players — previews duck the background score (fade out,
+pause) and it resumes with a fade-in when they stop. "✓ use" persists the re-pick to the world,
+the scene's location, and the tick carrying the score (so sequence replays honour it):
+`POST /api/worlds/:id/music-choice`. This is also how a world's intro-sequence music is edited
+after creation.
+
 **Engine-tolerant reuse:** every generated clip is kept forever (assets are never deleted;
 `meta` records voice identity, style, text, speaker and language for analysis). When an exact
 cache key misses — typically after the admin switches TTS engines or a style template evolves —
