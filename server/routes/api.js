@@ -342,7 +342,9 @@ export default async function apiRoutes(app) {
     const refPortrait = refCut?.portrait_asset_id || c.reference_asset_id;
     const { portrait, cutout } = await gm.generatePortrait(u, w, {
       name: c.name, appearance: base.appearance || '', outfit: req.body?.description || name,
-      outfitName: name, refAssetId: refPortrait, ownerRef: c.id });
+      outfitName: name, refAssetId: refPortrait, ownerRef: c.id,
+      // the sprite manager sends the player-edited image prompt (see web/app.js #sm-cap)
+      rawPrompt: req.body?.rawPrompt ? String(req.body.rawPrompt).slice(0, 800) : null });
     // Store the LOOK METADATA with the sprite: description (what it shows) and optional
     // emotion tag. Both ride inside materialised.outfits, which is part of the character
     // state the Game Master reads every tick — so it can pick & reuse existing sprites

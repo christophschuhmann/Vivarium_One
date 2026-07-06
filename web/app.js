@@ -817,11 +817,16 @@ async function profileDrawer(charId) {
     if (manageBar) manageBar.remove();
     manageBar = document.createElement('div');
     manageBar.style.cssText = 'margin-top:9px;padding:9px 11px;background:#f7f5fe;border:1.5px dashed #d9d2f5;border-radius:12px;text-align:left;width:100%;box-sizing:border-box';
+    // The editable image prompt: the sprite's own stored look-description if it has one,
+    // otherwise the character's base appearance (so it's a real, meaningful prompt — not
+    // just the outfit name). Editing it and regenerating repaints with the new prompt
+    // (identity stays anchored to the reference portrait).
+    const promptDefault = (o?.description && o.description.toLowerCase() !== oname.toLowerCase()) ? o.description : (c.base.appearance || oname);
     manageBar.innerHTML = `
-      <div style="font-size:11px;font-weight:700;margin-bottom:5px">🎨 Sprite “${esc(oname)}”</div>
-      <input id="sm-cap" value="${esc(o?.description || oname)}" placeholder="new caption / instruction for the image" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:6px 9px;font-size:12px">
+      <div style="font-size:11px;font-weight:700;margin-bottom:5px">🎨 Sprite “${esc(oname)}” · image prompt</div>
+      <textarea id="sm-cap" rows="3" placeholder="describe the look — hair, clothes, expression, pose…" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:7px 9px;font-size:12px;font-family:inherit;box-sizing:border-box">${esc(promptDefault)}</textarea>
       <div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap">
-        <button class="btn btn-soft small" id="sm-regen" style="flex:1 1 auto;min-width:0;white-space:nowrap">🔁 Regenerate</button>
+        <button class="btn btn-soft small" id="sm-regen" style="flex:1 1 auto;min-width:0;white-space:nowrap">🔁 Regenerate with this prompt (~30s)</button>
         <button class="btn btn-ghost small" id="sm-del" style="flex:none;color:#d92e66" title="Delete this sprite">🗑</button>
       </div>`;
     $('.outfit-strip', bg).after(manageBar);   // sits inside the column, right under the sprite strip
@@ -829,7 +834,7 @@ async function profileDrawer(charId) {
       const btn = e.target; if (btn.disabled) return;
       btn.disabled = true; btn.textContent = '⏳ painting…';
       try {
-        await api(`/api/characters/${c.id}/outfits`, { method: 'POST', body: { name: oname, description: $('#sm-cap', manageBar).value, replace: true, ...(o?.emotion ? { emotion: o.emotion } : {}) } });
+        await api(`/api/characters/${c.id}/outfits`, { method: 'POST', body: { name: oname, rawPrompt: $('#sm-cap', manageBar).value, description: $('#sm-cap', manageBar).value, replace: true, ...(o?.emotion ? { emotion: o.emotion } : {}) } });
         toast(`“${oname}” repainted ✨`, 'gold');
         S.worldData = null; bg.remove(); profileDrawer(charId); refreshMe();
       } catch (e2) { btn.disabled = false; btn.textContent = '🔁 Regenerate'; fail(e2); }

@@ -156,16 +156,22 @@ JSON shape:
 }
 
 // ---------- Portrait generation (+matte) ----------
-export async function generatePortrait(user, world, { name, appearance, outfit, outfitName = 'everyday', refAssetId = null, ownerRef = null }) {
+export async function generatePortrait(user, world, { name, appearance, outfit, outfitName = 'everyday', refAssetId = null, ownerRef = null, rawPrompt = null }) {
   preflight(user.id, EST.image());
   let refs = [];
   let prompt;
   if (refAssetId) {
     const ref = getAsset(refAssetId);
     if (ref) refs = ['data:image/png;base64,' + fs.readFileSync(assetPath(ref)).toString('base64')];
-    prompt = `Use the reference image for the character's identity. THE SAME PERSON as in the reference image (${name}: ${appearance}), now wearing ${outfit}${CHAR_SUFFIX}`;
+    // rawPrompt = a full player-edited look description (the sprite manager's prompt box);
+    // identity still anchored by the reference image.
+    prompt = rawPrompt
+      ? `Use the reference image for the character's identity. THE SAME PERSON as in the reference image (${name}). ${rawPrompt}${CHAR_SUFFIX}`
+      : `Use the reference image for the character's identity. THE SAME PERSON as in the reference image (${name}: ${appearance}), now wearing ${outfit}${CHAR_SUFFIX}`;
   } else {
-    prompt = `${name}, ${appearance}, wearing ${outfit} (their everyday wear)${CHAR_SUFFIX}`;
+    prompt = rawPrompt
+      ? `${name}, ${rawPrompt}${CHAR_SUFFIX}`
+      : `${name}, ${appearance}, wearing ${outfit} (their everyday wear)${CHAR_SUFFIX}`;
   }
   const img = await genImage(prompt, { aspect: '2:3', refs });
   debitCall(user.id, img, 'image_gen', { worldId: world.id });
