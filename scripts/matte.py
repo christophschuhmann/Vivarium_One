@@ -55,6 +55,37 @@ def cutout(src, dst):
     # over-aggressive and hardened every silhouette.
     residue = (alpha < 0.5) & (img[:, :, 1] > img[:, :, 0] + 14)
     alpha = np.where(residue, 0.0, alpha)
+    # ISLAND REMOVAL: the subject is ONE connected blob. Any separate island of opaque pixels
+    # floating away from it is a chroma-key artifact (a stray reflection, a bit of the backdrop
+    # the key missed). Label connected components of the solid mask, keep the largest, and drop
+    # every island smaller than 20% of it — the disconnected floating watermark the player saw
+    # pop in as sprites loaded.
+    try:
+        from scipy import ndimage
+        # The real subject is OPAQUE (alpha~1); chroma-key artifacts are FAINT and/or float
+        # away from it. So anchor on the largest OPAQUE blob: label opaque components, keep the
+        # biggest (plus any legit opaque part >=20% of it — a separated limb/held object), then
+        # keep only what's connected to that core — dilated a few px to recover its own soft
+        # feathered edge. Everything else (faint arcs, floating blobs, stray reflections the
+        # key missed) is dropped, no matter how large or faint.
+        opaque = alpha > 0.6
+        labeled, ncomp = ndimage.label(opaque, structure=np.ones((3, 3)))
+        if ncomp > 1:
+            sizes = np.bincount(labeled.ravel())
+            sizes[0] = 0
+            biggest = sizes.max()
+            core = np.zeros_like(opaque)
+            for cid in range(1, ncomp + 1):
+                if sizes[cid] >= 0.20 * biggest:
+                    core |= (labeled == cid)
+            keep = ndimage.binary_dilation(core, iterations=4)   # recover the feather halo
+            drop = ~keep
+            dropped = int((drop & (alpha > 0.02)).sum())
+            if dropped:
+                alpha = np.where(drop, 0.0, alpha)
+                print(f"   island-removal: kept {int((sizes[1:] >= 0.20 * biggest).sum())} opaque region(s), dropped ~{dropped} floating px")
+    except Exception as e:
+        print(f"   island-removal skipped: {e}")
     # Zero the RGB of every (near-)transparent pixel so no non-premultiplied renderer can show
     # its colour as a ghost, and so ffmpeg ?w= scaling can't bleed it into neighbours.
     clearRGB = alpha < 0.06
