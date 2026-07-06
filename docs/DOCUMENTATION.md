@@ -337,6 +337,24 @@ a scene when they are at that location at that moment of the timeline (their spr
 there); characters elsewhere may only be briefly mentioned by the narrator — vital for long
 stories where the model might otherwise drift.
 
+### 2.9f Cinematic sequences & the "Open Intellect" starter scenario 🎬
+Ticks generated as one film share a **sequence** (`ticks.seq`): a world's opening cold-open
+(`gm.runIntroSequence` — authored scenes rendered as real ticks) and every time-skip chapter.
+The timeline shows 🎬 pos/n chips on member cards and a **"Replay sequence"** button that plays
+exactly that film (its music switching per scene via `ticks.music`); single scenes replay/jump
+as usual. The World Wizard now plans 3-5 `intro_scenes` per world (cold-open with a hook +
+per-scene music queries), films them after the build, and offers a **🎼 score picker**: per
+scene the top-5 music candidates with inline audio previews, carry-over, or own-mp3 upload
+(`POST /api/music/search|upload`, `POST /api/worlds/:id/intro-music`).
+**Open Intellect** — the flagship demo for the ML/VC crowd (Silicon Valley × Black Mirror,
+built from `jessie-scenario-idea.txt`): 9 characters (Sam, Mira, Ilya, Greg, Woj, Anna, Liam,
+JESSIE, and Elon in his Texas Fortress), 16 locations incl. Liam's one-room SV apartment and
+the basement lab, 26 directed bonds, a distilled instruction bible in the world directives
+(secrets ledger, tone oscillation, Jessie principles), and a 5-scene scored opening sequence.
+Every **new account receives it automatically** at signup (template import from
+`data/templates/open-intellect/`, built by `scripts/build_open_intellect.mjs`; scene 3 was
+hand-authored — `scripts/film_scene3_by_hand.mjs`).
+
 ### 2.10 Time travel & replay
 Undo/redo arrows + the Timeline (🕰 chip in the top bar on every screen, or the stage button):
 a **graphical filmstrip** — earlier ⟵ left · right ⟶ later — where every scene is a thumbnail

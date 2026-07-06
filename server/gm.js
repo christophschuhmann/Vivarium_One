@@ -305,6 +305,51 @@ export async function searchMusic({ query, genre, emotion }) {
   return null;
 }
 
+// ---------- Opening sequence ("cold open") ----------
+// Builds a world's cinematic intro: a fixed list of authored scenes (location, participants,
+// premise, optional music query) rendered as REAL ticks marked as one replayable sequence
+// (seq.kind='intro'). Played like a chapter film on first entry; replayable forever from the
+// timeline. Used by the World Wizard and scenario templates.
+export async function runIntroSequence(user, world, scenes, lang = 'en', onEvent = () => {}) {
+  ensureRootBranch(world);
+  const seqId = uid('sq_');
+  const locs = db.prepare('SELECT id,name FROM locations WHERE world_id=?').all(world.id);
+  const locByName = (n) => locs.find(l => l.name.toLowerCase() === String(n || '').toLowerCase());
+  let last = null;
+  for (let k = 0; k < scenes.length; k++) {
+    const sc = scenes[k];
+    onEvent('status', { message: `opening scene ${k + 1} of ${scenes.length} — ${sc.location}…` });
+    const loc = locByName(sc.location);
+    const directive = `OPENING SEQUENCE — scene ${k + 1} of ${scenes.length} of this world's cinematic cold open: ${sc.premise}
+Set THIS scene at "${sc.location}"${sc.participants?.length ? `; it centres on ${sc.participants.join(', ')}` : ''}. Write it like the opening minutes of a prestige TV pilot — establish the people vividly through action and voice, plant the stakes, END ON A HOOK. Earlier opening scenes are already in RECENT TICKS — continue forward, never re-narrate them.`;
+    const opts = {
+      timeDelta: `+${sc.offsetMinutes ?? 3}m`,
+      perspective: loc ? { type: 'location', id: loc.id } : null,
+      lang, directive,
+      seq: { id: seqId, label: 'Opening sequence', kind: 'intro', pos: k + 1, n: scenes.length },
+    };
+    try { last = await runTickInner(user, world, opts, onEvent); }
+    catch (e) {
+      if (e.code === 'INSUFFICIENT_CREDITS' || e.code === 'DAILY_CAP') throw e;
+      console.error(`[intro] scene ${k + 1} failed (${e.message}) — retrying once`);
+      last = await runTickInner(user, world, opts, onEvent);
+    }
+    if (sc.music) {
+      // authored score for this scene (deterministic — the GM's own tool may refine later)
+      try {
+        const m = await searchMusic(sc.music);
+        if (m) {
+          db.prepare('UPDATE ticks SET music=? WHERE id=?').run(j(m), last.id);
+          db.prepare('UPDATE worlds SET current_music=? WHERE id=?').run(j(m), world.id);
+          if (loc) db.prepare('UPDATE locations SET music=? WHERE id=?').run(j(m), loc.id);
+          last.music = m;
+        }
+      } catch (e) { console.error('[intro music]', e.message); }
+    }
+  }
+  return { seqId, lastTick: last };
+}
+
 // ---------- The Tick ----------
 // Human names for the game languages the client may request (viv_lang localStorage pref,
 // passed per tick as `lang`). All player-visible model output (narration, dialogue,
@@ -374,6 +419,7 @@ export async function runChapter(user, world, { timeDelta = '+30m', intervention
     const locs = db.prepare('SELECT id,name FROM locations WHERE world_id=?').all(world.id);
     const locByName = (name) => locs.find(l => l.name.toLowerCase() === String(name || '').toLowerCase());
     let last = null;
+    const seqId = uid('sq_');   // all this chapter's scenes form ONE replayable sequence (timeline 🎬)
     for (let k = 0; k < events.length; k++) {
       const ev = events[k];
       onEvent('status', { message: `scene ${k + 1} of ${events.length} — ${ev.location}…` });
@@ -389,6 +435,7 @@ Set THIS scene at "${ev.location}"${ev.participants?.length ? `; it centres on $
         intervention: k === 0 ? intervention : null,   // the player's nudge seeds the first scene only
         perspective: loc ? { type: 'location', id: loc.id } : perspective,
         lang, directive,
+        seq: { id: seqId, label: `Time skip ${timeDelta}`, kind: 'chapter', pos: k + 1, n: events.length },
       };
       try {
         last = await runTickInner(user, world, sceneOpts, onEvent);
@@ -449,7 +496,7 @@ The skip: ${timeDelta} starting ${fmtClock(world.sim_time)}.`;
   return raw;
 }
 
-async function runTickInner(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en', directive = null }, onEvent = () => {}) {
+async function runTickInner(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en', directive = null, seq = null }, onEvent = () => {}) {
   preflight(user.id, EST.tick());
   ensureRootBranch(world);
   // Characters who join the story LATER (intro_tick_idx > current position) don't exist yet
@@ -647,10 +694,10 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
   }
   const tickId = uid('t_');
   const relSnap = relSnapshot(world.id);
-  db.prepare(`INSERT INTO ticks(id,world_id,idx,sim_time,time_delta,intervention,states,narration,mood_tag,summary,cost,created_at,pov_location_id,branch_id,rel_snapshot)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+  db.prepare(`INSERT INTO ticks(id,world_id,idx,sim_time,time_delta,intervention,states,narration,mood_tag,summary,cost,created_at,pov_location_id,branch_id,rel_snapshot,seq)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .run(tickId, world.id, idx, newTime, timeDelta, intervention ? j(intervention) : null,
-      j(states), j(narration), out.mood_tag || 'cosy', out.summary || '', j({ micro, usage: res.usage }), now(), sceneLoc, world.active_branch_id, j(relSnap));
+      j(states), j(narration), out.mood_tag || 'cosy', out.summary || '', j({ micro, usage: res.usage }), now(), sceneLoc, world.active_branch_id, j(relSnap), seq ? j(seq) : null);
   db.prepare('UPDATE worlds SET sim_time=?, tick_index=?, active_branch_id=?, updated_at=? WHERE id=?').run(newTime, idx, world.active_branch_id, now(), world.id);
 
   // Cast suggestion (the GM's optional "introduce this walk-on?" tool): validate strictly —
@@ -720,8 +767,9 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
   if (music) {
     db.prepare('UPDATE worlds SET current_music=? WHERE id=?').run(j(music), world.id);
     if (sceneLoc) db.prepare('UPDATE locations SET music=? WHERE id=?').run(j(music), sceneLoc);
+    db.prepare('UPDATE ticks SET music=? WHERE id=?').run(j(music), tickId);   // replays switch here
   }
-  const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion, location_suggestion: locationSuggestion, fact, music };
+  const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion, location_suggestion: locationSuggestion, fact, music, seq };
   onEvent('tick', tick);
   return tick;
 }

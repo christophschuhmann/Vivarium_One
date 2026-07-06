@@ -1027,12 +1027,16 @@ async function wizardScreen() {
         <div style="font-size:11px;color:var(--soft);margin:3px 0 6px">${esc(job.stage || '')}</div>
         <div class="strength"><div style="width:${Math.round((job.progress || 0) * 100)}%"></div></div>
         <div style="font-size:10.5px;color:#4b4573;max-height:180px;overflow-y:auto;margin-top:8px;font-family:monospace">${(job.log || []).slice(-25).map(esc).join('<br>')}</div>
-        ${job.status === 'done' && job.worldId ? `<button class="btn btn-primary" id="wz-open" style="width:100%;margin-top:10px">▶ Open "${esc(W.plan?.title || 'the world')}"</button>` : ''}
+        ${job.status === 'done' && job.worldId ? `
+          ${(W.plan?.intro_scenes || []).length ? `<button class="btn btn-teal" id="wz-score" style="width:100%;margin-top:10px">🎼 Choose the opening's music</button>` : ''}
+          <button class="btn btn-primary" id="wz-open" style="width:100%;margin-top:8px">▶ Open "${esc(W.plan?.title || 'the world')}"</button>` : ''}
         ${job.status === 'error' ? `<div style="font-size:11.5px;color:#d92e66;margin-top:8px">${esc(job.error || '')}</div>` : ''}`;
       refreshMe();
       if (job.status === 'done') {
         const open = $('#wz-open');
         if (open) open.onclick = () => { W.history = []; W.plan = null; W.estimate = null; W.jobId = null; S.world = job.worldId; S.worldData = null; nav(`#/stage?w=${job.worldId}`); };
+        const score = $('#wz-score');
+        if (score) score.onclick = () => introMusicPicker(job.worldId, W.plan);
         toast('Your world is ready 🌍', 'gold');
         return;
       }
@@ -1040,6 +1044,94 @@ async function wizardScreen() {
       if (location.hash.includes('wizard')) setTimeout(pollBuild, 3000);
     } catch (e) { /* job polling is best-effort; the build continues server-side regardless */ }
   }
+}
+
+/* ── 🎼 Opening-sequence music picker (wizard final step) ─────────────────────
+   For every intro scene: the top-5 search candidates with inline audio preview
+   players, a "carry the previous scene\'s track" option, and an own-file upload.
+   Choices apply to the intro ticks (replays switch there), each scene\'s
+   location memory, and the world\'s current score.                            */
+async function introMusicPicker(worldId, plan) {
+  const scenes = (plan?.intro_scenes || []).slice(0, 6);
+  if (!scenes.length) return;
+  const m = document.createElement('div');
+  m.className = 'modal-bg';
+  m.innerHTML = `<div class="modal" style="width:760px"><div class="modal-head gold">
+    <div><b>🎼 Score the opening</b><small>pick each scene\'s music — preview, carry over, or upload your own</small></div><span class="x">✕</span></div>
+  <div class="modal-body" id="imp-body" style="max-height:72vh;overflow-y:auto">
+    <div class="empty-hint" style="padding:26px"><span class="spinner dark"></span> finding candidates…</div>
+  </div></div>`;
+  document.body.appendChild(m);
+  const close = () => { m.remove(); $$('audio', m).forEach(a => a.pause()); };
+  m.onclick = (e) => { if (e.target === m) close(); };
+  $('.x', m).onclick = close;
+
+  // the intro ticks (idx order) — needed to map choices onto the timeline
+  const { ticks } = await api(`/api/worlds/${worldId}/export/timeline?branchId=&toIdx=999999`).catch(() => ({ ticks: [] }));
+  const introTicks = ticks.filter(t => { try { const s = t.seq && JSON.parse(t.seq); return s?.kind === 'intro'; } catch { return false; } });
+
+  // top-5 candidates per scene (parallel, staggered lightly)
+  const cands = await Promise.all(scenes.map((sc, k) => new Promise(res => setTimeout(async () => {
+    try { res((await api('/api/music/search', { method: 'POST', body: { query: sc.music_query || sc.premise, genre: sc.music_genre, emotion: sc.music_emotion } })).candidates); }
+    catch { res([]); }
+  }, k * 300))));
+
+  const picks = scenes.map((sc, k) => ({ tickIdx: introTicks[k]?.idx, mode: cands[k]?.length ? 'cand' : 'carry', cand: 0, upload: null }));
+  const fmtDur = (s) => s ? `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}` : '';
+
+  const render = () => {
+    $('#imp-body', m).innerHTML = scenes.map((sc, k) => `
+      <div class="panel" style="margin-bottom:12px">
+        <b style="font-size:13px">Scene ${k + 1} · ${esc(sc.location)}</b>
+        <div style="font-size:11.5px;color:var(--soft);margin:2px 0 8px">${esc(sc.premise || '')}</div>
+        ${k > 0 ? `<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:7px">
+          <input type="radio" name="imp-${k}" ${picks[k].mode === 'carry' ? 'checked' : ''} data-k="${k}" data-mode="carry"> ↩ carry the previous scene\'s track over
+        </label>` : ''}
+        ${(cands[k] || []).map((c, i) => `
+          <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:6px">
+            <input type="radio" name="imp-${k}" ${picks[k].mode === 'cand' && picks[k].cand === i ? 'checked' : ''} data-k="${k}" data-mode="cand" data-i="${i}">
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(c.title)}</b> <small style="color:var(--soft)">${fmtDur(c.duration)} · ${esc(c.tags)}</small></span>
+            <audio controls preload="none" src="${c.url}" style="height:28px;max-width:210px"></audio>
+          </label>`).join('') || (k === 0 ? '<p style="font-size:11.5px;color:var(--soft)">no candidates found — upload your own below</p>' : '')}
+        <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:4px">
+          <input type="radio" name="imp-${k}" ${picks[k].mode === 'upload' ? 'checked' : ''} data-k="${k}" data-mode="upload">
+          <span>⬆ my own track:</span>
+          <input type="file" accept="audio/*" data-up="${k}" style="font-size:11px">
+          ${picks[k].upload ? `<span class="tag t">${esc(picks[k].upload.title)}</span>` : ''}
+        </label>
+      </div>`).join('') + `
+      <button class="btn btn-primary" id="imp-apply" style="width:100%">🎼 Apply the score</button>`;
+    $$('input[type=radio]', m).forEach(r => r.onchange = () => {
+      const k = +r.dataset.k; picks[k].mode = r.dataset.mode;
+      if (r.dataset.mode === 'cand') picks[k].cand = +r.dataset.i;
+    });
+    $$('input[type=file]', m).forEach(f => f.onchange = async () => {
+      const k = +f.dataset.up;
+      if (!f.files[0]) return;
+      const fd = new FormData(); fd.append('file', f.files[0]);
+      try {
+        const r = await fetch('/api/music/upload', { method: 'POST', body: fd, credentials: 'same-origin' });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error?.message || 'upload failed');
+        picks[k].upload = d; picks[k].mode = 'upload';
+        toast(`uploaded: ${d.title} 🎵`); render();
+      } catch (e) { fail(e); }
+    });
+    $('#imp-apply', m).onclick = async () => {
+      const choices = picks.map((p, k) => {
+        if (p.mode === 'carry') return { tickIdx: p.tickIdx, carry: true };
+        if (p.mode === 'upload' && p.upload) return { tickIdx: p.tickIdx, music: { title: p.upload.title, url: p.upload.url } };
+        const c = (cands[k] || [])[p.cand];
+        return c ? { tickIdx: p.tickIdx, music: { row_id: c.row_id, title: c.title, url: c.url, query: scenes[k].music_query || '', genre: scenes[k].music_genre || '', emotion: scenes[k].music_emotion || '' } } : { tickIdx: p.tickIdx, carry: true };
+      }).filter(c => c.tickIdx != null);
+      try {
+        await api(`/api/worlds/${worldId}/intro-music`, { method: 'POST', body: { choices } });
+        toast('The opening is scored 🎼', 'gold');
+        close();
+      } catch (e) { fail(e); }
+    };
+  };
+  render();
 }
 
 /* ───────── pan/zoom helper ───────── */
@@ -1576,7 +1668,7 @@ async function stageScreen() {
     if (lm || cm) playMusic(lm || cm);
   } catch {}
   // Timeline handoff: a ▶ Replay click stashes the target; play it now that the stage exists.
-  if (S.replay) { const r = S.replay; S.replay = null; playReplay(r.branchId, r.idx); return; }
+  if (S.replay) { const r = S.replay; S.replay = null; playReplay(r.branchId, r.idx, r.endIdx ?? null); return; }
   // Mobile panel collapse (the handle is display:none on desktop). Preference persists.
   const sb = $('#stage-bottom');
   $('#panel-toggle').onclick = () => {
@@ -2022,14 +2114,15 @@ async function playCinema(cinema) {
    world's actual position, branch and state are never modified. ⏹ skips a
    scene; ✕ returns to the live present.                                       */
 let REPLAY_RUN = null;   // the one active replay — starting a new one cancels it (no double-play)
-async function playReplay(branchId, startIdx) {
+async function playReplay(branchId, startIdx, endIdx = null) {
   // GUARD: accidental double-clicks (or replaying while a replay runs) must never layer
   // two loops playing scenes over each other — cancel the previous run completely first.
   if (REPLAY_RUN) { REPLAY_RUN.cancelled = true; stopNarration(); $('#cine-hud')?.remove(); }
   const rep = { cancelled: false };
   REPLAY_RUN = rep;
   const data = await loadWorld();
-  const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${encodeURIComponent(branchId)}&toIdx=999999999`);
+  let { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${encodeURIComponent(branchId)}&toIdx=999999999`);
+  if (endIdx != null) ticks = ticks.filter(t => t.idx <= endIdx);   // sequence replay: play exactly the film
   const start = ticks.findIndex(t => t.idx === startIdx);
   if (start < 0) { if (REPLAY_RUN === rep) REPLAY_RUN = null; return toast('That moment is no longer on this timeline', 'err'); }
   if (rep.cancelled) return;   // superseded while we were fetching
@@ -2044,6 +2137,8 @@ async function playReplay(branchId, startIdx) {
   for (let i = start; i < ticks.length && !rep.cancelled; i++) {
     const tick = ticks[i];
     const rp = $('#rep-pos'); if (rp) rp.textContent = `⏪ replay · tick ${tick.idx} · ${fmtClock(tick.sim_time)}`;
+    // the score switches exactly where it did in the original telling
+    try { const tm = tick.music && (typeof tick.music === 'string' ? JSON.parse(tick.music) : tick.music); if (tm) playMusic(tm); } catch {}
     await showCineTransition(tick, data, prevLoc);
     if (rep.cancelled) break;
     renderCineScene(tick, data);
@@ -2730,7 +2825,8 @@ async function timelineModal() {
         <span style="font-size:10.5px;color:var(--soft);margin-left:6px">${t.sim_time ? fmtClock(t.sim_time) : ''}</span>
         <div style="font-size:12px;color:#3c3763;margin-top:3px">${esc(t.summary || '—')}</div>
       </div>
-      <div style="display:flex;gap:7px;flex:none;align-items:center">
+      <div style="display:flex;gap:7px;flex:none;align-items:center;flex-wrap:wrap">
+        ${(() => { try { const s = t.seq && (typeof t.seq === 'string' ? JSON.parse(t.seq) : t.seq); return s ? `<button class="btn btn-teal small" id="tl-replay-seq" title="Replay the whole ${esc(s.label)} as one film">🎬 Replay sequence (${s.n})</button>` : ''; } catch { return ''; } })()}
         ${t.idx > 0 ? `<button class="btn btn-primary small" id="tl-replay" title="Watch again from here — does not change the story">▶ Replay</button>` : ''}
         ${here ? '<span class="tag g">you are here</span>' : `<button class="btn btn-soft small" id="tl-jump" title="Rewind the world to here — advancing then forks a new branch">⤴ Jump</button>`}
       </div>`;
@@ -2738,6 +2834,16 @@ async function timelineModal() {
     if (rp) rp.onclick = () => {
       m.remove();
       S.replay = { branchId: selected, idx: t.idx };
+      if (location.hash.includes('stage')) stageScreen(); else nav(`#/stage?w=${S.world}`);
+    };
+    const rps = $('#tl-replay-seq', m);
+    if (rps) rps.onclick = () => {
+      // the whole film: all ticks sharing this sequence id, first to last
+      let s = null; try { s = typeof t.seq === 'string' ? JSON.parse(t.seq) : t.seq; } catch {}
+      const members = ticksCache.filter(x => { try { const xs = x.seq && (typeof x.seq === 'string' ? JSON.parse(x.seq) : x.seq); return xs && s && xs.id === s.id; } catch { return false; } });
+      if (!members.length) return;
+      m.remove();
+      S.replay = { branchId: selected, idx: members[0].idx, endIdx: members[members.length - 1].idx };
       if (location.hash.includes('stage')) stageScreen(); else nav(`#/stage?w=${S.world}`);
     };
     const jp = $('#tl-jump', m);
@@ -2774,6 +2880,7 @@ async function timelineModal() {
       <div class="tl-card ${t.idx === selTick ? 'sel' : ''} ${here ? 'here' : ''}" data-t="${t.idx}" title="${esc(t.summary || '')}">
         <div class="tl-thumb" data-bg="${loc?.background_asset_id ? `${assetUrl(loc.background_asset_id)}?w=320` : ''}" data-figs="${figs}">
           ${here ? '<span class="tl-herechip">now</span>' : ''}
+          ${(() => { try { const s = t.seq && (typeof t.seq === 'string' ? JSON.parse(t.seq) : t.seq); return s ? `<span class="tl-seqchip" title="${esc(s.label)} — scene ${s.pos}/${s.n}">🎬 ${s.pos}/${s.n}</span>` : ''; } catch { return ''; } })()}
         </div>
         <div class="tl-cap"><b>#${t.idx}</b><span>${t.sim_time ? fmtClock(t.sim_time).replace(/^\w+ /, '') : 'genesis'}</span></div>
       </div>`;

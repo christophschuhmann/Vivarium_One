@@ -151,6 +151,13 @@ try { db.exec(`ALTER TABLE worlds ADD COLUMN current_music TEXT`); } catch { /* 
 // shape as worlds.current_music). Switching to a location with a different stored track
 // crossfades the score client-side.
 try { db.exec(`ALTER TABLE locations ADD COLUMN music TEXT`); } catch { /* exists */ }
+// Cinematic sequence membership: ticks generated as one film (a world's opening sequence
+// or a time-skip chapter) share a seq JSON {id,label,kind:'intro'|'chapter',pos,n} so the
+// timeline can group them and replay the whole sequence as one piece.
+try { db.exec(`ALTER TABLE ticks ADD COLUMN seq TEXT`); } catch { /* exists */ }
+// The track that started playing AT this tick (JSON, when the score changed) — lets replays
+// and exported films switch music at the right scenes.
+try { db.exec(`ALTER TABLE ticks ADD COLUMN music TEXT`); } catch { /* exists */ }
 // "Did you know" fact cards generated every Nth tick; read_at drives the unread shimmer.
 db.exec(`CREATE TABLE IF NOT EXISTS facts (
   id TEXT PRIMARY KEY, world_id TEXT NOT NULL, tick_ref INTEGER, topic TEXT DEFAULT '',

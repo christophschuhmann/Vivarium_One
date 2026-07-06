@@ -3,6 +3,12 @@
 import { db, pj, getSetting } from './db.js';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { Agent } from 'undici';
+
+// Reasoning models (glm-5.2 with a big context) can think for MINUTES before the first
+// response byte — undici's default 300 s headers timeout killed long ticks mid-flight
+// (UND_ERR_HEADERS_TIMEOUT). Give provider calls a patient dispatcher.
+const PATIENT = new Agent({ headersTimeout: 900_000, bodyTimeout: 900_000 });
 
 const MOCK = process.env.MOCK_PROVIDERS === '1';
 const key = (route) => {
@@ -26,6 +32,7 @@ export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8 } 
   const r = route('reasoning_llm');
   if (MOCK) return mockLlm(messages);
   const resp = await fetch(`${r.base_url}/chat/completions`, {
+    dispatcher: PATIENT,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key(r)}` },
     body: JSON.stringify({ model: r.model, messages, max_tokens: maxTokens, temperature }),
@@ -58,7 +65,15 @@ export function parseJsonLoose(text) {
 }
 
 export async function llmJson(messages, opts = {}) {
-  let res = await llmChat(messages, opts);
+  let res;
+  try { res = await llmChat(messages, opts); }
+  catch (e) {
+    // Reasoning burn-out ("spent the whole budget on reasoning, no answer") isn't a parse
+    // failure — it throws before any content exists. Retrying at the SAME cap fails
+    // identically (glm-5.2 burned 14k twice on a heavy scene), so retry once at 2×.
+    if (!/spent the whole/.test(e.message)) throw e;
+    res = await llmChat(messages, { ...opts, maxTokens: Math.ceil((opts.maxTokens || 6000) * 2) });
+  }
   try { return { ...res, json: parseJsonLoose(res.content) }; }
   catch (e) {
     // Invalid JSON is usually TRUNCATION: reasoning models spend a variable share of

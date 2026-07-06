@@ -34,6 +34,16 @@ function runCmd(cmd, args, opts = {}) {
   });
 }
 
+// Import the bundled starter scenario for a user (idempotent enough: call once per account).
+const TEMPLATE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'data', 'templates', 'open-intellect');
+export function importTemplateWorld(userId) {
+  const mf = path.join(TEMPLATE_DIR, 'manifest.json');
+  if (!fs.existsSync(mf)) return null;                      // no template built on this install
+  const manifest = pj(fs.readFileSync(mf, 'utf8'), null);
+  if (!manifest) return null;
+  return importWorldManifest({ id: userId }, manifest, path.join(TEMPLATE_DIR, 'assets'));
+}
+
 const publicUser = (u) => ({ id: u.id, email: u.email, displayName: u.display_name, verified: !!u.email_verified_at, credits: Math.floor(toCredits(u.credit_balance) * 10) / 10, role: u.role, rating: u.rating || 'adult' });
 
 function ownWorld(user, id) {
@@ -56,6 +66,10 @@ export default async function apiRoutes(app) {
   app.post('/api/auth/signup', async (req, reply) => {
     const { email, password, displayName, rating } = req.body || {};
     const u = auth.signup({ email, password, displayName, rating });
+    // every new account starts with the "Open Intellect" demo scenario (a full template
+    // world incl. cast, art and the cinematic opening sequence) — imported in the background
+    // so signup stays instant; see scripts/build_open_intellect.mjs for how it's made.
+    setImmediate(() => { try { importTemplateWorld(u.id); } catch (e) { console.error('[template]', e.message); } });
     return { ok: true, userId: u.id, message: 'Check your email for a 6-digit verification code.' };
   });
   app.post('/api/auth/verify', async (req, reply) => {
@@ -954,6 +968,64 @@ export default async function apiRoutes(app) {
   });
 
   // ---------- assets ----------
+  // Player-facing music search (the wizard's score picker): top-5 candidates whose audio is
+  // actually available locally, with proxied preview URLs.
+  app.post('/api/music/search', async (req) => {
+    requireVerified(req);
+    const b = req.body || {};
+    const body = { query: [String(b.query || '').slice(0, 200), String(b.emotion || '').slice(0, 80)].filter(Boolean).join(', '), genre: gm.MUSIC_GENRES.includes(b.genre) ? b.genre : '', search_field: 'situation', top_k: 10, singing_filter: 'no_singing', nsfw_filter: 'sfw_only', rank_by: 'similarity' };
+    const r = await fetch(`${gm.MUSIC_API}/api/search`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) }).catch(() => null);
+    if (!r || !r.ok) throw httpErr(503, 'MUSIC_DOWN', 'The music server is not reachable right now.');
+    const { results } = await r.json();
+    const out = [];
+    for (const t of results || []) {
+      if (out.length >= 5) break;
+      try {
+        const h = await fetch(`${gm.MUSIC_API}/api/audio/${t.row_id}`, { method: 'HEAD', signal: AbortSignal.timeout(4000) });
+        if (h.ok) out.push({ row_id: t.row_id, title: t.title, url: `/api/music/audio/${t.row_id}`, duration: t.duration_seconds, tags: (t.tags_text || '').slice(0, 80) });
+      } catch { /* skip unavailable */ }
+    }
+    return { candidates: out };
+  });
+  // Own soundtrack upload (mp3/ogg/m4a) → a normal asset; playable via /api/assets/:id.
+  app.post('/api/music/upload', async (req) => {
+    const u = requireVerified(req);
+    const file = await req.file();
+    if (!file) throw httpErr(400, 'NO_FILE', 'Attach an audio file.');
+    const buf = await file.toBuffer();
+    if (buf.length > 25 * 1024 * 1024) throw httpErr(400, 'TOO_BIG', 'Keep uploads under 25 MB.');
+    const a = saveAsset({ userId: u.id, kind: 'music', prompt: `upload:${file.filename}`, buffer: buf, mime: file.mimetype || 'audio/mpeg', meta: { filename: file.filename } });
+    return { assetId: a.id, url: `/api/assets/${a.id}`, title: (file.filename || 'my track').replace(/\.[^.]+$/, '') };
+  });
+  // Apply the wizard's per-scene score choices to an intro sequence: set each tick's music
+  // (replay switches there), the scene location's remembered track, and the world's current.
+  app.post('/api/worlds/:id/intro-music', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    const choices = Array.isArray(req.body?.choices) ? req.body.choices.slice(0, 12) : [];
+    let lastMusic = null;
+    for (const ch of choices) {
+      const t = db.prepare('SELECT * FROM ticks WHERE world_id=? AND idx=?').get(w.id, +ch.tickIdx);
+      if (!t) continue;
+      if (ch.carry) {                       // carry the previous scene's track over
+        if (lastMusic) db.prepare('UPDATE ticks SET music=NULL WHERE id=?').run(t.id);
+        continue;
+      }
+      const m = ch.music && ch.music.url ? {
+        row_id: ch.music.row_id ?? null, title: String(ch.music.title || 'track').slice(0, 120),
+        url: String(ch.music.url).slice(0, 300), query: String(ch.music.query || '').slice(0, 200),
+        genre: String(ch.music.genre || '').slice(0, 40), emotion: String(ch.music.emotion || '').slice(0, 80),
+      } : null;
+      db.prepare('UPDATE ticks SET music=? WHERE id=?').run(m ? j(m) : null, t.id);
+      if (m) {
+        lastMusic = m;
+        if (t.pov_location_id) db.prepare('UPDATE locations SET music=? WHERE id=?').run(j(m), t.pov_location_id);
+      }
+    }
+    if (lastMusic) db.prepare('UPDATE worlds SET current_music=? WHERE id=?').run(j(lastMusic), w.id);
+    return { ok: true };
+  });
+
   // ---------- background music (proxied same-origin so it works through HTTPS tunnels) ----------
   // Streams a track from the local RPG-music search server (see server/gm.js MUSIC_API).
   app.get('/api/music/audio/:rowId', async (req, reply) => {
