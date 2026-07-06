@@ -978,19 +978,21 @@ export default async function apiRoutes(app) {
   app.post('/api/music/search', async (req) => {
     requireVerified(req);
     const b = req.body || {};
+    // same policy as the storyteller's tool: top-10 by similarity, available only,
+    // sorted by upvotes — winner first, 5 alternatives after
     const body = { query: [String(b.query || '').slice(0, 200), String(b.emotion || '').slice(0, 80)].filter(Boolean).join(', '), genre: gm.MUSIC_GENRES.includes(b.genre) ? b.genre : '', search_field: 'situation', top_k: 10, singing_filter: 'no_singing', nsfw_filter: 'sfw_only', rank_by: 'similarity' };
     const r = await fetch(`${gm.MUSIC_API}/api/search`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) }).catch(() => null);
     if (!r || !r.ok) throw httpErr(503, 'MUSIC_DOWN', 'The music server is not reachable right now.');
     const { results } = await r.json();
     const out = [];
-    for (const t of results || []) {
-      if (out.length >= 5) break;
+    for (const t of (results || []).slice(0, 10)) {
       try {
         const h = await fetch(`${gm.MUSIC_API}/api/audio/${t.row_id}`, { method: 'HEAD', signal: AbortSignal.timeout(4000) });
-        if (h.ok) out.push({ row_id: t.row_id, title: t.title, url: `/api/music/audio/${t.row_id}`, duration: t.duration_seconds, tags: (t.tags_text || '').slice(0, 80) });
+        if (h.ok) out.push({ row_id: t.row_id, title: t.title, url: `/api/music/audio/${t.row_id}`, duration: t.duration_seconds, tags: (t.tags_text || '').slice(0, 80), upvotes: t.upvote_count || 0 });
       } catch { /* skip unavailable */ }
     }
-    return { candidates: out };
+    out.sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+    return { candidates: out.slice(0, 6) };
   });
   // Own soundtrack upload (mp3/ogg/m4a) → a normal asset; playable via /api/assets/:id.
   app.post('/api/music/upload', async (req) => {

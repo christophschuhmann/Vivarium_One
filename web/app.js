@@ -1102,7 +1102,7 @@ async function introMusicPicker(worldId, plan) {
         ${(cands[k] || []).map((c, i) => `
           <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:6px">
             <input type="radio" name="imp-${k}" ${picks[k].mode === 'cand' && picks[k].cand === i ? 'checked' : ''} data-k="${k}" data-mode="cand" data-i="${i}">
-            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(c.title)}</b> <small style="color:var(--soft)">${fmtDur(c.duration)} · ${esc(c.tags)}</small></span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(c.title)}</b> <small style="color:var(--soft)">${c.upvotes != null ? `👍${c.upvotes} · ` : ''}${fmtDur(c.duration)} · ${esc(c.tags)}</small></span>
             <audio controls preload="none" src="${c.url}" style="height:28px;max-width:210px"></audio>
           </label>`).join('') || (k === 0 ? '<p style="font-size:11.5px;color:var(--soft)">no candidates found — upload your own below</p>' : '')}
         <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:4px">
@@ -1925,7 +1925,7 @@ async function musicWidget() {
     cands.map((c, i) => `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">
-          ${meta && c.url === meta.url ? '▸ ' : ''}<b>${esc(c.title)}</b> <small style="color:var(--soft)">${esc(c.tags || '')}</small></span>
+          ${meta && c.url === meta.url ? '▸ ' : ''}<b>${esc(c.title)}</b> <small style="color:var(--soft)">${c.upvotes != null ? `👍${c.upvotes} · ` : ''}${esc(c.tags || '')}</small></span>
         <audio controls preload="none" src="${c.url}" style="height:26px;max-width:190px"></audio>
         ${meta && c.url === meta.url ? '<span class="tag t">current</span>' : `<button class="btn btn-teal small" data-use="${i}" style="padding:4px 10px">✓ use</button>`}
       </div>`).join('');
