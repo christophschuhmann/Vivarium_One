@@ -23,10 +23,28 @@ def cutout(src, dst):
     lo, hi = 40.0, 110.0
     alpha = np.clip((d - lo) / (hi - lo), 0, 1)
     alpha = 1 - (1 - alpha) * greenish          # only key out green-like pixels
-    # Despill: pull green channel down toward avg(R,B) where matte is soft
-    spill = (alpha < 1) & (g_dom > 0)
+    # FULL green despill on every FEATHER pixel (alpha<1): the silhouette edge picks up
+    # semi-transparent green-screen spill that, faint in the source, becomes a visible teal
+    # fringe line when the sprite is scaled up over a warm background. Clamping green all the
+    # way to avg(R,B) here neutralises it; solid interior pixels (alpha==1) are untouched so
+    # legitimately-green clothing keeps its colour.
     avg_rb = (img[:, :, 0] + img[:, :, 2]) / 2
-    img[:, :, 1] = np.where(spill, np.minimum(img[:, :, 1], avg_rb + (img[:, :, 1] - avg_rb) * alpha), img[:, :, 1])
+    feather = (alpha < 0.98) & (g_dom > 0)
+    img[:, :, 1] = np.where(feather, np.minimum(img[:, :, 1], avg_rb), img[:, :, 1])
+    # Erode the matte by TWO pixels so the outermost contaminated ring — including any cyan/
+    # teal rim-light the generator painted on the silhouette edge — is dropped entirely.
+    def erode(a):
+        return np.minimum.reduce([a,
+            np.pad(a[1:], ((0,1),(0,0)), constant_values=0),
+            np.pad(a[:-1], ((1,0),(0,0)), constant_values=0),
+            np.pad(a[:, 1:], ((0,0),(0,1)), constant_values=0),
+            np.pad(a[:, :-1], ((0,0),(1,0)), constant_values=0)])
+    alpha = erode(erode(alpha))
+    # Kill saturated teal/cyan (g and b both well above r) in the whole feather band — rim
+    # light is bluish-green, not just green, so the green-only despill above misses it.
+    tealish = (alpha < 0.98) & (img[:, :, 1] > img[:, :, 0] + 20) & (img[:, :, 2] > img[:, :, 0] + 20)
+    img[:, :, 1] = np.where(tealish, img[:, :, 0], img[:, :, 1])
+    img[:, :, 2] = np.where(tealish, img[:, :, 0], img[:, :, 2])
     out = np.dstack([img.clip(0, 255).astype(np.uint8), (alpha * 255).astype(np.uint8)])
     Image.fromarray(out, "RGBA").save(dst)
     solid = (alpha > 0.99).mean()

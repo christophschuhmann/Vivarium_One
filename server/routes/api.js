@@ -46,6 +46,25 @@ export function importTemplateWorld(userId) {
 
 const publicUser = (u) => ({ id: u.id, email: u.email, displayName: u.display_name, verified: !!u.email_verified_at, credits: Math.floor(toCredits(u.credit_balance) * 10) / 10, role: u.role, rating: u.rating || 'adult' });
 
+// Propagate a character's current outfit list into every tick's state snapshot, so a
+// regenerated / deleted sprite shows up in EXISTING scenes (films, replays, the timeline read
+// the sprite from the tick snapshot, not the live character). Matches outfits by name.
+function syncOutfitsToTicks(worldId, charId, outfits) {
+  for (const t of db.prepare('SELECT id, states FROM ticks WHERE world_id=?').all(worldId)) {
+    const states = pj(t.states, []);
+    const s = states.find(x => x.character_id === charId);
+    if (!s) continue;
+    // keep the scene's worn-outfit name; refresh the image ids from the current list
+    const byName = new Map((outfits || []).map(o => [o.name, o]));
+    s.outfits = (s.outfits || []).map(o => byName.get(o.name) || o);
+    // add any brand-new outfits too (so a fresh sprite is available), and drop deleted ones
+    for (const o of outfits || []) if (!s.outfits.some(x => x.name === o.name)) s.outfits.push(o);
+    s.outfits = s.outfits.filter(o => byName.has(o.name));
+    if (!byName.has(s.outfit)) s.outfit = outfits?.[0]?.name || s.outfit;
+    db.prepare('UPDATE ticks SET states=? WHERE id=?').run(j(states), t.id);
+  }
+}
+
 function ownWorld(user, id) {
   const w = db.prepare('SELECT * FROM worlds WHERE id=? AND user_id=?').get(id, user.id);
   if (!w) throw httpErr(404, 'NOT_FOUND', 'World not found.');
@@ -364,6 +383,7 @@ export default async function apiRoutes(app) {
     if (ix >= 0) fresh.outfits[ix] = entry;
     else fresh.outfits = [...(fresh.outfits || []), entry];
     db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(fresh), c.id);
+    syncOutfitsToTicks(c.world_id, c.id, fresh.outfits);   // show the new/updated sprite in existing scenes
     return { outfit: { name, cutout_asset_id: cutout.id, portrait_asset_id: portrait.id } };
   });
   // ---------- Inner voice (talk inside a character's head; see gm.innerVoiceChat) ----------
@@ -408,6 +428,7 @@ export default async function apiRoutes(app) {
     st.outfits = list;
     if ((st.outfit || '') .toLowerCase() === name.toLowerCase()) st.outfit = list[0].name;   // they were wearing it
     db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(st), c.id);
+    syncOutfitsToTicks(c.world_id, c.id, st.outfits);   // drop the deleted sprite from existing scenes
     return { ok: true, outfits: list.map(o => o.name) };
   });
 

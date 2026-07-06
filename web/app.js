@@ -826,7 +826,7 @@ async function profileDrawer(charId) {
       <div style="font-size:11px;font-weight:700;margin-bottom:5px">🎨 Sprite “${esc(oname)}” · image prompt</div>
       <textarea id="sm-cap" rows="3" placeholder="describe the look — hair, clothes, expression, pose…" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:7px 9px;font-size:12px;font-family:inherit;box-sizing:border-box">${esc(promptDefault)}</textarea>
       <div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap">
-        <button class="btn btn-soft small" id="sm-regen" style="flex:1 1 auto;min-width:0;white-space:nowrap">🔁 Regenerate with this prompt (~30s)</button>
+        <button class="btn btn-soft small" id="sm-regen" style="flex:1 1 auto;min-width:0;white-space:nowrap" title="Regenerate the sprite with the edited prompt (~30s)">🔁 Regenerate</button>
         <button class="btn btn-ghost small" id="sm-del" style="flex:none;color:#d92e66" title="Delete this sprite">🗑</button>
       </div>`;
     $('.outfit-strip', bg).after(manageBar);   // sits inside the column, right under the sprite strip
