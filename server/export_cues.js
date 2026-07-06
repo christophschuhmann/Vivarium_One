@@ -131,7 +131,10 @@ export function assembleCues(worldId, branchId, toIdx) {
     } else {
       cues.push({ type: 'transition', kind: 'time', label: describeDelta(t.time_delta), sub: fmtClock(t.sim_time), bgUrl: bgUrl(loc), fromBgUrl: bgUrl(loc) });
     }
-    const presentStates = (t.states || []).filter(s => loc && s.location_id === loc.id && charById[s.character_id]);
+    // at the scene location — plus every SPEAKER (their sprite must be visible even if
+    // their end-of-interval state says they left; matches the live film renderer)
+    const speakerIds = new Set((t.narration || []).map(n => n.speaker).filter(s => s && s !== 'narrator' && charById[s]));
+    const presentStates = (t.states || []).filter(s => charById[s.character_id] && (loc && s.location_id === loc.id || speakerIds.has(s.character_id)));
     (t.narration || []).forEach((n) => {
       const isNarrator = n.speaker === 'narrator' || !charById[n.speaker];
       cues.push({

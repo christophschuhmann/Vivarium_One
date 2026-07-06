@@ -112,6 +112,22 @@ export default async function apiRoutes(app) {
     return { ledger: rows.map(r => ({ at: r.created_at, credits: toCredits(r.delta), reason: r.reason, model: r.model, meter: pj(r.meter, {}) })) };
   });
 
+  // Generate (or regenerate) a world's cover/preview image for the home cards. Prompt is
+  // player-editable in the 🎬 Direction modal; default is derived from the world identity.
+  app.post('/api/worlds/:id/cover', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    const prompt = String(req.body?.prompt || `cinematic key art for a story called "${w.title}", genre ${w.genre}, mood ${w.mood}`).slice(0, 600)
+      + ',  -  warm & bright colors, very nice HQ Anime style, ghiblhi style, cinematic key art poster, dramatic lighting, widescreen';
+    preflight(u.id, EST.image());
+    const { genImage } = await import('../providers.js');
+    const res = await genImage(prompt, { aspect: '16:9' });
+    debitCall(u.id, res, 'cover', { worldId: w.id });
+    const a = saveAsset({ userId: u.id, worldId: w.id, kind: 'cover', prompt, buffer: res.buffer, mime: 'image/png' });
+    db.prepare('UPDATE worlds SET cover_asset_id=?, updated_at=? WHERE id=?').run(a.id, now(), w.id);
+    return { coverId: a.id };
+  });
+
   // Default world-direction text (for the 🎬 modal's reset button — single source: gm.js).
   app.get('/api/world-direction-default', async (req) => {
     requireUser(req);
@@ -1031,6 +1047,43 @@ export default async function apiRoutes(app) {
       }
     }
     if (lastMusic) db.prepare('UPDATE worlds SET current_music=? WHERE id=?').run(j(lastMusic), w.id);
+    return { ok: true };
+  });
+
+  // ── Intro-scene editor: rewrite one opening scene's script/summary/music by hand ──
+  // The player edits narration lines (speaker, text, emotion, speech/thought), the scene
+  // summary and the scene's score in an overlay editor; changes persist on the tick so
+  // films, replays and exports all honour them.
+  app.patch('/api/worlds/:id/intro-scene', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    const b = req.body || {};
+    const t = db.prepare('SELECT * FROM ticks WHERE world_id=? AND idx=?').get(w.id, +b.tickIdx);
+    if (!t || !t.seq) throw httpErr(404, 'NOT_A_SCENE', 'That tick is not part of a sequence.');
+    const castIds = new Set(db.prepare('SELECT id FROM characters WHERE world_id=?').all(w.id).map(c => c.id));
+    if (Array.isArray(b.narration)) {
+      const clean = b.narration.slice(0, 40).map(n => ({
+        speaker: n.speaker === 'narrator' || castIds.has(n.speaker) ? n.speaker : 'narrator',
+        text: String(n.text || '').trim().slice(0, 600),
+        emotion: String(n.emotion || '').slice(0, 40),
+        mode: n.mode === 'thought' && n.speaker !== 'narrator' ? 'thought' : 'speech',
+      })).filter(n => n.text);
+      if (!clean.length) throw httpErr(400, 'EMPTY_SCENE', 'A scene needs at least one line.');
+      db.prepare('UPDATE ticks SET narration=? WHERE id=?').run(j(clean), t.id);
+    }
+    if (typeof b.summary === 'string') db.prepare('UPDATE ticks SET summary=? WHERE id=?').run(b.summary.trim().slice(0, 300), t.id);
+    if (b.music?.url) {
+      const cur = pj(t.music, {}) || {};
+      const music = {
+        row_id: b.music.row_id ?? null, title: String(b.music.title || 'track').slice(0, 120), url: String(b.music.url).slice(0, 300),
+        query: cur.query || '', genre: cur.genre || '', emotion: cur.emotion || '',
+        candidates: Array.isArray(b.candidates) ? b.candidates.slice(0, 5) : (cur.candidates || []),
+      };
+      db.prepare('UPDATE ticks SET music=? WHERE id=?').run(j(music), t.id);
+      if (t.pov_location_id) db.prepare('UPDATE locations SET music=? WHERE id=?').run(j(music), t.pov_location_id);
+      const newest = db.prepare('SELECT idx FROM ticks WHERE world_id=? AND music IS NOT NULL ORDER BY idx DESC LIMIT 1').get(w.id);
+      if (newest && newest.idx === t.idx) db.prepare('UPDATE worlds SET current_music=? WHERE id=?').run(j(music), w.id);
+    }
     return { ok: true };
   });
 

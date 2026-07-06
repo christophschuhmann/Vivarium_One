@@ -352,6 +352,7 @@ async function homeScreen() {
         if (e.target.closest('[data-del]')) { if (confirm('Delete this world forever?')) { await api(`/api/worlds/${c.dataset.id}`, { method: 'DELETE' }); homeScreen(); } return; }
         S.world = c.dataset.id; S.worldData = null;
         const w = worlds.find(x => x.id === c.dataset.id);
+        if (e.target.closest('[data-editintro]')) { introEditor(c.dataset.id); return; }
         if (e.target.closest('[data-intro]')) {
           // enter like a game intro: the opening sequence plays as a film (scenes, music,
           // voice-over), then lands on the live present where the player takes over
@@ -373,7 +374,7 @@ function worldCard(w, featured = false) {
       <div class="meta">Tick ${w.tick_index} · ${w.characters.map(c => esc(c.name)).join(', ') || 'no cast yet'} · ${w.status === 'live' ? '🟢 live' : '🛠 authoring'}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary small" style="flex:1">▶ ${w.status === 'live' ? t('resume', 'Resume') : t('continue_building', 'Continue building')}</button>
-        ${w.has_intro && w.status === 'live' ? `<button class="btn btn-teal small" data-intro title="Watch the opening sequence — scenes, music and voices — then take over">🎬 ${t('from_beginning', 'From the beginning')}</button>` : ''}
+        ${w.has_intro && w.status === 'live' ? `<button class="btn btn-teal small" data-intro title="Watch the opening sequence — scenes, music and voices — then take over">🎬 ${t('from_beginning', 'From the beginning')}</button><button class="btn btn-ghost small" data-editintro title="Edit the opening: script lines, summaries, music">✏️</button>` : ''}
         <button class="btn btn-ghost small" data-del title="Delete">🗑</button>
       </div>
     </div></div>`;
@@ -1162,6 +1163,134 @@ async function introMusicPicker(worldId, plan) {
   render();
 }
 
+/* ── ✏️ INTRO-SCENE EDITOR ───────────────────────────────────────────────────
+   Hand-edit a world\'s opening sequence without touching code: scroll through
+   the scenes (prev/next timeline), rewrite every narration line (speaker,
+   speech/thought, emotion, text — add/remove/reorder), the scene summary, and
+   the scene\'s score via manual music search with previews. Saves onto the
+   tick, so films, replays and exports all honour the edits.                 */
+async function introEditor(worldId) {
+  S.world = worldId || S.world;
+  const data = await loadWorld();
+  const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${encodeURIComponent(data.world.active_branch_id)}&toIdx=999999999`);
+  const jp = (v, fb) => { if (v == null) return fb; if (typeof v !== 'string') return v; try { return JSON.parse(v); } catch { return fb; } };
+  const scenes = ticks.filter(t => jp(t.seq, null))
+    .map(t => ({ idx: t.idx, seq: jp(t.seq, {}), summary: t.summary || '', narration: jp(t.narration, []), music: jp(t.music, null), loc: data.locations.find(l => l.id === t.pov_location_id)?.name || '' }));
+  if (!scenes.length) return toast('This world has no opening sequence to edit');
+  const cast = data.characters.map(c => ({ id: c.id, name: c.name }));
+  let k = 0;
+
+  const m = document.createElement('div');
+  m.className = 'modal-bg';
+  m.innerHTML = `<div class="modal" style="width:min(860px,97vw)"><div class="modal-head violet">
+    <div><b>✏️ Opening editor</b><small id="ie-sub"></small></div><span class="x">✕</span></div>
+  <div class="modal-body" id="ie-body" style="max-height:76vh;overflow-y:auto"></div></div>`;
+  document.body.appendChild(m);
+  const close = () => { m.remove(); $$('audio', m).forEach(a => a.pause()); };
+  m.onclick = (e) => { if (e.target === m) close(); };
+  $('.x', m).onclick = close;
+
+  const lineRow = (n, i) => `
+    <div class="ie-line" data-i="${i}" style="display:flex;gap:6px;align-items:flex-start;margin-bottom:7px">
+      <div style="display:flex;flex-direction:column;gap:3px;flex:none">
+        <select data-spk style="border:1.5px solid var(--line);border-radius:8px;padding:4px 6px;font-size:11px;max-width:120px">
+          <option value="narrator" ${n.speaker === 'narrator' ? 'selected' : ''}>✦ narrator</option>
+          ${cast.map(c => `<option value="${c.id}" ${n.speaker === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+        </select>
+        <select data-mode style="border:1.5px solid var(--line);border-radius:8px;padding:3px 6px;font-size:10.5px" ${n.speaker === 'narrator' ? 'disabled' : ''}>
+          <option value="speech" ${n.mode !== 'thought' ? 'selected' : ''}>speech</option>
+          <option value="thought" ${n.mode === 'thought' ? 'selected' : ''}>thought</option>
+        </select>
+        <input data-emo value="${esc(n.emotion || '')}" placeholder="emotion" style="border:1.5px solid var(--line);border-radius:8px;padding:3px 6px;font-size:10.5px;max-width:120px">
+      </div>
+      <textarea data-text rows="2" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:6px 9px;font-size:12.5px;font-family:inherit">${esc(n.text)}</textarea>
+      <div style="display:flex;flex-direction:column;gap:2px;flex:none">
+        <button class="btn btn-ghost small" data-up title="move up" style="padding:1px 7px">↑</button>
+        <button class="btn btn-ghost small" data-dn title="move down" style="padding:1px 7px">↓</button>
+        <button class="btn btn-ghost small" data-del title="remove" style="padding:1px 7px;color:#d92e66">✕</button>
+      </div>
+    </div>`;
+
+  const collect = () => $$('.ie-line', m).map(row => ({
+    speaker: $('[data-spk]', row).value,
+    mode: $('[data-mode]', row).value,
+    emotion: $('[data-emo]', row).value,
+    text: $('[data-text]', row).value.trim(),
+  })).filter(n => n.text);
+
+  let pickedMusic = null, pickedCands = null;
+  const render = () => {
+    const sc = scenes[k];
+    pickedMusic = null; pickedCands = null;
+    $('#ie-sub', m).textContent = `${data.world.title} · scene ${k + 1} of ${scenes.length} · ${sc.loc}`;
+    $('#ie-body', m).innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <button class="btn btn-soft small" id="ie-prev" ${k === 0 ? 'disabled' : ''}>← scene ${k || 1}</button>
+        <div class="strength" style="flex:1"><div style="width:${Math.round(((k + 1) / scenes.length) * 100)}%"></div></div>
+        <button class="btn btn-soft small" id="ie-next" ${k === scenes.length - 1 ? 'disabled' : ''}>scene ${Math.min(k + 2, scenes.length)} →</button>
+      </div>
+      <label style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--soft)">SCENE SUMMARY</label>
+      <textarea id="ie-summary" rows="2" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px;margin:4px 0 12px">${esc(sc.summary)}</textarea>
+      <label style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--soft)">SCRIPT — WHO SAYS WHAT</label>
+      <div id="ie-lines" style="margin-top:6px">${sc.narration.map(lineRow).join('')}</div>
+      <button class="btn btn-ghost small" id="ie-add">＋ add line</button>
+      <div style="margin-top:14px;border-top:1px dashed var(--line);padding-top:10px">
+        <label style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--soft)">SCENE MUSIC ${sc.music ? `· current: <b>${esc(sc.music.title)}</b>` : '· none'}</label>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input id="ie-mq" placeholder="🔍 search music (keywords)…" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:6px 10px;font-size:12px">
+          <button class="btn btn-soft small" id="ie-mgo">Search</button>
+        </div>
+        <div id="ie-mres" style="margin-top:7px"></div>
+      </div>
+      <button class="btn btn-primary" id="ie-save" style="width:100%;margin-top:14px">💾 Save scene ${k + 1}</button>`;
+    $('#ie-prev', m).onclick = () => { if (k > 0) { k--; render(); } };
+    $('#ie-next', m).onclick = () => { if (k < scenes.length - 1) { k++; render(); } };
+    const wireRows = () => $$('.ie-line', m).forEach(row => {
+      $('[data-spk]', row).onchange = () => { $('[data-mode]', row).disabled = $('[data-spk]', row).value === 'narrator'; };
+      $('[data-del]', row).onclick = () => row.remove();
+      $('[data-up]', row).onclick = () => { const p = row.previousElementSibling; if (p) row.parentNode.insertBefore(row, p); };
+      $('[data-dn]', row).onclick = () => { const nx = row.nextElementSibling; if (nx) row.parentNode.insertBefore(nx, row); };
+    });
+    wireRows();
+    $('#ie-add', m).onclick = () => {
+      $('#ie-lines', m).insertAdjacentHTML('beforeend', lineRow({ speaker: 'narrator', text: '', emotion: '', mode: 'speech' }, 99));
+      wireRows();
+    };
+    $('#ie-mgo', m).onclick = async () => {
+      const q = $('#ie-mq', m).value.trim(); if (!q) return;
+      $('#ie-mres', m).innerHTML = '<div class="empty-hint" style="padding:8px"><span class="spinner dark"></span></div>';
+      try {
+        const { candidates } = await api('/api/music/search', { method: 'POST', body: { query: q, field: 'bm25_caption' } });
+        pickedCands = candidates;
+        $('#ie-mres', m).innerHTML = candidates.map((c, i) => `
+          <label style="display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:5px">
+            <input type="radio" name="ie-mc" data-mi="${i}">
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(c.title)}</b> <small style="color:var(--soft)">${c.aesthetics != null ? `⭐${c.aesthetics}` : ''}</small></span>
+            <audio controls preload="none" src="${c.url}" style="height:26px;max-width:180px"></audio>
+          </label>`).join('') || '<p style="font-size:11.5px;color:var(--soft)">nothing found</p>';
+        $$('input[name=ie-mc]', m).forEach(r => r.onchange = () => { pickedMusic = candidates[+r.dataset.mi]; });
+        const prevs = $$('#ie-mres audio', m);
+        prevs.forEach(a => { a.onplay = () => { prevs.forEach(o => { if (o !== a) o.pause(); }); duckMusic(); }; a.onpause = a.onended = () => { if (!prevs.some(o => !o.paused)) unduckMusic(); }; });
+      } catch (e) { fail(e); $('#ie-mres', m).innerHTML = ''; }
+    };
+    $('#ie-mq', m).onkeydown = (e) => { if (e.key === 'Enter') $('#ie-mgo', m).click(); };
+    $('#ie-save', m).onclick = async (e) => {
+      const btn = e.target; btn.disabled = true; btn.textContent = '💾 saving…';
+      try {
+        const body = { tickIdx: sc.idx, narration: collect(), summary: $('#ie-summary', m).value };
+        if (pickedMusic) { body.music = pickedMusic; body.candidates = pickedCands; }
+        await api(`/api/worlds/${S.world}/intro-scene`, { method: 'PATCH', body });
+        // keep the local copy in sync so scene-hopping shows the saved state
+        scenes[k].narration = body.narration; scenes[k].summary = body.summary;
+        if (pickedMusic) scenes[k].music = pickedMusic;
+        toast(`Scene ${k + 1} saved ✏️`, 'gold');
+        btn.disabled = false; btn.textContent = `💾 Save scene ${k + 1}`;
+      } catch (e2) { btn.disabled = false; btn.textContent = `💾 Save scene ${k + 1}`; fail(e2); }
+    };
+  };
+  render();
+}
+
 /* ───────── pan/zoom helper ───────── */
 function panZoom(wrap, viewport, opts = {}) {
   let tx = opts.x ?? 40, ty = opts.y ?? 40, scale = opts.scale ?? 1;
@@ -1386,6 +1515,11 @@ async function worldDirectionModal(world) {
       <button class="btn btn-primary" id="wd-save" style="flex:1">Save direction</button>
       <button class="btn btn-ghost" id="wd-reset">↺ Reset to default</button>
     </div>
+    <div style="margin-top:14px;border-top:1px dashed var(--line);padding-top:10px">
+      <label style="font-size:12px;font-weight:600">🖼 World preview image (home card)</label>
+      <input id="wd-cover" placeholder="key-art prompt… leave empty for an automatic one" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px;margin-top:5px">
+      <button class="btn btn-teal small" id="wd-genc" style="margin-top:7px">🖼 ${world.cover_asset_id ? 'Regenerate' : 'Generate'} cover (~20s)</button>
+    </div>
   </div></div>`;
   document.body.appendChild(m);
   m.onclick = (e) => { if (e.target === m) m.remove(); };
@@ -1394,6 +1528,16 @@ async function worldDirectionModal(world) {
   $('#wd-reset', m).onclick = async () => {
     const { directives } = await api('/api/world-direction-default');
     $('#wd-dir', m).value = directives;
+  };
+  $('#wd-genc', m).onclick = async (e) => {
+    const btn = e.target; if (btn.disabled) return;
+    btn.disabled = true; btn.textContent = '🎨 painting…';
+    try {
+      await api(`/api/worlds/${S.world}/cover`, { method: 'POST', body: { prompt: $('#wd-cover', m).value || undefined } });
+      toast('🖼 New cover ready — see the home screen', 'gold');
+      S.worldData = null; refreshMe();
+      btn.disabled = false; btn.textContent = '🖼 Regenerate cover (~20s)';
+    } catch (e2) { btn.disabled = false; btn.textContent = '🖼 Generate cover (~20s)'; fail(e2); }
   };
   $('#wd-save', m).onclick = async () => {
     try {
@@ -2088,11 +2232,29 @@ function playClipUrl(url, onended, { earlySec = 0, onEarly = null } = {}) {
   const done = () => { if (!dead) { dead = true; cleanup(); onended?.(); } };
   el.onended = done;
   el.onerror = done;
-  el.play().catch(done);
+  let fb = null;   // buffer-source fallback handle (mobile)
+  el.play().catch(() => {
+    // MOBILE AUTOPLAY GATE: media-element playback can be blocked long after the initiating
+    // tap (films fetch + generate for seconds first) even when piped through WebAudio.
+    // AudioBufferSource playback only needs the ctx — which the tap already unlocked — so
+    // fall back to decode-and-play. (Rate stays 1.0 on this path: buffer rate would shift
+    // pitch; correct speech beats fast speech.)
+    if (dead) return;
+    cleanup();
+    fetch(url, { credentials: 'same-origin' })
+      .then(r => { if (!r.ok) throw new Error('audio ' + r.status); return r.arrayBuffer(); })
+      .then(buf => ctx.decodeAudioData(buf))
+      .then(abuf => {
+        if (dead) return;
+        fb = playClip(abuf, () => { if (!dead) { dead = true; onended?.(); } },
+          { earlySec, onEarly: () => { if (!earlyFired) { earlyFired = true; onEarly?.(); } } });
+      })
+      .catch(done);
+  });
   return {
-    pause: () => el.pause(),
-    play: () => el.play().catch(() => {}),
-    stop: () => { dead = true; el.onended = null; el.onerror = null; try { el.pause(); } catch {} cleanup(); },
+    pause: () => { fb ? fb.pause() : el.pause(); },
+    play: () => { fb ? fb.play() : el.play().catch(() => {}); },
+    stop: () => { dead = true; el.onended = null; el.onerror = null; try { el.pause(); } catch {} cleanup(); fb?.stop(); },
   };
 }
 
@@ -2754,7 +2916,11 @@ function renderCineScene(tick, data) {
   const loc = locations.find(l => l.id === tick.pov_location_id) || locations[0];
   const bg = $('.stage-bg');
   if (bg) bg.style.backgroundImage = `url(${assetUrl(loc?.background_asset_id)})`;
-  const present = (tick.states || []).filter(st => st.location_id === loc?.id && characters.find(c => c.id === st.character_id));
+  // everyone AT the scene location — plus anyone who SPEAKS in this scene (their sprite
+  // must be visible even if their end-of-interval state says they left, e.g. Sam in the
+  // lab scene): consistency between the script and what's on screen.
+  const speakerIds = new Set((tick.narration || []).map(n => n.speaker).filter(s => s && s !== 'narrator'));
+  const present = (tick.states || []).filter(st => characters.find(c => c.id === st.character_id) && (st.location_id === loc?.id || speakerIds.has(st.character_id)));
   const cast = $('#stage-cast');
   if (cast) cast.innerHTML = present.map((st, i) => {
     const c = characters.find(x => x.id === st.character_id);
@@ -3000,7 +3166,7 @@ async function timelineModal() {
         <div style="font-size:12px;color:#3c3763;margin-top:3px">${esc(t.summary || '—')}</div>
       </div>
       <div style="display:flex;gap:7px;flex:none;align-items:center;flex-wrap:wrap">
-        ${(() => { try { const s = t.seq && (typeof t.seq === 'string' ? JSON.parse(t.seq) : t.seq); return s ? `<button class="btn btn-teal small" id="tl-replay-seq" title="Replay the whole ${esc(s.label)} as one film">🎬 Replay sequence (${s.n})</button>` : ''; } catch { return ''; } })()}
+        ${(() => { try { const s = t.seq && (typeof t.seq === 'string' ? JSON.parse(t.seq) : t.seq); return s ? `<button class="btn btn-teal small" id="tl-replay-seq" title="Replay the whole ${esc(s.label)} as one film">🎬 Replay sequence (${s.n})</button><button class="btn btn-ghost small" id="tl-edit-seq" title="Edit this sequence's script and music">✏️</button>` : ''; } catch { return ''; } })()}
         ${t.idx > 0 ? `<button class="btn btn-primary small" id="tl-replay" title="Watch again from here — does not change the story">▶ Replay</button>` : ''}
         ${here ? '<span class="tag g">you are here</span>' : `<button class="btn btn-soft small" id="tl-jump" title="Rewind the world to here — advancing then forks a new branch">⤴ Jump</button>`}
       </div>`;
@@ -3010,6 +3176,8 @@ async function timelineModal() {
       S.replay = { branchId: selected, idx: t.idx };
       if (location.hash.includes('stage')) stageScreen(); else nav(`#/stage?w=${S.world}`);
     };
+    const eds = $('#tl-edit-seq', m);
+    if (eds) eds.onclick = () => { m.remove(); introEditor(S.world); };
     const rps = $('#tl-replay-seq', m);
     if (rps) rps.onclick = () => {
       // the whole film: all ticks sharing this sequence id, first to last

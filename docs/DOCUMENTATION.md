@@ -373,6 +373,18 @@ where the player takes over. Every **new account receives it automatically** at 
 `data/templates/open-intellect/`, built by `scripts/build_open_intellect.mjs`; scene 3 was
 hand-authored — `scripts/film_scene3_by_hand.mjs`).
 
+### 2.9g Opening editor ✏️
+Worlds with an opening sequence get a ✏️ button on their home card (and in the timeline's
+sequence detail): an overlay editor to hand-edit the whole cold open — scroll scene to scene,
+rewrite every script line (speaker dropdown incl. narrator, speech/thought, emotion, text,
+add/remove/reorder), edit the scene summary, and re-score the scene via manual music search
+with previews. Saves onto the tick (`PATCH /api/worlds/:id/intro-scene`), so films, replays
+and exports honour the edits. World cards also show a cover/preview image — generate or
+regenerate it (editable prompt) from the 🎬 Direction modal (`POST /api/worlds/:id/cover`).
+Film scenes always show every SPEAKER's sprite (not just characters located at the scene);
+voice playback falls back to decoded WebAudio buffers when a mobile autoplay policy blocks
+media elements mid-film.
+
 ### 2.10 Time travel & replay
 Undo/redo arrows + the Timeline (🕰 chip in the top bar on every screen, or the stage button):
 a **graphical filmstrip** — earlier ⟵ left · right ⟶ later — where every scene is a thumbnail
