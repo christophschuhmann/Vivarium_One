@@ -2424,6 +2424,10 @@ function setupNarrationPlayer(sceneLines, characters) {
   const chOf = (spk) => spk === 'narrator' ? null : characters.find(c => c.id === spk);
   const prefetch = (i) => {
     if (i >= lines.length || player.cache[i]) return player.cache[i];
+    // Authored/intro lines can carry PRE-GENERATED audio per language (line.audio[lang],
+    // bundled with the scenario) — play it directly, no synthesis, no cost, no wait.
+    const pre = lines[i].audio && lines[i].audio[getLang()];
+    if (pre) { player.cache[i] = Promise.resolve({ assetId: pre, cached: true }); return player.cache[i]; }
     player.cache[i] = fetchTts(lines[i].text, chOf(lines[i].speaker), lines[i].emotion || '', lines[i].mode || '').catch(e => { player.cache[i] = null; throw e; });
     return player.cache[i];
   };
