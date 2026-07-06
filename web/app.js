@@ -1163,37 +1163,56 @@ async function introMusicPicker(worldId, plan) {
   render();
 }
 
-/* ── ✏️ INTRO-SCENE EDITOR ───────────────────────────────────────────────────
-   Hand-edit a world\'s opening sequence without touching code: scroll through
-   the scenes (prev/next timeline), rewrite every narration line (speaker,
-   speech/thought, emotion, text — add/remove/reorder), the scene summary, and
-   the scene\'s score via manual music search with previews. Saves onto the
-   tick, so films, replays and exports all honour the edits.                 */
+/* ── ✏️ INTRO-SCENE EDITOR (v2) ──────────────────────────────────────────────
+   Two columns. LEFT: pick the scene\'s background (location) and each speaking
+   character\'s sprite with a live composited preview; edit every script line
+   (speaker/mode/emotion/text) in any of EN/DE/FR/ES with a language toggle and
+   one-click auto-translate; edit the summary; re-score via manual music search.
+   RIGHT: a creation-assistant chat (with mic) that sees the whole scenario and
+   writes/rewrites the scene for you. Saves onto the tick, so films, replays and
+   exports honour everything.                                                  */
 async function introEditor(worldId) {
   S.world = worldId || S.world;
   const data = await loadWorld();
-  const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${encodeURIComponent(data.world.active_branch_id)}&toIdx=999999999`);
   const jp = (v, fb) => { if (v == null) return fb; if (typeof v !== 'string') return v; try { return JSON.parse(v); } catch { return fb; } };
-  const scenes = ticks.filter(t => jp(t.seq, null))
-    .map(t => ({ idx: t.idx, seq: jp(t.seq, {}), summary: t.summary || '', narration: jp(t.narration, []), music: jp(t.music, null), loc: data.locations.find(l => l.id === t.pov_location_id)?.name || '' }));
+  const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${encodeURIComponent(data.world.active_branch_id)}&toIdx=999999999`);
+  const scenes = ticks.filter(t => jp(t.seq, null)).map(t => ({
+    idx: t.idx, seq: jp(t.seq, {}), summary: t.summary || '',
+    narration: jp(t.narration, []), music: jp(t.music, null),
+    povId: t.pov_location_id, states: jp(t.states, []),
+  }));
   if (!scenes.length) return toast('This world has no opening sequence to edit');
-  const cast = data.characters.map(c => ({ id: c.id, name: c.name }));
-  let k = 0;
+  const cast = data.characters;
+  const castById = Object.fromEntries(cast.map(c => [c.id, c]));
+  const locs = data.locations;
+  const LANGS = [['en', 'EN'], ['de', 'DE'], ['fr', 'FR'], ['es', 'ES']];
+  let k = 0, curLang = 'en';
+  const assistHist = [];
 
   const m = document.createElement('div');
   m.className = 'modal-bg';
-  m.innerHTML = `<div class="modal" style="width:min(860px,97vw)"><div class="modal-head violet">
+  m.innerHTML = `<div class="modal" style="width:min(1180px,98vw)"><div class="modal-head violet">
     <div><b>✏️ Opening editor</b><small id="ie-sub"></small></div><span class="x">✕</span></div>
-  <div class="modal-body" id="ie-body" style="max-height:76vh;overflow-y:auto"></div></div>`;
+  <div class="modal-body" style="padding:0"><div class="ie-grid">
+    <div class="ie-left" id="ie-left"></div>
+    <div class="ie-right">
+      <div style="font-size:12px;font-weight:700;color:var(--violet);padding:2px 2px 8px">✨ Scene-craft assistant</div>
+      <div class="iv-log" id="ie-chat" style="flex:1"></div>
+      <div class="chat-inputrow" style="padding:8px 0 0"><div class="field" id="ie-cfield" style="background:#fff;margin:0"><input id="ie-cin" placeholder="ask me to write or change the scene…"><button class="btn btn-primary small" id="ie-csend">Send</button></div></div>
+    </div>
+  </div></div></div>`;
   document.body.appendChild(m);
   const close = () => { m.remove(); $$('audio', m).forEach(a => a.pause()); };
   m.onclick = (e) => { if (e.target === m) close(); };
   $('.x', m).onclick = close;
 
-  const lineRow = (n, i) => `
-    <div class="ie-line" data-i="${i}" style="display:flex;gap:6px;align-items:flex-start;margin-bottom:7px">
+  // sprite selection per character for the current scene (charId -> outfit name)
+  const spriteSel = {};
+  const lineRow = (n, i) => {
+    const shown = curLang === 'en' ? (n.text || '') : (n.i18n?.[curLang] ?? '');
+    return `<div class="ie-line" data-i="${i}" style="display:flex;gap:6px;align-items:flex-start;margin-bottom:7px">
       <div style="display:flex;flex-direction:column;gap:3px;flex:none">
-        <select data-spk style="border:1.5px solid var(--line);border-radius:8px;padding:4px 6px;font-size:11px;max-width:120px">
+        <select data-spk style="border:1.5px solid var(--line);border-radius:8px;padding:4px 6px;font-size:11px;max-width:118px">
           <option value="narrator" ${n.speaker === 'narrator' ? 'selected' : ''}>✦ narrator</option>
           ${cast.map(c => `<option value="${c.id}" ${n.speaker === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
         </select>
@@ -1201,93 +1220,201 @@ async function introEditor(worldId) {
           <option value="speech" ${n.mode !== 'thought' ? 'selected' : ''}>speech</option>
           <option value="thought" ${n.mode === 'thought' ? 'selected' : ''}>thought</option>
         </select>
-        <input data-emo value="${esc(n.emotion || '')}" placeholder="emotion" style="border:1.5px solid var(--line);border-radius:8px;padding:3px 6px;font-size:10.5px;max-width:120px">
+        <input data-emo value="${esc(n.emotion || '')}" placeholder="emotion" style="border:1.5px solid var(--line);border-radius:8px;padding:3px 6px;font-size:10.5px;max-width:118px">
       </div>
-      <textarea data-text rows="2" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:6px 9px;font-size:12.5px;font-family:inherit">${esc(n.text)}</textarea>
+      <textarea data-text rows="2" placeholder="${curLang === 'en' ? '' : 'translation ('+curLang.toUpperCase()+')'}" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:6px 9px;font-size:12.5px;font-family:inherit">${esc(shown)}</textarea>
       <div style="display:flex;flex-direction:column;gap:2px;flex:none">
-        <button class="btn btn-ghost small" data-up title="move up" style="padding:1px 7px">↑</button>
-        <button class="btn btn-ghost small" data-dn title="move down" style="padding:1px 7px">↓</button>
-        <button class="btn btn-ghost small" data-del title="remove" style="padding:1px 7px;color:#d92e66">✕</button>
+        <button class="btn btn-ghost small" data-up style="padding:1px 7px">↑</button>
+        <button class="btn btn-ghost small" data-dn style="padding:1px 7px">↓</button>
+        <button class="btn btn-ghost small" data-del style="padding:1px 7px;color:#d92e66">✕</button>
       </div>
     </div>`;
+  };
 
-  const collect = () => $$('.ie-line', m).map(row => ({
-    speaker: $('[data-spk]', row).value,
-    mode: $('[data-mode]', row).value,
-    emotion: $('[data-emo]', row).value,
-    text: $('[data-text]', row).value.trim(),
-  })).filter(n => n.text);
+  // pull the edited rows back into scenes[k].narration, preserving other languages
+  const commit = () => {
+    const rows = $$('.ie-line', m);
+    scenes[k].narration = rows.map(row => {
+      const idx = +row.dataset.i;
+      const prev = scenes[k].narration[idx] || { text: '', i18n: {} };
+      const val = $('[data-text]', row).value.trim();
+      const speaker = $('[data-spk]', row).value;
+      const line = {
+        speaker,
+        mode: $('[data-mode]', row).value,
+        emotion: $('[data-emo]', row).value,
+        text: prev.text || '',
+        i18n: { ...(prev.i18n || {}) },
+      };
+      if (curLang === 'en') line.text = val;
+      else { line.i18n[curLang] = val; if (!line.text) line.text = val; }
+      return line;
+    }).filter(n => n.text || Object.values(n.i18n).some(Boolean));
+    // re-index for stable row mapping after reorder/delete
+    scenes[k].narration.forEach((n, i) => n._i = i);
+  };
 
-  let pickedMusic = null, pickedCands = null;
+  const spriteOptions = (c, sel) => (c.state.outfits || []).map(o => `<option value="${esc(o.name)}" ${o.name === sel ? 'selected' : ''}>${esc(o.name)}</option>`).join('');
+
+  let musicPick = null, musicCands = null;
   const render = () => {
     const sc = scenes[k];
-    pickedMusic = null; pickedCands = null;
-    $('#ie-sub', m).textContent = `${data.world.title} · scene ${k + 1} of ${scenes.length} · ${sc.loc}`;
-    $('#ie-body', m).innerHTML = `
+    sc.narration.forEach((n, i) => n._i = i);
+    musicPick = null; musicCands = null;
+    const loc = locs.find(l => l.id === sc.povId) || locs[0];
+    // speakers in this scene get sprite pickers; default sprite = tick state\'s outfit
+    const speakers = [...new Set(sc.narration.map(n => n.speaker).filter(s => s && s !== 'narrator'))].map(id => castById[id]).filter(Boolean);
+    for (const c of speakers) if (!(c.id in spriteSel)) spriteSel[c.id] = (sc.states.find(s => s.character_id === c.id)?.outfit) || (c.state.outfits?.[0]?.name);
+    $('#ie-sub', m).textContent = `${data.world.title} · scene ${k + 1} of ${scenes.length}`;
+
+    $('#ie-left', m).innerHTML = `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-        <button class="btn btn-soft small" id="ie-prev" ${k === 0 ? 'disabled' : ''}>← scene ${k || 1}</button>
+        <button class="btn btn-soft small" id="ie-prev" ${k === 0 ? 'disabled' : ''}>←</button>
         <div class="strength" style="flex:1"><div style="width:${Math.round(((k + 1) / scenes.length) * 100)}%"></div></div>
-        <button class="btn btn-soft small" id="ie-next" ${k === scenes.length - 1 ? 'disabled' : ''}>scene ${Math.min(k + 2, scenes.length)} →</button>
+        <button class="btn btn-soft small" id="ie-next" ${k === scenes.length - 1 ? 'disabled' : ''}>→</button>
+        <div style="display:flex;gap:3px">${LANGS.map(([lg, lb]) => `<button class="tchip ${lg === curLang ? 'sel' : ''}" data-lang="${lg}" style="padding:4px 8px;font-size:11px">${lb}</button>`).join('')}</div>
       </div>
+
+      <div class="ie-preview" id="ie-preview"></div>
+
+      <div style="display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0">
+        <label style="font-size:11px;font-weight:700;color:var(--soft)">🖼 BACKGROUND (location)
+          <select id="ie-bg" style="display:block;width:100%;border:1.5px solid var(--line);border-radius:9px;padding:6px 9px;font-size:12px;margin-top:3px">
+            ${locs.map(l => `<option value="${l.id}" ${l.id === sc.povId ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}
+          </select>
+        </label>
+        ${speakers.length ? `<div><div style="font-size:11px;font-weight:700;color:var(--soft);margin-bottom:4px">🎭 SPRITES</div>${speakers.map(c => `
+          <label style="display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:4px"><b style="flex:none;min-width:70px">${esc(c.name)}</b>
+            <select data-sprite="${c.id}" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:4px 7px;font-size:11.5px">${spriteOptions(c, spriteSel[c.id])}</select></label>`).join('')}</div>` : ''}
+      </div>
+
       <label style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--soft)">SCENE SUMMARY</label>
       <textarea id="ie-summary" rows="2" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px;margin:4px 0 12px">${esc(sc.summary)}</textarea>
-      <label style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--soft)">SCRIPT — WHO SAYS WHAT</label>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--soft)">SCRIPT ${curLang !== 'en' ? '· ' + curLang.toUpperCase() : ''}</label>
+        <span style="flex:1"></span>
+        <button class="btn btn-ghost small" id="ie-translate" title="Auto-translate all scenes to DE/FR/ES">🌐 Auto-translate</button>
+      </div>
       <div id="ie-lines" style="margin-top:6px">${sc.narration.map(lineRow).join('')}</div>
       <button class="btn btn-ghost small" id="ie-add">＋ add line</button>
+
       <div style="margin-top:14px;border-top:1px dashed var(--line);padding-top:10px">
-        <label style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--soft)">SCENE MUSIC ${sc.music ? `· current: <b>${esc(sc.music.title)}</b>` : '· none'}</label>
+        <label style="font-size:11px;font-weight:700;color:var(--soft)">SCENE MUSIC ${sc.music ? `· <b>${esc(sc.music.title)}</b>` : '· none'}</label>
         <div style="display:flex;gap:6px;margin-top:6px">
-          <input id="ie-mq" placeholder="🔍 search music (keywords)…" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:6px 10px;font-size:12px">
+          <input id="ie-mq" placeholder="🔍 search music…" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:6px 10px;font-size:12px">
           <button class="btn btn-soft small" id="ie-mgo">Search</button>
         </div>
         <div id="ie-mres" style="margin-top:7px"></div>
       </div>
       <button class="btn btn-primary" id="ie-save" style="width:100%;margin-top:14px">💾 Save scene ${k + 1}</button>`;
-    $('#ie-prev', m).onclick = () => { if (k > 0) { k--; render(); } };
-    $('#ie-next', m).onclick = () => { if (k < scenes.length - 1) { k++; render(); } };
-    const wireRows = () => $$('.ie-line', m).forEach(row => {
-      $('[data-spk]', row).onchange = () => { $('[data-mode]', row).disabled = $('[data-spk]', row).value === 'narrator'; };
-      $('[data-del]', row).onclick = () => row.remove();
-      $('[data-up]', row).onclick = () => { const p = row.previousElementSibling; if (p) row.parentNode.insertBefore(row, p); };
-      $('[data-dn]', row).onclick = () => { const nx = row.nextElementSibling; if (nx) row.parentNode.insertBefore(nx, row); };
-    });
+
+    drawPreview();
+    // language toggle
+    $$('[data-lang]', m).forEach(el => el.onclick = () => { commit(); curLang = el.dataset.lang; render(); });
+    $('#ie-prev', m).onclick = () => { commit(); if (k > 0) { k--; Object.keys(spriteSel).forEach(x => delete spriteSel[x]); render(); } };
+    $('#ie-next', m).onclick = () => { commit(); if (k < scenes.length - 1) { k++; Object.keys(spriteSel).forEach(x => delete spriteSel[x]); render(); } };
+    $('#ie-bg', m).onchange = () => { sc.povId = $('#ie-bg', m).value; drawPreview(); };
+    $$('[data-sprite]', m).forEach(sel => sel.onchange = () => { spriteSel[sel.dataset.sprite] = sel.value; drawPreview(); });
     wireRows();
-    $('#ie-add', m).onclick = () => {
-      $('#ie-lines', m).insertAdjacentHTML('beforeend', lineRow({ speaker: 'narrator', text: '', emotion: '', mode: 'speech' }, 99));
-      wireRows();
+    $('#ie-add', m).onclick = () => { commit(); scenes[k].narration.push({ speaker: 'narrator', text: '', emotion: '', mode: 'speech', i18n: {} }); render(); };
+    $('#ie-translate', m).onclick = async (e) => {
+      const btn = e.target; if (btn.disabled) return; btn.disabled = true; btn.textContent = '🌐 translating…';
+      try { const r = await api(`/api/worlds/${S.world}/translate-intro`, { method: 'POST', body: { langs: ['de', 'fr', 'es'] } });
+        toast(`Translated ${r.scenes} scenes → ${r.langs.map(l => l.toUpperCase()).join(', ')} 🌐`, 'gold');
+        // reload scene texts with the new i18n
+        const fresh = (await api(`/api/worlds/${S.world}/export/timeline?branchId=${encodeURIComponent(data.world.active_branch_id)}&toIdx=999999999`)).ticks;
+        scenes.forEach(s => { const ft = fresh.find(t => t.idx === s.idx); if (ft) s.narration = jp(ft.narration, []); });
+        render();
+      } catch (e2) { fail(e2); btn.disabled = false; btn.textContent = '🌐 Auto-translate'; }
     };
-    $('#ie-mgo', m).onclick = async () => {
-      const q = $('#ie-mq', m).value.trim(); if (!q) return;
-      $('#ie-mres', m).innerHTML = '<div class="empty-hint" style="padding:8px"><span class="spinner dark"></span></div>';
-      try {
-        const { candidates } = await api('/api/music/search', { method: 'POST', body: { query: q, field: 'bm25_caption' } });
-        pickedCands = candidates;
-        $('#ie-mres', m).innerHTML = candidates.map((c, i) => `
-          <label style="display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:5px">
-            <input type="radio" name="ie-mc" data-mi="${i}">
-            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(c.title)}</b> <small style="color:var(--soft)">${c.aesthetics != null ? `⭐${c.aesthetics}` : ''}</small></span>
-            <audio controls preload="none" src="${c.url}" style="height:26px;max-width:180px"></audio>
-          </label>`).join('') || '<p style="font-size:11.5px;color:var(--soft)">nothing found</p>';
-        $$('input[name=ie-mc]', m).forEach(r => r.onchange = () => { pickedMusic = candidates[+r.dataset.mi]; });
-        const prevs = $$('#ie-mres audio', m);
-        prevs.forEach(a => { a.onplay = () => { prevs.forEach(o => { if (o !== a) o.pause(); }); duckMusic(); }; a.onpause = a.onended = () => { if (!prevs.some(o => !o.paused)) unduckMusic(); }; });
-      } catch (e) { fail(e); $('#ie-mres', m).innerHTML = ''; }
-    };
-    $('#ie-mq', m).onkeydown = (e) => { if (e.key === 'Enter') $('#ie-mgo', m).click(); };
-    $('#ie-save', m).onclick = async (e) => {
-      const btn = e.target; btn.disabled = true; btn.textContent = '💾 saving…';
-      try {
-        const body = { tickIdx: sc.idx, narration: collect(), summary: $('#ie-summary', m).value };
-        if (pickedMusic) { body.music = pickedMusic; body.candidates = pickedCands; }
-        await api(`/api/worlds/${S.world}/intro-scene`, { method: 'PATCH', body });
-        // keep the local copy in sync so scene-hopping shows the saved state
-        scenes[k].narration = body.narration; scenes[k].summary = body.summary;
-        if (pickedMusic) scenes[k].music = pickedMusic;
-        toast(`Scene ${k + 1} saved ✏️`, 'gold');
-        btn.disabled = false; btn.textContent = `💾 Save scene ${k + 1}`;
-      } catch (e2) { btn.disabled = false; btn.textContent = `💾 Save scene ${k + 1}`; fail(e2); }
-    };
+    $('#ie-mgo', m).onclick = musicSearch;
+    $('#ie-mq', m).onkeydown = (e) => { if (e.key === 'Enter') musicSearch(); };
+    $('#ie-save', m).onclick = saveScene;
   };
+
+  const wireRows = () => $$('.ie-line', m).forEach(row => {
+    $('[data-spk]', row).onchange = () => { $('[data-mode]', row).disabled = $('[data-spk]', row).value === 'narrator'; };
+    $('[data-del]', row).onclick = () => { commit(); scenes[k].narration.splice(+row.dataset.i, 1); render(); };
+    $('[data-up]', row).onclick = () => { commit(); const i = +row.dataset.i; if (i > 0) { const a = scenes[k].narration; [a[i - 1], a[i]] = [a[i], a[i - 1]]; render(); } };
+    $('[data-dn]', row).onclick = () => { commit(); const i = +row.dataset.i; const a = scenes[k].narration; if (i < a.length - 1) { [a[i + 1], a[i]] = [a[i], a[i + 1]]; render(); } };
+  });
+
+  const drawPreview = () => {
+    const box = $('#ie-preview', m); if (!box) return;
+    const sc = scenes[k];
+    const loc = locs.find(l => l.id === sc.povId);
+    const speakers = [...new Set(sc.narration.map(n => n.speaker).filter(s => s && s !== 'narrator'))].map(id => castById[id]).filter(Boolean);
+    box.style.backgroundImage = loc?.background_asset_id ? `url(${assetUrl(loc.background_asset_id)}?w=640)` : '';
+    box.innerHTML = speakers.map((c, i) => {
+      const o = (c.state.outfits || []).find(x => x.name === spriteSel[c.id]) || (c.state.outfits || [])[0];
+      const n = speakers.length, x = n === 1 ? 50 : 18 + (64 / Math.max(n - 1, 1)) * i;
+      return o ? `<img src="${assetUrl(o.cutout_asset_id)}?w=320" style="position:absolute;bottom:0;left:${x}%;transform:translateX(-50%);height:92%">` : '';
+    }).join('') + `<span class="ie-prevloc">${esc(loc?.name || '')}</span>`;
+  };
+
+  const musicSearch = async () => {
+    const q = $('#ie-mq', m).value.trim(); if (!q) return;
+    $('#ie-mres', m).innerHTML = '<div class="empty-hint" style="padding:8px"><span class="spinner dark"></span></div>';
+    try {
+      const { candidates } = await api('/api/music/search', { method: 'POST', body: { query: q, field: 'bm25_caption' } });
+      musicCands = candidates;
+      $('#ie-mres', m).innerHTML = candidates.map((c, i) => `
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:5px">
+          <input type="radio" name="ie-mc" data-mi="${i}">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(c.title)}</b> <small style="color:var(--soft)">${c.aesthetics != null ? `⭐${c.aesthetics}` : ''}</small></span>
+          <audio controls preload="none" src="${c.url}" style="height:26px;max-width:170px"></audio></label>`).join('') || '<p style="font-size:11.5px;color:var(--soft)">nothing found</p>';
+      $$('input[name=ie-mc]', m).forEach(r => r.onchange = () => { musicPick = candidates[+r.dataset.mi]; });
+      const prevs = $$('#ie-mres audio', m);
+      prevs.forEach(a => { a.onplay = () => { prevs.forEach(o => { if (o !== a) o.pause(); }); duckMusic(); }; a.onpause = a.onended = () => { if (!prevs.some(o => !o.paused)) unduckMusic(); }; });
+    } catch (e) { fail(e); $('#ie-mres', m).innerHTML = ''; }
+  };
+
+  const saveScene = async (e) => {
+    commit();
+    const btn = e.target; btn.disabled = true; btn.textContent = '💾 saving…';
+    const sc = scenes[k];
+    try {
+      const body = { tickIdx: sc.idx, narration: sc.narration, summary: $('#ie-summary', m).value, pov_location_id: sc.povId, sprites: spriteSel };
+      if (musicPick) { body.music = musicPick; body.candidates = musicCands; }
+      await api(`/api/worlds/${S.world}/intro-scene`, { method: 'PATCH', body });
+      if (musicPick) sc.music = musicPick;
+      // keep local state snapshot outfits in sync so the preview + re-open reflect saves
+      for (const [cid, outfit] of Object.entries(spriteSel)) { const s = sc.states.find(x => x.character_id === cid); if (s) s.outfit = outfit; }
+      toast(`Scene ${k + 1} saved ✏️`, 'gold');
+      btn.disabled = false; btn.textContent = `💾 Save scene ${k + 1}`;
+    } catch (e2) { btn.disabled = false; btn.textContent = `💾 Save scene ${k + 1}`; fail(e2); }
+  };
+
+  // ── assistant chat (right) ──
+  const chat = $('#ie-chat', m);
+  const addChat = (cls, text) => { const d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = text; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d; };
+  addChat('assistant', 'Tell me how you want the scene to go — “make Sam angrier”, “add a line where Jessie jokes”, “move this to the rooftop” — and I\'ll rewrite it. Review it on the left, then Save.');
+  attachMic($('#ie-cfield', m), $('#ie-cin', m));
+  let busy = false;
+  const sendChat = async () => {
+    const text = $('#ie-cin', m).value.trim(); if (!text || busy) return;
+    busy = true; $('#ie-cin', m).value = ''; addChat('user', text);
+    assistHist.push({ role: 'user', content: text });
+    const status = addChat('status', '✨ writing…');
+    try {
+      commit();
+      const r = await api(`/api/worlds/${S.world}/intro-assist`, { method: 'POST', body: { tickIdx: scenes[k].idx, message: text, narration: scenes[k].narration, history: assistHist, lang: curLang } });
+      status.remove(); addChat('assistant', r.reply);
+      assistHist.push({ role: 'assistant', content: r.reply });
+      if (r.narration) {
+        // assistant wrote text in curLang; store into the right field, keep other langs
+        scenes[k].narration = r.narration.map(n => curLang === 'en' ? { ...n, i18n: {} } : { speaker: n.speaker, mode: n.mode, emotion: n.emotion, text: n.text, i18n: { [curLang]: n.text } });
+        toast('Scene rewritten — review & Save', 'gold');
+      }
+      if (r.locationId) scenes[k].povId = r.locationId;
+      if (r.narration || r.locationId) render();
+    } catch (e) { status.remove(); addChat('assistant', '😔 ' + e.message); }
+    busy = false;
+  };
+  $('#ie-csend', m).onclick = sendChat;
+  $('#ie-cin', m).onkeydown = (e) => { if (e.key === 'Enter') sendChat(); };
+
   render();
 }
 
@@ -1975,6 +2102,14 @@ function buildScene(lastTick, loc, present, povChar) {
     });
   }
   return { lines, meta: `now · at ${loc?.name || '—'} · the story is unfolding elsewhere`, live: false };
+}
+// Intro/authored scenes may carry per-line translations (line.i18n = {de,fr,es}); when the
+// player has switched language, swap in the translated text for display AND for TTS. Live
+// ticks are already generated in-language and have no i18n, so this is a no-op for them.
+function localizeNarr(narration) {
+  const lang = getLang();
+  if (lang === 'en') return narration || [];
+  return (narration || []).map(n => (n.i18n && n.i18n[lang]) ? { ...n, text: n.i18n[lang] } : n);
 }
 function renderNarration(lines, characters) {
   // Only real characters get a name/voice; anything else (narrator or a GM-invented walk-on) reads as narration.
@@ -2919,7 +3054,8 @@ function renderCineScene(tick, data) {
   // everyone AT the scene location — plus anyone who SPEAKS in this scene (their sprite
   // must be visible even if their end-of-interval state says they left, e.g. Sam in the
   // lab scene): consistency between the script and what's on screen.
-  const speakerIds = new Set((tick.narration || []).map(n => n.speaker).filter(s => s && s !== 'narrator'));
+  const narr = localizeNarr(tick.narration);
+  const speakerIds = new Set(narr.map(n => n.speaker).filter(s => s && s !== 'narrator'));
   const present = (tick.states || []).filter(st => characters.find(c => c.id === st.character_id) && (st.location_id === loc?.id || speakerIds.has(st.character_id)));
   const cast = $('#stage-cast');
   if (cast) cast.innerHTML = present.map((st, i) => {
@@ -2932,7 +3068,7 @@ function renderCineScene(tick, data) {
     </div>`;
   }).join('') || `<div class="empty-hint" style="position:absolute;inset:30% 0;color:#cfc9f2">${esc(loc?.name || '')} — the scene unfolds…</div>`;
   const lines = $('#storylines');
-  if (lines) { lines.innerHTML = renderNarration(tick.narration || [], characters); bindStoryLines(characters); }
+  if (lines) { lines.innerHTML = renderNarration(narr, characters); bindStoryLines(characters); }
   const meta = $('.story-meta span'); if (meta) meta.textContent = `tick ${tick.idx} · ${tick.mood_tag || ''} · ${tick.time_delta}`;
   // keep the top HUD chip in sync with the scene being shown (place · tick · clock)
   const hudSpans = $$('.stage-hud .glasschip span');
@@ -2945,7 +3081,7 @@ function renderCineScene(tick, data) {
 // applies here exactly as in normal play.
 function playSceneNarration(tick, data) {
   return new Promise((resolve) => {
-    const lines = (tick.narration || []).filter(n => n.text);
+    const lines = localizeNarr(tick.narration).filter(n => n.text);
     if (!lines.length) return setTimeout(resolve, 1600);
     stopNarration();
     setupNarrationPlayer(lines, data.characters);

@@ -1235,3 +1235,80 @@ export function innerVoiceSince(worldId, charId, sinceIso) {
   return db.prepare(`SELECT role, content FROM chat_logs WHERE world_id=? AND surface=? AND created_at > ? ORDER BY created_at ASC LIMIT 16`)
     .all(worldId, `inner:${charId}`, sinceIso || '1970');
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// INTRO-SCENE TOOLS — translation + a creation-assistant chat for the editor.
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Translate every narration line of the given ticks into the target languages, storing
+// the result per line as line.i18n[lang]. English `text` stays canonical. Batched per tick.
+export async function translateIntro(user, world, tickIdxs, langs) {
+  preflight(user.id, EST.chat());
+  const targets = (langs || ['de', 'fr', 'es']).filter(l => GAME_LANGS[l] && l !== 'en');
+  let translated = 0;
+  for (const idx of tickIdxs) {
+    const t = db.prepare('SELECT * FROM ticks WHERE world_id=? AND idx=?').get(world.id, idx);
+    if (!t) continue;
+    const narr = pj(t.narration, []);
+    const texts = narr.map(n => n.text);
+    if (!texts.length) continue;
+    for (const lg of targets) {
+      if (narr.every(n => n.i18n?.[lg])) continue;   // this language already done for every line
+      const sys = `You are a literary translator. Translate each English line into natural, dramatic ${GAME_LANGS[lg]}, preserving tone, register and punchiness (this is a cinematic screenplay). Keep proper nouns/brand names as-is. Return ONLY JSON: {"lines":[ "<translation of line 1>", ... ]} with EXACTLY ${texts.length} entries in order. ${SYSTEM_CONTRACT}`;
+      const usr = `Lines:\n${texts.map((x, i) => `${i + 1}. ${x}`).join('\n')}`;
+      try {
+        const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: usr }], { maxTokens: 8000 });
+        debitCall(user.id, res, 'translate_intro', { worldId: world.id });
+        const out = (res.json?.lines || []).map(String);
+        narr.forEach((n, i) => { if (out[i]) { n.i18n = n.i18n || {}; n.i18n[lg] = out[i].slice(0, 600); } });
+      } catch (e) { console.error('[translate]', lg, e.message); }
+    }
+    db.prepare('UPDATE ticks SET narration=? WHERE id=?').run(j(narr), t.id);
+    translated++;
+  }
+  return { scenes: translated, langs: targets };
+}
+
+// The editor's creation assistant: sees the whole scenario + the scene being edited, and the
+// player's request; proposes a rewritten narration script (and optionally a better location)
+// which the client drops into the editor for review. Out-of-character, like the World Wizard.
+export async function introAssist(user, world, tick, draftNarration, message, history = [], lang = 'en') {
+  preflight(user.id, EST.chat());
+  const chars = db.prepare('SELECT id,name,base_profile FROM characters WHERE world_id=?').all(world.id)
+    .map(c => ({ id: c.id, name: c.name, ...(({ personality, speaking_style }) => ({ personality, speaking_style }))(pj(c.base_profile, {})) }));
+  const locs = db.prepare('SELECT id,name FROM locations WHERE world_id=?').all(world.id);
+  const scenes = db.prepare(`SELECT idx, summary FROM ticks WHERE world_id=? AND seq IS NOT NULL ORDER BY idx`).all(world.id);
+  const nameById = Object.fromEntries(chars.map(c => [c.id, c.name]));
+  const draftText = (draftNarration || pj(tick.narration, [])).map(n => `${n.speaker === 'narrator' ? 'NARRATOR' : (nameById[n.speaker] || n.speaker)}${n.mode === 'thought' ? ' (thought)' : ''}: ${n.text}`).join('\n');
+
+  const sys = `You are Vivarium's SCENE-CRAFT ASSISTANT, helping a creator hand-write a story's opening sequence. You see the whole scenario and the scene being edited. When the creator asks for changes, rewrite the scene's SCRIPT accordingly — punchy, cinematic, in-character — and/or suggest a better location. Keep the creator's intent; don't pad. ${SYSTEM_CONTRACT}
+Reply ONLY JSON:
+{"reply":"a short conversational note to the creator (what you changed / a question)",
+ "narration":[{"speaker":"exact character id OR 'narrator'","text":"the line","emotion":"one delivery word","mode":"speech|thought"}] or null (null = you didn't change the script this turn),
+ "location":"an existing location NAME to move the scene to, or null"}
+Character ids: ${chars.map(c => `${c.name}=${c.id}`).join(', ')}. Locations: ${locs.map(l => l.name).join(' | ')}. Write narration text in ${GAME_LANGS[lang] || 'English'}.`;
+  const usr = `SCENARIO: ${world.title} — ${world.genre}, ${world.mood}
+CAST: ${j(chars)}
+ALL OPENING SCENES: ${scenes.map(s => `#${s.idx}: ${s.summary}`).join(' / ')}
+THE SCENE YOU ARE EDITING (#${tick.idx}, at ${locs.find(l => l.id === tick.pov_location_id)?.name || '?'}):
+${draftText}`;
+
+  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: usr },
+    ...history.slice(-8).map(m => ({ role: m.role, content: m.content })),
+    { role: 'user', content: message }], { maxTokens: 6000 });
+  debitCall(user.id, res, 'intro_assist', { worldId: world.id });
+  logCall({ userId: user.id, worldId: world.id, kind: 'llm', surface: 'intro_assist', request: message, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
+  const out = res.json || {};
+  const castIds = new Set(chars.map(c => c.id));
+  let narration = null;
+  if (Array.isArray(out.narration) && out.narration.length) {
+    narration = out.narration.slice(0, 40).map(n => ({
+      speaker: n.speaker === 'narrator' || castIds.has(n.speaker) ? n.speaker : 'narrator',
+      text: String(n.text || '').trim().slice(0, 600),
+      emotion: String(n.emotion || '').slice(0, 40),
+      mode: n.mode === 'thought' && n.speaker !== 'narrator' ? 'thought' : 'speech',
+    })).filter(n => n.text);
+  }
+  const loc = out.location && locs.find(l => l.name.toLowerCase() === String(out.location).toLowerCase());
+  return { reply: out.reply || '…', narration, locationId: loc?.id || null, locationName: loc?.name || null };
+}

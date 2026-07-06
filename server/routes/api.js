@@ -1061,17 +1061,40 @@ export default async function apiRoutes(app) {
     const t = db.prepare('SELECT * FROM ticks WHERE world_id=? AND idx=?').get(w.id, +b.tickIdx);
     if (!t || !t.seq) throw httpErr(404, 'NOT_A_SCENE', 'That tick is not part of a sequence.');
     const castIds = new Set(db.prepare('SELECT id FROM characters WHERE world_id=?').all(w.id).map(c => c.id));
+    const LANGS = ['de', 'fr', 'es'];
     if (Array.isArray(b.narration)) {
-      const clean = b.narration.slice(0, 40).map(n => ({
-        speaker: n.speaker === 'narrator' || castIds.has(n.speaker) ? n.speaker : 'narrator',
-        text: String(n.text || '').trim().slice(0, 600),
-        emotion: String(n.emotion || '').slice(0, 40),
-        mode: n.mode === 'thought' && n.speaker !== 'narrator' ? 'thought' : 'speech',
-      })).filter(n => n.text);
+      const clean = b.narration.slice(0, 40).map(n => {
+        const line = {
+          speaker: n.speaker === 'narrator' || castIds.has(n.speaker) ? n.speaker : 'narrator',
+          text: String(n.text || '').trim().slice(0, 600),
+          emotion: String(n.emotion || '').slice(0, 40),
+          mode: n.mode === 'thought' && n.speaker !== 'narrator' ? 'thought' : 'speech',
+        };
+        // per-line translations {de,fr,es} — kept so a language toggle plays the right text
+        if (n.i18n && typeof n.i18n === 'object') {
+          const i18n = {};
+          for (const lg of LANGS) if (n.i18n[lg]) i18n[lg] = String(n.i18n[lg]).slice(0, 600);
+          if (Object.keys(i18n).length) line.i18n = i18n;
+        }
+        return line;
+      }).filter(n => n.text);
       if (!clean.length) throw httpErr(400, 'EMPTY_SCENE', 'A scene needs at least one line.');
       db.prepare('UPDATE ticks SET narration=? WHERE id=?').run(j(clean), t.id);
     }
     if (typeof b.summary === 'string') db.prepare('UPDATE ticks SET summary=? WHERE id=?').run(b.summary.trim().slice(0, 300), t.id);
+    // background: choosing the scene's location sets which backdrop shows
+    if (b.pov_location_id && db.prepare('SELECT 1 FROM locations WHERE id=? AND world_id=?').get(b.pov_location_id, w.id)) {
+      db.prepare('UPDATE ticks SET pov_location_id=? WHERE id=?').run(b.pov_location_id, t.id);
+    }
+    // per-character sprite selection: update the outfit named in the tick's state snapshot
+    if (b.sprites && typeof b.sprites === 'object') {
+      const states = pj(t.states, []);
+      for (const [cid, outfitName] of Object.entries(b.sprites)) {
+        const s = states.find(x => x.character_id === cid);
+        if (s && (s.outfits || []).some(o => o.name === outfitName)) s.outfit = outfitName;
+      }
+      db.prepare('UPDATE ticks SET states=? WHERE id=?').run(j(states), t.id);
+    }
     if (b.music?.url) {
       const cur = pj(t.music, {}) || {};
       const music = {
@@ -1085,6 +1108,24 @@ export default async function apiRoutes(app) {
       if (newest && newest.idx === t.idx) db.prepare('UPDATE worlds SET current_music=? WHERE id=?').run(j(music), w.id);
     }
     return { ok: true };
+  });
+
+  // Auto-translate the whole opening sequence into de/fr/es (per-line i18n on each tick).
+  app.post('/api/worlds/:id/translate-intro', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    const idxs = db.prepare(`SELECT idx FROM ticks WHERE world_id=? AND seq IS NOT NULL ORDER BY idx`).all(w.id).map(r => r.idx);
+    if (!idxs.length) throw httpErr(404, 'NO_INTRO', 'This world has no opening sequence.');
+    return gm.translateIntro(u, w, idxs, req.body?.langs || ['de', 'fr', 'es']);
+  });
+
+  // Scene-craft assistant chat (editor right panel): proposes narration + optional location.
+  app.post('/api/worlds/:id/intro-assist', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    const t = db.prepare('SELECT * FROM ticks WHERE world_id=? AND idx=?').get(w.id, +req.body?.tickIdx);
+    if (!t) throw httpErr(404, 'NOT_A_SCENE', 'Scene not found.');
+    return gm.introAssist(u, w, t, req.body?.narration || null, String(req.body?.message || '').slice(0, 2000), req.body?.history || [], req.body?.lang || 'en');
   });
 
   // Re-pick the score (the 🎶 widget): persist the player's choice as the world's current
