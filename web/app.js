@@ -2094,7 +2094,9 @@ async function stageScreen() {
 function buildScene(lastTick, loc, present, povChar) {
   if (!lastTick) return { lines: [], meta: 'the book is open', live: false };
   if (lastTick.pov_location_id === loc?.id && (lastTick.narration || []).length)
-    return { lines: lastTick.narration, meta: `tick ${lastTick.idx} · ${lastTick.mood_tag || ''} · ${lastTick.time_delta}`, live: true };
+    // localize: authored/intro ticks carry per-line translations — the storybook must show
+    // (and read aloud) the current language, same as the film renderer does.
+    return { lines: localizeNarr(lastTick.narration), meta: `tick ${lastTick.idx} · ${lastTick.mood_tag || ''} · ${lastTick.time_delta}`, live: true };
   // elsewhere — describe THIS place right now
   const lines = [];
   if (!present.length) {

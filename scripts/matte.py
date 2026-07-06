@@ -39,7 +39,7 @@ def cutout(src, dst):
             np.pad(a[:-1], ((1,0),(0,0)), constant_values=0),
             np.pad(a[:, 1:], ((0,0),(0,1)), constant_values=0),
             np.pad(a[:, :-1], ((0,0),(1,0)), constant_values=0)])
-    alpha = erode(erode(alpha))
+    alpha = erode(alpha)
     # Kill saturated teal/cyan (g and b both well above r) in the whole feather band — rim
     # light is bluish-green, not just green, so the green-only despill above misses it.
     tealish = (alpha < 0.98) & (img[:, :, 1] > img[:, :, 0] + 20) & (img[:, :, 2] > img[:, :, 0] + 20)
@@ -50,8 +50,10 @@ def cutout(src, dst):
     # watermark over a real scene backdrop (and it follows the sprite's transparent canvas on
     # resize). Any low-alpha pixel that is still green/teal-leaning is background residue:
     # force it fully transparent. Real subject content is opaque (alpha~1), so it is untouched.
-    gd = img[:, :, 1] - np.maximum(img[:, :, 0], img[:, :, 2])
-    residue = (alpha < 0.5) & (gd > -8)
+    # residue = low-alpha pixel where GREEN clearly dominates red (despilled key colour).
+    # Tight threshold so neutral/dark clothing soft edges (r~=g~=b) are NOT eaten — that was
+    # over-aggressive and hardened every silhouette.
+    residue = (alpha < 0.5) & (img[:, :, 1] > img[:, :, 0] + 14)
     alpha = np.where(residue, 0.0, alpha)
     # Zero the RGB of every (near-)transparent pixel so no non-premultiplied renderer can show
     # its colour as a ghost, and so ffmpeg ?w= scaling can't bleed it into neighbours.
