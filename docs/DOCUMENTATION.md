@@ -351,7 +351,10 @@ built from `jessie-scenario-idea.txt`): 9 characters (Sam, Mira, Ilya, Greg, Woj
 JESSIE, and Elon in his Texas Fortress), 16 locations incl. Liam's one-room SV apartment and
 the basement lab, 26 directed bonds, a distilled instruction bible in the world directives
 (secrets ledger, tone oscillation, Jessie principles), and a 5-scene scored opening sequence.
-Every **new account receives it automatically** at signup (template import from
+Worlds with an opening
+sequence show a **🎬 "From the beginning"** button on their home card: entering that way plays
+the whole cold open as a game intro (scenes, music, voice-over) and lands on the live present
+where the player takes over. Every **new account receives it automatically** at signup (template import from
 `data/templates/open-intellect/`, built by `scripts/build_open_intellect.mjs`; scene 3 was
 hand-authored — `scripts/film_scene3_by_hand.mjs`).
 

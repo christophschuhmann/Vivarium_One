@@ -150,7 +150,12 @@ export default async function apiRoutes(app) {
   app.get('/api/worlds', async (req) => {
     const u = requireUser(req);
     const rows = db.prepare('SELECT * FROM worlds WHERE user_id=? ORDER BY updated_at DESC').all(u.id);
-    return { worlds: rows.map(w => ({ ...w, characters: db.prepare('SELECT id,name,reference_asset_id FROM characters WHERE world_id=?').all(w.id) })) };
+    return { worlds: rows.map(w => ({
+      ...w,
+      characters: db.prepare('SELECT id,name,reference_asset_id FROM characters WHERE world_id=?').all(w.id),
+      // worlds with a cinematic cold open get a "▶ From the beginning" button on their card
+      has_intro: !!db.prepare(`SELECT 1 FROM ticks WHERE world_id=? AND seq LIKE '%"kind":"intro"%' LIMIT 1`).get(w.id),
+    })) };
   });
   app.post('/api/worlds', async (req) => {
     const u = requireVerified(req);

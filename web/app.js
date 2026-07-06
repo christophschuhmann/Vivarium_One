@@ -350,6 +350,13 @@ async function homeScreen() {
         if (e.target.closest('[data-del]')) { if (confirm('Delete this world forever?')) { await api(`/api/worlds/${c.dataset.id}`, { method: 'DELETE' }); homeScreen(); } return; }
         S.world = c.dataset.id; S.worldData = null;
         const w = worlds.find(x => x.id === c.dataset.id);
+        if (e.target.closest('[data-intro]')) {
+          // enter like a game intro: the opening sequence plays as a film (scenes, music,
+          // voice-over), then lands on the live present where the player takes over
+          S.replay = { intro: true };
+          nav(`#/stage?w=${c.dataset.id}`);
+          return;
+        }
         nav(w.status === 'live' ? `#/stage?w=${c.dataset.id}` : (w.characters.length ? `#/cast?w=${c.dataset.id}` : `#/forge?w=${c.dataset.id}`));
       };
     });
@@ -362,7 +369,11 @@ function worldCard(w, featured = false) {
       ${featured ? '<span class="tag c" style="margin-bottom:6px">Continue playing</span>' : ''}
       <b>${esc(w.title)}</b>
       <div class="meta">Tick ${w.tick_index} · ${w.characters.map(c => esc(c.name)).join(', ') || 'no cast yet'} · ${w.status === 'live' ? '🟢 live' : '🛠 authoring'}</div>
-      <div style="display:flex;gap:8px"><button class="btn btn-primary small" style="flex:1">▶ ${w.status === 'live' ? t('resume', 'Resume') : t('continue_building', 'Continue building')}</button><button class="btn btn-ghost small" data-del title="Delete">🗑</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary small" style="flex:1">▶ ${w.status === 'live' ? t('resume', 'Resume') : t('continue_building', 'Continue building')}</button>
+        ${w.has_intro && w.status === 'live' ? `<button class="btn btn-teal small" data-intro title="Watch the opening sequence — scenes, music and voices — then take over">🎬 ${t('from_beginning', 'From the beginning')}</button>` : ''}
+        <button class="btn btn-ghost small" data-del title="Delete">🗑</button>
+      </div>
     </div></div>`;
 }
 
@@ -1668,7 +1679,12 @@ async function stageScreen() {
     if (lm || cm) playMusic(lm || cm);
   } catch {}
   // Timeline handoff: a ▶ Replay click stashes the target; play it now that the stage exists.
-  if (S.replay) { const r = S.replay; S.replay = null; playReplay(r.branchId, r.idx, r.endIdx ?? null); return; }
+  if (S.replay) {
+    const r = S.replay; S.replay = null;
+    if (r.intro) { playIntroSequence(); return; }   // "From the beginning" on the world card
+    playReplay(r.branchId, r.idx, r.endIdx ?? null);
+    return;
+  }
   // Mobile panel collapse (the handle is display:none on desktop). Preference persists.
   const sb = $('#stage-bottom');
   $('#panel-toggle').onclick = () => {
@@ -1811,13 +1827,16 @@ function musicPrefs() { const p = ttsPrefs(); return { on: p.musicOn !== false, 
 // voice playback preferences: separate volume + a pitch-preserving speed (50-150%)
 function voicePrefs() { const p = ttsPrefs(); return { vol: Math.max(0, Math.min(1, p.voiceVol ?? 1)), rate: Math.max(0.5, Math.min(1.5, p.voiceRate ?? 1)) }; }
 function musicFade(a, to, ms, done) {
-  clearInterval(music.fade);
+  // PER-ELEMENT fade timer. A single global handle raced: the outgoing track's async
+  // fade-in (play().then) cleared the crossfade interval of the INCOMING switch, so the
+  // fade's completion callback — which starts the next track — never fired.
+  clearInterval(a._fade);
   const from = a.volume, steps = Math.max(1, Math.round(ms / 50));
   let k = 0;
-  music.fade = setInterval(() => {
+  a._fade = setInterval(() => {
     k++;
     a.volume = Math.max(0, Math.min(1, from + (to - from) * (k / steps)));
-    if (k >= steps) { clearInterval(music.fade); done?.(); }
+    if (k >= steps) { clearInterval(a._fade); done?.(); }
   }, 50);
 }
 function playMusic(meta) {
@@ -2309,6 +2328,18 @@ async function curiosityModal() {
       m.remove();
     } catch (e) { fail(e); }
   };
+}
+
+// "From the beginning": find the world's opening sequence on the active lineage and play
+// it start-to-end as a film. Ends on the live present — the player takes over from there.
+async function playIntroSequence() {
+  try {
+    const w = (await loadWorld()).world;
+    const { ticks } = await api(`/api/worlds/${S.world}/export/timeline?branchId=${encodeURIComponent(w.active_branch_id)}&toIdx=999999999`);
+    const intro = ticks.filter(t => { try { const s = t.seq && JSON.parse(t.seq); return s?.kind === 'intro'; } catch { return false; } });
+    if (!intro.length) { toast('This world has no opening sequence'); return stageScreen(); }
+    playReplay(w.active_branch_id, intro[0].idx, intro[intro.length - 1].idx);
+  } catch (e) { fail(e); stageScreen(); }
 }
 
 /* ── 💬 GAME MASTER CHAT ─────────────────────────────────────────────────────
