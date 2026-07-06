@@ -1102,7 +1102,7 @@ async function introMusicPicker(worldId, plan) {
         ${(cands[k] || []).map((c, i) => `
           <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:6px">
             <input type="radio" name="imp-${k}" ${picks[k].mode === 'cand' && picks[k].cand === i ? 'checked' : ''} data-k="${k}" data-mode="cand" data-i="${i}">
-            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(c.title)}</b> <small style="color:var(--soft)">${c.upvotes != null ? `👍${c.upvotes} · ` : ''}${fmtDur(c.duration)} · ${esc(c.tags)}</small></span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(c.title)}</b> <small style="color:var(--soft)">${c.aesthetics != null ? `⭐${c.aesthetics} · ` : ''}${c.upvotes != null ? `👍${c.upvotes} · ` : ''}${fmtDur(c.duration)} · ${esc(c.tags)}</small></span>
             <audio controls preload="none" src="${c.url}" style="height:28px;max-width:210px"></audio>
           </label>`).join('') || (k === 0 ? '<p style="font-size:11.5px;color:var(--soft)">no candidates found — upload your own below</p>' : '')}
         <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:4px">
@@ -1111,11 +1111,26 @@ async function introMusicPicker(worldId, plan) {
           <input type="file" accept="audio/*" data-up="${k}" style="font-size:11px">
           ${picks[k].upload ? `<span class="tag t">${esc(picks[k].upload.title)}</span>` : ''}
         </label>
+        <div style="display:flex;gap:6px;margin-top:7px">
+          <input data-q="${k}" placeholder="🔍 search other music (keywords)…" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:5px 9px;font-size:11.5px">
+          <button class="btn btn-ghost small" data-qgo="${k}">Search</button>
+        </div>
       </div>`).join('') + `
       <button class="btn btn-primary" id="imp-apply" style="width:100%">🎼 Apply the score</button>`;
     $$('input[type=radio]', m).forEach(r => r.onchange = () => {
       const k = +r.dataset.k; picks[k].mode = r.dataset.mode;
       if (r.dataset.mode === 'cand') picks[k].cand = +r.dataset.i;
+    });
+    $$('[data-qgo]', m).forEach(bq => bq.onclick = async () => {
+      const k = +bq.dataset.qgo;
+      const q = $(`[data-q="${k}"]`, m).value.trim(); if (!q) return;
+      bq.textContent = '…';
+      try {
+        // BM25 keyword search over the sound captions, reordered by aesthetics (top 5)
+        cands[k] = (await api('/api/music/search', { method: 'POST', body: { query: q, field: 'bm25_caption' } })).candidates;
+        picks[k].mode = cands[k].length ? 'cand' : picks[k].mode; picks[k].cand = 0;
+        render();
+      } catch (e) { bq.textContent = 'Search'; fail(e); }
     });
     $$('input[type=file]', m).forEach(f => f.onchange = async () => {
       const k = +f.dataset.up;
@@ -1671,15 +1686,25 @@ async function stageScreen() {
   <nav id="dock">${['home', 'cast', 'bonds', 'world', 'play', 'share'].map(k => `
     <button class="dock-btn ${k === 'play' ? 'active' : ''}" data-nav="${k}">${ICONS[k]}<span>${dockLabel(k)}</span></button>`).join('')}</nav>`;
   bindChrome();
+  // "From the beginning"/replay pending: cover the stage instantly so the current scene
+  // never flashes before the film's first transition card takes over.
+  if (S.replay && !$('#cine-blackout')) {
+    const bl = document.createElement('div');
+    bl.id = 'cine-blackout';
+    bl.style.cssText = 'position:fixed;inset:0;background:#0d0b1e;z-index:88;transition:opacity .6s';
+    document.body.appendChild(bl);
+  }
   initFactBubble();
   // Score for the CURRENT scene: the viewed location's remembered track wins (each place
   // keeps its own music — switching between locations with different tracks crossfades),
   // otherwise the world's current track. Lazy: only this ONE track is ever loaded.
-  try {
-    const lm = loc?.music && JSON.parse(loc.music);
-    const cm = world.current_music && JSON.parse(world.current_music);
-    if (lm || cm) playMusic(lm || cm);
-  } catch {}
+  if (!S.replay) {   // a pending film scores itself — don't blip the scene track first
+    try {
+      const lm = loc?.music && JSON.parse(loc.music);
+      const cm = world.current_music && JSON.parse(world.current_music);
+      if (lm || cm) playMusic(lm || cm);
+    } catch {}
+  }
   // Timeline handoff: a ▶ Replay click stashes the target; play it now that the stage exists.
   if (S.replay) {
     const r = S.replay; S.replay = null;
@@ -1847,7 +1872,11 @@ function playMusic(meta) {
   if (!on || !music.meta?.url) return;
   const url = music.meta.url;
   if (music.url === url && music.audio) return;          // same track — keep looping untouched
+  // generation token: on mobile, background-tab throttling can delay a crossfade's begin()
+  // past the NEXT track change — a stale begin must never resurrect the wrong music.
+  const gen = music.gen = (music.gen || 0) + 1;
   const begin = () => {
+    if (gen !== music.gen) return;                       // superseded while fading — stay silent
     const a = new Audio(url);                            // streamed, not decoded — light on slow connections
     a.preload = 'auto'; a.volume = 0;
     music.audio = a; music.url = url;
@@ -1865,7 +1894,11 @@ function stopMusic() {
   music.meta = null; music.url = null;
   if (music.audio) { const old = music.audio; music.audio = null; musicFade(old, 0, 800, () => { old.pause(); old.src = ''; }); }
 }
-function setMusicVolume(v) { if (music.audio && !music.audio._tail) music.audio.volume = v; }
+function setMusicVolume(v) {
+  if (!music.audio || music.audio._tail) return;
+  clearInterval(music.audio._fade);                      // a running fade-in targets the OLD volume
+  music.audio.volume = Math.max(0, Math.min(1, v));      // → apply instantly (mobile slider fix)
+}
 // Preview ducking: while a candidate preview plays, the background score fades out and
 // pauses; when previews stop, it resumes with a smooth fade-in.
 function duckMusic() {
@@ -1915,41 +1948,60 @@ async function musicWidget() {
 
   // candidates: stored with the track, else a live re-search via the stored query
   let cands = meta?.candidates || [];
+  const box = $('#mw-cands', panel);
+  if (!box) return;
+
+  const renderCands = (label) => {
+    if (!cands.length) { box.innerHTML = '<p style="font-size:11.5px;color:var(--soft)">Nothing found — try other words in the search box.</p>'; return; }
+    box.innerHTML = `<div style="font-size:10px;letter-spacing:.08em;color:var(--violet);font-weight:700;margin-bottom:6px">${label}</div>` +
+      cands.map((c, i) => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">
+            ${meta && c.url === meta.url ? '▸ ' : ''}<b>${esc(c.title)}</b> <small style="color:var(--soft)">${c.aesthetics != null ? `⭐${c.aesthetics} · ` : ''}${c.upvotes != null ? `👍${c.upvotes} · ` : ''}${esc(c.tags || '')}</small></span>
+          <audio controls preload="none" src="${c.url}" style="height:26px;max-width:190px"></audio>
+          ${meta && c.url === meta.url ? '<span class="tag t">current</span>' : `<button class="btn btn-teal small" data-use="${i}" style="padding:4px 10px">✓ use</button>`}
+        </div>`).join('');
+    // preview ducking: background score fades out while a preview plays, resumes after
+    const previews = $$('audio', box);
+    previews.forEach(a => {
+      a.onplay = () => { previews.forEach(o => { if (o !== a) o.pause(); }); duckMusic(); };
+      a.onpause = () => { if (!previews.some(o => !o.paused)) unduckMusic(); };
+      a.onended = () => { if (!previews.some(o => !o.paused)) unduckMusic(); };
+    });
+    $$('[data-use]', box).forEach(btn => btn.onclick = async () => {
+      const c = cands[+btn.dataset.use];
+      btn.disabled = true; btn.textContent = '…';
+      try {
+        previews.forEach(o => o.pause());
+        const locId = (() => { try { const pov = stageState.pov; const chars = S.worldData?.characters || []; return pov.type === 'location' ? pov.id : chars.find(x => x.id === pov.id)?.state.location_id; } catch { return null; } })();
+        const { music: saved } = await api(`/api/worlds/${S.world}/music-choice`, { method: 'POST', body: { music: c, candidates: cands, locationId: locId } });
+        music._muted = false; music._ducked = false;
+        music.url = null;                                    // force the crossfade to the new pick
+        playMusic(saved);
+        toast(`🎶 now scoring: ${c.title}`, 'gold');
+        panel.remove();
+      } catch (e) { btn.disabled = false; btn.textContent = '✓ use'; fail(e); }
+    });
+  };
+
+  // 🔍 free search: BM25 over the sound captions, reordered by aesthetics (top 5 of 10)
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;gap:6px;margin:2px 0 8px';
+  bar.innerHTML = `<input id="mw-q" placeholder="search music… e.g. dark techno, warm piano" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:6px 10px;font-size:12px"><button class="btn btn-soft small" id="mw-go">🔍</button>`;
+  box.before(bar);
+  const doSearch = async () => {
+    const q = $('#mw-q', panel).value.trim(); if (!q) return;
+    box.innerHTML = '<div class="empty-hint" style="padding:10px"><span class="spinner dark"></span></div>';
+    try { cands = (await api('/api/music/search', { method: 'POST', body: { query: q, field: 'bm25_caption' } })).candidates; renderCands('SEARCH RESULTS — BEST AESTHETICS FIRST'); }
+    catch (e) { fail(e); renderCands('SUGGESTED TRACKS'); }
+  };
+  $('#mw-go', panel).onclick = doSearch;
+  $('#mw-q', panel).onkeydown = (e) => { if (e.key === 'Enter') doSearch(); };
+
   if (!cands.length && meta?.query) {
     try { cands = (await api('/api/music/search', { method: 'POST', body: { query: meta.query, genre: meta.genre, emotion: meta.emotion } })).candidates; } catch {}
   }
-  const box = $('#mw-cands', panel);
-  if (!box) return;
-  if (!cands.length) { box.innerHTML = '<p style="font-size:11.5px;color:var(--soft)">No suggestions available — the storyteller picks music as scenes change vibe.</p>'; return; }
-  box.innerHTML = `<div style="font-size:10px;letter-spacing:.08em;color:var(--violet);font-weight:700;margin-bottom:6px">SUGGESTED TRACKS — PREVIEW & PICK</div>` +
-    cands.map((c, i) => `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">
-          ${meta && c.url === meta.url ? '▸ ' : ''}<b>${esc(c.title)}</b> <small style="color:var(--soft)">${c.upvotes != null ? `👍${c.upvotes} · ` : ''}${esc(c.tags || '')}</small></span>
-        <audio controls preload="none" src="${c.url}" style="height:26px;max-width:190px"></audio>
-        ${meta && c.url === meta.url ? '<span class="tag t">current</span>' : `<button class="btn btn-teal small" data-use="${i}" style="padding:4px 10px">✓ use</button>`}
-      </div>`).join('');
-  // preview ducking: background score fades out while a preview plays, resumes after
-  const previews = $$('audio', box);
-  previews.forEach(a => {
-    a.onplay = () => { previews.forEach(o => { if (o !== a) o.pause(); }); duckMusic(); };
-    a.onpause = () => { if (!previews.some(o => !o.paused)) unduckMusic(); };
-    a.onended = () => { if (!previews.some(o => !o.paused)) unduckMusic(); };
-  });
-  $$('[data-use]', box).forEach(btn => btn.onclick = async () => {
-    const c = cands[+btn.dataset.use];
-    btn.disabled = true; btn.textContent = '…';
-    try {
-      previews.forEach(o => o.pause());
-      const locId = (() => { try { const pov = stageState.pov; const chars = S.worldData?.characters || []; return pov.type === 'location' ? pov.id : chars.find(x => x.id === pov.id)?.state.location_id; } catch { return null; } })();
-      const { music: saved } = await api(`/api/worlds/${S.world}/music-choice`, { method: 'POST', body: { music: c, candidates: cands, locationId: locId } });
-      music._muted = false; music._ducked = false;
-      music.url = null;                                    // force the crossfade to the new pick
-      playMusic(saved);
-      toast(`🎶 now scoring: ${c.title}`, 'gold');
-      panel.remove();
-    } catch (e) { btn.disabled = false; btn.textContent = '✓ use'; fail(e); }
-  });
+  renderCands('SUGGESTED TRACKS — PREVIEW & PICK');
 }
 
 /* ── WebAudio clip engine ────────────────────────────────────────────────────
@@ -2242,6 +2294,7 @@ async function playReplay(branchId, startIdx, endIdx = null) {
   let prevLoc = null;
   for (let i = start; i < ticks.length && !rep.cancelled; i++) {
     const tick = ticks[i];
+    if (i === start) { const bl = $('#cine-blackout'); if (bl) { bl.style.opacity = '0'; setTimeout(() => bl.remove(), 700); } }
     const rp = $('#rep-pos'); if (rp) rp.textContent = `⏪ replay · tick ${tick.idx} · ${fmtClock(tick.sim_time)}`;
     // the score switches exactly where it did in the original telling
     try { const tm = tick.music && (typeof tick.music === 'string' ? JSON.parse(tick.music) : tick.music); if (tm) playMusic(tm); } catch {}
@@ -2252,6 +2305,7 @@ async function playReplay(branchId, startIdx, endIdx = null) {
     prevLoc = tick.pov_location_id;
   }
   hud.remove();
+  $('#cine-blackout')?.remove();
   if (REPLAY_RUN === rep) REPLAY_RUN = null;
   if (rep.cancelled && REPLAY_RUN) return;   // superseded by a newer replay — it owns the stage now
   stopNarration();

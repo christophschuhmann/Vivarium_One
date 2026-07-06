@@ -291,9 +291,10 @@ export const MUSIC_API = process.env.MUSIC_API_URL || 'http://127.0.0.1:8930';
 export const MUSIC_GENRES = ['high_fantasy', 'low_fantasy', 'dark_fantasy', 'mythic_ancient', 'medieval', 'renaissance_pirate', 'wild_west', 'gothic_horror', 'cosmic_horror', 'modern_supernatural', 'modern_realistic', 'superhero', 'post_apocalyptic', 'cyberpunk', 'hard_scifi', 'space_opera', 'science_fantasy', 'alt_history'];
 export async function searchMusic({ query, genre, emotion }) {
   const g = MUSIC_GENRES.includes(genre) ? genre : '';
-  // top-10 by situation similarity → keep the available ones → SORT BY UPVOTES → the most
-  // upvoted plays; the next 5 ride along as alternatives for the 🎶 widget.
-  const body = { query: [query, emotion].filter(Boolean).join(', '), genre: g, search_field: 'situation', top_k: 10, singing_filter: 'no_singing', nsfw_filter: 'sfw_only', rank_by: 'similarity' };
+  // top-10 by CAPTION vector similarity (the Music-Whisper caption embeddings — matches how
+  // the track actually SOUNDS) → keep the available ones → pick the highest AESTHETICS score
+  // (score_average); the next 5 ride along as alternatives for the 🎶 widget.
+  const body = { query: [query, emotion].filter(Boolean).join(', '), genre: g, search_field: 'caption', top_k: 10, singing_filter: 'no_singing', nsfw_filter: 'sfw_only', rank_by: 'similarity' };
   const r = await fetch(`${MUSIC_API}/api/search`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000) });
   if (!r.ok) throw new Error(`music search ${r.status}`);
   const { results } = await r.json();
@@ -301,11 +302,11 @@ export async function searchMusic({ query, genre, emotion }) {
   for (const t of (results || []).slice(0, 10)) {
     try {
       const h = await fetch(`${MUSIC_API}/api/audio/${t.row_id}`, { method: 'HEAD', signal: AbortSignal.timeout(4000) });
-      if (h.ok) avail.push({ row_id: t.row_id, title: t.title, url: `/api/music/audio/${t.row_id}`, tags: (t.tags_text || '').slice(0, 60), upvotes: t.upvote_count || 0 });
+      if (h.ok) avail.push({ row_id: t.row_id, title: t.title, url: `/api/music/audio/${t.row_id}`, tags: (t.tags_text || '').slice(0, 60), upvotes: t.upvote_count || 0, aesthetics: t.score_average != null ? +(+t.score_average).toFixed(2) : null });
     } catch { /* skip unavailable */ }
   }
   if (!avail.length) return null;
-  avail.sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+  avail.sort((a, b) => (b.aesthetics ?? 0) - (a.aesthetics ?? 0));
   const candidates = avail.slice(0, 6);               // winner + 5 alternatives
   return { ...candidates[0], query, genre: g, emotion: emotion || '', candidates };
 }

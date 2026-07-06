@@ -235,6 +235,10 @@ naturalistic and emotionally clamped, so its templates (`LAIONBOX_NARRATOR_STYLE
 `LAIONBOX_CHARACTER_TEMPLATE`) demand vivid, audible emotion. A player customisation overrides
 both engines; all templates are visible on the admin **Prompts** page.
 
+Music selection policy: **top-10 by caption-vector similarity** (how the track actually
+sounds) → available only → **highest aesthetics score wins**; both pickers also have a 🔍
+free-text search (BM25 over captions, reordered by aesthetics, top 5).
+
 **The 🎶 music widget** (stage top bar): shows the current track with a mute toggle, plus the
 top-5 suggested candidates (stored with every chosen track; older tracks re-search live via
 their stored query) as inline preview players — previews duck the background score (fade out,
@@ -358,7 +362,10 @@ scene the top-5 music candidates with inline audio previews, carry-over, or own-
 built from `jessie-scenario-idea.txt`): 9 characters (Sam, Mira, Ilya, Greg, Woj, Anna, Liam,
 JESSIE, and Elon in his Texas Fortress), 16 locations incl. Liam's one-room SV apartment and
 the basement lab, 26 directed bonds, a distilled instruction bible in the world directives
-(secrets ledger, tone oscillation, Jessie principles), and a 5-scene scored opening sequence.
+(secrets ledger, tone oscillation, Jessie principles), and a hand-written 3-scene scored opening
+(Elon unveils VALENTINE — Jessie's uninhibited mirror — with a flirty live interview; the
+code-red boardroom votes Sam DOWN 4-2 on companion androids; Sam takes Liam two floors below
+the badge readers and introduces him to Jessie, leaving them alone as the game begins).
 Worlds with an opening
 sequence show a **🎬 "From the beginning"** button on their home card: entering that way plays
 the whole cold open as a game intro (scenes, music, voice-over) and lands on the live present

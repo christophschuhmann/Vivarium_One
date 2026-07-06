@@ -389,7 +389,8 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 #cinecard.show .cine-inner{transform:scale(1)}
 #cinecard b{font-family:'Lora',serif;font-style:italic;font-weight:600;font-size:32px;color:#fff;line-height:1.3}
 #cinecard span{font-size:15px;color:#cdc4f0;letter-spacing:.04em}
-#cine-hud{position:absolute;top:64px;right:14px;z-index:45;display:flex;gap:8px}
+#cine-hud{position:absolute;top:64px;right:14px;z-index:66;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:760px){#cine-hud{top:96px;right:8px}}   /* below the compact topbar — the stage-hud must never swallow ✕ */
 #cine-hud .glasschip{cursor:pointer}
 
 /* ── collapsible stage bottom panels (all screen sizes) ──
