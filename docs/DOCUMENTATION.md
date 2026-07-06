@@ -323,9 +323,19 @@ the best track whose audio is actually available (falls to 2nd/3rd), persists it
 at a time (lazy, kind to slow connections), fades in ~1.5 s, loops with a breathing seam (last
 ~2 s fade out → restart fade in), crossfades on change, keeps playing across same-vibe scenes,
 and fades out when leaving the world. Audio is proxied same-origin
-(`/api/music/audio/:rowId`) so HTTPS tunnels work. Settings (Account → Voice): music on/off +
-music-vs-voices volume slider (default 35%). Stage bottom controls are now collapsible on ALL
+(`/api/music/audio/:rowId`) so HTTPS tunnels work. Tracks are remembered **per location**
+(`locations.music`) — switching between locations with different tracks crossfades, whether the
+scene moves in the story or the player changes the viewed location. Settings (Account → Voice):
+music on/off + three 1%-step sliders — 🔊 voice volume (default 100%), ⏩ voice speed 50-150%
+(pitch-preserving: chunks play through an `<audio>` element piped into the WebAudio graph, so
+the browser's time-stretcher changes tempo without artifacts while gain ramps keep boundaries
+click-free), 🎵 music volume (default 8%). Stage bottom controls are now collapsible on ALL
 screen sizes (📖 handle) so the scene art can be admired full-frame.
+
+The tick prompt enforces scene-location coherence: characters may only act, speak, or think in
+a scene when they are at that location at that moment of the timeline (their sprites stand
+there); characters elsewhere may only be briefly mentioned by the narrator — vital for long
+stories where the model might otherwise drift.
 
 ### 2.10 Time travel & replay
 Undo/redo arrows + the Timeline (🕰 chip in the top bar on every screen, or the stage button):

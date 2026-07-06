@@ -524,7 +524,7 @@ JSON shape:
 Narration is ONE flowing script of the interval, anchored at ${povChar ? `wherever ${povChar.name} ENDS this interval` : povLoc ? `the place "${povLoc.name}"` : 'the main scene'}. Rules — follow strictly:
   • Interleave: 1-3 narrator sentences, then a character speaks or THINKS (1-2 sentences), another reacts, a short narrator beat, and so on. Cover EVERY character present — their words AND their inner thoughts (mode "thought") intermixed into the one script, not just the point-of-view character.
   • Never let any voice run long: narrator lines are normally 1-2 sentences (see PACING for when longer bridging passages are allowed); character lines are 1-2 sentences, then someone else takes over.
-  • LOCATION COHERENCE (hard rule): each character's final location_id in your characters output is where they END the interval, and the story must agree. Characters may only SPEAK or THINK in the closing scene if their final location is the scene location. If someone moves during the interval, the narrator must show the move (leaving, travelling, arriving) BEFORE they appear at the new place. The script must end with everyone exactly where their final location_id says.
+  • LOCATION COHERENCE (hard rule): each character's final location_id in your characters output is where they END the interval, and the story must agree. A character can only ACT, SPEAK or THINK in the scene if they are AT THE SCENE LOCATION at that moment of the timeline — their sprite stands where their location_id says, and the on-screen action must match. Characters who are ELSEWHERE may be briefly MENTIONED by the narrator (a line or two about what they're up to across town) but never perform actions or dialogue inside this scene. This matters even more in LONG stories: re-check the location list above for where everyone actually is right now — never drift into writing someone into a scene out of habit. If someone moves during the interval, the narrator must show the move (leaving, travelling, arriving) BEFORE they appear at the new place. The script must end with everyone exactly where their final location_id says.
   • speaker "narrator" for scene/beat/bridge lines; a character id ONLY for their own speech or thoughts. Use ONLY character ids from the Characters list; unknown walk-ons are voiced inside narrator lines, never with an invented id.
   • ${paceHint}
 ${lang !== 'en' && GAME_LANGS[lang] ? `  • LANGUAGE (hard rule): write ALL player-visible text — every narration line, every spoken line, every thought, activity, mood, summary, and event — in ${GAME_LANGS[lang]}. Character and location NAMES stay as given. JSON keys, ids, and the mode/mood_tag enums stay in English exactly as specified.
@@ -532,7 +532,7 @@ ${lang !== 'en' && GAME_LANGS[lang] ? `  • LANGUAGE (hard rule): write ALL pla
 CAST SUGGESTION (an optional tool you may use): when an UNLISTED walk-on character — someone you have only voiced inside narrator lines — has become genuinely story-relevant (recurring, pivotal to a thread, entangled with the cast; NOT a passing extra), you may fill "cast_suggestion" to ask the player whether to flesh that person out into a full cast member with a portrait and profile. The reason is shown to the player verbatim — make it a warm, concrete 1-2 sentence pitch. STRICT LIMITS: at most ONE suggestion per scene, and most scenes should have none; NEVER suggest an existing cast member; NEVER suggest names on the declined list in the world bible. Set it to null otherwise.
 OUTFIT SUGGESTION (another optional tool): each cast member's current sprites are listed in their state under "outfits" (name + description + emotion tag). When a character's LOOK changes significantly this scene — a genuinely different dress/clothing, or a strong clearly-visible emotion no existing sprite captures — you may fill "outfit_suggestion" to ask the player whether to paint a new sprite for it: either a new outfit (neutral expression) or the current outfit with the new expression. Write the description as a complete ENGLISH image prompt (clothing + expression + posture). STRICT LIMITS: at most ONE per scene and most scenes need none — only for changes a viewer would clearly see; never duplicate an existing sprite's look; the emotion tag only for emotion variants. Set it to null otherwise.
 LOCATION SUGGESTION (another optional tool): when the story keeps gesturing at a place that DOESN'T EXIST in the Locations list — somewhere characters talk about going, that a plot thread needs, or that the world clearly lacks — you may fill "location_suggestion" to ask the player whether to build it: give it a name, an evocative but CONCRETE visual description (empty scene, no people — it feeds the background generator), and 1-3 EXISTING location names it plausibly connects to for the world map. STRICT LIMITS: at most ONE per scene, most scenes need none, never suggest a place that already exists. Set it to null otherwise.
-MUSIC (background score): the world bible shows the CURRENTLY PLAYING track. Fill "music" ONLY when this scene's mood/energy/location vibe differs meaningfully from what the current track expresses (or when nothing plays yet) — a fitting track should simply KEEP LOOPING across scenes, so most scenes set null. When you do change it, describe the scene's atmosphere as a music-search situation (query + genre + emotions).${factDue ? `
+MUSIC (background score): the world bible shows the CURRENTLY PLAYING track. Fill "music" ONLY when this scene's mood/energy/location vibe differs meaningfully from what the current track expresses (or when nothing plays yet) — a fitting track should simply KEEP LOOPING across scenes, so most scenes set null. Different LOCATIONS may carry different scores (each place remembers its last track and the game crossfades automatically when the scene moves) — so set new music when a location's remembered score no longer fits the moment, not merely because the scene moved. When you do change it, describe the scene's atmosphere as a music-search situation (query + genre + emotions).${factDue ? `
 FACT CARD (required this tick): the player wants to LEARN while playing. Fill "fact" with one genuinely TRUE, well-established piece of knowledge drawn from these interests: ${curioThemes}. Make it curiosity-evoking and inspiring — the kind of fact one retells at dinner — and let it resonate SUBTLY with what is happening in the story right now (a mirrored theme, not a lecture). Cite the researcher/era/place when it makes the fact more vivid. 3-8 sentences, warm 'Did you know' tone, in the same language as the narration. NEVER invent or embellish facts.` : ''}${ratingBlock(user)}`;
 
   const userMsg = `WORLD BIBLE
@@ -702,13 +702,24 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
       .run(fact.id, world.id, idx, fact.topic, fact.title, fact.body, now());
   }
   // Background music: resolve the GM's request against the music server (best available of
-  // the top results); persists per world so a fitting track keeps looping across scenes.
+  // the top results). Tracks are remembered PER LOCATION (locations.music) as well as
+  // per world — when a scene moves to a location that carries a different stored track,
+  // the client crossfades to it even if the GM didn't request a change.
   let music = null;
   if (out.music && typeof out.music.query === 'string' && out.music.query.trim()) {
     try {
       music = await searchMusic({ query: out.music.query.slice(0, 200), genre: out.music.genre, emotion: String(out.music.emotion || '').slice(0, 80) });
-      if (music) db.prepare('UPDATE worlds SET current_music=? WHERE id=?').run(j(music), world.id);
     } catch (e) { console.error('[music] search failed:', e.message); }
+  }
+  if (!music && sceneLoc) {
+    // no explicit change → does the scene's location remember a different track?
+    const locMusic = pj(db.prepare('SELECT music FROM locations WHERE id=?').get(sceneLoc)?.music, null);
+    const cur = pj(world.current_music, null);
+    if (locMusic && locMusic.url !== cur?.url) music = locMusic;
+  }
+  if (music) {
+    db.prepare('UPDATE worlds SET current_music=? WHERE id=?').run(j(music), world.id);
+    if (sceneLoc) db.prepare('UPDATE locations SET music=? WHERE id=?').run(j(music), sceneLoc);
   }
   const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion, location_suggestion: locationSuggestion, fact, music };
   onEvent('tick', tick);

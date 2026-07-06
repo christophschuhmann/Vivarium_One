@@ -104,7 +104,9 @@ const OLD_NARRATOR_DEFAULTS = [
 const ttsPrefs = () => {
   const stored = JSON.parse(localStorage.getItem('viv_tts') || '{}');
   if (OLD_NARRATOR_DEFAULTS.includes(stored.narratorStyle)) delete stored.narratorStyle;
-  return { narrator: 'Iapetus', prepare: true, autoplay: true, innerVoice: true, narratorStyle: DEFAULT_NARRATOR_STYLE, characterStyle: DEFAULT_CHARACTER_STYLE, custom: '', ...stored };
+  const p = { narrator: 'Iapetus', prepare: true, autoplay: true, innerVoice: true, musicOn: true, musicVol: 0.08, voiceVol: 1, voiceRate: 1, narratorStyle: DEFAULT_NARRATOR_STYLE, characterStyle: DEFAULT_CHARACTER_STYLE, custom: '', ...stored };
+  if (stored.musicVol === 0.35) p.musicVol = 0.08;   // remap the short-lived old default
+  return p;
 };
 // Time-skip settings (Account → Time skips). animate: large skips play as a scene-by-scene
 // FILM (the server plans the events; see server/gm.js runChapter) — off = classic single
@@ -668,9 +670,8 @@ async function speakTextChunks(text, ch, btnEl, emotion = '', mode = 'thought') 
     for (let k = 0; k < chunks.length && !run.cancelled; k++) {
       const r = await proms[k];
       if (!r || run.cancelled) continue;
-      if (proms[k + 1]) proms[k + 1].then(n => n && loadClip(n.assetId)).catch(() => {});   // pre-decode next
-      const buf = await loadClip(r.assetId).catch(() => null);
-      if (buf && !run.cancelled) await new Promise(res => { run.handle = playClip(buf, res); });
+      if (proms[k + 1]) proms[k + 1].then(n => n && fetch(assetUrl(n.assetId), { credentials: 'same-origin' })).catch(() => {});   // warm next
+      if (!run.cancelled) await new Promise(res => { run.handle = playClipUrl(assetUrl(r.assetId), res); });
     }
   } finally {
     if (btnEl) { btnEl.classList.remove('playing'); btnEl.textContent = '🔊'; }
@@ -1566,8 +1567,14 @@ async function stageScreen() {
     <button class="dock-btn ${k === 'play' ? 'active' : ''}" data-nav="${k}">${ICONS[k]}<span>${dockLabel(k)}</span></button>`).join('')}</nav>`;
   bindChrome();
   initFactBubble();
-  // resume this world's looping score (worlds.current_music) — lazy: only this ONE track loads
-  try { const cm = world.current_music && JSON.parse(world.current_music); if (cm) playMusic(cm); } catch {}
+  // Score for the CURRENT scene: the viewed location's remembered track wins (each place
+  // keeps its own music — switching between locations with different tracks crossfades),
+  // otherwise the world's current track. Lazy: only this ONE track is ever loaded.
+  try {
+    const lm = loc?.music && JSON.parse(loc.music);
+    const cm = world.current_music && JSON.parse(world.current_music);
+    if (lm || cm) playMusic(lm || cm);
+  } catch {}
   // Timeline handoff: a ▶ Replay click stashes the target; play it now that the stage exists.
   if (S.replay) { const r = S.replay; S.replay = null; playReplay(r.branchId, r.idx); return; }
   // Mobile panel collapse (the handle is display:none on desktop). Preference persists.
@@ -1708,7 +1715,9 @@ function renderNarration(lines, characters) {
    balance live in Account → Voice. Replays/scene changes at the same vibe
    just keep the loop running.                                               */
 const music = { audio: null, url: null, meta: null, fade: null };
-function musicPrefs() { const p = ttsPrefs(); return { on: p.musicOn !== false, vol: Math.max(0, Math.min(1, p.musicVol ?? 0.35)) }; }
+function musicPrefs() { const p = ttsPrefs(); return { on: p.musicOn !== false, vol: Math.max(0, Math.min(1, p.musicVol ?? 0.08)) }; }
+// voice playback preferences: separate volume + a pitch-preserving speed (50-150%)
+function voicePrefs() { const p = ttsPrefs(); return { vol: Math.max(0, Math.min(1, p.voiceVol ?? 1)), rate: Math.max(0.5, Math.min(1.5, p.voiceRate ?? 1)) }; }
 function musicFade(a, to, ms, done) {
   clearInterval(music.fade);
   const from = a.volume, steps = Math.max(1, Math.round(ms / 50));
@@ -1795,6 +1804,46 @@ function playClip(buf, onended, { earlySec = 0, onEarly = null } = {}) {
   };
 }
 
+// ── Media-element voice pipeline ─────────────────────────────────────────────
+// Voice chunks now play through an <audio> element piped INTO the WebAudio graph
+// (MediaElementSource → gain → out). Why both worlds:
+//   • the element's playbackRate + preservesPitch uses the browser's time-
+//     stretcher — the voice-speed slider (50-150%) changes TEMPO without pitch
+//     artifacts (a raw AudioBufferSource would chipmunk);
+//   • the gain node keeps the click-free ramps and the crossfade hook;
+//   • streaming playback (no full decode) stays kind to slow connections.
+// Server-side 200-400ms fades still guard the clip tails themselves.
+function playClipUrl(url, onended, { earlySec = 0, onEarly = null } = {}) {
+  const ctx = waCtx();
+  const vp = voicePrefs();
+  const el = new Audio(url);
+  el.preload = 'auto';
+  el.playbackRate = vp.rate;
+  try { el.preservesPitch = true; el.mozPreservesPitch = true; } catch {}
+  const srcNode = ctx.createMediaElementSource(el);
+  const g = ctx.createGain();
+  g.gain.value = 0;
+  srcNode.connect(g); g.connect(ctx.destination);
+  let dead = false, earlyFired = false;
+  const rampTo = (v, sec) => { const t = ctx.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(v, t + sec); };
+  const cleanup = () => { try { srcNode.disconnect(); g.disconnect(); } catch {} el.src = ''; };
+  el.onplaying = () => rampTo(voicePrefs().vol, 0.012);   // click-free ramp-in when sound actually starts
+  el.ontimeupdate = () => {
+    if (dead || !el.duration) return;
+    const remain = (el.duration - el.currentTime) / (el.playbackRate || 1);
+    if (earlySec > 0 && onEarly && !earlyFired && remain <= earlySec + 0.12 && el.duration / (el.playbackRate || 1) > earlySec * 3) { earlyFired = true; onEarly(); }
+  };
+  const done = () => { if (!dead) { dead = true; cleanup(); onended?.(); } };
+  el.onended = done;
+  el.onerror = done;
+  el.play().catch(done);
+  return {
+    pause: () => el.pause(),
+    play: () => el.play().catch(() => {}),
+    stop: () => { dead = true; el.onended = null; el.onerror = null; try { el.pause(); } catch {} cleanup(); },
+  };
+}
+
 /* ── the narration player: sentence-by-sentence, prefetching, pausable ── */
 const player = { active: false, paused: false, idx: 0, audio: null, cache: [], lines: [], chars: [], token: 0 };
 function stopNarration() {
@@ -1849,16 +1898,15 @@ function setupNarrationPlayer(sceneLines, characters) {
     try {
       const { assetId } = await prefetch(i);
       if (tok !== player.token) return;                            // stopped while fetching
-      prefetch(i + 1)?.then(r => r && loadClip(r.assetId)).catch(() => {});  // generate AND pre-decode ahead
+      // generate ahead AND warm the browser HTTP cache (assets are immutable-cached)
+      prefetch(i + 1)?.then(r => r && fetch(assetUrl(r.assetId), { credentials: 'same-origin' })).catch(() => {});
       prefetch(i + 2)?.catch(() => {});                            // (gen ≈ playback time, so keep two in flight)
-      const buf = await loadClip(assetId);
-      if (tok !== player.token) return;
       highlight(i, true);
       // advance ~180ms early: the next chunk starts under this one's fading tail (crossfade) —
       // guard so early + natural end can't both advance
       let advanced = false;
       const next = () => { if (advanced || tok !== player.token) return; advanced = true; playFrom(i + 1); };
-      player.audio = playClip(buf, () => { highlight(i, false); next(); }, { earlySec: 0.18, onEarly: next });
+      player.audio = playClipUrl(assetUrl(assetId), () => { highlight(i, false); next(); }, { earlySec: 0.18, onEarly: next });
       refreshMe();
     } catch (e) {
       if (tok !== player.token) return;
@@ -2094,12 +2142,11 @@ async function factOverlay() {
         for (let k = 0; k < chunks.length && !state.cancelled; k++) {
           const r = await proms[k];
           if (!r || state.cancelled) continue;
-          if (proms[k + 1]) proms[k + 1].then(n => n && loadClip(n.assetId)).catch(() => {});  // pre-decode next
+          if (proms[k + 1]) proms[k + 1].then(n => n && fetch(assetUrl(n.assetId), { credentials: 'same-origin' })).catch(() => {});  // warm next
           const el = chunkEls[k];
           if (el) { el.classList.add('speaking'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
-          // WebAudio playback with 12ms anti-click ramps (see the clip engine)
-          const buf = await loadClip(r.assetId).catch(() => null);
-          if (buf && !state.cancelled) await new Promise((res) => { state.audio = playClip(buf, res); });
+          // element pipeline: click-free ramps + the voice-speed/volume prefs apply here too
+          if (!state.cancelled) await new Promise((res) => { state.audio = playClipUrl(assetUrl(r.assetId), res); });
           if (el) el.classList.remove('speaking');
         }
       } finally {
@@ -2528,6 +2575,9 @@ async function speak(text, ch, el, emotion = '', mode = '') {
     el?.classList.add('playing');
     const { assetId } = await fetchTts(text, ch, emotion, mode);
     const a = new Audio(assetUrl(assetId));
+    const vp = voicePrefs();
+    a.volume = vp.vol; a.playbackRate = vp.rate;
+    try { a.preservesPitch = true; } catch {}
     a.onended = () => el?.classList.remove('playing');
     a.play(); refreshMe();
   } catch (e) {
@@ -3102,11 +3152,18 @@ async function accountModal() {
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-auto" ${ttsPrefs().autoplay ? 'checked' : ''}> Read each new moment aloud automatically</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-inner" ${ttsPrefs().innerVoice !== false ? 'checked' : ''}> 🕯 Read inner-voice replies aloud (the character's voice)</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-music" ${ttsPrefs().musicOn !== false ? 'checked' : ''}> 🎵 Background music (scene-matched, chosen by the storyteller)</label>
-        <div style="display:flex;align-items:center;gap:10px;margin:2px 0 0 26px">
-          <span style="font-size:11.5px;color:var(--soft)">music volume vs voices</span>
-          <input type="range" id="tp-musicvol" min="0" max="100" step="5" value="${Math.round((ttsPrefs().musicVol ?? 0.35) * 100)}" style="flex:1;max-width:180px">
-          <b id="tp-musicvol-n" style="font-size:11.5px;width:36px">${Math.round((ttsPrefs().musicVol ?? 0.35) * 100)}%</b>
+        <div style="display:grid;grid-template-columns:130px 1fr 44px;gap:8px 10px;align-items:center;margin:6px 0 0 26px;max-width:420px">
+          <span style="font-size:11.5px;color:var(--soft)">🔊 voice volume</span>
+          <input type="range" id="tp-voicevol" min="0" max="100" step="1" value="${Math.round((ttsPrefs().voiceVol ?? 1) * 100)}">
+          <b id="tp-voicevol-n" style="font-size:11.5px">${Math.round((ttsPrefs().voiceVol ?? 1) * 100)}%</b>
+          <span style="font-size:11.5px;color:var(--soft)">⏩ voice speed</span>
+          <input type="range" id="tp-voicerate" min="50" max="150" step="1" value="${Math.round((ttsPrefs().voiceRate ?? 1) * 100)}">
+          <b id="tp-voicerate-n" style="font-size:11.5px">${Math.round((ttsPrefs().voiceRate ?? 1) * 100)}%</b>
+          <span style="font-size:11.5px;color:var(--soft)">🎵 music volume</span>
+          <input type="range" id="tp-musicvol" min="0" max="100" step="1" value="${Math.round((ttsPrefs().musicVol ?? 0.08) * 100)}">
+          <b id="tp-musicvol-n" style="font-size:11.5px">${Math.round((ttsPrefs().musicVol ?? 0.08) * 100)}%</b>
         </div>
+        <p style="font-size:10.5px;color:var(--soft);margin:3px 0 0 26px">speed is pitch-preserving (50-150%) · music sits far beneath the voices by default (8%)</p>
         <label style="display:flex;flex-direction:column;gap:4px">
           <span style="display:flex;justify-content:space-between;align-items:center">📖 Storyteller (narrator) direction <button class="btn btn-ghost small" id="tp-narr-reset" style="padding:2px 9px;font-size:10.5px">↺ reset to default</button></span>
           <textarea id="tp-narr-style" rows="3" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-family:inherit;resize:vertical">${esc(ttsPrefs().narratorStyle)}</textarea>
@@ -3139,12 +3196,14 @@ async function accountModal() {
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   $('.x', m).onclick = () => m.remove();
   const savePrefs = () => {
-    saveTtsPrefs({ narrator: $('#tp-narr', m).value, prepare: $('#tp-prepare', m).checked, autoplay: $('#tp-auto', m).checked, innerVoice: $('#tp-inner', m).checked, musicOn: $('#tp-music', m).checked, musicVol: (+$('#tp-musicvol', m).value) / 100, narratorStyle: $('#tp-narr-style', m).value, characterStyle: $('#tp-char-style', m).value, custom: $('#tp-custom', m).value });
+    saveTtsPrefs({ narrator: $('#tp-narr', m).value, prepare: $('#tp-prepare', m).checked, autoplay: $('#tp-auto', m).checked, innerVoice: $('#tp-inner', m).checked, musicOn: $('#tp-music', m).checked, musicVol: (+$('#tp-musicvol', m).value) / 100, voiceVol: (+$('#tp-voicevol', m).value) / 100, voiceRate: (+$('#tp-voicerate', m).value) / 100, narratorStyle: $('#tp-narr-style', m).value, characterStyle: $('#tp-char-style', m).value, custom: $('#tp-custom', m).value });
     // apply live: volume ramps immediately; toggling off fades the score out, on resumes it
     if (!$('#tp-music', m).checked) stopMusic(); else setMusicVolume((+$('#tp-musicvol', m).value) / 100);
   };
   $('#tp-musicvol', m).oninput = () => { $('#tp-musicvol-n', m).textContent = $('#tp-musicvol', m).value + '%'; setMusicVolume((+$('#tp-musicvol', m).value) / 100); };
-  ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-inner', '#tp-music', '#tp-musicvol', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); if (el) { el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); } });
+  $('#tp-voicevol', m).oninput = () => { $('#tp-voicevol-n', m).textContent = $('#tp-voicevol', m).value + '%'; };
+  $('#tp-voicerate', m).oninput = () => { $('#tp-voicerate-n', m).textContent = $('#tp-voicerate', m).value + '%'; };
+  ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-inner', '#tp-music', '#tp-musicvol', '#tp-voicevol', '#tp-voicerate', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); if (el) { el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); } });
   $('#tp-narr-reset', m).onclick = () => { $('#tp-narr-style', m).value = DEFAULT_NARRATOR_STYLE; savePrefs(); };
   $('#tp-char-reset', m).onclick = () => { $('#tp-char-style', m).value = DEFAULT_CHARACTER_STYLE; savePrefs(); };
   const saveSkip = () => saveSkipPrefs({ animate: $('#sk-animate', m).checked, detail: $('#sk-detail', m).value });

@@ -147,6 +147,10 @@ try { db.exec(`ALTER TABLE characters ADD COLUMN intro_tick_idx INTEGER DEFAULT 
 // Background music currently playing in this world (chosen by the GM's music tool from the
 // RPG-music search server; JSON {row_id,title,url,query,genre,emotion}). Client fades it in/out.
 try { db.exec(`ALTER TABLE worlds ADD COLUMN current_music TEXT`); } catch { /* exists */ }
+// Per-LOCATION music memory: the track last chosen while a scene played here (JSON, same
+// shape as worlds.current_music). Switching to a location with a different stored track
+// crossfades the score client-side.
+try { db.exec(`ALTER TABLE locations ADD COLUMN music TEXT`); } catch { /* exists */ }
 // "Did you know" fact cards generated every Nth tick; read_at drives the unread shimmer.
 db.exec(`CREATE TABLE IF NOT EXISTS facts (
   id TEXT PRIMARY KEY, world_id TEXT NOT NULL, tick_ref INTEGER, topic TEXT DEFAULT '',
