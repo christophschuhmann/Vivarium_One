@@ -104,7 +104,7 @@ const OLD_NARRATOR_DEFAULTS = [
 const ttsPrefs = () => {
   const stored = JSON.parse(localStorage.getItem('viv_tts') || '{}');
   if (OLD_NARRATOR_DEFAULTS.includes(stored.narratorStyle)) delete stored.narratorStyle;
-  const p = { narrator: 'Iapetus', prepare: true, autoplay: true, innerVoice: true, musicOn: true, musicVol: 0.10, voiceVol: 1, voiceRate: 1.05, narratorStyle: DEFAULT_NARRATOR_STYLE, characterStyle: DEFAULT_CHARACTER_STYLE, custom: '', ...stored };
+  const p = { narrator: 'Iapetus', prepare: true, autoplay: true, innerVoice: true, musicOn: true, musicVol: 0.10, voiceVol: 1, voiceRate: 1.05, narratorStyle: DEFAULT_NARRATOR_STYLE, characterStyle: DEFAULT_CHARACTER_STYLE, custom: '', micId: '', ...stored };
   if (stored.musicVol === 0.35 || stored.musicVol === 0.08) p.musicVol = 0.10;   // remap old defaults
   if (stored.voiceRate === 1) p.voiceRate = 1.05;                                 // new default pace
   return p;
@@ -120,6 +120,20 @@ const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', { weekday: 'long
 const cutoutFor = (ch) => { const o = (ch.state.outfits || []).find(o => o.name === (ch.state.outfit || 'everyday')) || (ch.state.outfits || [])[0]; return o?.cutout_asset_id; };
 
 /* ── mic component: 🎙 → record (pulse+✕) → click again → transcribe → insert ── */
+// Turn a getUserMedia failure into an actionable message. The #1 cause in practice is an
+// INSECURE origin: browsers only expose the microphone on https:// (or localhost), so over a
+// plain http:// address navigator.mediaDevices is undefined — the fix is to open the game via
+// the HTTPS tunnel link. Other cases: permission blocked, or no device / a stale selection.
+function micError(e) {
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || e?.name === 'InsecureContext')
+    toast('🎤 The microphone needs a secure (HTTPS) connection. Open the game via the https:// tunnel link — a plain http:// address blocks it. (Settings → Microphone lets you pick & test one once you\'re on HTTPS.)', 'err');
+  else if (e?.name === 'NotAllowedError' || e?.name === 'SecurityError')
+    toast('🎤 Microphone permission is blocked — allow it for this site in your browser, then try again.', 'err');
+  else if (e?.name === 'NotFoundError' || e?.name === 'OverconstrainedError')
+    toast('🎤 No microphone found (or the chosen one is unplugged). Pick another in Settings → Microphone.', 'err');
+  else toast('🎤 Microphone unavailable — you can type instead.', 'err');
+}
+
 function attachMic(field, input) {
   const btn = document.createElement('button');
   btn.className = 'micbtn'; btn.type = 'button'; btn.title = 'Speak instead of typing';
@@ -129,7 +143,9 @@ function attachMic(field, input) {
     if (btn.classList.contains('busy')) return;
     if (rec) { rec.stop(); return; }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('insecure'), { name: 'InsecureContext' });
+      const micId = ttsPrefs().micId;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: micId ? { deviceId: { exact: micId } } : true });
       rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : undefined });
       chunks = []; cancelled = false;
       rec.ondataavailable = (e) => chunks.push(e.data);
@@ -153,10 +169,71 @@ function attachMic(field, input) {
       cancelBtn.onclick = () => { cancelled = true; rec?.stop(); };
       field.prepend(cancelBtn);
       setTimeout(() => { if (rec) rec.stop(); }, 60000);
-    } catch { toast('Microphone unavailable — you can type instead', 'err'); }
+    } catch (e) { micError(e); }
   };
   field.appendChild(btn);
   return btn;
+}
+
+// Settings → Microphone: pick which input device the 🎙 buttons use, and TEST it with a live
+// level meter so you can confirm it's actually hearing you before relying on it in a scene.
+async function renderMicSettings(box) {
+  if (!box) return;
+  if (!window.isSecureContext || !navigator.mediaDevices?.enumerateDevices) {
+    box.innerHTML = `<div style="background:#fff4e5;border:1px solid #ffd9a8;border-radius:10px;padding:10px 12px;color:#8a5a00;line-height:1.5">
+      🔒 The microphone is only available over a secure <b>HTTPS</b> connection (or on localhost). You're currently on <code>${esc(location.origin)}</code>, so browsers block it.<br>
+      → Open the game via the <b>https:// tunnel link</b> and the mic (and this tester) will work.</div>`;
+    return;
+  }
+  const sel = ttsPrefs().micId;
+  let devices = [];
+  try { devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput'); } catch {}
+  const haveLabels = devices.some(d => d.label);
+  box.innerHTML = !haveLabels
+    ? `<button class="btn btn-soft small" id="mic-enable">🎤 Enable microphone access</button>
+       <p style="font-size:11px;color:var(--soft);margin:6px 0 0">Grant access once so your microphones can be listed by name.</p>`
+    : `<label style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Input device
+        <select id="mic-sel" style="border:1px solid var(--line);border-radius:9px;padding:5px 9px;background:#fff;min-width:220px">
+          <option value="">System default</option>
+          ${devices.map((d, i) => `<option value="${esc(d.deviceId)}" ${d.deviceId === sel ? 'selected' : ''}>${esc(d.label || ('Microphone ' + (i + 1)))}</option>`).join('')}
+        </select>
+        <button class="btn btn-soft small" id="mic-test">🎙 Test</button>
+      </label>
+      <div id="mic-meter" style="display:none;margin-top:10px;max-width:360px">
+        <div style="font-size:11px;color:var(--soft);margin-bottom:4px">Speak now — the bar should move:</div>
+        <div style="height:12px;background:#efecfb;border-radius:6px;overflow:hidden"><div id="mic-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#4ade80,#f59e0b);border-radius:6px"></div></div>
+        <div id="mic-teststatus" style="font-size:11px;color:var(--soft);margin-top:5px">&nbsp;</div>
+      </div>`;
+  if (!haveLabels) {
+    $('#mic-enable', box).onclick = async () => {
+      try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach(t => t.stop()); renderMicSettings(box); }
+      catch (e) { micError(e); }
+    };
+    return;
+  }
+  $('#mic-sel', box).onchange = () => { saveTtsPrefs({ micId: $('#mic-sel', box).value }); toast('🎤 Microphone saved'); };
+  $('#mic-test', box).onclick = () => testMic(box, $('#mic-sel', box).value);
+}
+
+async function testMic(box, deviceId) {
+  const meter = $('#mic-meter', box), bar = $('#mic-bar', box), status = $('#mic-teststatus', box);
+  meter.style.display = 'block'; status.textContent = 'Listening…';
+  let stream, ctx, raf, peak = 0;
+  const stop = () => { cancelAnimationFrame(raf); try { stream?.getTracks().forEach(t => t.stop()); ctx?.close(); } catch {} bar.style.width = '0%';
+    status.textContent = peak > 8 ? `✅ Working — heard your voice (peak ${peak}%).` : '⚠️ No sound detected. Check the mic isn\'t muted, pick another device, and test again.'; };
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: deviceId ? { deviceId: { exact: deviceId } } : true });
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(stream).connect(an);
+    const buf = new Uint8Array(an.fftSize); const t0 = Date.now();
+    const loop = () => {
+      an.getByteTimeDomainData(buf);
+      let m = 0; for (const v of buf) m = Math.max(m, Math.abs(v - 128));
+      const pct = Math.min(100, Math.round((m / 128) * 180)); bar.style.width = pct + '%'; peak = Math.max(peak, pct);
+      if (Date.now() - t0 < 5000) raf = requestAnimationFrame(loop); else stop();
+    };
+    loop();
+  } catch (e) { meter.style.display = 'none'; micError(e); }
 }
 
 /* ───────── chrome ───────── */
@@ -3834,6 +3911,10 @@ async function accountModal() {
           <input id="tp-custom" placeholder="e.g. slightly slower; a hint of a smile" value="${esc(ttsPrefs().custom)}" style="border:1px solid var(--line);border-radius:9px;padding:6px 10px"></label>
       </div>
     </div>
+    <div class="panel" style="margin-top:14px;padding:14px 16px">
+      <b style="font-size:13px">🎤 Microphone <span style="font-weight:400;color:var(--soft);font-size:11px">— for speaking instead of typing (the 🎙 buttons)</span></b>
+      <div id="mic-settings" style="margin-top:9px;font-size:12.5px">Loading…</div>
+    </div>
     <!-- Time-skip behaviour: whether big jumps play as a scene-by-scene film, and how much
          of the plan makes the cut (main plot only vs also side plots). See skipPrefs(). -->
     <div class="panel" style="margin-top:14px;padding:14px 16px">
@@ -3853,6 +3934,7 @@ async function accountModal() {
   document.body.appendChild(m);
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   $('.x', m).onclick = () => m.remove();
+  renderMicSettings($('#mic-settings', m));
   const savePrefs = () => {
     saveTtsPrefs({ narrator: $('#tp-narr', m).value, prepare: $('#tp-prepare', m).checked, autoplay: $('#tp-auto', m).checked, innerVoice: $('#tp-inner', m).checked, musicOn: $('#tp-music', m).checked, musicVol: (+$('#tp-musicvol', m).value) / 100, voiceVol: (+$('#tp-voicevol', m).value) / 100, voiceRate: (+$('#tp-voicerate', m).value) / 100, narratorStyle: $('#tp-narr-style', m).value, characterStyle: $('#tp-char-style', m).value, custom: $('#tp-custom', m).value });
     // apply live: volume ramps immediately; toggling off fades the score out, on resumes it
