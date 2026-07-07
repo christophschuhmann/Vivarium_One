@@ -138,6 +138,38 @@ export default async function adminRoutes(app) {
       ttsProvider: getSetting('tts_provider') || 'gemini',   // which TTS engine is live (see below)
     };
   });
+
+  // API-key / provider status for the admin "API keys" panel. Reports, per provider env var,
+  // whether the key is loaded into the server process and a MASKED preview (so the admin can
+  // confirm the RIGHT key is present without the panel ever exposing the full secret), plus
+  // which routes use it. Keys live only in the server env (.env, referenced by name) — never DB.
+  app.get('/admin/api/providers', async (req) => {
+    requireAdmin(req);
+    const KNOWN = {
+      HYPRLAB_API_KEY: { label: 'HyprLab', docs: 'https://api.hyprlab.io/v1', note: 'LLM · image · TTS · ASR' },
+      CEREBRAS_API_KEY: { label: 'Cerebras', docs: 'https://api.cerebras.ai/v1', note: 'ultra-fast LLM inference' },
+      LAIONBOX_API_KEY: { label: 'LAIONBox', docs: '', note: 'self-hosted voice cloning' },
+    };
+    // every distinct key_env referenced by a route, plus the known ones
+    const used = db.prepare('SELECT key_env, GROUP_CONCAT(role) roles, GROUP_CONCAT(DISTINCT base_url) urls FROM model_routes WHERE key_env IS NOT NULL GROUP BY key_env').all();
+    const byEnv = Object.fromEntries(used.map(u => [u.key_env, u]));
+    const envs = [...new Set([...Object.keys(KNOWN), ...used.map(u => u.key_env)])].filter(e => e && e !== 'NONE');
+    const mask = (v) => !v ? null : v.length <= 10 ? v.slice(0, 3) + '…' : v.slice(0, 5) + '…' + v.slice(-4);
+    return {
+      providers: envs.map(env => {
+        const val = process.env[env];
+        return {
+          key_env: env,
+          label: KNOWN[env]?.label || env.replace(/_API_KEY$/, ''),
+          note: KNOWN[env]?.note || '',
+          base_url: byEnv[env]?.urls || KNOWN[env]?.docs || '',
+          roles: byEnv[env]?.roles ? byEnv[env].roles.split(',') : [],
+          configured: !!val,
+          masked: mask(val),
+        };
+      }),
+    };
+  });
   // Switch the app-wide TTS engine: 'gemini' (prebuilt voices) | 'laionbox' (self-hosted voice
   // cloning — characters then need reference-voice clips, managed by the players in-game).
   // Probes the LAIONBox /health endpoint before enabling it so the admin can't switch to a dead box.
@@ -163,8 +195,8 @@ export default async function adminRoutes(app) {
     if (!r) throw httpErr(404, 'NOT_FOUND', 'Route not found.');
     const b = req.body || {};
     db.prepare(`UPDATE model_routes SET model=COALESCE(?,model), base_url=COALESCE(?,base_url),
-                unit_cost=COALESCE(?,unit_cost), enabled=COALESCE(?,enabled) WHERE role=?`)
-      .run(b.model, b.baseUrl, b.unitCost ? j(b.unitCost) : null, b.enabled == null ? null : (b.enabled ? 1 : 0), r.role);
+                key_env=COALESCE(?,key_env), unit_cost=COALESCE(?,unit_cost), enabled=COALESCE(?,enabled) WHERE role=?`)
+      .run(b.model, b.baseUrl, b.keyEnv || null, b.unitCost ? j(b.unitCost) : null, b.enabled == null ? null : (b.enabled ? 1 : 0), r.role);
     audit(a.id, 'update_model_route', r.role, b);
     return { ok: true };
   });

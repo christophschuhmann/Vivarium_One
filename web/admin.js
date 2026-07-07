@@ -236,6 +236,16 @@ async function dataExplorerModal(userId, u) {
 
 async function models() {
   const { routes, ttsProvider } = await api('/admin/api/model-routes');
+  const providers = (await api('/admin/api/providers')).providers;
+  // provider-aware reasoning-LLM presets (model + endpoint + key env + est. costs)
+  const LLM_PRESETS = [
+    { p: 'HyprLab', m: 'glm-5.2', base: 'https://api.hyprlab.io/v1', ke: 'HYPRLAB_API_KEY', cost: { in_per_mtok: 0.7, out_per_mtok: 2.2 } },
+    { p: 'HyprLab', m: 'gemini-3.5-flash', base: 'https://api.hyprlab.io/v1', ke: 'HYPRLAB_API_KEY', cost: { in_per_mtok: 0.75, out_per_mtok: 4.5 } },
+    { p: 'HyprLab', m: 'claude-sonnet-5', base: 'https://api.hyprlab.io/v1', ke: 'HYPRLAB_API_KEY', cost: { in_per_mtok: 1.8, out_per_mtok: 9 } },
+    { p: 'Cerebras', label: 'GLM-4.7', m: 'zai-glm-4.7', base: 'https://api.cerebras.ai/v1', ke: 'CEREBRAS_API_KEY', cost: { in_per_mtok: 0.6, out_per_mtok: 1.2 } },
+    { p: 'Cerebras', label: 'gemma-4-31b', m: 'gemma-4-31b', base: 'https://api.cerebras.ai/v1', ke: 'CEREBRAS_API_KEY', cost: { in_per_mtok: 0.99, out_per_mtok: 1.49 } },
+    { p: 'Cerebras', label: 'gpt-oss-120b', m: 'gpt-oss-120b', base: 'https://api.cerebras.ai/v1', ke: 'CEREBRAS_API_KEY', cost: { in_per_mtok: 0.25, out_per_mtok: 0.69 } },
+  ];
   $('#tabc').innerHTML = `
     <!-- TTS engine switch: Gemini (prebuilt voices) vs LAIONBox (self-hosted voice cloning).
          Switching to LAIONBox health-probes the box first (server-side) and changes the whole
@@ -249,37 +259,56 @@ async function models() {
     </div>
     <div class="panel"><b style="font-size:14px">Model & endpoint registry</b>
     <p style="font-size:12px;color:var(--soft)">Swap a model or change unit costs without a deploy. Keys stay server-side (referenced by env name).</p>
-    <!-- One-click presets for the reasoning_llm row: every HyprLab chat model speaks the same
-         /v1/chat/completions format (verified live for all three), so switching = model string
-         + unit costs. Prices are HyprLab's discounted per-1M-token rates as of 2026-07-04;
-         pasting any other model id into the row directly also works — same format. -->
-    <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:4px 0 10px">
-      <span style="font-size:11.5px;color:var(--soft)">LLM presets:</span>
-      ${[
-        { m: 'gemini-3.5-flash', cost: { in_per_mtok: 0.75, out_per_mtok: 4.5 } },
-        { m: 'glm-5.2', cost: { in_per_mtok: 0.7, out_per_mtok: 2.2 } },
-        { m: 'claude-sonnet-5', cost: { in_per_mtok: 1.8, out_per_mtok: 9 } },
-      ].map(p => `<button class="btn btn-soft small" data-preset="${p.m}" data-cost='${JSON.stringify(p.cost)}' style="padding:3px 10px;font-size:11.5px">${p.m}</button>`).join('')}
+    <!-- One-click reasoning_llm presets. Each carries its full endpoint: model + base URL + the
+         env-var name of the API key + per-1M-token costs. HyprLab and Cerebras both speak the
+         OpenAI /v1/chat/completions format, so switching provider is pure config. Cerebras is
+         ~10-500x faster (see the model benchmark); its prices are estimates — edit the row if
+         you have exact rates. Pasting any model id into the row directly also works. -->
+    <div style="margin:4px 0 12px">
+      <div style="font-size:11.5px;color:var(--soft);margin-bottom:6px">Reasoning-LLM presets — one click sets model + endpoint + key + costs:</div>
+      ${['HyprLab', 'Cerebras'].map(prov => `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
+        <span style="font-size:11px;font-weight:700;min-width:74px;color:${prov === 'Cerebras' ? '#c2410c' : 'var(--soft)'}">${prov === 'Cerebras' ? '⚡ Cerebras' : prov}</span>
+        ${LLM_PRESETS.filter(p => p.p === prov).map(p => `<button class="btn btn-soft small" data-preset='${JSON.stringify(p)}' style="padding:3px 10px;font-size:11.5px">${p.label || p.m}</button>`).join('')}
+      </div>`).join('')}
     </div>
-    <table style="margin-top:8px"><tr><th>Role</th><th>Model</th><th>Base URL</th><th>Unit costs</th><th>Enabled</th><th></th></tr>
+    <table style="margin-top:8px"><tr><th>Role</th><th>Model</th><th>Base URL</th><th>Key (env)</th><th>Unit costs</th><th>On</th><th></th></tr>
     ${routes.map(r => `<tr data-role="${r.role}">
       <td><b>${esc(r.role)}</b></td>
-      <td><input value="${esc(r.model)}" data-f="model" style="width:170px;border:1px solid var(--line);border-radius:8px;padding:4px 8px"></td>
-      <td><input value="${esc(r.base_url)}" data-f="base" style="width:220px;border:1px solid var(--line);border-radius:8px;padding:4px 8px"></td>
-      <td><input value='${esc(JSON.stringify(r.unit_cost))}' data-f="cost" style="width:220px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-family:monospace;font-size:11px"></td>
+      <td><input value="${esc(r.model)}" data-f="model" style="width:150px;border:1px solid var(--line);border-radius:8px;padding:4px 8px"></td>
+      <td><input value="${esc(r.base_url)}" data-f="base" style="width:200px;border:1px solid var(--line);border-radius:8px;padding:4px 8px"></td>
+      <td><input value="${esc(r.key_env || '')}" data-f="keyenv" style="width:150px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-family:monospace;font-size:11px"></td>
+      <td><input value='${esc(JSON.stringify(r.unit_cost))}' data-f="cost" style="width:190px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-family:monospace;font-size:11px"></td>
       <td><input type="checkbox" ${r.enabled ? 'checked' : ''} data-f="on"></td>
-      <td><button class="btn btn-soft small" data-save>Save</button></td></tr>`).join('')}</table></div>`;
-  // LLM presets: fill the reasoning_llm row's model + unit-cost fields and save immediately
+      <td><button class="btn btn-soft small" data-save>Save</button></td></tr>`).join('')}</table></div>
+
+    <!-- API-KEY / PROVIDER STATUS — which provider keys are loaded into the server (masked). -->
+    <div class="panel" style="margin-top:14px"><b style="font-size:14px">🔑 API keys &amp; providers</b>
+    <p style="font-size:12px;color:var(--soft)">Which provider credentials are loaded into the server. Keys live only in the server environment (<code>.env</code>, referenced by name) — never in the database or the browser. Shown masked so you can confirm the right key without exposing it.</p>
+    <table style="margin-top:8px"><tr><th>Provider</th><th>Env var</th><th>Status</th><th>Key</th><th>Base URL</th><th>Used by</th></tr>
+    ${providers.map(p => `<tr>
+      <td><b>${esc(p.label)}</b>${p.note ? `<div style="font-size:10.5px;color:var(--soft)">${esc(p.note)}</div>` : ''}</td>
+      <td style="font-family:monospace;font-size:11px">${esc(p.key_env)}</td>
+      <td>${p.configured ? '<span style="color:#16a34a;font-weight:700">● loaded</span>' : '<span style="color:#dc2626;font-weight:700">○ missing</span>'}</td>
+      <td style="font-family:monospace;font-size:11px">${p.masked ? esc(p.masked) : '—'}</td>
+      <td style="font-size:11px;color:var(--soft)">${esc(p.base_url || '—')}</td>
+      <td style="font-size:11px;color:var(--soft)">${p.roles.length ? esc(p.roles.join(', ')) : '—'}</td>
+    </tr>`).join('')}</table>
+    <p style="font-size:11px;color:var(--soft);margin-top:8px">To add or change a key, set its env var in the server's <code>.env</code> and restart. A “missing” key means any route using it will fail until it's provided.</p>
+    </div>`;
+  // LLM presets: fill the reasoning_llm row (model + endpoint + key env + costs) and save.
   $$('#tabc [data-preset]').forEach(b => b.onclick = async () => {
     const tr = $('#tabc tr[data-role="reasoning_llm"]');
     if (!tr) return;
-    $('[data-f=model]', tr).value = b.dataset.preset;
-    $('[data-f=cost]', tr).value = b.dataset.cost;
+    const p = JSON.parse(b.dataset.preset);
+    $('[data-f=model]', tr).value = p.m;
+    $('[data-f=base]', tr).value = p.base;
+    $('[data-f=keyenv]', tr).value = p.ke;
+    $('[data-f=cost]', tr).value = JSON.stringify(p.cost);
     try {
       await api(`/admin/api/model-routes/reasoning_llm`, { method: 'PATCH', body: {
-        model: b.dataset.preset, baseUrl: $('[data-f=base]', tr).value,
-        unitCost: JSON.parse(b.dataset.cost), enabled: $('[data-f=on]', tr).checked } });
-      toast('LLM → ' + b.dataset.preset, 'gold');
+        model: p.m, baseUrl: p.base, keyEnv: p.ke, unitCost: p.cost, enabled: $('[data-f=on]', tr).checked } });
+      toast('LLM → ' + (p.label || p.m) + ' (' + p.p + ')', 'gold');
+      models();   // refresh so the key-status panel reflects the new provider
     } catch (e) { fail(e); }
   });
   // provider switch — server validates LAIONBox health before accepting
@@ -295,6 +324,7 @@ async function models() {
       try {
         await api(`/admin/api/model-routes/${tr.dataset.role}`, { method: 'PATCH', body: {
           model: $('[data-f=model]', tr).value, baseUrl: $('[data-f=base]', tr).value,
+          keyEnv: $('[data-f=keyenv]', tr).value || undefined,
           unitCost: JSON.parse($('[data-f=cost]', tr).value), enabled: $('[data-f=on]', tr).checked } });
         toast('Route saved');
       } catch (e) { fail(e); }
