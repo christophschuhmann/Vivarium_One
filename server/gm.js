@@ -431,6 +431,7 @@ export async function runChapter(user, world, { timeDelta = '+30m', intervention
     const locs = db.prepare('SELECT id,name FROM locations WHERE world_id=?').all(world.id);
     const locByName = (name) => locs.find(l => l.name.toLowerCase() === String(name || '').toLowerCase());
     let last = null;
+    const committedTicks = [];   // tick ids actually persisted, so we can fix the seq count if cut short
     const seqId = uid('sq_');   // all this chapter's scenes form ONE replayable sequence (timeline 🎬)
     for (let k = 0; k < events.length; k++) {
       const ev = events[k];
@@ -450,16 +451,40 @@ Set THIS scene at "${ev.location}"${ev.participants?.length ? `; it centres on $
         seq: { id: seqId, label: `Time skip ${timeDelta}`, kind: 'chapter', pos: k + 1, n: events.length },
       };
       try {
-        last = await runTickInner(user, world, sceneOpts, onEvent);
+        try {
+          last = await runTickInner(user, world, sceneOpts, onEvent);
+        } catch (e) {
+          if (e.code === 'INSUFFICIENT_CREDITS' || e.code === 'DAILY_CAP') throw e;  // money errors: no retry
+          console.error(`[chapter] scene ${k + 1}/${events.length} failed (${e.message}) — retrying once`);
+          onEvent('status', { message: `scene ${k + 1} stumbled — retrying…` });
+          last = await runTickInner(user, world, sceneOpts, onEvent);
+        }
       } catch (e) {
-        if (e.code === 'INSUFFICIENT_CREDITS' || e.code === 'DAILY_CAP') throw e;  // money errors: no retry
-        console.error(`[chapter] scene ${k + 1}/${events.length} failed (${e.message}) — retrying once`);
-        onEvent('status', { message: `scene ${k + 1} stumbled — retrying…` });
-        last = await runTickInner(user, world, sceneOpts, onEvent);
+        if (e.code === 'INSUFFICIENT_CREDITS' || e.code === 'DAILY_CAP') throw e;
+        // Scene FAILED even after the retry. If it's a LATER scene, don't discard the ones
+        // that already committed (that left the timeline with a "1 of 3" sequence pointing at
+        // scenes that never persisted). Stop cleanly, keep what we have, and fix the sequence
+        // metadata to the real count so the 🎬 replay isn't broken.
+        console.error(`[chapter] scene ${k + 1}/${events.length} failed twice (${e.message}) — keeping ${committedTicks.length} committed scene(s)`);
+        if (!committedTicks.length) throw e;   // scene 1 itself died → nothing to salvage, surface it
+        break;
       }
+      committedTicks.push(last.id);
       // runTickInner mutates the DB; refresh the in-memory world row for the next pass
       const fresh = db.prepare('SELECT * FROM worlds WHERE id=?').get(world.id);
       world.sim_time = fresh.sim_time; world.tick_index = fresh.tick_index; world.active_branch_id = fresh.active_branch_id;
+    }
+    // cut short? rewrite every committed scene's seq.n to the ACTUAL count (or drop the seq
+    // entirely for a lone survivor) so the timeline shows a valid, replayable sequence.
+    const got = committedTicks.length;
+    if (got && got < events.length) {
+      for (let i = 0; i < got; i++) {
+        const row = db.prepare('SELECT seq FROM ticks WHERE id=?').get(committedTicks[i]);
+        const s = pj(row?.seq, null);
+        const newSeq = got <= 1 ? null : j({ ...s, pos: i + 1, n: got });
+        db.prepare('UPDATE ticks SET seq=? WHERE id=?').run(newSeq, committedTicks[i]);
+      }
+      onEvent('chapter_trimmed', { got, planned: events.length });
     }
     return last;
   } finally {

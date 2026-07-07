@@ -2039,14 +2039,23 @@ async function stageScreen() {
     const names = future.map(c => c.name).join(', ');
     const m = document.createElement('div');
     m.className = 'modal-bg';
-    m.innerHTML = `<div class="modal" style="width:min(560px,96vw)"><div class="modal-head violet">
+    m.innerHTML = `<div class="modal" style="width:min(620px,96vw)"><div class="modal-head violet">
       <div><b>🌿 Branch from scene ${w.tick_index}</b><small>an alternative direction from here</small></div><span class="x">✕</span></div>
-    <div class="modal-body" style="padding:18px">
-      <p style="font-size:13px;line-height:1.5;margin:0 0 6px">You've rewound to <b>scene ${w.tick_index}</b>, before <b>${esc(names)}</b> ${future.length === 1 ? 'had' : 'had'} joined the story. Advancing here starts an <b>alternative branch</b>. How should ${future.length === 1 ? 'this character' : 'these characters'} be handled?</p>
-      <div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">
-        <button class="btn btn-primary" id="bp-copy" style="text-align:left;padding:11px 14px;line-height:1.35">🌱 <b>Continue in a clean copy</b><div style="font-size:11.5px;font-weight:400;opacity:.85">Duplicate the world, keep only the story up to scene ${w.tick_index}, and remove ${future.length === 1 ? 'them' : 'them'}. Your original timeline stays untouched. <b>Recommended.</b></div></button>
-        <button class="btn btn-soft" id="bp-strip" style="text-align:left;padding:11px 14px;line-height:1.35">✂️ <b>Remove them & branch here</b><div style="font-size:11.5px;font-weight:400;opacity:.8">Delete ${esc(names)} from <i>this</i> world and branch. Their later scenes on other timelines are lost.</div></button>
-        <button class="btn btn-ghost" id="bp-keep" style="text-align:left;padding:11px 14px;line-height:1.35">▶ <b>Branch here, keep everyone</b><div style="font-size:11.5px;font-weight:400;opacity:.7">They stay in the cast but won't act until the story reaches their scene again.</div></button>
+    <div class="modal-body" style="padding:20px 22px 22px">
+      <p style="font-size:13.5px;line-height:1.55;margin:0 0 4px">You've rewound to <b>scene ${w.tick_index}</b>, before <b>${esc(names)}</b> joined the story. Advancing here starts an <b>alternative branch</b>. How should ${future.length === 1 ? 'this character' : 'these characters'} be handled?</p>
+      <div class="bp-opts">
+        <button class="bp-opt bp-primary" id="bp-copy">
+          <span class="bp-t">🌱 Continue in a clean copy <span class="bp-rec">Recommended</span></span>
+          <span class="bp-d">Duplicate the world, keep only the story up to scene ${w.tick_index}, and leave ${future.length === 1 ? 'them' : 'them'} out. Your original timeline stays completely untouched.</span>
+        </button>
+        <button class="bp-opt" id="bp-strip">
+          <span class="bp-t">✂️ Remove them &amp; branch here</span>
+          <span class="bp-d">Delete ${esc(names)} from <i>this</i> world and branch from here. Their later scenes on other timelines are lost.</span>
+        </button>
+        <button class="bp-opt" id="bp-keep">
+          <span class="bp-t">▶ Branch here, keep everyone</span>
+          <span class="bp-d">They stay in the cast but won't act or appear until the story reaches their scene again.</span>
+        </button>
       </div>
     </div></div>`;
     document.body.appendChild(m);
@@ -2054,7 +2063,7 @@ async function stageScreen() {
     m.onclick = (e) => { if (e.target === m) close(); };
     $('.x', m).onclick = close;
     $('#bp-copy', m).onclick = async (e) => {
-      const b = e.currentTarget; b.disabled = true; b.querySelector('b').textContent = '🌱 Copying…';
+      const b = e.currentTarget; b.disabled = true; b.querySelector('.bp-t').textContent = '🌱 Copying…';
       try {
         const r = await api(`/api/worlds/${S.world}/fork-clean`, { method: 'POST', body: { tickIdx: w.tick_index } });
         close(); toast('🌱 Clean copy created — exploring it now', 'gold');
@@ -2121,6 +2130,7 @@ async function stageScreen() {
               if (cinema.scenes.length === 1) playCinema(cinema); // roll film on the first scene — rest streams in behind
             }
           }
+          if (ev === 'chapter_trimmed') toast(`The time-skip was cut short after ${data.got} of ${data.planned} scenes (a later scene failed to generate) — the ${data.got} that landed are saved.`, 'err');
           if (ev === 'error') errored = data;
           if (ev === 'done') { const c = $('#credits-num'); if (c) c.textContent = data.credits; }
         }
