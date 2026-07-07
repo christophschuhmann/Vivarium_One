@@ -28,15 +28,30 @@ export function route(role) {
 // Bearer endpoint (verified live for all three), so swapping models is just editing the
 // `reasoning_llm` route's model string (+ unit costs) in the admin Models tab; no code
 // path changes. Extraction below is defensive across providers' response quirks.
-export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8 } = {}) {
+// A single LLM call may never run forever: it's capped by LLM_TIMEOUT_MS, and it also
+// honours an optional external `signal` (aborted when the player reloads/leaves — see the
+// /ticks route) so a generation the client walked away from stops instead of holding the
+// world's tick lock. glm-5.2 legitimately takes ~2 min on the largest contexts, so the cap
+// sits a little above that to catch true HANGS without killing honest slow generations.
+export const LLM_TIMEOUT_MS = 150000;
+export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, signal = null } = {}) {
   const r = route('reasoning_llm');
   if (MOCK) return mockLlm(messages);
-  const resp = await fetch(`${r.base_url}/chat/completions`, {
-    dispatcher: PATIENT,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key(r)}` },
-    body: JSON.stringify({ model: r.model, messages, max_tokens: maxTokens, temperature }),
-  });
+  const timeout = AbortSignal.timeout(LLM_TIMEOUT_MS);
+  const abortSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  let resp;
+  try {
+    resp = await fetch(`${r.base_url}/chat/completions`, {
+      dispatcher: PATIENT, signal: abortSignal,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key(r)}` },
+      body: JSON.stringify({ model: r.model, messages, max_tokens: maxTokens, temperature }),
+    });
+  } catch (e) {
+    if (timeout.aborted) throw Object.assign(new Error(`The AI model took longer than ${Math.round(LLM_TIMEOUT_MS / 1000)}s and was stopped. Try again, or switch to a faster model in the admin panel.`), { code: 'LLM_TIMEOUT', statusCode: 504 });
+    if (signal?.aborted) throw Object.assign(new Error('Generation cancelled.'), { code: 'ABORTED', statusCode: 499 });
+    throw e;
+  }
   if (!resp.ok) throw new Error(`LLM ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
   const data = await resp.json();
   const usage = data.usage || { prompt_tokens: 0, completion_tokens: 0 };

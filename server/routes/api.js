@@ -596,20 +596,27 @@ export default async function apiRoutes(app) {
     const w = ownWorld(u, req.params.id);
     if (w.status !== 'live') throw httpErr(400, 'NOT_LIVE', 'Press Begin in Genesis first.');
     reply.raw.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
-    const send = (event, data) => reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    let finished = false;
+    const send = (event, data) => { if (!finished) { try { reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch {} } };
     const hb = setInterval(() => send('status', { message: 'still thinking…' }), 9000);
+    // If the player reloads or leaves, abort the generation so it stops burning tokens and,
+    // crucially, RELEASES the world's tick lock — otherwise the next attempt is refused with
+    // "already generating" until the (possibly hung) run finishes on its own.
+    const ac = new AbortController();
+    reply.raw.on('close', () => { if (!finished) ac.abort(); });
     try {
       // runChapter decides: small skip (or animation disabled) → one classic tick;
       // large skip → planner + several scene-ticks, each streamed the moment it's ready
       // (body.chapter = { animate, detail } from the player's time-skip settings).
-      const tick = await gm.runChapter(u, w, req.body || {}, send);
+      const tick = await gm.runChapter(u, w, { ...(req.body || {}), signal: ac.signal }, send);
       send('done', { credits: Math.floor(toCredits(db.prepare('SELECT credit_balance FROM users WHERE id=?').get(u.id).credit_balance) * 10) / 10, tick_idx: tick.idx, branch_id: tick.branch_id, branched: tick.branched });
       setImmediate(() => gm.runMemoryMaintenance(u, w).catch(() => {}));   // background summarisation
     } catch (e) {
-      // also log server-side — SSE errors are otherwise invisible in the server logs
-      console.error(`[tick] world=${w.id} delta=${req.body?.timeDelta} failed:`, e.code || '', e.message);
-      send('error', { code: e.code || 'TICK_FAILED', message: e.message });
-    } finally { clearInterval(hb); reply.raw.end(); }
+      if (e.code !== 'ABORTED') {   // ABORTED = the client already left; nothing to report to
+        console.error(`[tick] world=${w.id} delta=${req.body?.timeDelta} failed:`, e.code || '', e.message);
+        send('error', { code: e.code || 'TICK_FAILED', message: e.message });
+      }
+    } finally { finished = true; clearInterval(hb); try { reply.raw.end(); } catch {} }
   });
   app.get('/api/worlds/:id/ticks', async (req) => {
     const u = requireUser(req);

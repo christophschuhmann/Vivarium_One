@@ -368,14 +368,29 @@ Set THIS scene at "${sc.location}"${sc.participants?.length ? `; it centres on $
 // thoughts, activities, summaries) is written in this language; ids & JSON keys stay English.
 export const GAME_LANGS = { en: 'English', de: 'German', fr: 'French', es: 'Spanish' };
 
-const tickLocks = new Set();
-export async function runTick(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en' }, onEvent = () => {}) {
-  if (tickLocks.has(world.id)) throw Object.assign(new Error('A tick is already being generated for this world — wait for it to finish.'), { statusCode: 409, code: 'TICK_IN_PROGRESS' });
-  tickLocks.add(world.id);
+// One generation per world at a time. Kept as a Map (not a bare Set) with the request's abort
+// signal + start time, so a NEW request can tell a genuinely-running generation from a dead
+// one: if the holder's signal is already aborted (the player reloaded/left) or it has been
+// held longer than MAX_LOCK_MS (a true hang the LLM timeout should already have killed), the
+// new request STEALS the lock instead of being refused forever. This is what makes reload →
+// retry Just Work.
+const tickLocks = new Map();   // worldId → { signal, startedAt }
+const MAX_LOCK_MS = 200000;    // > LLM_TIMEOUT_MS, so the per-call timeout normally frees it first
+function acquireTickLock(worldId, signal) {
+  const held = tickLocks.get(worldId);
+  if (held && !held.signal?.aborted && (Date.now() - held.startedAt) < MAX_LOCK_MS) {
+    throw Object.assign(new Error('This world is already generating a scene — give it a moment, or reload to cancel it.'), { statusCode: 409, code: 'TICK_IN_PROGRESS' });
+  }
+  const entry = { signal, startedAt: Date.now() };
+  tickLocks.set(worldId, entry);
+  return () => { if (tickLocks.get(worldId) === entry) tickLocks.delete(worldId); };   // release only if still ours
+}
+export async function runTick(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en', signal = null }, onEvent = () => {}) {
+  const release = acquireTickLock(world.id, signal);
   try {
-    return await runTickInner(user, world, { timeDelta, intervention, perspective, lang }, onEvent);
+    return await runTickInner(user, world, { timeDelta, intervention, perspective, lang, signal }, onEvent);
   } finally {
-    tickLocks.delete(world.id);
+    release();
   }
 }
 
@@ -405,23 +420,22 @@ export async function runTick(user, world, { timeDelta = '+30m', intervention = 
 export const CHAPTER_MIN_MINUTES = 20;   // skips at/below this always stay a single tick
 const CHAPTER_MAX_EVENTS = 6;
 
-export async function runChapter(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en', chapter = null }, onEvent = () => {}) {
+export async function runChapter(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en', chapter = null, signal = null }, onEvent = () => {}) {
   const mins = deltaMinutes(world.sim_time, timeDelta);
   const animate = chapter?.animate !== false;              // default ON; settings can disable
   const detail = chapter?.detail === 'main' ? 'main' : 'full';
   if (!animate || mins <= CHAPTER_MIN_MINUTES) {
-    return runTick(user, world, { timeDelta, intervention, perspective, lang }, onEvent);
+    return runTick(user, world, { timeDelta, intervention, perspective, lang, signal }, onEvent);
   }
-  if (tickLocks.has(world.id)) throw Object.assign(new Error('A tick is already being generated for this world — wait for it to finish.'), { statusCode: 409, code: 'TICK_IN_PROGRESS' });
-  tickLocks.add(world.id);
+  const release = acquireTickLock(world.id, signal);
   try {
     // ---- 1. plan the events ----
     onEvent('status', { message: 'weighing what the hours hold…' });
-    const events = await planChapter(user, world, { timeDelta, mins, intervention, detail, lang });
+    const events = await planChapter(user, world, { timeDelta, mins, intervention, detail, lang, signal });
     if (events.length <= 1) {
       // nothing (or one thing) noteworthy — classic single tick covers the span;
       // hand the single planned premise through as a directive if there is one.
-      return await runTickInner(user, world, { timeDelta, intervention, perspective, lang, directive: events[0]?.premise ? `During this span, this happens: ${events[0].premise}` : null }, onEvent);
+      return await runTickInner(user, world, { timeDelta, intervention, perspective, lang, signal, directive: events[0]?.premise ? `During this span, this happens: ${events[0].premise}` : null }, onEvent);
     }
     // tell the client how many scenes are coming (it shows "scene 1 of K" and
     // starts cinematic playback as soon as the first tick lands)
@@ -447,7 +461,7 @@ Set THIS scene at "${ev.location}"${ev.participants?.length ? `; it centres on $
         timeDelta: `+${ev.offsetMinutes}m`,
         intervention: k === 0 ? intervention : null,   // the player's nudge seeds the first scene only
         perspective: loc ? { type: 'location', id: loc.id } : perspective,
-        lang, directive,
+        lang, directive, signal,
         seq: { id: seqId, label: `Time skip ${timeDelta}`, kind: 'chapter', pos: k + 1, n: events.length },
       };
       try {
@@ -488,13 +502,13 @@ Set THIS scene at "${ev.location}"${ev.participants?.length ? `; it centres on $
     }
     return last;
   } finally {
-    tickLocks.delete(world.id);
+    release();
   }
 }
 
 // The planner: one small LLM call that decides WHAT happens during a long skip.
 // Returns [] when nothing story-worthy occurs (→ classic quiet tick).
-async function planChapter(user, world, { timeDelta, mins, intervention, detail, lang }) {
+async function planChapter(user, world, { timeDelta, mins, intervention, detail, lang, signal = null }) {
   preflight(user.id, EST.chat());
   const chars = db.prepare('SELECT id,name,materialised FROM characters WHERE world_id=?').all(world.id)
     .map(c => ({ name: c.name, ...(({ location_id, activity, mood, intentions }) => ({ location_id, activity, mood, intentions }))(pj(c.materialised, {})) }));
@@ -515,7 +529,7 @@ ${intervention ? `The player just nudged the world (${intervention.kind}): "${in
 The skip: ${timeDelta} starting ${fmtClock(world.sim_time)}.`;
   // generous token budget: the model may spend tokens on internal reasoning before the JSON,
   // and a truncated reply fails parsing (the repair re-ask would truncate identically)
-  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: usr }], { maxTokens: 4000 });
+  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: usr }], { maxTokens: 4000, signal });
   debitCall(user.id, res, 'chapter_plan', { worldId: world.id });
   logCall({ userId: user.id, worldId: world.id, kind: 'llm', surface: 'chapter_plan', request: usr, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const raw = (res.json?.events || []).slice(0, CHAPTER_MAX_EVENTS)
@@ -533,7 +547,7 @@ The skip: ${timeDelta} starting ${fmtClock(world.sim_time)}.`;
   return raw;
 }
 
-async function runTickInner(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en', directive = null, seq = null }, onEvent = () => {}) {
+async function runTickInner(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en', directive = null, seq = null, signal = null }, onEvent = () => {}) {
   preflight(user.id, EST.tick());
   ensureRootBranch(world);
   // Characters who join the story LATER (intro_tick_idx > current position) don't exist yet
@@ -636,7 +650,7 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
   // 14000: the tick JSON itself is ~3-4k tokens, but reasoning models (esp. glm-5.2) burn a
   // VARIABLE — sometimes huge — share of the budget thinking first; 9000 exhausted entirely
   // on reasoning once the schema grew (music/fact/location tools). Output is cheap; be generous.
-  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: userMsg }], { maxTokens: 14000 });
+  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: userMsg }], { maxTokens: 14000, signal });
   const micro = debitCall(user.id, res, 'tick_llm', { worldId: world.id, tickRef: idx });
   logCall({ userId: user.id, worldId: world.id, tickRef: idx, kind: 'llm', surface: 'tick', request: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }], response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const out = res.json;

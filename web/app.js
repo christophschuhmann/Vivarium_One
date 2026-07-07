@@ -2094,8 +2094,10 @@ async function stageScreen() {
     let cinema = null;   // declared out here so the catch can release a stuck film on stream errors
     stageState.castSugs = [];   // GM cast suggestions arriving with this advance (shown at the end)
     try {
+      stageState.advanceAbort?.abort();               // cancel any earlier in-flight advance
+      const ctrl = new AbortController(); stageState.advanceAbort = ctrl;
       const res = await fetch(`/api/worlds/${S.world}/ticks`, {
-        method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', credentials: 'same-origin', signal: ctrl.signal, headers: { 'Content-Type': 'application/json' },
         // lang = the 🌐 preference: the Game Master writes this tick's story in that language.
         // chapter = the player's time-skip settings (animate on/off + detail level) — for
         // large skips the server may answer with SEVERAL scene-ticks instead of one.
@@ -2141,7 +2143,10 @@ async function stageScreen() {
       showCastSuggestions();
     } catch (e) {
       if (cinema) cinema.done = true;                         // release a film waiting on scenes that will never come
-      $('#veil').innerHTML = ''; const adv = $('#advance'); if (adv) adv.disabled = false; fail(e);
+      $('#veil').innerHTML = ''; const adv = $('#advance'); if (adv) adv.disabled = false;
+      if (e.name === 'AbortError') return;                   // we cancelled it on purpose (nav / new advance)
+      if (e.code === 'TICK_IN_PROGRESS') toast('A scene is still generating — give it a moment, then try again. (Reloading also cancels a stuck one.)', 'err');
+      else fail(e);
     }
   }
 }
