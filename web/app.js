@@ -2032,7 +2032,54 @@ async function stageScreen() {
   };
   $('#timelinebtn').onclick = () => timelineModal(world);
 
-  async function advanceTick(intervention) {
+  // Prompt shown when the player advances from a rewound position where later-joining
+  // characters don't exist yet. Three ways forward + cancel. (See /fork-clean & /strip-future-chars.)
+  function branchFromPastModal(future, intervention) {
+    const w = S.worldData.world;
+    const names = future.map(c => c.name).join(', ');
+    const m = document.createElement('div');
+    m.className = 'modal-bg';
+    m.innerHTML = `<div class="modal" style="width:min(560px,96vw)"><div class="modal-head violet">
+      <div><b>🌿 Branch from scene ${w.tick_index}</b><small>an alternative direction from here</small></div><span class="x">✕</span></div>
+    <div class="modal-body" style="padding:18px">
+      <p style="font-size:13px;line-height:1.5;margin:0 0 6px">You've rewound to <b>scene ${w.tick_index}</b>, before <b>${esc(names)}</b> ${future.length === 1 ? 'had' : 'had'} joined the story. Advancing here starts an <b>alternative branch</b>. How should ${future.length === 1 ? 'this character' : 'these characters'} be handled?</p>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">
+        <button class="btn btn-primary" id="bp-copy" style="text-align:left;padding:11px 14px;line-height:1.35">🌱 <b>Continue in a clean copy</b><div style="font-size:11.5px;font-weight:400;opacity:.85">Duplicate the world, keep only the story up to scene ${w.tick_index}, and remove ${future.length === 1 ? 'them' : 'them'}. Your original timeline stays untouched. <b>Recommended.</b></div></button>
+        <button class="btn btn-soft" id="bp-strip" style="text-align:left;padding:11px 14px;line-height:1.35">✂️ <b>Remove them & branch here</b><div style="font-size:11.5px;font-weight:400;opacity:.8">Delete ${esc(names)} from <i>this</i> world and branch. Their later scenes on other timelines are lost.</div></button>
+        <button class="btn btn-ghost" id="bp-keep" style="text-align:left;padding:11px 14px;line-height:1.35">▶ <b>Branch here, keep everyone</b><div style="font-size:11.5px;font-weight:400;opacity:.7">They stay in the cast but won't act until the story reaches their scene again.</div></button>
+      </div>
+    </div></div>`;
+    document.body.appendChild(m);
+    const close = () => m.remove();
+    m.onclick = (e) => { if (e.target === m) close(); };
+    $('.x', m).onclick = close;
+    $('#bp-copy', m).onclick = async (e) => {
+      const b = e.currentTarget; b.disabled = true; b.querySelector('b').textContent = '🌱 Copying…';
+      try {
+        const r = await api(`/api/worlds/${S.world}/fork-clean`, { method: 'POST', body: { tickIdx: w.tick_index } });
+        close(); toast('🌱 Clean copy created — exploring it now', 'gold');
+        S.world = r.worldId; S.worldData = null; nav(`#/stage?w=${r.worldId}`);
+      } catch (e2) { b.disabled = false; fail(e2); }
+    };
+    $('#bp-strip', m).onclick = async () => {
+      if (!confirm(`Delete ${names} from this world? Their scenes on other timelines will be lost. This cannot be undone.`)) return;
+      try {
+        const r = await api(`/api/worlds/${S.world}/strip-future-chars`, { method: 'POST', body: { tickIdx: w.tick_index } });
+        close(); toast(`Removed ${r.removed.join(', ')} — branching…`);
+        S.worldData = null; await loadWorld();
+        advanceTick(intervention, { force: true });
+      } catch (e2) { fail(e2); }
+    };
+    $('#bp-keep', m).onclick = () => { close(); advanceTick(intervention, { force: true }); };
+  }
+
+  async function advanceTick(intervention, opts = {}) {
+    // Branching from a PAST tick: if we're positioned before some character joined the story,
+    // advancing here spins off an alternative branch that should not contain them. Ask the
+    // player how to handle it (clean copy / strip them / keep everyone) before generating.
+    const _w = S.worldData?.world;
+    const _future = (S.worldData?.characters || []).filter(c => (c.intro_tick_idx || 0) > (_w?.tick_index ?? 0));
+    if (!opts.force && _future.length) { branchFromPastModal(_future, intervention); return; }
     $('#veil').innerHTML = `<div class="thinking-veil"><div class="pageturn"></div><div>the world is thinking…</div></div>`;
     $('#advance').disabled = true;
     let cinema = null;   // declared out here so the catch can release a stuck film on stream errors

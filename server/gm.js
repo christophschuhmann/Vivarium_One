@@ -531,7 +531,10 @@ async function runTickInner(user, world, { timeDelta = '+30m', intervention = nu
       script: pj(t.narration, []).map(n => `${n.speaker === 'narrator' ? '✦' : n.speaker}${n.mode === 'thought' ? '(thinks)' : ''}: ${n.text}`).join(' | '),
       end_states: pj(t.states, []).map(s => `${s.character_id}@${locNameOf(s.location_id)} ${s.activity || ''}`).join('; '),
     }));
-  let memChunks = db.prepare('SELECT level,start_idx,end_idx,text FROM memory_chunks WHERE world_id=? AND branch_id=? ORDER BY start_idx ASC').all(world.id, world.active_branch_id)
+  // end_idx <= head: a chunk summarising ticks BEYOND the current head is the abandoned
+  // future (after a rewind). Feeding it would let the LLM narratively reintroduce characters
+  // and events that don't exist on this branch yet. No-op at the tip (all chunks are past).
+  let memChunks = db.prepare('SELECT level,start_idx,end_idx,text FROM memory_chunks WHERE world_id=? AND branch_id=? AND end_idx <= ? ORDER BY start_idx ASC').all(world.id, world.active_branch_id, world.tick_index)
     .map(c => `[ticks ${c.start_idx}–${c.end_idx}${c.level > 1 ? ` · ×${c.level} condensed` : ''}] ${c.text}`);
   // keep the assembled context under budget: drop OLDEST chunks first (they're the most condensed anyway)
   const estT = (s) => Math.ceil(String(s).length / 4);

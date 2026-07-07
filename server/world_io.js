@@ -88,7 +88,8 @@ const remapId = (v, idMap) => (v == null ? v : (idMap.get(v) || v));
 
 // Restore a world from a manifest + a directory of unzipped asset binaries, owned by `user`.
 // Returns the new world id.
-export function importWorldManifest(user, manifest, unpackedAssetsDir) {
+export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}) {
+  const reuseAssets = !!opts.reuseAssets;   // same-server copy: keep original asset ids/files, don't duplicate binaries
   if (!manifest || manifest.format !== BUNDLE_FORMAT) {
     throw Object.assign(new Error('This file is not a Vivarium world bundle.'), { statusCode: 400, code: 'BAD_BUNDLE' });
   }
@@ -108,7 +109,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir) {
   freshen(manifest.ticks, 't');
   freshen(manifest.memory_chunks, 'mc');
   freshen(manifest.state_patches, 'sp');
-  freshen(manifest.assets, 'a');
+  if (!reuseAssets) freshen(manifest.assets, 'a');   // reuse → asset ids stay, references keep pointing at originals
 
   const newWorldId = idMap.get(manifest.world.id);
 
@@ -172,7 +173,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir) {
     value: remapJsonCol(p.value, idMap), reason: p.reason, created_at: p.created_at,
   }));
   // Asset rows: keep original filename EXTENSION, mint a new file named <newId>.<ext>.
-  const assetRows = (manifest.assets || []).map((a) => {
+  const assetRows = reuseAssets ? [] : (manifest.assets || []).map((a) => {
     const newId = idMap.get(a.id);
     const ext = (a.file && a.file.includes('.')) ? a.file.split('.').pop() : 'bin';
     return {

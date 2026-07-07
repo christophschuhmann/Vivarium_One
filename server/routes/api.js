@@ -675,6 +675,73 @@ export default async function apiRoutes(app) {
     return { ok: true, ...result };
   });
 
+  // ── Branching from a PAST tick where not-everyone-had-been-introduced-yet ────────────────
+  // Info the client needs to decide whether to prompt before advancing: are we positioned
+  // before some character joined (so an alternative branch here should not include them)?
+  app.get('/api/worlds/:id/branch-precheck', async (req) => {
+    const u = requireUser(req);
+    const w = ownWorld(u, req.params.id);
+    const atIdx = req.query.tickIdx != null ? Number(req.query.tickIdx) : w.tick_index;
+    const future = db.prepare('SELECT id,name,intro_tick_idx FROM characters WHERE world_id=? AND COALESCE(intro_tick_idx,0) > ? ORDER BY intro_tick_idx')
+      .all(w.id, atIdx).map(c => ({ id: c.id, name: c.name, intro_tick_idx: c.intro_tick_idx }));
+    return { atIdx, futureCharacters: future, hasForward: branches.hasForwardTicks(w.id, w.active_branch_id, atIdx) };
+  });
+
+  // Option A — strip the not-yet-introduced characters from THIS world (destructive to the
+  // abandoned futures where they lived), so the alternative branch starts without them.
+  app.post('/api/worlds/:id/strip-future-chars', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    const atIdx = req.body?.tickIdx != null ? Number(req.body.tickIdx) : w.tick_index;
+    const future = db.prepare('SELECT id,name FROM characters WHERE world_id=? AND COALESCE(intro_tick_idx,0) > ?').all(w.id, atIdx);
+    const ids = future.map(c => c.id);
+    const tx = db.transaction(() => {
+      for (const id of ids) {
+        db.prepare('DELETE FROM relationships WHERE world_id=? AND (from_id=? OR to_id=?)').run(w.id, id, id);
+        db.prepare('DELETE FROM paths WHERE world_id=? AND (from_id=? OR to_id=?)').run(w.id, id, id);
+        db.prepare('DELETE FROM characters WHERE id=? AND world_id=?').run(id, w.id);
+      }
+    });
+    tx();
+    return { ok: true, removed: future.map(c => c.name) };
+  });
+
+  // Option B — CLEAN COPY: duplicate the world, keep only the history up to `tickIdx` on the
+  // chosen lineage (flattened to one branch), drop every not-yet-introduced character, and
+  // leave the original completely untouched. The copy is a pristine timeline to explore from.
+  app.post('/api/worlds/:id/fork-clean', async (req) => {
+    const u = requireVerified(req);
+    const w = ownWorld(u, req.params.id);
+    branches.ensureRootBranch(w);
+    const targetBranch = req.body?.branchId || w.active_branch_id;
+    const targetIdx = req.body?.tickIdx != null ? Number(req.body.tickIdx) : w.tick_index;
+    if (!db.prepare('SELECT 1 FROM branches WHERE id=? AND world_id=?').get(targetBranch, w.id)) throw httpErr(404, 'NOT_FOUND', 'No such timeline.');
+
+    const keptTickIds = new Set(branches.visibleTicks(w.id, targetBranch, targetIdx).map(t => t.id));
+    const manifest = buildWorldManifest(w.id);
+    // characters that exist at this point
+    manifest.characters = (manifest.characters || []).filter(c => (c.intro_tick_idx || 0) <= targetIdx);
+    const keptChars = new Set(manifest.characters.map(c => c.id));
+    // flatten kept ticks onto ONE fresh root branch
+    manifest.ticks = (manifest.ticks || []).filter(t => keptTickIds.has(t.id)).map(t => ({ ...t, branch_id: targetBranch }));
+    manifest.branches = [{ id: targetBranch, world_id: w.id, parent_branch_id: null, fork_tick_idx: 0, label: `Branch from tick ${targetIdx}`, created_at: now() }];
+    manifest.relationships = (manifest.relationships || []).filter(r => keptChars.has(r.from_id) && keptChars.has(r.to_id));
+    manifest.paths = (manifest.paths || []);   // location links: harmless to keep
+    manifest.memory_chunks = (manifest.memory_chunks || []).filter(mc => mc.end_idx <= targetIdx).map(mc => ({ ...mc, branch_id: targetBranch }));
+    manifest.state_patches = (manifest.state_patches || []).filter(p => p.idx <= targetIdx);
+    // prune the genesis snapshot to kept characters so the copy has no ghost of future cast
+    let genesis = pj(manifest.world.genesis_state, null);
+    if (genesis) {
+      if (Array.isArray(genesis.characters)) genesis.characters = genesis.characters.filter(c => keptChars.has(c.id));
+      manifest.world = { ...manifest.world, genesis_state: JSON.stringify(genesis) };
+    }
+    manifest.world = { ...manifest.world, tick_index: targetIdx, active_branch_id: targetBranch, status: 'live',
+      title: `${manifest.world.title} · branch @${targetIdx}` };
+
+    const res = importWorldManifest(u, manifest, null, { reuseAssets: true });   // shares the original's asset files
+    return { ok: true, worldId: res.worldId, title: manifest.world.title };
+  });
+
   // ---------- voice ----------
   app.post('/api/asr', async (req) => {
     const u = requireVerified(req);
