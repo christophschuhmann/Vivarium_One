@@ -236,6 +236,15 @@ function attachMic(field, input) {
 
 // Settings → Microphone: pick which input device the 🎙 buttons use, and TEST it with a live
 // level meter so you can confirm it's actually hearing you before relying on it in a scene.
+// Wrap any mediaDevices promise so a wedged audio stack can never hang the UI — the device
+// list / tester always settle within `ms` and fall into a visible, retryable error state.
+function mediaTimeout(promise, ms, what) {
+  let timer;
+  return Promise.race([
+    promise.finally(() => clearTimeout(timer)),
+    new Promise((_, rej) => { timer = setTimeout(() => rej(Object.assign(new Error(`${what} timed out`), { name: 'TimeoutError' })), ms); }),
+  ]);
+}
 async function renderMicSettings(box) {
   if (!box) return;
   if (!window.isSecureContext || !navigator.mediaDevices?.enumerateDevices) {
@@ -244,34 +253,66 @@ async function renderMicSettings(box) {
       → Open the game via the <b>https:// tunnel link</b> and the mic (and this tester) will work.</div>`;
     return;
   }
+  box.innerHTML = `<span class="spinner dark"></span> <span style="color:var(--soft)">Looking for microphones…</span>`;
+  // Retryable failure state — the old code awaited enumerateDevices() with NO timeout, so a
+  // wedged audio stack left the settings stuck on "Loading…" forever.
+  const showError = (msg) => {
+    box.innerHTML = `<div style="background:#fdeeee;border:1px solid #f3c1c1;border-radius:10px;padding:10px 12px;color:#a33;line-height:1.5">
+      🎤 ${esc(msg)}<br><button class="btn btn-soft small" id="mic-retry" style="margin-top:7px">↻ Try again</button></div>`;
+    $('#mic-retry', box).onclick = () => renderMicSettings(box);
+  };
   const sel = ttsPrefs().micId;
   let devices = [];
-  try { devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput'); } catch {}
+  try {
+    devices = (await mediaTimeout(navigator.mediaDevices.enumerateDevices(), 6000, 'device list')).filter(d => d.kind === 'audioinput');
+  } catch (e) {
+    return showError(e?.name === 'TimeoutError'
+      ? 'The device list did not load — the browser\'s audio system seems stuck (this often means another app or a zombie tab is holding the microphone). Close whatever might be using it — or reload this page — and try again.'
+      : `Could not list audio devices (${e?.name || 'unknown error'}).`);
+  }
   const haveLabels = devices.some(d => d.label);
-  box.innerHTML = !haveLabels
-    ? `<button class="btn btn-soft small" id="mic-enable">🎤 Enable microphone access</button>
-       <p style="font-size:11px;color:var(--soft);margin:6px 0 0">Grant access once so your microphones can be listed by name.</p>`
-    : `<label style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Input device
-        <select id="mic-sel" style="border:1px solid var(--line);border-radius:9px;padding:5px 9px;background:#fff;min-width:220px">
-          <option value="">System default</option>
-          ${devices.map((d, i) => `<option value="${esc(d.deviceId)}" ${d.deviceId === sel ? 'selected' : ''}>${esc(d.label || ('Microphone ' + (i + 1)))}</option>`).join('')}
-        </select>
-        <button class="btn btn-soft small" id="mic-test">🎙 Test</button>
-      </label>
-      <div id="mic-meter" style="display:none;margin-top:10px;max-width:360px">
-        <div style="font-size:11px;color:var(--soft);margin-bottom:4px">Speak now — the bar should move:</div>
-        <div style="height:12px;background:#efecfb;border-radius:6px;overflow:hidden"><div id="mic-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#4ade80,#f59e0b);border-radius:6px"></div></div>
-        <div id="mic-teststatus" style="font-size:11px;color:var(--soft);margin-top:5px">&nbsp;</div>
-      </div>`;
   if (!haveLabels) {
+    box.innerHTML = `<button class="btn btn-soft small" id="mic-enable">🎤 Enable microphone access</button>
+       <p style="font-size:11px;color:var(--soft);margin:6px 0 0">Grant access once so your microphones can be listed by name.${devices.length ? '' : ' (No audio inputs visible yet — they appear after access is granted.)'}</p>`;
     $('#mic-enable', box).onclick = async () => {
-      try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach(t => t.stop()); renderMicSettings(box); }
-      catch (e) { micError(e); }
+      box.innerHTML = `<span class="spinner dark"></span> <span style="color:var(--soft)">Waiting for permission… check the browser prompt</span>`;
+      let s = null;
+      try {
+        s = await mediaTimeout(navigator.mediaDevices.getUserMedia({ audio: true }), 20000, 'microphone access');
+        // Enumerate WHILE the stream is live — Firefox only exposes device labels during an
+        // active capture (or with a remembered permission); enumerating after stop() can
+        // yield a blank list there, which looked like "no microphones".
+        await renderMicSettings(box);
+      } catch (e) {
+        if (e?.name === 'TimeoutError') showError('No answer from the permission prompt after 20 s. If no prompt appeared, the site may be blocked: click the 🔒/camera icon in the address bar and allow the microphone, then try again.');
+        else { micError(e); renderMicSettings(box); }
+      } finally { try { s?.getTracks().forEach(t => t.stop()); } catch {} }
     };
     return;
   }
+  // Stale saved device (unplugged, or Firefox rotated its per-session device IDs): warn and
+  // fall back to the system default instead of silently failing later in the recorder/tester.
+  const staleSaved = sel && !devices.some(d => d.deviceId === sel);
+  if (staleSaved) saveTtsPrefs({ micId: '' });
+  box.innerHTML = `${staleSaved ? '<p style="font-size:11px;color:#a86f0d;background:#fdf3e0;border:1px solid #f4d79a;border-radius:8px;padding:6px 9px;margin-bottom:8px">Your previously chosen microphone is no longer available — switched to the system default.</p>' : ''}
+    <label style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Input device
+      <select id="mic-sel" style="border:1px solid var(--line);border-radius:9px;padding:5px 9px;background:#fff;min-width:220px">
+        <option value="">System default</option>
+        ${devices.map((d, i) => `<option value="${esc(d.deviceId)}" ${d.deviceId === sel && !staleSaved ? 'selected' : ''}>${esc(d.label || ('Microphone ' + (i + 1)))}</option>`).join('')}
+      </select>
+      <button class="btn btn-soft small" id="mic-test">🎙 Test</button>
+      <button class="btn btn-ghost small" id="mic-refresh" title="Re-scan audio devices">↻</button>
+    </label>
+    <div id="mic-meter" style="display:none;margin-top:10px;max-width:360px">
+      <div style="font-size:11px;color:var(--soft);margin-bottom:4px">Speak now — the bar should move:</div>
+      <div style="height:12px;background:#efecfb;border-radius:6px;overflow:hidden"><div id="mic-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#4ade80,#f59e0b);border-radius:6px"></div></div>
+      <div id="mic-teststatus" style="font-size:11px;color:var(--soft);margin-top:5px">&nbsp;</div>
+    </div>`;
   $('#mic-sel', box).onchange = () => { saveTtsPrefs({ micId: $('#mic-sel', box).value }); toast('🎤 Microphone saved'); };
   $('#mic-test', box).onclick = () => testMic(box, $('#mic-sel', box).value);
+  $('#mic-refresh', box).onclick = () => renderMicSettings(box);
+  // live refresh when devices are (un)plugged — guarded so it only fires while this box is on screen
+  navigator.mediaDevices.ondevicechange = () => { if (document.contains(box)) renderMicSettings(box); else navigator.mediaDevices.ondevicechange = null; };
 }
 
 let MIC_TEST_RUNNING = false;   // one tester at a time — a second click during a run is ignored
@@ -286,11 +327,22 @@ async function testMic(box, deviceId) {
   try {
     // Never hang the tester on a wedged device — 12s cap, then a concrete error message.
     let timedOut = false;
-    stream = await Promise.race([
-      navigator.mediaDevices.getUserMedia({ audio: deviceId ? { deviceId: { exact: deviceId } } : true })
+    const open = (c) => Promise.race([
+      navigator.mediaDevices.getUserMedia({ audio: c })
         .then(s => { if (timedOut) { try { s.getTracks().forEach(t => t.stop()); } catch {} } return s; }),
       new Promise((_, rej) => setTimeout(() => { timedOut = true; rej(Object.assign(new Error('mic open timed out'), { name: 'TimeoutError' })); }, 12000)),
     ]);
+    try {
+      stream = await open(deviceId ? { deviceId: { exact: deviceId } } : true);
+    } catch (e) {
+      // Selected device gone/busy (or a stale id from an earlier browser session) → test the
+      // system default instead of failing, and say so.
+      if (deviceId && ['OverconstrainedError', 'NotFoundError', 'NotReadableError'].includes(e?.name)) {
+        status.textContent = 'Chosen mic unavailable — testing the system default instead…';
+        timedOut = false;
+        stream = await open(true);
+      } else throw e;
+    }
     status.textContent = 'Listening…';
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     // A context created outside a direct user gesture can start SUSPENDED — then the analyser
