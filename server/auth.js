@@ -65,12 +65,23 @@ export function login(email, password) {
   return u;
 }
 
+export const ADMIN_TTL_MS = 24 * 3600e3;   // 24h admin session — sliding (see touchAdminSession)
 export function createSession(userId, realm = 'player') {
   const id = uid('s_') + randomBytes(24).toString('base64url');
-  const ttl = realm === 'admin' ? 2 * 3600e3 : 7 * 24 * 3600e3;
+  const ttl = realm === 'admin' ? ADMIN_TTL_MS : 7 * 24 * 3600e3;
   db.prepare('INSERT INTO sessions(id,user_id,realm,expires_at,created_at) VALUES (?,?,?,?,?)')
     .run(id, userId, realm, new Date(Date.now() + ttl).toISOString(), now());
   return id;
+}
+// Sliding renewal: push a still-valid admin session's expiry back out to the full 24h on
+// every authenticated admin request, so continuous use never logs out. Returns false if the
+// session is missing/expired (nothing to renew). Idle sessions still lapse after 24h.
+export function touchAdminSession(token) {
+  if (!token) return false;
+  const s = db.prepare("SELECT id FROM sessions WHERE id=? AND realm='admin' AND expires_at>?").get(token, now());
+  if (!s) return false;
+  db.prepare('UPDATE sessions SET expires_at=? WHERE id=?').run(new Date(Date.now() + ADMIN_TTL_MS).toISOString(), token);
+  return true;
 }
 export function getSession(token, realm = 'player') {
   if (!token) return null;

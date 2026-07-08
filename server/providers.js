@@ -266,12 +266,24 @@ function pcmToMp3(pcm) {
 export async function asr(buffer, mime, filename = 'audio.webm') {
   const r = route('asr');
   if (MOCK) return { text: 'mock transcription of your voice note', seconds: 3, rawUsd: 0.0002, meter: { seconds: 3 }, provider: 'hyprlab', model: r.model };
+  // Defensive: strip any codecs parameter ('audio/webm;codecs=opus' → 'audio/webm') — Whisper
+  // returns an empty transcription when it's present.
+  const cleanMime = (mime || 'audio/webm').split(';')[0].trim() || 'audio/webm';
   const form = new FormData();
-  form.append('file', new Blob([buffer], { type: mime || 'audio/webm' }), filename);
+  form.append('file', new Blob([buffer], { type: cleanMime }), filename);
   form.append('model', r.model);
-  const resp = await fetch(`${r.base_url}/audio/transcriptions`, {
-    method: 'POST', headers: { Authorization: `Bearer ${key(r)}` }, body: form,
-  });
+  // Hard timeout so a stuck upstream request surfaces as a clean error instead of hanging.
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 45000);
+  let resp;
+  try {
+    resp = await fetch(`${r.base_url}/audio/transcriptions`, {
+      method: 'POST', headers: { Authorization: `Bearer ${key(r)}` }, body: form, signal: ctl.signal,
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('asr timed out after 45s');
+    throw e;
+  } finally { clearTimeout(timer); }
   if (!resp.ok) throw new Error(`asr ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
   const data = await resp.json();
   const seconds = data.usage?.seconds ?? Math.ceil(data.duration ?? 1);

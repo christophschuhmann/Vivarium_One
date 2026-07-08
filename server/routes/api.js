@@ -757,9 +757,18 @@ export default async function apiRoutes(app) {
     if (!file) throw httpErr(400, 'NO_AUDIO', 'No audio uploaded.');
     const buf = await file.toBuffer();
     if (buf.length > 8 * 1024 * 1024) throw httpErr(400, 'TOO_LARGE', 'Audio too large (max ~60s).');
-    const mime = file.mimetype || 'audio/webm';
-    const inputAsset = saveAsset({ userId: u.id, kind: 'asr_input', prompt: null, buffer: buf, mime: mime.includes('mp4') ? 'audio/mp4' : mime.includes('mpeg') ? 'audio/mpeg' : 'audio/webm' });
-    const res = await asr(buf, mime, file.filename || 'clip.webm');
+    // Browsers hand us 'audio/webm;codecs=opus' (or 'audio/mp4' on Safari). The HyprLab
+    // Whisper endpoint returns an EMPTY transcription when a codecs parameter is present, so
+    // normalise to a bare audio type — and send a matching filename extension.
+    const rawMime = file.mimetype || 'audio/webm';
+    const mime = rawMime.includes('mp4') ? 'audio/mp4'
+      : rawMime.includes('mpeg') || rawMime.includes('mp3') ? 'audio/mpeg'
+      : rawMime.includes('wav') ? 'audio/wav'
+      : rawMime.includes('ogg') ? 'audio/ogg'
+      : 'audio/webm';
+    const ext = { 'audio/mp4': 'mp4', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/ogg': 'ogg', 'audio/webm': 'webm' }[mime];
+    const inputAsset = saveAsset({ userId: u.id, kind: 'asr_input', prompt: null, buffer: buf, mime });
+    const res = await asr(buf, mime, `clip.${ext}`);
     debitCall(u.id, res, 'asr');
     logCall({ userId: u.id, kind: 'asr', surface: 'stage_mic', request: { inputAssetId: inputAsset.id, mime }, response: { text: res.text, seconds: res.seconds }, assetId: inputAsset.id, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.meter });
     return { text: res.text, seconds: res.seconds };

@@ -67,11 +67,16 @@ async function api(path, opts = {}) {
   if (!res.ok) { const e = new Error(data.error?.message || res.statusText); e.code = data.error?.code; throw e; }
   return data;
 }
-function toast(msg, cls = '') {
+// ms=0 → sticky toast (won't auto-dismiss). Always returns a dismiss fn so callers can
+// clear a progress toast ("Transcribing…") when the work finishes. Back-compatible: existing
+// two-arg calls keep the 3.4s auto-dismiss and simply ignore the return value.
+function toast(msg, cls = '', ms = 3400) {
   const t = document.createElement('div');
   t.className = 'toast ' + cls; t.textContent = msg;
   $('#toasts').appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; setTimeout(() => t.remove(), 400); }, 3400);
+  const dismiss = () => { if (t._gone) return; t._gone = true; t.style.opacity = '0'; t.style.transition = 'opacity .4s'; setTimeout(() => t.remove(), 400); };
+  const timer = ms > 0 ? setTimeout(dismiss, ms) : null;
+  return () => { if (timer) clearTimeout(timer); dismiss(); };
 }
 const fail = (e) => toast(e.message || 'Something went wrong', 'err');
 async function refreshMe() {
@@ -104,9 +109,9 @@ const OLD_NARRATOR_DEFAULTS = [
 const ttsPrefs = () => {
   const stored = JSON.parse(localStorage.getItem('viv_tts') || '{}');
   if (OLD_NARRATOR_DEFAULTS.includes(stored.narratorStyle)) delete stored.narratorStyle;
-  const p = { narrator: 'Iapetus', prepare: true, autoplay: true, innerVoice: true, musicOn: true, musicVol: 0.10, voiceVol: 1, voiceRate: 1.05, narratorStyle: DEFAULT_NARRATOR_STYLE, characterStyle: DEFAULT_CHARACTER_STYLE, custom: '', micId: '', ...stored };
+  const p = { narrator: 'Iapetus', prepare: true, autoplay: true, innerVoice: true, musicOn: true, musicVol: 0.10, voiceVol: 1, voiceRate: 1.15, narratorStyle: DEFAULT_NARRATOR_STYLE, characterStyle: DEFAULT_CHARACTER_STYLE, custom: '', micId: '', ...stored };
   if (stored.musicVol === 0.35 || stored.musicVol === 0.08) p.musicVol = 0.10;   // remap old defaults
-  if (stored.voiceRate === 1) p.voiceRate = 1.05;                                 // new default pace
+  if (stored.voiceRate === 1 || stored.voiceRate === 1.05) p.voiceRate = 1.15;    // new default pace (old persisted defaults follow it; a custom choice is untouched)
   return p;
 };
 // Time-skip settings (Account → Time skips). animate: large skips play as a scene-by-scene
@@ -138,38 +143,92 @@ function attachMic(field, input) {
   const btn = document.createElement('button');
   btn.className = 'micbtn'; btn.type = 'button'; btn.title = 'Speak instead of typing';
   btn.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4"/></svg>';
-  let rec = null, chunks = [], cancelBtn = null, cancelled = false;
+  // State machine: idle → starting (device opening) → recording → transcribing → idle.
+  // Every transition is guarded so double-clicks, slow device opens, unplugged mics and
+  // recorder errors can never leave the button stuck or two capture flows fighting.
+  let rec = null, chunks = [], cancelBtn = null, cancelled = false, starting = false, autoStop = null;
+  // Central teardown — safe from any state, any number of times. Everything that can fail
+  // routes through here so the mic can never stay half-open (which is what made the next
+  // click conflict with a zombie capture).
+  const cleanup = (stream) => {
+    if (autoStop) { clearTimeout(autoStop); autoStop = null; }
+    try { stream?.getTracks().forEach(t => t.stop()); } catch {}
+    btn.classList.remove('rec'); cancelBtn?.remove(); cancelBtn = null; rec = null;
+  };
   btn.onclick = async () => {
-    if (btn.classList.contains('busy')) return;
-    if (rec) { rec.stop(); return; }
+    if (starting || btn.classList.contains('busy')) return;      // open/transcribe in flight — ignore extra clicks
+    if (rec) { try { rec.stop(); } catch { cleanup(); } return; } // click #2 = stop & transcribe
+    starting = true; btn.classList.add('busy');                   // instant feedback while the device opens
+    let stream = null, clearOpening = null, timedOut = false;
+    // Opening the device can genuinely take seconds (permission prompt, sleeping USB mic, a
+    // wedged audio stack) — this is the silent "freeze" users hit. Tell them what's happening
+    // after 400 ms, and never wait beyond 12 s.
+    const slow = setTimeout(() => { clearOpening = toast('🎙 Opening the microphone… (if nothing happens, look for a browser permission prompt)', '', 0); }, 400);
+    const open = (constraint) => navigator.mediaDevices.getUserMedia({ audio: constraint })
+      .then(s => { if (timedOut) { try { s.getTracks().forEach(t => t.stop()); } catch {} } return s; }); // a too-late grant must not leave the mic captured
+    const withTimeout = (p) => Promise.race([p, new Promise((_, rej) =>
+      setTimeout(() => { timedOut = true; rej(Object.assign(new Error('mic open timed out'), { name: 'TimeoutError' })); }, 12000))]);
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('insecure'), { name: 'InsecureContext' });
       const micId = ttsPrefs().micId;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: micId ? { deviceId: { exact: micId } } : true });
+      try {
+        stream = await withTimeout(open(micId ? { deviceId: { exact: micId } } : true));
+      } catch (e) {
+        // The saved device may be unplugged or held by another app — fall back to the system
+        // default once before giving up, so a stale Settings pick doesn't brick the mic.
+        if (micId && ['OverconstrainedError', 'NotFoundError', 'NotReadableError'].includes(e?.name)) {
+          toast('🎤 Your saved microphone is unavailable — using the system default. (Settings → Microphone to re-pick.)');
+          timedOut = false;
+          stream = await withTimeout(open(true));
+        } else throw e;
+      }
       rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : undefined });
       chunks = []; cancelled = false;
+      rec.onerror = (ev) => {   // mid-recording device failure (unplugged, OS revoked, encoder died)
+        toast(`🎤 Recording failed${ev.error?.message ? ': ' + ev.error.message : ''} — nothing was lost but this take; try again.`, 'err');
+        cancelled = true;
+        try { rec?.stop(); } catch { cleanup(stream); }
+      };
       rec.ondataavailable = (e) => chunks.push(e.data);
       rec.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        btn.classList.remove('rec'); cancelBtn?.remove(); const localRec = rec; rec = null;
-        if (cancelled) return;
+        const localRec = rec;
+        cleanup(stream);
+        if (cancelled) { btn.classList.remove('busy'); return; }
         btn.classList.add('busy');
+        // Visible progress so the transcription round-trip never reads as a frozen mic.
+        const clearBusyToast = toast('🎧 Transcribing…', '', 0);
         try {
-          const blob = new Blob(chunks, { type: localRec.mimeType || 'audio/webm' });
+          const blob = new Blob(chunks, { type: localRec?.mimeType || 'audio/webm' });
           const fd = new FormData(); fd.append('file', blob, 'clip.webm');
           const { text } = await api('/api/asr', { method: 'POST', body: fd });
-          input.value = (input.value ? input.value + ' ' : '') + text;
-          input.dispatchEvent(new Event('input')); input.focus();
+          const clean = (text || '').trim();
+          if (!clean) { toast('🤔 Didn\'t catch that — speak a little closer and try again.', 'err'); }
+          else {
+            input.value = (input.value ? input.value + ' ' : '') + clean;
+            input.dispatchEvent(new Event('input')); input.focus();
+          }
           refreshMe();
-        } catch (e) { fail(e); } finally { btn.classList.remove('busy'); }
+        } catch (e) { fail(e); } finally { btn.classList.remove('busy'); clearBusyToast(); }
       };
-      rec.start(); btn.classList.add('rec'); btn.title = 'Click to stop & transcribe';
+      rec.start();
+      btn.classList.remove('busy'); btn.classList.add('rec'); btn.title = 'Click to stop & transcribe';
       cancelBtn = document.createElement('button');
       cancelBtn.className = 'cancelrec'; cancelBtn.type = 'button'; cancelBtn.textContent = '✕'; cancelBtn.title = 'Discard recording';
-      cancelBtn.onclick = () => { cancelled = true; rec?.stop(); };
+      cancelBtn.onclick = () => { cancelled = true; try { rec?.stop(); } catch { cleanup(stream); } };
       field.prepend(cancelBtn);
-      setTimeout(() => { if (rec) rec.stop(); }, 60000);
-    } catch (e) { micError(e); }
+      autoStop = setTimeout(() => { try { rec?.stop(); } catch { cleanup(stream); } }, 60000);  // cleared by cleanup() so it can never kill a LATER take
+    } catch (e) {
+      cleanup(stream);
+      btn.classList.remove('busy');
+      if (e?.name === 'TimeoutError')
+        toast('🎤 The microphone did not respond within 12 s — it may be held by another app (video call?) or the audio system is stuck. Free it up, or pick another device in Settings → Microphone, then try again.', 'err');
+      else if (e?.name === 'NotReadableError')
+        toast('🎤 The microphone is busy — another app or tab is using it. Close it there and try again.', 'err');
+      else micError(e);
+    } finally {
+      starting = false;
+      clearTimeout(slow); clearOpening?.();
+    }
   };
   field.appendChild(btn);
   return btn;
@@ -215,15 +274,28 @@ async function renderMicSettings(box) {
   $('#mic-test', box).onclick = () => testMic(box, $('#mic-sel', box).value);
 }
 
+let MIC_TEST_RUNNING = false;   // one tester at a time — a second click during a run is ignored
 async function testMic(box, deviceId) {
+  if (MIC_TEST_RUNNING) return;
+  MIC_TEST_RUNNING = true;
   const meter = $('#mic-meter', box), bar = $('#mic-bar', box), status = $('#mic-teststatus', box);
-  meter.style.display = 'block'; status.textContent = 'Listening…';
+  meter.style.display = 'block'; status.textContent = 'Opening microphone…';
   let stream, ctx, raf, peak = 0;
-  const stop = () => { cancelAnimationFrame(raf); try { stream?.getTracks().forEach(t => t.stop()); ctx?.close(); } catch {} bar.style.width = '0%';
+  const stop = () => { MIC_TEST_RUNNING = false; cancelAnimationFrame(raf); try { stream?.getTracks().forEach(t => t.stop()); ctx?.close(); } catch {} bar.style.width = '0%';
     status.textContent = peak > 8 ? `✅ Working — heard your voice (peak ${peak}%).` : '⚠️ No sound detected. Check the mic isn\'t muted, pick another device, and test again.'; };
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: deviceId ? { deviceId: { exact: deviceId } } : true });
+    // Never hang the tester on a wedged device — 12s cap, then a concrete error message.
+    let timedOut = false;
+    stream = await Promise.race([
+      navigator.mediaDevices.getUserMedia({ audio: deviceId ? { deviceId: { exact: deviceId } } : true })
+        .then(s => { if (timedOut) { try { s.getTracks().forEach(t => t.stop()); } catch {} } return s; }),
+      new Promise((_, rej) => setTimeout(() => { timedOut = true; rej(Object.assign(new Error('mic open timed out'), { name: 'TimeoutError' })); }, 12000)),
+    ]);
+    status.textContent = 'Listening…';
     ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // A context created outside a direct user gesture can start SUSPENDED — then the analyser
+    // only ever sees silence and the tester wrongly reports "no sound". Resume it first.
+    if (ctx.state === 'suspended') { try { await ctx.resume(); } catch {} }
     const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(stream).connect(an);
     const buf = new Uint8Array(an.fftSize); const t0 = Date.now();
     const loop = () => {
@@ -233,7 +305,13 @@ async function testMic(box, deviceId) {
       if (Date.now() - t0 < 5000) raf = requestAnimationFrame(loop); else stop();
     };
     loop();
-  } catch (e) { meter.style.display = 'none'; micError(e); }
+  } catch (e) {
+    MIC_TEST_RUNNING = false;
+    meter.style.display = 'none';
+    if (e?.name === 'TimeoutError') toast('🎤 The microphone did not respond within 12 s — it may be held by another app, or the audio system is stuck. Free it, or pick another device, then test again.', 'err');
+    else if (e?.name === 'NotReadableError') toast('🎤 The microphone is busy — another app or tab is using it. Close it there and test again.', 'err');
+    else micError(e);
+  }
 }
 
 /* ───────── chrome ───────── */
@@ -2279,7 +2357,7 @@ function renderNarration(lines, characters) {
 const music = { audio: null, url: null, meta: null, fade: null };
 function musicPrefs() { const p = ttsPrefs(); return { on: p.musicOn !== false, vol: Math.max(0, Math.min(1, p.musicVol ?? 0.10)) }; }
 // voice playback preferences: separate volume + a pitch-preserving speed (50-150%)
-function voicePrefs() { const p = ttsPrefs(); return { vol: Math.max(0, Math.min(1, p.voiceVol ?? 1)), rate: Math.max(0.5, Math.min(1.5, p.voiceRate ?? 1)) }; }
+function voicePrefs() { const p = ttsPrefs(); return { vol: Math.max(0, Math.min(1, p.voiceVol ?? 1)), rate: Math.max(0.5, Math.min(1.5, p.voiceRate ?? 1.15)) }; }
 function musicFade(a, to, ms, done) {
   // PER-ELEMENT fade timer. A single global handle raced: the outgoing track's async
   // fade-in (play().then) cleared the crossfade interval of the INCOMING switch, so the
@@ -2556,7 +2634,7 @@ function stopNarration() {
 }
 function setupNarrationPlayer(sceneLines, characters) {
   const lines = (sceneLines || []).filter(n => n.text);
-  player.lines = lines; player.chars = characters; player.cache = []; player.idx = 0;
+  player.lines = lines; player.chars = characters; player.cache = []; player.idx = 0; player.manual = false;
   const playBtn = $('#tts-play'), pauseBtn = $('#tts-pause');
   if (!playBtn) return;
   if (!lines.length) { playBtn.disabled = true; return; }
@@ -2618,6 +2696,16 @@ function setupNarrationPlayer(sceneLines, characters) {
         if (ch) voiceRefModal(ch.id);
         return;
       }
+      // Cinema/replay: a failed voiceover must NOT yank the scene forward. Leave the text on
+      // screen, drop out of the playing state, and let the player read it and press ⏭ Next.
+      if (player.manual) {
+        player.active = false;
+        const pb = $('#tts-play'); if (pb) { pb.textContent = '▶'; pb.classList.remove('on'); }
+        const pp = $('#tts-pause'); if (pp) pp.style.display = 'none';
+        toast('🔇 voice unavailable for this scene — read it, then press ⏭ Next', 'err');
+        cineWaitHint(true);
+        return;                                    // hold the scene; advance only on ⏭ Next / ⏹
+      }
       fail(e); stopNarration();
     }
   }
@@ -2671,8 +2759,14 @@ async function playCinema(cinema) {
   const hud = document.createElement('div');
   hud.id = 'cine-hud';
   hud.innerHTML = `<span class="glasschip" id="cine-count" style="color:#efeaff;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">🎬 scene 1</span>
-    <button class="glasschip" id="cine-exit" title="End the film and jump to the outcome" style="color:#ffd9e6;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">⏭ skip all</button>`;
+    <span class="glasschip" id="cine-hint" style="display:none;color:#fff3c4;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">read at your own pace →</span>
+    <button class="glasschip" id="cine-next" title="Go to the next scene" style="color:#d7f7ff;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">⏭ next scene</button>
+    <button class="glasschip" id="cine-exit" title="End the film and jump to the outcome" style="color:#ffd9e6;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">⏹ skip all</button>`;
   $('#stage-root')?.appendChild(hud);
+  // ⏭ Next scene — advance this scene now. stopNarration() stops any audio and fires
+  // player.onIdle, which is the promise playSceneNarration() awaits, so it works whether
+  // TTS is playing, off, or has failed.
+  $('#cine-next', hud).onclick = () => { stopNarration(); };
   $('#cine-exit', hud).onclick = () => { cinema.cancelled = true; stopNarration(); };
 
   let prevLocId = null;
@@ -2736,8 +2830,11 @@ async function playReplay(branchId, startIdx, endIdx = null) {
   const hud = document.createElement('div');
   hud.id = 'cine-hud';
   hud.innerHTML = `<span class="glasschip" id="rep-pos" style="color:#efeaff;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">⏪ replay</span>
+    <span class="glasschip" id="cine-hint" style="display:none;color:#fff3c4;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">read at your own pace →</span>
+    <button class="glasschip" id="cine-next" title="Go to the next scene" style="color:#d7f7ff;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">⏭ next scene</button>
     <button class="glasschip" id="rep-exit" style="color:#ffd9e6;background:rgba(34,31,69,.65);border-color:rgba(255,255,255,.18)">✕ back to now</button>`;
   $('#stage-root')?.appendChild(hud);
+  $('#cine-next', hud).onclick = () => { stopNarration(); };
   $('#rep-exit', hud).onclick = () => { rep.cancelled = true; stopNarration(); };
 
   let prevLoc = null;
@@ -3229,16 +3326,36 @@ function renderCineScene(tick, data) {
 // Autoplay one scene's narration and resolve when it ends (or is stopped/skipped).
 // The narration player's pipelined prefetch (line n plays while n+1/n+2 generate)
 // applies here exactly as in normal play.
+// Show/hide the "read at your own pace" cue on the film HUD and make the ⏭ Next-scene
+// button pulse. Shown whenever a scene has no voiceover to pace it (TTS off, or TTS failed)
+// so the player is never rushed off the scene before reading it.
+function cineWaitHint(on) {
+  const hint = document.getElementById('cine-hint');
+  const next = document.getElementById('cine-next');
+  if (hint) hint.style.display = on ? '' : 'none';
+  if (next) next.classList.toggle('waiting', !!on);
+}
 function playSceneNarration(tick, data) {
   return new Promise((resolve) => {
     const lines = localizeNarr(tick.narration).filter(n => n.text);
     if (!lines.length) return setTimeout(resolve, 1600);
     stopNarration();
     setupNarrationPlayer(lines, data.characters);
-    player.onIdle = resolve;                       // fires from stopNarration (natural end, ⏹, or error)
+    player.manual = true;                          // cinema/replay: a TTS-off or TTS-fail scene
+                                                   // waits for ⏭ Next instead of self-advancing
+    player.onIdle = resolve;                        // fires from stopNarration (audio end, ⏭ Next, ⏹, or error)
     const playBtn = $('#tts-play');
-    if (playBtn && !playBtn.disabled) playBtn.click();
-    else setTimeout(resolve, Math.min(20000, lines.length * 2500));  // no audio possible → read-along timing
+    // "Read each new moment aloud automatically" (Account → Voice) is the read-aloud switch.
+    // Off → treat the scene as silent: the player reads it and presses ⏭ Next themselves.
+    const readAloud = ttsPrefs().autoplay !== false;
+    if (readAloud && playBtn && !playBtn.disabled) {
+      cineWaitHint(false);
+      playBtn.click();                             // TTS on: audio paces the scene & auto-advances at its end
+    } else {
+      // No voiceover (TTS deactivated in Settings, or nothing to speak): do NOT auto-advance
+      // on a timer — the player reads the whole scene and presses ⏭ Next (or ⏹ Skip all).
+      cineWaitHint(true);
+    }
   });
 }
 // Thought suffix — BYTE-IDENTICAL to server/export_cues.js THOUGHT_SUFFIX (shared cache!)
@@ -3892,8 +4009,8 @@ async function accountModal() {
           <input type="range" id="tp-voicevol" min="0" max="100" step="1" value="${Math.round((ttsPrefs().voiceVol ?? 1) * 100)}">
           <b id="tp-voicevol-n" style="font-size:11.5px">${Math.round((ttsPrefs().voiceVol ?? 1) * 100)}%</b>
           <span style="font-size:11.5px;color:var(--soft)">⏩ voice speed</span>
-          <input type="range" id="tp-voicerate" min="50" max="150" step="1" value="${Math.round((ttsPrefs().voiceRate ?? 1.05) * 100)}">
-          <b id="tp-voicerate-n" style="font-size:11.5px">${Math.round((ttsPrefs().voiceRate ?? 1.05) * 100)}%</b>
+          <input type="range" id="tp-voicerate" min="50" max="150" step="1" value="${Math.round((ttsPrefs().voiceRate ?? 1.15) * 100)}">
+          <b id="tp-voicerate-n" style="font-size:11.5px">${Math.round((ttsPrefs().voiceRate ?? 1.15) * 100)}%</b>
           <span style="font-size:11.5px;color:var(--soft)">🎵 music volume</span>
           <input type="range" id="tp-musicvol" min="0" max="100" step="1" value="${Math.round((ttsPrefs().musicVol ?? 0.10) * 100)}">
           <b id="tp-musicvol-n" style="font-size:11.5px">${Math.round((ttsPrefs().musicVol ?? 0.10) * 100)}%</b>

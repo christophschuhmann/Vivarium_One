@@ -392,6 +392,9 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 #cine-hud{position:absolute;top:64px;right:14px;z-index:66;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 @media(max-width:760px){#cine-hud{top:96px;right:8px}}   /* below the compact topbar — the stage-hud must never swallow ✕ */
 #cine-hud .glasschip{cursor:pointer}
+/* ⏭ Next-scene button pulses when a scene is waiting on the reader (TTS off/failed) */
+#cine-next.waiting{animation:cineNextPulse 1.25s ease-in-out infinite;border-color:rgba(215,247,255,.7)!important}
+@keyframes cineNextPulse{0%,100%{box-shadow:0 0 0 0 rgba(120,220,255,.0)}50%{box-shadow:0 0 0 5px rgba(120,220,255,.28)}}
 
 /* ── collapsible stage bottom panels (all screen sizes) ──
    The 📖 handle hides the controls + storybook so the scene art can be admired

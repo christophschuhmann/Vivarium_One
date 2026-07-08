@@ -59,7 +59,75 @@ export const GM_CORE_DEFAULT = `NARRATIVE CRAFT (always):
 • Every time step must MOVE THE STORY: pursue an open plot thread, make tangible progress toward someone's goal, deepen or strain a relationship, or introduce a fresh complication. Avoid emotionally flat small talk — each scene needs at least one of: real conflict (internal or external), meaningful progress, or a new twist that is surprising yet plausible.
 • Aim for scenes that are emotionally interesting, a little unpredictable, creative — the way a great TV episode never wastes a scene.
 - The story should be very emotional and emotionally intelligent at the same time, never just black and white, always complicated shades of grey. Sweet things are sweeter than in reality, dark things are darker than in reality, scary things are scarier than in reality, and hopeful things are even more hopeful and promising than in reality.Adult contents are welcomed, but not necessary. If they occur, they occur, and then it's fine to narrate them in details. They might become organically an important part of the story, but they don't have to. The overall age rating of the storiy is for adults.
-- Do NOT HESITATE to INTRODUCE new charcaters, new locations and new outfits, whenever this would SUPPORT the STORY and the PLAYERS PREFERENCES and his VIVID IMMERSION.`;
+- Do NOT HESITATE to INTRODUCE new charcaters, new locations and new outfits, whenever this would SUPPORT the STORY and the PLAYERS PREFERENCES and his VIVID IMMERSION.
+
+STORY WRITING GUIDELINES:
+CHEAT SHEET FOR WRITING DAMN
+
+GOOD NOVELS
+
+Based on James N. Frey's "How to Write a Damn Good Novel"
+
+A "damn good novel" is fundamentally intense, and to achieve intensity, it must be robustly dramatic. The dramatic novel
+functions as an ecosystem centered entirely on a single protagonist facing a deep dilemma that rapidly escalates into a
+crisis, structures through intense complications, peaks at a major climax, and achieves complete resolution. This cheat
+sheet condenses the essential rules, operational frameworks, and actionable mechanics required to execute a high-impact
+dramatic novel.
+
+1. CHARACTER CONCEPTION: "HOMO FICTUS" VS. "HOMO
+SAPIENS"
+A novel fails completely if its characters do not sizzle in the reader's imagination. You must understand that fictional
+characters are an entirely separate species from real-life humans:
+Homo Sapiens: Real people are inherently fickle, contrary, and often change their feelings pointlessly from moment
+to moment. They live largely mundane lives.
+Homo Fictus: Fictional characters are concentrated and heightened. They possess hotter passions, colder anger,
+deeper vulnerabilities, and sharper focus. Even a character who is dull or ordinary must be extraordinarily, strikingly
+dull to fascinate a reader. Homo Fictus is always complex but ultimately fathomable; if they become completely
+random or unfathomable, the reader will close the book.
+The Walk-On vs. The Fully-Rounded Character
+Characters are divided into strict tactical tiers based on their narrative purpose:
+Walk-On Characters: Peripheral figures (waiters, doormen, clerks) who occupy a single explicit trait (e.g., greedy,
+horny, servile). They provide brief texture, state a line or two, and immediately exit. Do not over-complicate them.
+Fully-Rounded Characters: The core drivers of your plot. They require a rigorous, three-dimensional architectural
+design before you type a single page of text.
+Hands-on Tip: Test your character concepts using the Maximum Capacity Rule. Ask yourself: "Would this character
+really act this way under peak pressure?" If their actions feel unmotivated or out of character, you have failed to define
+their core architecture.
+•
+
+•
+
+•
+
+•
+
+Page 1
+
+2. BUILDING CHARACTERS FROM THE GROUND UP
+To know your characters intimately, you must construct them across Lajos Egri’s three fundamental dimensions. These
+dimensions form an unbreakable chain of cause and effect:
+
+Dimension Core Elements & Architectural Questions
+1. Physiological Age, sex, height, weight, physical posture, medical history, defining flaws, or
+exceptional features. How does their physical body shape their self-worth and
+dictate how they interact with the physical world?
+
+2. Sociological Class background, parental upbringing, economic status, education, religious
+beliefs, home city/environment, and occupational choice. What societal rules or
+family climates forged their worldview?
+
+3. Psychological The direct product of the physiological and sociological dimensions. Includes
+phobias, manias, core inhibitions, guilt patterns, hidden longings, and complex
+neuroses.
+The Character Biography Workflow
+Never rely on abstract inspiration. Write an explicit, narrative character biography for every major player before
+launching into your first draft. This document is strictly for your eyes only and should be written in the first person ("I")
+to directly capture the character's unique voice, past trauma, and psychological defense mechanisms.
+The Core Driver: The Ruling Passion
+At the center of every memorable character is a singular, burning Ruling Passion. This passion acts as an unyielding
+psychological force that dictates their behaviors, errors, and choices throughout the novel. Even if a character operates
+with a complexity of secondary motives, those motives must ultimately converge into their primary obsession (e.g.,
+Captain Ahab's monomaniacal drive to destroy Moby Dick; Scrooge's desperate, defensive miserliness).`;
 // Default per-world direction — seeded into new worlds' `directives` (player-editable in
 // the 🎬 Direction modal on the World screen; it rides in every tick's world bible).
 export const DEFAULT_WORLD_DIRECTIVES = `WORLD DIRECTION:
@@ -315,6 +383,22 @@ export async function searchMusic({ query, genre, emotion }) {
   avail.sort((a, b) => (b.aesthetics ?? 0) - (a.aesthetics ?? 0));
   const candidates = avail.slice(0, 6);               // winner + 5 alternatives
   return { ...candidates[0], query, genre: g, emotion: emotion || '', candidates };
+}
+// Map a free-text world genre (player-typed: 'slice-of-life', 'Fantasy', 'mystery', …) onto
+// the closest laion-tunes RPG genre key, for the automatic starter-track search below.
+export function worldGenreToMusicGenre(genre = '') {
+  const g = String(genre).toLowerCase();
+  const pairs = [
+    [/cyber|neon|hacker/, 'cyberpunk'], [/space|sci[- ]?fi|scifi|star/, 'space_opera'],
+    [/post[- ]?apoc|wasteland|zombie/, 'post_apocalyptic'], [/superhero|comic/, 'superhero'],
+    [/horror|gothic|vampire/, 'gothic_horror'], [/lovecraft|cosmic/, 'cosmic_horror'],
+    [/dark fantasy|grimdark/, 'dark_fantasy'], [/fantasy|magic|dragon|knight|grimoire|medieval|kingdom/, 'high_fantasy'],
+    [/myth|ancient|greek|rome|egypt/, 'mythic_ancient'], [/pirate|renaissance/, 'renaissance_pirate'],
+    [/west|cowboy|frontier/, 'wild_west'], [/supernatural|ghost|witch/, 'modern_supernatural'],
+    [/history|victorian|steampunk/, 'alt_history'],
+  ];
+  for (const [re, key] of pairs) if (re.test(g)) return key;
+  return 'modern_realistic';   // slice-of-life, drama, mystery, romance, techno-drama, …
 }
 
 // ---------- Opening sequence ("cold open") ----------
@@ -817,6 +901,17 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
     const locMusic = pj(db.prepare('SELECT music FROM locations WHERE id=?').get(sceneLoc)?.music, null);
     const cur = pj(world.current_music, null);
     if (locMusic && locMusic.url !== cur?.url) music = locMusic;
+  }
+  if (!music && !pj(world.current_music, null)) {
+    // NOTHING is playing at all (fresh world, or the GM never asked): pick a starter track
+    // deterministically from the scene so every story has a score from its first advance.
+    // Non-fatal like every music path — no music server → the story simply plays silent.
+    try {
+      const locName = sceneLoc ? (db.prepare('SELECT name FROM locations WHERE id=?').get(sceneLoc)?.name || '') : '';
+      const q = [locName, out.summary || 'a quiet scene beginning'].filter(Boolean).join(' — ');
+      music = await searchMusic({ query: q.slice(0, 200), genre: worldGenreToMusicGenre(world.genre), emotion: (out.mood_tag || world.mood || 'calm').slice(0, 60) });
+      if (music) console.log(`[music] auto starter track for ${world.id}: "${music.title}"`);
+    } catch (e) { console.error('[music] starter-track search failed:', e.message); }
   }
   if (music) {
     db.prepare('UPDATE worlds SET current_music=? WHERE id=?').run(j(music), world.id);

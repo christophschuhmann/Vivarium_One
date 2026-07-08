@@ -41,11 +41,23 @@ function audit(adminId, action, target, payload = {}) {
     .run(uid('au_'), adminId, action, target, j(payload), now());
 }
 
+const ADMIN_COOKIE_MAXAGE = Math.floor(auth.ADMIN_TTL_MS / 1000);   // seconds — matches the DB session TTL
+const adminCookieOpts = { path: '/', httpOnly: true, sameSite: 'lax', maxAge: ADMIN_COOKIE_MAXAGE };
+
 export default async function adminRoutes(app) {
+  // Sliding session renewal: on every authenticated admin request, push the session's expiry
+  // and re-issue the cookie with a fresh 24h max-age. An admin actively using the console
+  // therefore stays logged in indefinitely; only a genuinely idle session lapses (after 24h).
+  app.addHook('onRequest', async (req, reply) => {
+    const url = req.url.split('?')[0];
+    if (!url.startsWith('/admin/api/') || url === '/admin/api/login' || url === '/admin/api/logout') return;
+    const tok = req.cookies?.asession;
+    if (tok && auth.touchAdminSession(tok)) reply.setCookie('asession', tok, adminCookieOpts);
+  });
   app.post('/admin/api/login', async (req, reply) => {
     const u = auth.login(req.body?.email, req.body?.password);
     if (u.role !== 'admin') throw httpErr(403, 'NOT_ADMIN', 'This account has no admin access.');
-    reply.setCookie('asession', auth.createSession(u.id, 'admin'), { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 2 * 3600 });
+    reply.setCookie('asession', auth.createSession(u.id, 'admin'), adminCookieOpts);
     audit(u.id, 'login', u.email);
     return { ok: true, admin: { email: u.email, displayName: u.display_name } };
   });
@@ -273,12 +285,12 @@ export default async function adminRoutes(app) {
     const a = requireAdmin(req);
     const gm = await import('../gm.js');
     if (req.body?.gmCore !== undefined) {
-      const text = String(req.body.gmCore ?? '').slice(0, 4000);
+      const text = String(req.body.gmCore ?? '').slice(0, 20000);
       setSetting('gm_core_directives', text);   // empty string → falls back to default
       audit(a.id, 'update_gm_core', 'prompts', { length: text.length });
     }
     if (req.body?.teenSafety !== undefined) {
-      const text = String(req.body.teenSafety ?? '').slice(0, 4000);
+      const text = String(req.body.teenSafety ?? '').slice(0, 20000);
       setSetting('teen_safety_prompt', text);   // empty string → falls back to default
       audit(a.id, 'update_teen_safety', 'prompts', { length: text.length });
     }
