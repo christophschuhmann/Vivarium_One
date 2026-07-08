@@ -49,7 +49,7 @@ const httpErr = (statusCode, code, message) => Object.assign(new Error(message),
 // The candidate set is built from the speaker's CURRENT voice, so deliberately
 // recasting a character still regenerates (candidates change with the voice),
 // while provider flips and style-template evolution reuse the stored audio.
-export function findReusableAudio({ text, voice, characterId = null }) {
+export function findReusableAudio({ text, voice, characterId = null, preferUserId = null }) {
   const cands = [];
   let vname = voice;
   if (characterId) {
@@ -70,6 +70,7 @@ export function findReusableAudio({ text, voice, characterId = null }) {
     conds.push(cd.endsWith('%') ? `json_extract(meta,'$.voice') LIKE ?` : `json_extract(meta,'$.voice')=?`);
     args.push(cd);
   }
+  if (preferUserId) return db.prepare(`SELECT * FROM assets WHERE kind='audio' AND json_extract(meta,'$.text')=? AND (${conds.join(' OR ')}) ORDER BY (user_id=?) DESC, created_at DESC LIMIT 1`).get(...args, preferUserId) || null;
   return db.prepare(`SELECT * FROM assets WHERE kind='audio' AND json_extract(meta,'$.text')=? AND (${conds.join(' OR ')}) ORDER BY created_at DESC LIMIT 1`).get(...args) || null;
 }
 
@@ -105,19 +106,30 @@ export async function synthesizeLine(user, { text, voice = 'Sulafat', style = ''
   // a sliced key, making ALL same-style narrator lines share one cached clip across worlds
   // (the "wrong world's audio plays" bug). SQLite TEXT is unbounded; exact match is cheap.
   const cacheKey = `${cacheVoice}|${style}|${text}`;
+  // A cache hit owned by ANOTHER user cannot be returned as-is: /api/assets/:id enforces
+  // per-user ownership, so the requester would get a permanent 404 on exactly that line
+  // (the "one broken line" bug — identical story copies across accounts share the global
+  // text+voice+style cache). Mint the requester their own asset row + file copy instead:
+  // still no regeneration cost, and ownership stays strict.
+  const ownCopy = (src) => {
+    if (src.user_id === user.id) return { assetId: src.id };
+    const dup = saveAsset({ userId: user.id, kind: 'audio', prompt: src.prompt, buffer: fs.readFileSync(assetPath(src)), mime: src.mime, meta: pj(src.meta, {}) });
+    console.log(`[tts] cross-user cache hit ${src.id} → copied as ${dup.id} for ${user.id}`);
+    return { assetId: dup.id };
+  };
   // SELF-HEAL: a cache row whose FILE is gone from disk (partial restore, crashed write,
   // manual cleanup) must fall through to regeneration — otherwise the dangling row keeps
   // winning the lookup forever and that line plays as silence/404 on every replay.
-  const cached = findCached('audio', cacheKey);
+  const cached = findCached('audio', cacheKey, user.id);
   if (cached) {
-    if (fs.existsSync(assetPath(cached))) return { assetId: cached.id, cached: true, genMs: 0, seconds: pj(cached.meta, {}).seconds || null };
+    if (fs.existsSync(assetPath(cached))) return { ...ownCopy(cached), cached: true, genMs: 0, seconds: pj(cached.meta, {}).seconds || null };
     console.warn(`[tts] cached audio ${cached.id} has no file on disk — regenerating "${String(text).slice(0, 60)}"`);
   }
 
   // exact miss → reuse a clip of the same line by the same speaker from another
   // engine/style era before paying for regeneration (see findReusableAudio)
-  const reusable = findReusableAudio({ text, voice, characterId });
-  if (reusable && fs.existsSync(assetPath(reusable))) return { assetId: reusable.id, cached: true, reused: true, genMs: 0, seconds: pj(reusable.meta, {}).seconds || null };
+  const reusable = findReusableAudio({ text, voice, characterId, preferUserId: user.id });
+  if (reusable && fs.existsSync(assetPath(reusable))) return { ...ownCopy(reusable), cached: true, reused: true, genMs: 0, seconds: pj(reusable.meta, {}).seconds || null };
 
   preflight(user.id, EST.tts());
   const t0 = Date.now();

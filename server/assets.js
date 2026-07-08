@@ -27,8 +27,11 @@ export function importAssetFile({ userId, worldId = null, kind, ownerRef = null,
 export function getAsset(id) { return db.prepare('SELECT * FROM assets WHERE id=?').get(id); }
 export function assetPath(asset) { return path.join(ASSET_DIR, asset.file); }
 
-export function findCached(kind, prompt) {
-  const hash = createHash('sha256').update(kind).update(prompt || '').digest('hex').slice(0, 24);
+export function findCached(kind, prompt, preferUserId = null) {
+  // preferUserId: /api/assets/:id enforces per-user ownership, so when several users hold a
+  // copy of the same cached clip, hand back the REQUESTER's own row first (tts_service
+  // copies a cross-user hit exactly once — without this preference the copies ping-pong).
+  if (preferUserId) return db.prepare('SELECT * FROM assets WHERE kind=? AND prompt=? ORDER BY (user_id=?) DESC, created_at DESC').get(kind, prompt || '', preferUserId);
   return db.prepare('SELECT * FROM assets WHERE kind=? AND prompt=? ORDER BY created_at DESC').get(kind, prompt || '');
 }
 
