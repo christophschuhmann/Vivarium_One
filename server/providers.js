@@ -149,21 +149,45 @@ async function ttsGemini(text, { voice = 'Sulafat', style = '' } = {}) {
   const r = route('tts');
   if (MOCK) return mockTts();
   const prompt = `${NATURAL_DIRECTION}${style ? ' ' + style + '.' : ''} Say: ${text}`;
-  const resp = await fetch(`${r.base_url}/models/${r.model}:generateContent?key=${key(r)}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      // temperature slightly below the 1.0 default for a steadier delivery. Route-param
-      // tunable. (Note: the 2026-07-02 sweep showed LARGE reductions hurt — 0.3/0.6 scored
-      // worse than 1.0 for narrator reliability — so keep any adjustment gentle.)
-      generationConfig: { responseModalities: ['audio'], temperature: r.params.temperature ?? 0.9,
-        speech_config: { voice_config: { prebuilt_voice_config: { voice_name: voice } } } },
-    }),
+  const body = JSON.stringify({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    // temperature slightly below the 1.0 default for a steadier delivery. Route-param
+    // tunable. (Note: the 2026-07-02 sweep showed LARGE reductions hurt — 0.3/0.6 scored
+    // worse than 1.0 for narrator reliability — so keep any adjustment gentle.)
+    generationConfig: { responseModalities: ['audio'], temperature: r.params.temperature ?? 0.9,
+      speech_config: { voice_config: { prebuilt_voice_config: { voice_name: voice } } } },
+    // Stories are adult-rated (teen accounts are constrained at the STORY level, so no
+    // explicit text reaches TTS for them) — don't let the voice model's default filters
+    // intermittently swallow a legitimate dark line as an empty response.
+    safetySettings: ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'HARM_CATEGORY_DANGEROUS_CONTENT']
+      .map(category => ({ category, threshold: 'BLOCK_NONE' })),
   });
-  if (!resp.ok) throw new Error(`tts ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
-  const data = await resp.json();
-  const part = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-  if (!part) throw new Error('tts: no audio in response');
+  // Gemini TTS intermittently (~1% observed) answers 200 with NO audio part, and
+  // occasionally 429/5xx under load. Both are transient — retry before failing the line.
+  let data = null, lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) await new Promise(res => setTimeout(res, attempt * 800));
+    const resp = await fetch(`${r.base_url}/models/${r.model}:generateContent?key=${key(r)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+    });
+    if (!resp.ok) {
+      lastErr = new Error(`tts ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
+      if (resp.status === 429 || resp.status >= 500) { console.warn(`[tts] attempt ${attempt + 1}: ${resp.status} — retrying`); continue; }
+      throw lastErr;                                  // real 4xx (bad key, bad voice) — retrying won't help
+    }
+    const d = await resp.json();
+    if (d.candidates?.[0]?.content?.parts?.find(p => p.inlineData)) { data = d; break; }
+    // no audio: log WHY (finishReason / safety / an unexpected text part) so the pattern
+    // behind these empties is visible in the server log, then retry
+    const cand = d.candidates?.[0];
+    console.warn(`[tts] attempt ${attempt + 1}: no audio in response — finishReason=${cand?.finishReason || '?'}` +
+      `${d.promptFeedback ? ' promptFeedback=' + JSON.stringify(d.promptFeedback).slice(0, 120) : ''}` +
+      `${cand?.content?.parts?.find(p => p.text) ? ' textPart="' + cand.content.parts.find(p => p.text).text.slice(0, 80) + '"' : ''}` +
+      ` — "${String(text).slice(0, 50)}"`);
+    lastErr = new Error(`tts: no audio in response (finishReason=${cand?.finishReason || 'unknown'})`);
+  }
+  if (!data) throw lastErr || new Error('tts: no audio in response');
+  const part = data.candidates[0].content.parts.find(p => p.inlineData);
   const pcm = Buffer.from(part.inlineData.data, 'base64');
   const mp3 = await pcmToMp3(pcm);
   const um = data.usageMetadata || {};
