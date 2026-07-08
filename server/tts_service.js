@@ -105,13 +105,19 @@ export async function synthesizeLine(user, { text, voice = 'Sulafat', style = ''
   // a sliced key, making ALL same-style narrator lines share one cached clip across worlds
   // (the "wrong world's audio plays" bug). SQLite TEXT is unbounded; exact match is cheap.
   const cacheKey = `${cacheVoice}|${style}|${text}`;
+  // SELF-HEAL: a cache row whose FILE is gone from disk (partial restore, crashed write,
+  // manual cleanup) must fall through to regeneration — otherwise the dangling row keeps
+  // winning the lookup forever and that line plays as silence/404 on every replay.
   const cached = findCached('audio', cacheKey);
-  if (cached) return { assetId: cached.id, cached: true, genMs: 0, seconds: pj(cached.meta, {}).seconds || null };
+  if (cached) {
+    if (fs.existsSync(assetPath(cached))) return { assetId: cached.id, cached: true, genMs: 0, seconds: pj(cached.meta, {}).seconds || null };
+    console.warn(`[tts] cached audio ${cached.id} has no file on disk — regenerating "${String(text).slice(0, 60)}"`);
+  }
 
   // exact miss → reuse a clip of the same line by the same speaker from another
   // engine/style era before paying for regeneration (see findReusableAudio)
   const reusable = findReusableAudio({ text, voice, characterId });
-  if (reusable) return { assetId: reusable.id, cached: true, reused: true, genMs: 0, seconds: pj(reusable.meta, {}).seconds || null };
+  if (reusable && fs.existsSync(assetPath(reusable))) return { assetId: reusable.id, cached: true, reused: true, genMs: 0, seconds: pj(reusable.meta, {}).seconds || null };
 
   preflight(user.id, EST.tts());
   const t0 = Date.now();

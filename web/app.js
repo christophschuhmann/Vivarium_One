@@ -2620,7 +2620,7 @@ function playClip(buf, onended, { earlySec = 0, onEarly = null } = {}) {
 //   • the gain node keeps the click-free ramps and the crossfade hook;
 //   • streaming playback (no full decode) stays kind to slow connections.
 // Server-side 200-400ms fades still guard the clip tails themselves.
-function playClipUrl(url, onended, { earlySec = 0, onEarly = null } = {}) {
+function playClipUrl(url, onended, { earlySec = 0, onEarly = null, onError = null } = {}) {
   const ctx = waCtx();
   const vp = voicePrefs();
   const el = new Audio(url);
@@ -2641,8 +2641,12 @@ function playClipUrl(url, onended, { earlySec = 0, onEarly = null } = {}) {
     if (earlySec > 0 && onEarly && !earlyFired && remain <= earlySec + 0.12 && el.duration / (el.playbackRate || 1) > earlySec * 3) { earlyFired = true; onEarly(); }
   };
   const done = () => { if (!dead) { dead = true; cleanup(); onended?.(); } };
+  // A LOAD/DECODE FAILURE is not a natural end: treating it as one silently SKIPPED the line
+  // (the "missing lines don't play and don't regenerate" bug). Callers pass onError to
+  // regenerate the clip on the fly; without a handler we keep the old advance behaviour.
+  const errored = () => { if (!dead) { dead = true; cleanup(); (onError || onended)?.(); } };
   el.onended = done;
-  el.onerror = done;
+  el.onerror = errored;
   let fb = null;   // buffer-source fallback handle (mobile)
   el.play().catch(() => {
     // MOBILE AUTOPLAY GATE: media-element playback can be blocked long after the initiating
@@ -2660,7 +2664,7 @@ function playClipUrl(url, onended, { earlySec = 0, onEarly = null } = {}) {
         fb = playClip(abuf, () => { if (!dead) { dead = true; onended?.(); } },
           { earlySec, onEarly: () => { if (!earlyFired) { earlyFired = true; onEarly?.(); } } });
       })
-      .catch(done);
+      .catch(errored);
   });
   return {
     pause: () => { fb ? fb.pause() : el.pause(); },
@@ -2687,6 +2691,7 @@ function stopNarration() {
 function setupNarrationPlayer(sceneLines, characters) {
   const lines = (sceneLines || []).filter(n => n.text);
   player.lines = lines; player.chars = characters; player.cache = []; player.idx = 0; player.manual = false;
+  const retriedLines = new Set();   // per-scene: each line gets ONE on-the-fly regeneration before being skipped
   const playBtn = $('#tts-play'), pauseBtn = $('#tts-pause');
   if (!playBtn) return;
   if (!lines.length) { playBtn.disabled = true; return; }
@@ -2695,7 +2700,9 @@ function setupNarrationPlayer(sceneLines, characters) {
     if (i >= lines.length || player.cache[i]) return player.cache[i];
     // Authored/intro lines can carry PRE-GENERATED audio per language (line.audio[lang],
     // bundled with the scenario) — play it directly, no synthesis, no cost, no wait.
-    const pre = lines[i].audio && lines[i].audio[getLang()];
+    // (_noPre is set by the retry path when that pointer turned out to be dead — the retry
+    // then goes through /api/tts, which regenerates AND saves the line like any other.)
+    const pre = !lines[i]._noPre && lines[i].audio && lines[i].audio[getLang()];
     if (pre) { player.cache[i] = Promise.resolve({ assetId: pre, cached: true }); return player.cache[i]; }
     player.cache[i] = fetchTts(lines[i].text, chOf(lines[i].speaker), lines[i].emotion || '', lines[i].mode || '').catch(e => { player.cache[i] = null; throw e; });
     return player.cache[i];
@@ -2735,7 +2742,26 @@ function setupNarrationPlayer(sceneLines, characters) {
       // guard so early + natural end can't both advance
       let advanced = false;
       const next = () => { if (advanced || tok !== player.token) return; advanced = true; playFrom(i + 1); };
-      player.audio = playClipUrl(assetUrl(assetId), () => { highlight(i, false); next(); }, { earlySec: 0.18, onEarly: next });
+      player.audio = playClipUrl(assetUrl(assetId), () => { highlight(i, false); next(); }, {
+        earlySec: 0.18, onEarly: next,
+        // The clip failed to LOAD (dangling asset id, half-written file, transient stream
+        // error) — don't skip the line: drop every cached pointer for it and regenerate once
+        // through /api/tts (the server re-synthesises and permanently saves a fresh asset).
+        onError: () => {
+          if (advanced || tok !== player.token) return;
+          highlight(i, false);
+          if (!retriedLines.has(i)) {
+            retriedLines.add(i);
+            lines[i]._noPre = true;            // a dead pre-stored pointer must not win again
+            player.cache[i] = null;
+            console.warn(`[tts] line ${i} audio failed to load — regenerating on the fly`);
+            playFrom(i);                        // re-enters through prefetch → fetchTts → fresh asset
+          } else {
+            toast('🔇 One line could not be voiced — skipping it.', 'err');
+            next();                             // second failure: keep the story moving
+          }
+        },
+      });
       refreshMe();
     } catch (e) {
       if (tok !== player.token) return;
@@ -3435,7 +3461,9 @@ function ttsStyleFor(ch, emotion = '', mode = '') {
   const base = tpl.replace('{mood}', emotion || 'calm');
   return [`${base}${mode === 'thought' ? THOUGHT_SUFFIX : ''}`, p.custom].filter(Boolean).join(' ');
 }
-const ttsInflight = new Map(); // dedup concurrent + repeated requests within the session
+const ttsInflight = new Map(); // dedup CONCURRENT requests (entries drop once settled — the
+                               // durable cache is server-side; keeping resolved entries forever
+                               // made retries re-serve a dead assetId after an asset went missing)
 function fetchTts(text, ch, emotion = '', mode = '') {
   const p = ttsPrefs();
   const voice = ch?.voice || p.narrator;
@@ -3457,7 +3485,7 @@ function fetchTts(text, ch, emotion = '', mode = '') {
     return r;
   })();
   ttsInflight.set(key, prom);
-  prom.catch(() => ttsInflight.delete(key));
+  prom.then(() => ttsInflight.delete(key), () => ttsInflight.delete(key));
   return prom;
 }
 async function speak(text, ch, el, emotion = '', mode = '') {
