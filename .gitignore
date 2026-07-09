@@ -1,5 +1,7 @@
 # dependencies
 node_modules/
+node_modules
+__pycache__/
 
 # secrets — the real API key lives here; commit only .env.example
 .env
