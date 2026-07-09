@@ -1192,14 +1192,15 @@ async function wizardScreen() {
         <div class="chatlog" id="wz-log">
           <div class="msg assistant">This is YOUR story — so first: who do you want to be? A billionaire in today's world, a vampire in a modern city, a wizard in a medieval academy, a starship captain on the frontier…? Pick a spark below, or just tell me in your own words (age, epoch, dreams, fears — as much or as little as you like). 🧙</div>
           <div class="wz-seeds">
-            ${[['💰','Billionaire','a self-made tech billionaire in the contemporary world — money can buy everything except the things I actually want'],
-               ['🧛','Vampire','a newly-turned vampire trying to keep a normal life in a modern city where nobody knows the night has teeth'],
-               ['🧙','Wizard','a young wizard at a medieval academy of magic, gifted but untested, with a rival and a secret'],
-               ['🚀','Starship captain','a starship captain running frontier colony routes with a small loyal crew and too many debts'],
-               ['🕵️','Detective','a private detective in a rain-soaked noir metropolis, one unsolved case away from redemption'],
-               ['⚔️','Knight','a knight errant in a war-torn medieval kingdom, sworn to a fading house'],
-               ['🎸','Rockstar','a musician on the edge of a breakthrough, juggling the band, love and old debts'],
-               ['🏝','Castaway','a castaway building a new life on a strange island that is more than it seems']]
+            ${[['💰','Billionaire','a billionaire in the contemporary world'],
+               ['🧛','Vampire','a vampire in a modern-fantasy setting'],
+               ['🧙','Wizard','a wizard in a medieval fantasy world'],
+               ['🚀','Starship captain','a starship captain in a sci-fi setting'],
+               ['🕵️','Detective','a detective in a noir metropolis'],
+               ['⚔️','Knight','a knight in a medieval kingdom'],
+               ['🎸','Rockstar','a musician chasing a breakthrough'],
+               ['🏝','Castaway','a castaway on a mysterious island'],
+               ['🃏','Reality-bender','someone in the contemporary world who discovered — maybe over a Magic: The Gathering deck — that reality behaves like a dream, and learned to bend it']]
               .map(x => `<button class="wz-seed" data-seed="${esc(x[2])}">${x[0]} ${x[1]}</button>`).join('')}
           </div>
         </div>
@@ -1218,7 +1219,13 @@ async function wizardScreen() {
   if (W.plan) renderPlan();
   if (W.jobId) pollBuild(); // resume watching an in-flight build after navigation
   attachMic($('#wz-field'), $('#wz-in'));
-  $$('.wz-seed').forEach(bn => bn.onclick = () => { $('#wz-in').value = `I want to play ${bn.dataset.seed}. Help me flesh out who I am.`; $('#wz-send').click(); });
+  // Seed chips fill the input for REVIEW — the player edits or just presses Send; nothing
+  // is submitted for them, and the phrasing invites the wizard to ASK before drafting.
+  $$('.wz-seed').forEach(bn => bn.onclick = () => {
+    const inp = $('#wz-in');
+    inp.value = `I'd like to play ${bn.dataset.seed} — but ask me a few questions first to figure out exactly what kind.`;
+    inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+  });
 
   // Right panel: readable plan summary + itemised cost + the approval button.
   function renderPlan() {
