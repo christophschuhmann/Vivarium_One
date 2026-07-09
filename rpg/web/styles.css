@@ -577,3 +577,8 @@ body.rpg .here-rail .rail-face.places { display:none }
 .decision-card .dc-ico{font-size:19px;line-height:1.2}
 @keyframes decIn{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
 @media(max-width:760px){.action-bar{padding:7px 8px;gap:6px}.action-bar .field input{font-size:13px;padding:8px 10px}}
+/* wizard: clickable player-fantasy seeds under the greeting */
+.wz-seeds{display:flex;flex-wrap:wrap;gap:7px;padding:4px 2px 8px}
+.wz-seed{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:12.5px;
+  font-family:inherit;cursor:pointer;transition:all .15s ease;color:#3c3763}
+.wz-seed:hover{border-color:var(--violet);background:var(--tint);transform:translateY(-1px)}

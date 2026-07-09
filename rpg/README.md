@@ -33,4 +33,7 @@ PORT=8891 VIV_DATA_DIR=./data-rpg node server/index.js
 ```
 `node_modules` and `assets` are symlinks into the parent game.
 
-Demo: the seeded "Alice & Bob — as Bob" world (set `worlds.player_character_id` to Bob's id).
+The fork starts with a CLEAN database — `scripts/seed_rpg.js` creates accounts only, no
+worlds: the player's first act is creating their character & world in the wizard, which
+opens with clickable player-fantasy seeds (billionaire, vampire, wizard, starship captain,
+detective, knight, rockstar, castaway) and taste questions for the undecided.

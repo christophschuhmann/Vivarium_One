@@ -1188,9 +1188,20 @@ async function wizardScreen() {
   <div class="screen"><div class="container">
     <div class="forge-layout" style="grid-template-columns:minmax(320px,1fr) minmax(300px,420px)">
       <div class="chatpanel">
-        <div style="padding:13px 16px;border-bottom:1px solid var(--line)"><b style="font-size:14px">Describe the world you want</b><div style="font-size:11px;color:var(--soft)">genre, characters, places — I'll draft the whole scenario and refine it with you</div></div>
+        <div style="padding:13px 16px;border-bottom:1px solid var(--line)"><b style="font-size:14px">Who do you want to be?</b><div style="font-size:11px;color:var(--soft)">your character, their world, the people in their life — I'll draft everything and refine it with you</div></div>
         <div class="chatlog" id="wz-log">
-          <div class="msg assistant">Where are we going? A medieval keep, a space freighter, a sleepy seaside town? Tell me the world you want and roughly who lives in it — I'll draft everything. 🧙</div>
+          <div class="msg assistant">This is YOUR story — so first: who do you want to be? A billionaire in today's world, a vampire in a modern city, a wizard in a medieval academy, a starship captain on the frontier…? Pick a spark below, or just tell me in your own words (age, epoch, dreams, fears — as much or as little as you like). 🧙</div>
+          <div class="wz-seeds">
+            ${[['💰','Billionaire','a self-made tech billionaire in the contemporary world — money can buy everything except the things I actually want'],
+               ['🧛','Vampire','a newly-turned vampire trying to keep a normal life in a modern city where nobody knows the night has teeth'],
+               ['🧙','Wizard','a young wizard at a medieval academy of magic, gifted but untested, with a rival and a secret'],
+               ['🚀','Starship captain','a starship captain running frontier colony routes with a small loyal crew and too many debts'],
+               ['🕵️','Detective','a private detective in a rain-soaked noir metropolis, one unsolved case away from redemption'],
+               ['⚔️','Knight','a knight errant in a war-torn medieval kingdom, sworn to a fading house'],
+               ['🎸','Rockstar','a musician on the edge of a breakthrough, juggling the band, love and old debts'],
+               ['🏝','Castaway','a castaway building a new life on a strange island that is more than it seems']]
+              .map(x => `<button class="wz-seed" data-seed="${esc(x[2])}">${x[0]} ${x[1]}</button>`).join('')}
+          </div>
         </div>
         <div class="chat-inputrow"><div class="field" id="wz-field"><input id="wz-in" placeholder="e.g. a medieval scenario with a knight, a mage, and the knight's jealous brother…"><button class="btn btn-primary small" id="wz-send">Send</button></div></div>
       </div>
@@ -1207,6 +1218,7 @@ async function wizardScreen() {
   if (W.plan) renderPlan();
   if (W.jobId) pollBuild(); // resume watching an in-flight build after navigation
   attachMic($('#wz-field'), $('#wz-in'));
+  $$('.wz-seed').forEach(bn => bn.onclick = () => { $('#wz-in').value = `I want to play ${bn.dataset.seed}. Help me flesh out who I am.`; $('#wz-send').click(); });
 
   // Right panel: readable plan summary + itemised cost + the approval button.
   function renderPlan() {
