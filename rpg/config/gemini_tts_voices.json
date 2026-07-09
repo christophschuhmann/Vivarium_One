@@ -1,0 +1,213 @@
+{
+ "_meta": {
+  "source": [
+   "https://ai.google.dev/gemini-api/docs/speech-generation (official style adjectives)",
+   "https://docs.cloud.google.com/text-to-speech/docs/gemini-tts (official genders)"
+  ],
+  "retrieved": "2026-07-02",
+  "model": "gemini-3.1-flash-tts (also valid for other Gemini TTS models)",
+  "usage_notes": {
+   "performance_instructions": "Prepend natural-language directions to the text, like directing a voice actor. Controls style, accent, pace, tone, emotion. Example: \"Say in a spooky whisper: '...'\" or \"soft, almost a whisper\" / \"anxious, rushed\". Works per request; per-sentence direction = one short request per sentence (Vivarium narration pipeline does this).",
+   "inline_audio_tags": "Inline modifiers inside the transcript give granular delivery control: [whispers], [laughs], [sighs], [excited], [bored], [shouting]. Example: \"[whispers] Hey there... [shouting] and I can say things in many different ways.\"",
+   "multi_speaker": "multiSpeakerVoiceConfig assigns up to 2 speakers each a prebuilt voice; the prompt can direct each separately, e.g. \"Make Speaker1 sound tired and bored, and Speaker2 sound excited and happy\".",
+   "director_notes_pattern": "Best results structure: audio profile -> scene description -> director's notes (style/pacing/accent) -> transcript. Align all three levers: style prompt, emotionally-matching text, and markup tags should agree.",
+   "output_format": "Returns base64 audio/l16;rate=24000 mono PCM in candidates[0].content.parts[0].inlineData — transcode server-side (ffmpeg) to Opus/MP3.",
+   "metering": "usageMetadata.candidatesTokenCount (modality AUDIO) ~= 32 tokens per second of audio; billed at output-token rate."
+  },
+  "vivarium_casting": {
+   "alice": "Leda",
+   "bob": "Puck",
+   "narrator": "Iapetus",
+   "_note": "all three are voice-profile-backed (per-language LAIONBox references): Leda=\"Lily\", Puck=\"Peter\", Iapetus=\"Ian\""
+  },
+  "narrator_experiment_2026-07-02": {
+   "method": "gemini-3.5-flash judged 0-10 on 'calm audiobook narrator, no acting, no vocal bursts' across 45+ generated samples (scripts/tts_narrator_experiment.py); full results in scripts/tts_experiment_summary.md",
+   "prompt_finding": "the prior default narration style scored a reliable 2/10 (3/3 draws) — reliably exhibited acted/performed delivery. A 'documentary narrator' framing scored 10/10/10 initially and held up best under repeated sampling.",
+   "voice_finding": "pooling all draws at temp=1.0 with the winning prompt: Iapetus 87.5% hit-rate (7/8 >=7, avg 9.0) vs. the old default Algenib 0% (0/3). Zubenelgenubi was second-best at 62.5%.",
+   "temperature_finding": "lowering TTS temperature below the default 1.0 did NOT improve reliability in this test (Iapetus: 67% @0.3, 50% @0.6, vs 87.5% @1.0) — kept at default.",
+   "caveat": "even the winning combo (Iapetus + documentary-narrator prompt) is not 100% reliable — roughly 1-in-8 draws still shows an audible vocal burst or performed delivery. This appears to be inherent TTS model randomness, not fixable by prompt/voice/temperature choice alone."
+  }
+ },
+ "voices": {
+  "Zephyr": {
+   "gender": "female",
+   "style": "Bright",
+   "description": "Bright, cheerful, energetic female voice; sunny and engaging.",
+   "good_for": "optimistic young women, upbeat hosts"
+  },
+  "Puck": {
+   "gender": "male",
+   "style": "Upbeat",
+   "description": "Upbeat, energetic male voice with playful bounce.",
+   "good_for": "cheerful friends, comic relief, mischievous characters"
+  },
+  "Charon": {
+   "gender": "male",
+   "style": "Informative",
+   "description": "Clear, informative male voice; measured and explanatory.",
+   "good_for": "professors, documentary-style narrators, calm mentors"
+  },
+  "Kore": {
+   "gender": "female",
+   "style": "Firm",
+   "description": "Firm, confident female voice with authority.",
+   "good_for": "determined leads, doctors, officials"
+  },
+  "Fenrir": {
+   "gender": "male",
+   "style": "Excitable",
+   "description": "Excitable, intense male voice; high energy.",
+   "good_for": "enthusiastic students, sports fans, dramatic moments"
+  },
+  "Leda": {
+   "gender": "female",
+   "style": "Youthful",
+   "description": "Youthful, soft, energetic young female voice.",
+   "good_for": "students, gentle protagonists (Vivarium: Alice)"
+  },
+  "Orus": {
+   "gender": "male",
+   "style": "Firm",
+   "description": "Firm, steady male voice; grounded and assured.",
+   "good_for": "authority figures, fathers, judges"
+  },
+  "Aoede": {
+   "gender": "female",
+   "style": "Breezy",
+   "description": "Breezy, light, relaxed female voice.",
+   "good_for": "casual friends, baristas, easy-going characters"
+  },
+  "Callirrhoe": {
+   "gender": "female",
+   "style": "Easy-going",
+   "description": "Easy-going, relaxed female voice; unhurried warmth.",
+   "good_for": "laid-back roommates, kind neighbours"
+  },
+  "Autonoe": {
+   "gender": "female",
+   "style": "Bright",
+   "description": "Bright, clear female voice; friendly and alert.",
+   "good_for": "receptionists, cheerful colleagues"
+  },
+  "Enceladus": {
+   "gender": "male",
+   "style": "Breathy",
+   "description": "Breathy, soft male voice; intimate and quiet.",
+   "good_for": "shy characters, whispered/late-night scenes"
+  },
+  "Iapetus": {
+   "gender": "male",
+   "style": "Clear",
+   "description": "Clear, articulate male voice; neutral and precise.",
+   "good_for": "newsreaders, lab scientists, neutral narrators"
+  },
+  "Umbriel": {
+   "gender": "male",
+   "style": "Easy-going",
+   "description": "Easy-going, mellow male voice; calm and warm.",
+   "good_for": "relaxed boyfriends, gentle psychologists"
+  },
+  "Algieba": {
+   "gender": "male",
+   "style": "Smooth",
+   "description": "Smooth, rich male voice; polished delivery.",
+   "good_for": "charming hosts, restaurant owners, romantic leads"
+  },
+  "Despina": {
+   "gender": "female",
+   "style": "Smooth",
+   "description": "Smooth, velvety female voice; composed and elegant.",
+   "good_for": "elegant characters, evening-scene narration"
+  },
+  "Erinome": {
+   "gender": "female",
+   "style": "Clear",
+   "description": "Clear, precise female voice; neutral and professional.",
+   "good_for": "doctors, lecturers, announcements"
+  },
+  "Algenib": {
+   "gender": "male",
+   "style": "Gravelly",
+   "description": "Gravelly, textured male voice; weathered character.",
+   "good_for": "older men, gruff shopkeepers, detectives"
+  },
+  "Rasalgethi": {
+   "gender": "male",
+   "style": "Informative",
+   "description": "Informative, engaged male voice; explanatory with warmth.",
+   "good_for": "teachers, tour guides, radio hosts"
+  },
+  "Laomedeia": {
+   "gender": "female",
+   "style": "Upbeat",
+   "description": "Upbeat, lively female voice; quick and spirited.",
+   "good_for": "energetic best friends, gym trainers"
+  },
+  "Achernar": {
+   "gender": "female",
+   "style": "Soft",
+   "description": "Soft, gentle female voice; tender and soothing.",
+   "good_for": "caring characters, bedtime narration, nurses"
+  },
+  "Alnilam": {
+   "gender": "male",
+   "style": "Firm",
+   "description": "Firm, solid male voice; dependable and direct.",
+   "good_for": "coaches, police officers, decisive characters"
+  },
+  "Schedar": {
+   "gender": "male",
+   "style": "Even",
+   "description": "Even, balanced male voice; steady neutral tone.",
+   "good_for": "neutral narrators, officials, calm colleagues"
+  },
+  "Gacrux": {
+   "gender": "female",
+   "style": "Mature",
+   "description": "Mature, seasoned female voice; experienced warmth.",
+   "good_for": "mothers, professors, wise mentors"
+  },
+  "Pulcherrima": {
+   "gender": "female",
+   "style": "Forward",
+   "description": "Forward, expressive female voice; direct and emphatic.",
+   "good_for": "assertive journalists, lawyers, bold characters"
+  },
+  "Achird": {
+   "gender": "male",
+   "style": "Friendly",
+   "description": "Friendly, warm male voice; approachable and kind.",
+   "good_for": "warm boyfriends, helpful classmates (Vivarium: Bob)"
+  },
+  "Zubenelgenubi": {
+   "gender": "male",
+   "style": "Casual",
+   "description": "Casual, conversational male voice; everyday relaxed tone.",
+   "good_for": "flatmates, casual dialogue, students"
+  },
+  "Vindemiatrix": {
+   "gender": "female",
+   "style": "Gentle",
+   "description": "Gentle, mild female voice; soft-spoken and considerate.",
+   "good_for": "librarians, gentle grandmothers, quiet scenes"
+  },
+  "Sadachbia": {
+   "gender": "male",
+   "style": "Lively",
+   "description": "Lively, animated male voice; vivid and dynamic.",
+   "good_for": "market vendors, entertainers, excitable friends"
+  },
+  "Sadaltager": {
+   "gender": "male",
+   "style": "Knowledgeable",
+   "description": "Knowledgeable, assured male voice; expert tone.",
+   "good_for": "doctors, professors, court experts"
+  },
+  "Sulafat": {
+   "gender": "female",
+   "style": "Warm",
+   "description": "Warm, embracing female voice; rich and comforting.",
+   "good_for": "storybook narrators (Vivarium default narrator), hosts"
+  }
+ }
+}

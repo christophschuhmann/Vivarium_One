@@ -1,0 +1,148 @@
+[
+ {
+  "label": "Iapetus_confirm",
+  "voice": "Iapetus",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "samples": [
+   {
+    "label": "Iapetus_confirm",
+    "voice": "Iapetus",
+    "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+    "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p3_Iapetus_confirm_r0.mp3",
+    "seconds": 19.88,
+    "gen_s": 13.7,
+    "score": 2,
+    "vocal_bursts_detected": true,
+    "reasoning": "The narrator performs an audible chuckle/gasp when reading the line 'Alice laughed', which counts as an acting flourish and a vocal burst.",
+    "judge_s": 11.8
+   },
+   {
+    "label": "Iapetus_confirm",
+    "voice": "Iapetus",
+    "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+    "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p3_Iapetus_confirm_r1.mp3",
+    "seconds": 19.48,
+    "gen_s": 12.8,
+    "score": 10,
+    "vocal_bursts_detected": false,
+    "reasoning": "The narrator delivers the text in a perfectly calm, steady, and professional manner with zero acting or vocal flourishes. No vocal bursts or sound effects are present.",
+    "judge_s": 6.1
+   },
+   {
+    "label": "Iapetus_confirm",
+    "voice": "Iapetus",
+    "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+    "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p3_Iapetus_confirm_r2.mp3",
+    "seconds": 19.2,
+    "gen_s": 12.3,
+    "score": 10,
+    "vocal_bursts_detected": false,
+    "reasoning": "The narrator delivers the text in a perfectly steady, calm, and professional manner with no dramatic acting or vocal bursts. The pacing is even and the tone is completely natural for a standard audiobook narration.",
+    "judge_s": 12.7
+   },
+   {
+    "label": "Iapetus_confirm",
+    "voice": "Iapetus",
+    "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+    "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p3_Iapetus_confirm_r3.mp3",
+    "seconds": 19.48,
+    "gen_s": 16.7,
+    "score": 10,
+    "vocal_bursts_detected": false,
+    "reasoning": "The narrator delivers the text in a perfectly steady, calm, and professional manner with zero dramatic acting or vocal flourishes. The reading is plain and pleasant, maintaining an even pace throughout without any vocal bursts.",
+    "judge_s": 8.5
+   },
+   {
+    "label": "Iapetus_confirm",
+    "voice": "Iapetus",
+    "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+    "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p3_Iapetus_confirm_r4.mp3",
+    "seconds": 20.12,
+    "gen_s": 12.6,
+    "score": 10,
+    "vocal_bursts_detected": false,
+    "reasoning": "The narrator delivers the text in a perfectly steady, calm, and professional manner with zero dramatic acting, consistent pacing, and no vocal bursts.",
+    "judge_s": 6.5
+   }
+  ],
+  "score": 8.4,
+  "score_min": 2,
+  "score_max": 10,
+  "vocal_bursts_detected": true,
+  "reasoning": "(run 1: 2) The narrator performs an audible chuckle/gasp when reading the line 'Alice laughed', which counts as an acting flourish and a vocal burst. | (run 2: 10) The narrator delivers the text in a perfectly calm, steady, and professional manner with zero acting or vocal flourishes. No vocal bursts or sound effects are present. | (run 3: 10) The narrator delivers the text in a perfectly steady, calm, and professional manner with no dramatic acting or vocal bursts. The pacing is even and the tone is completely natural for a standard audiobook narration. | (run 4: 10) The narrator delivers the text in a perfectly steady, calm, and professional manner with zero dramatic acting or vocal flourishes. The reading is plain and pleasant, maintaining an even pace throughout without any vocal bursts. | (run 5: 10) The narrator delivers the text in a perfectly steady, calm, and professional manner with zero dramatic acting, consistent pacing, and no vocal bursts.",
+  "n_scored": 5
+ },
+ {
+  "label": "Zubenelgenubi_confirm",
+  "voice": "Zubenelgenubi",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "samples": [
+   {
+    "label": "Zubenelgenubi_confirm",
+    "voice": "Zubenelgenubi",
+    "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+    "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p3_Zubenelgenubi_confirm_r0.mp3",
+    "seconds": 19.88,
+    "gen_s": 10.1,
+    "score": 10,
+    "vocal_bursts_detected": false,
+    "reasoning": "The narrator delivers the text in a perfectly calm, steady, and professional manner with zero acting or vocal flourishes.",
+    "judge_s": 5.8
+   },
+   {
+    "label": "Zubenelgenubi_confirm",
+    "voice": "Zubenelgenubi",
+    "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+    "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p3_Zubenelgenubi_confirm_r1.mp3",
+    "seconds": 18.36,
+    "gen_s": 11.6,
+    "score": 2,
+    "vocal_bursts_detected": true,
+    "reasoning": "The narrator vocalizes an audible chuckle when reading the words 'Alice laughed', which is a clear vocal burst. This acting choice violates the requirement for a plain, professional reading.",
+    "judge_s": 6.4
+   },
+   {
+    "label": "Zubenelgenubi_confirm",
+    "voice": "Zubenelgenubi",
+    "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+    "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p3_Zubenelgenubi_confirm_r2.mp3",
+    "seconds": 19.88,
+    "gen_s": 16.1,
+    "score": 2,
+    "vocal_bursts_detected": true,
+    "reasoning": "The narrator performs an audible chuckle on the word 'laughed', which counts as a vocal burst and violates the requirement for a plain, non-performed reading.",
+    "judge_s": 5.1
+   },
+   {
+    "label": "Zubenelgenubi_confirm",
+    "voice": "Zubenelgenubi",
+    "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+    "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p3_Zubenelgenubi_confirm_r3.mp3",
+    "seconds": 18.8,
+    "gen_s": 17.0,
+    "score": 2,
+    "vocal_bursts_detected": true,
+    "reasoning": "The narrator performs an audible chuckle/giggle on the word 'laughed' instead of plainly reading the text. This vocal burst and acting flourish requires a heavy penalty according to the guidelines.",
+    "judge_s": 10.4
+   },
+   {
+    "label": "Zubenelgenubi_confirm",
+    "voice": "Zubenelgenubi",
+    "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+    "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p3_Zubenelgenubi_confirm_r4.mp3",
+    "seconds": 19.24,
+    "gen_s": 10.7,
+    "score": 10,
+    "vocal_bursts_detected": false,
+    "reasoning": "The narrator delivers the text in a perfectly calm, steady, and professional manner with no dramatic acting or vocal bursts.",
+    "judge_s": 5.5
+   }
+  ],
+  "score": 5.2,
+  "score_min": 2,
+  "score_max": 10,
+  "vocal_bursts_detected": true,
+  "reasoning": "(run 1: 10) The narrator delivers the text in a perfectly calm, steady, and professional manner with zero acting or vocal flourishes. | (run 2: 2) The narrator vocalizes an audible chuckle when reading the words 'Alice laughed', which is a clear vocal burst. This acting choice violates the requirement for a plain, professional reading. | (run 3: 2) The narrator performs an audible chuckle on the word 'laughed', which counts as a vocal burst and violates the requirement for a plain, non-performed reading. | (run 4: 2) The narrator performs an audible chuckle/giggle on the word 'laughed' instead of plainly reading the text. This vocal burst and acting flourish requires a heavy penalty according to the guidelines. | (run 5: 10) The narrator delivers the text in a perfectly calm, steady, and professional manner with no dramatic acting or vocal bursts.",
+  "n_scored": 5
+ }
+]

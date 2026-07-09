@@ -1,0 +1,35 @@
+[
+ {
+  "label": "Iapetus_t0.3_more",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=180)"
+ },
+ {
+  "label": "Iapetus_t0.3_more",
+  "voice": "Iapetus",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.3,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4b_r1.mp3",
+  "seconds": 75.68,
+  "gen_s": 40.1,
+  "score": 0,
+  "vocal_bursts_detected": false,
+  "reasoning": "The audio clip contains only silence, with no narrator voice present to evaluate.",
+  "judge_s": 4.6
+ },
+ {
+  "label": "Iapetus_t0.3_more",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=180)"
+ },
+ {
+  "label": "Iapetus_t0.3_more",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=180)"
+ },
+ {
+  "label": "Iapetus_t0.3_more",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=180)"
+ },
+ {
+  "label": "Iapetus_t0.3_more",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=180)"
+ }
+]

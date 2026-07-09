@@ -16,3 +16,4 @@ e2e/shots/
 .DS_Store
 Thumbs.db
 .claude/
+rpg/node_modules

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vivarium — Operator Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Lora:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  /* the shared /styles.css locks the game SPA with body{overflow:hidden} + #app{height:100%};
+     the admin console is a normal scrollable document, so undo that chain here (this <style>
+     comes after the stylesheet link, so it wins). Fixes: can't scroll to the bottom of a tab. */
+  html, body { height: auto; overflow: auto; }
+  #app { height: auto; display: block; }
+  .admin-shell{max-width:1160px;margin:0 auto;padding:80px 24px 80px}
+  .admin-tabs{display:flex;gap:6px;background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:5px;width:fit-content;margin-bottom:22px;backdrop-filter:blur(10px)}
+  .admin-tabs button{border-radius:999px;padding:7px 18px;font-size:13px;font-weight:600;color:var(--soft)}
+  .admin-tabs button.active{background:linear-gradient(180deg,#ffc45e,var(--gold));color:#3d2a00;box-shadow:0 5px 14px rgba(240,169,46,.4)}
+  .stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:13px;margin-bottom:20px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow)}
+  .stat b{font-size:24px}.stat small{color:var(--soft);font-size:11px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--ink);color:#fff;text-align:left;padding:8px 11px;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+  td{padding:8px 11px;border-bottom:1px solid #f0edfa;vertical-align:middle}
+  .bar{height:10px;background:#efecfb;border-radius:6px;overflow:hidden}
+  .bar>div{height:100%;background:linear-gradient(90deg,var(--gold),#ffd47e)}
+</style>
+</head>
+<body>
+<div id="aurora"></div>
+<div id="app"></div>
+<div id="toasts"></div>
+<script src="/admin.js"></script>
+</body>
+</html>
