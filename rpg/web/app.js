@@ -4220,8 +4220,11 @@ async function accountModal() {
     <button class="btn btn-ghost small" id="logout" style="margin-top:14px">Sign out</button>
   </div></div>`;
   document.body.appendChild(m);
-  m.onclick = (e) => { if (e.target === m) m.remove(); };
-  $('.x', m).onclick = () => m.remove();
+  // closing after an admin-mode flip re-renders the stage so hidden/revealed thought-lines
+  // and mind access take effect immediately (prefs are read at render time)
+  const closeAccount = () => { m.remove(); if (m._rpgDirty && location.hash.includes('stage')) { stopNarration(); stageScreen(); } };
+  m.onclick = (e) => { if (e.target === m) closeAccount(); };
+  $('.x', m).onclick = closeAccount;
   renderMicSettings($('#mic-settings', m));
   const savePrefs = () => {
     if ($('#tp-innersight', m)) saveRpgPrefs({ adminMode: $('#tp-innersight', m).checked });
@@ -4232,7 +4235,15 @@ async function accountModal() {
   $('#tp-musicvol', m).oninput = () => { $('#tp-musicvol-n', m).textContent = $('#tp-musicvol', m).value + '%'; setMusicVolume((+$('#tp-musicvol', m).value) / 100); };
   $('#tp-voicevol', m).oninput = () => { $('#tp-voicevol-n', m).textContent = $('#tp-voicevol', m).value + '%'; };
   $('#tp-voicerate', m).oninput = () => { $('#tp-voicerate-n', m).textContent = $('#tp-voicerate', m).value + '%'; };
-  ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-inner', '#tp-music', '#tp-musicvol', '#tp-voicevol', '#tp-voicerate', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); if (el) { el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); } });
+  ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-inner', '#tp-innersight', '#tp-music', '#tp-musicvol', '#tp-voicevol', '#tp-voicerate', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); if (el) { el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); } });
+  // Admin mode feedback + live apply: confirm the switch immediately, and re-render the
+  // stage on modal close so thought-lines/mind access reflect the new mode without a reload.
+  const sight = $('#tp-innersight', m);
+  if (sight) sight.addEventListener('change', () => {
+    savePrefs();
+    toast(sight.checked ? '🛠 Admin mode ON — every mind is open to you' : '🎭 Admin mode off — you are your character again');
+    m._rpgDirty = true;
+  });
   $('#tp-narr-reset', m).onclick = () => { $('#tp-narr-style', m).value = DEFAULT_NARRATOR_STYLE; savePrefs(); };
   $('#tp-char-reset', m).onclick = () => { $('#tp-char-style', m).value = DEFAULT_CHARACTER_STYLE; savePrefs(); };
   const saveSkip = () => saveSkipPrefs({ animate: $('#sk-animate', m).checked, detail: $('#sk-detail', m).value });
