@@ -28,6 +28,7 @@ const I18N = {
     resume: 'Weiter', continue_building: 'Weiterbauen', create_world: 'Welt erschaffen', wizard: '🧙 Welten-Assistent',
     sign_in: 'Anmelden', create_account: 'Konto erstellen', step_inside: 'Eintreten', advance: '▶ Weiter',
     intervene: '⚡ Eingreifen', character: 'Figur', location: 'Ort', custom: 'eigene', listen_hint: '💡 Zeile anklicken zum Anhören',
+    continue: 'Weiter', act_ph: 'Was tust du? (handeln, sprechen — oder Zeit überspringen)', act_ph_dec: 'Was tust du?',
     first_page: 'Lass die Zeit voranschreiten, um die erste Seite aufzuschlagen…', voice: 'Stimme', settings_voice: '🔊 Stimme & Erzählung',
     sign_out: 'Abmelden', credits: 'Guthaben', spent_today: 'heute verbraucht',
   },
@@ -39,6 +40,7 @@ const I18N = {
     intervene: '⚡ Intervenir', character: 'Personnage', location: 'Lieu', custom: 'perso', listen_hint: '💡 cliquez une ligne pour l\'écouter',
     first_page: 'Faites avancer le temps pour tourner la première page…', voice: 'Voix', settings_voice: '🔊 Voix & narration',
     sign_out: 'Déconnexion', credits: 'crédits', spent_today: 'dépensé aujourd\'hui',
+    continue: 'Continuer', act_ph: 'Que fais-tu ? (agir, parler — ou sauter du temps)', act_ph_dec: 'Que fais-tu ?',
   },
   es: {
     home: 'Inicio', cast: 'Personajes', bonds: 'Vínculos', world: 'Mundo', play: 'Jugar', share: 'Compartir',
@@ -48,6 +50,7 @@ const I18N = {
     intervene: '⚡ Intervenir', character: 'Personaje', location: 'Lugar', custom: 'propio', listen_hint: '💡 pulsa una línea para escucharla',
     first_page: 'Avanza el tiempo para pasar la primera página…', voice: 'Voz', settings_voice: '🔊 Voz y narración',
     sign_out: 'Cerrar sesión', credits: 'créditos', spent_today: 'gastado hoy',
+    continue: 'Continuar', act_ph: '¿Qué haces? (actúa, habla — o salta el tiempo)', act_ph_dec: '¿Qué haces?',
   },
 };
 const getLang = () => { const l = localStorage.getItem('viv_lang'); return LANGS.includes(l) ? l : 'en'; };
@@ -1235,7 +1238,23 @@ async function wizardScreen() {
       <b style="font-size:15px">${esc(p.title || 'Untitled world')}</b>
       <div style="font-size:11px;color:var(--soft);margin:2px 0 8px">${esc(p.genre || '')} · ${esc(p.mood || '')}</div>
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:8px 0 4px">CAST (${(p.characters || []).length})</h5>
-      ${(p.characters || []).map(c => `<div style="font-size:12px;margin-bottom:3px"><b>${esc(c.name)}</b> <span style="color:var(--soft)">· ${esc(c.age ?? '')} · ${esc((c.personality || '').slice(0, 60))}</span></div>`).join('')}
+      ${(p.characters || []).map(c => {
+        const isPC = c.name === p.player_character;
+        // this character's bonds, PLAYER bonds first — the plan panel must show how everyone connects
+        const bonds = (p.relationships || []).filter(r => r.from === c.name || r.to === c.name)
+          .sort((x, y) => ((y.from === p.player_character || y.to === p.player_character) ? 1 : 0) - ((x.from === p.player_character || x.to === p.player_character) ? 1 : 0));
+        const bondLines = bonds.slice(0, 4).map(r => {
+          const other = r.from === c.name ? r.to : r.from;
+          const txt = r.from === c.name ? r.description : (r.reverse_description || r.description);
+          return `<div style="font-size:11px;color:#4b4573;margin-top:2px">↔ <b>${esc(other)}${other === p.player_character ? ' 🎮' : ''}</b> — ${esc(txt || '')}</div>`;
+        }).join('');
+        return `<div style="font-size:12px;margin-bottom:9px;padding:8px 9px;border:1.5px solid ${isPC ? 'var(--violet)' : 'var(--line)'};border-radius:11px;${isPC ? 'background:var(--tint)' : ''}">
+          <b>${esc(c.name)}</b> ${isPC ? '<span class="tag v" style="font-size:9px">🎮 YOU — player character</span>' : '<span class="tag" style="font-size:9px;background:#efecfb;color:#6a63a0">NPC</span>'} <span style="color:var(--soft)">· ${esc(c.age ?? '')}</span>
+          <div style="font-size:11.5px;color:#3c3763;margin-top:3px">${esc(c.personality || '')}</div>
+          ${c.backstory ? `<div style="font-size:11px;color:#5a5487;margin-top:3px;line-height:1.45">${esc(c.backstory)}</div>` : ''}
+          ${bondLines}
+        </div>`;
+      }).join('')}
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:10px 0 4px">PLACES (${(p.locations || []).length})</h5>
       <div style="font-size:11.5px;color:#3c3763">${(p.locations || []).map(l => esc(l.name)).join(' · ')}</div>
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:10px 0 4px">BONDS (${(p.relationships || []).length})</h5>
@@ -2207,7 +2226,7 @@ async function stageScreen() {
     <!-- RPG action bar: the player speaks/acts as their character; the storyteller paces time -->
     ${dec ? `<div class="decision-card" id="decision-card"><span class="dc-ico">🎭</span><span>${esc(dec)}</span></div>` : ''}
     <div class="action-bar" id="action-bar">
-      <div class="field action-field" id="act-field" style="flex:1;margin:0"><input id="act-in" placeholder="${dec ? 'What do you do?' : `What do you do, ${esc(characters.find(c => c.id === pcLocked)?.name || 'hero')}? (act, speak — or ask to skip ahead)`}"></div>
+      <div class="field action-field" id="act-field" style="flex:1;margin:0"><input id="act-in" placeholder="${dec ? t('act_ph_dec', 'What do you do?') : t('act_ph', 'What do you do? (act, speak — or ask to skip ahead)')}"></div>
       <button class="tchip" id="act-skip" title="Skip a longer stretch of time (plays as scenes)">⏱</button>
       <button class="btn btn-primary small" id="act-go">▶ ${t('continue', 'Continue')}</button>
     </div>` : ''}

@@ -87,10 +87,10 @@ Return ONLY a JSON object, no fences:
  "plan": {  // the CURRENT full plan, or null if you truly have nothing yet — keep it complete & self-consistent on every turn
    "title","genre","mood","pacing":0.4,"directives":"1-2 sentences of standing story guidance",
    "player_character":"the exact name (from characters[]) of the character the player plays",
-   "characters":[{"name","age","pronouns","appearance":"ENGLISH image prompt: hair, eyes, build, colors","outfit":"ENGLISH everyday wear","extra_outfits":["ENGLISH outfit desc", "… 2-4 total"],"personality","goals":["…"],"fears":["…"],"coping":["…"],"backstory","speaking_style","voice":"best fit from: ${voiceList()}","voice_desc":"ENGLISH voice description: age, gender, timbre, character (for voice cloning)","home_location":"a location name from locations"}],
+   "characters":[{"name","age","pronouns","appearance":"ENGLISH image prompt: hair, eyes, build, colors","outfit":"ENGLISH everyday wear","extra_outfits":["ENGLISH outfit desc", "… 2-4 total"],"personality" (2-3 sentences),"goals":["…"],"fears":["…"],"coping":["…"],"backstory" (5-6 full sentences: upbringing, formative wounds/wins, how their life reached today — concrete, specific, novel-grade),"speaking_style","voice":"best fit from: ${voiceList()}","voice_desc":"ENGLISH voice description: age, gender, timbre, character (for voice cloning)","home_location":"a location name from locations"}],
    "locations":[{"name","type":"room|public","place_group":"cluster name or empty","description":"ENGLISH image prompt for the background"}],
    "paths":[["Location A","Location B"]],
-   "relationships":[{"from":"Char name","to":"Char name","description":"how FROM feels about TO","reverse_description":"how TO feels about FROM"}],
+   "relationships":[{"from":"Char name","to":"Char name","description":"2-3 sentences: how FROM sees/feels about TO INCLUDING their concrete shared history","reverse_description":"2-3 sentences: how TO sees/feels about FROM"}],
    "intro_scenes":[{"location":"a location name from locations","participants":["character names"],"premise":"1-2 sentences: what happens in this opening scene and why it hooks","offset_minutes":3,"music_query":"ENGLISH music-search situation for this scene's score","music_genre":"closest of: high_fantasy|low_fantasy|dark_fantasy|mythic_ancient|medieval|renaissance_pirate|wild_west|gothic_horror|cosmic_horror|modern_supernatural|modern_realistic|superhero|post_apocalyptic|cyberpunk|hard_scifi|space_opera|science_fantasy|alt_history","music_emotion":"2-4 mood words"}]
  },
  "ready": true|false  // true once the plan is complete and you have asked the player to confirm building
@@ -103,7 +103,11 @@ export async function wizardChat(user, message, history = [], lang = 'en') {
   const msgs = [{ role: 'system', content: CHAT_SYS(lang) },
     ...history.slice(-16).map(m => ({ role: m.role, content: m.content })),
     { role: 'user', content: message }];
-  const res = await llmJson(msgs, { maxTokens: 6000 });
+  // Rich plans (5-6 sentence backstories + two-direction bond texts for every character)
+  // are far bigger than the old 6k cap — truncation here surfaced as a generic
+  // "something went wrong" after a long think. llmJson retries a truncated reply at 1.5×,
+  // so worst case is ~24k, well within the model's window.
+  const res = await llmJson(msgs, { maxTokens: 16000 });
   debitCall(user.id, res, 'wizard_chat');
   logCall({ userId: user.id, kind: 'llm', surface: 'wizard_chat', request: msgs, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const out = res.json || {};
