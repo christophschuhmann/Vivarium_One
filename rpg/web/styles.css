@@ -582,3 +582,8 @@ body.rpg .here-rail .rail-face.places { display:none }
 .wz-seed{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:12.5px;
   font-family:inherit;cursor:pointer;transition:all .15s ease;color:#3c3763}
 .wz-seed:hover{border-color:var(--violet);background:var(--tint);transform:translateY(-1px)}
+/* RPG action bar: quick fast-forward presets */
+.skip-chips{display:flex;gap:4px;flex:none;align-items:center}
+.skip-chips .tchip{padding:5px 8px;font-size:11px;color:#d9d2f5;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2)}
+.skip-chips .tchip:hover{background:rgba(255,255,255,.18);color:#fff}
+@media(max-width:760px){.skip-chips .tchip{padding:4px 6px;font-size:10px}}

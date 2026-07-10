@@ -2227,7 +2227,10 @@ async function stageScreen() {
     ${dec ? `<div class="decision-card" id="decision-card"><span class="dc-ico">🎭</span><span>${esc(dec)}</span></div>` : ''}
     <div class="action-bar" id="action-bar">
       <div class="field action-field" id="act-field" style="flex:1;margin:0"><input id="act-in" placeholder="${dec ? t('act_ph_dec', 'What do you do?') : t('act_ph', 'What do you do? (act, speak — or ask to skip ahead)')}"></div>
-      <button class="tchip" id="act-skip" title="Skip a longer stretch of time (plays as scenes)">⏱</button>
+      <div class="skip-chips" title="Fast-forward time — longer skips play as scenes">
+        ${['+30s', '+5m', '+1h', '+1d'].map(d => `<button class="tchip" data-skip="${d}">${d.slice(1)}</button>`).join('')}
+        <button class="tchip" id="act-skip" title="Custom time skip (any amount)">⏱</button>
+      </div>
       <button class="btn btn-primary small" id="act-go">▶ ${t('continue', 'Continue')}</button>
     </div>` : ''}
   </div>
@@ -2302,7 +2305,12 @@ async function stageScreen() {
       };
       $('#act-go').onclick = go;
       actIn.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); } };
-      $('#act-skip').onclick = () => customDeltaModal((d) => { stopNarration(); advanceTick(actIn.value.trim() ? { kind: 'player_action', target: pcLocked, text: actIn.value.trim() } : null, { delta: d }); });
+      // quick fast-forward presets — one click, no popup; any typed action rides along.
+      // Longer spans go through the chapter planner and play as scene films, decision
+      // stops included, exactly like the ⏱ custom popup.
+      const skipTo = (d) => { stopNarration(); advanceTick(actIn.value.trim() ? { kind: 'player_action', target: pcLocked, text: actIn.value.trim() } : null, { delta: d }); };
+      $$('.skip-chips [data-skip]').forEach(ch => ch.onclick = () => skipTo(ch.dataset.skip));
+      $('#act-skip').onclick = () => customDeltaModal(skipTo);
     }
   }
   $('#undobtn').onclick = async () => {
