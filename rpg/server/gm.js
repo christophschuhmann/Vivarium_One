@@ -1153,6 +1153,7 @@ const GM_ACTIONS_SPEC = `Each action is one of (use ids from the world data; NEV
 {"type":"update_relationship","from_id","to_id","description","strength"?(0-1)}  — upserts one direction; send two actions for both directions
 {"type":"create_location","name","description"(ENGLISH image prompt, empty scene),"connect_to":["existing location names"]}  — builds place + paths + background (~30s)
 {"type":"update_location","location_id","name"?,"description"?,"regenerate_background"?:true}
+{"type":"remove_character","character_id","reason":"1 sentence shown to the player"}  — permanently removes a cast member (their bonds and state history go too; past scenes keep mentioning them)
 {"type":"set_direction","directives":"full replacement text for the world's standing direction"}`;
 
 export async function gmChat(user, world, message, lang = 'en', adminMode = false) {
@@ -1243,8 +1244,11 @@ export async function gmApplyActions(user, world, actions, adminMode = false) {
           const cid = uid('c_');
           const home = locByName(d.home_location)?.id || db.prepare('SELECT id FROM locations WHERE world_id=? LIMIT 1').get(world.id)?.id || null;
           const state = { location_id: home, activity: 'arriving', mood: 'curious', thought: null, dialogue: null, outfit: 'everyday', outfits: [] };
-          db.prepare(`INSERT INTO characters(id,world_id,name,base_profile,materialised,voice,created_at) VALUES (?,?,?,?,?,?,?)`)
-            .run(cid, world.id, d.name.trim(), j(d), j(state), (d.voice || 'Sulafat').split(' ')[0], now());
+          // intro_tick_idx: they join the story NOW — rewinding below this hides them and the
+          // branch-from-past flow offers to strip them (the Forge route already did this; the
+          // GM-chat path forgot, so its characters "existed since tick 0" and never rewound away).
+          db.prepare(`INSERT INTO characters(id,world_id,name,base_profile,materialised,voice,intro_tick_idx,created_at) VALUES (?,?,?,?,?,?,?,?)`)
+            .run(cid, world.id, d.name.trim(), j(d), j(state), (d.voice || 'Sulafat').split(' ')[0], world.tick_index, now());
           // portrait (identity for everything later)
           const { portrait, cutout } = await generatePortrait(user, world, { name: d.name, appearance: d.appearance || 'a person', outfit: d.outfit || 'casual everyday clothes', ownerRef: cid });
           const st = pj(charById(cid).materialised, {});
@@ -1314,6 +1318,18 @@ export async function gmApplyActions(user, world, actions, adminMode = false) {
           if (row) db.prepare('UPDATE relationships SET description=?, strength=COALESCE(?,strength) WHERE id=?').run(String(a.description || row.description).slice(0, 200), s, row.id);
           else db.prepare('INSERT INTO relationships(id,world_id,from_id,to_id,description,strength,history) VALUES (?,?,?,?,?,?,?)').run(uid('r_'), world.id, from.id, to.id, String(a.description || 'a connection').slice(0, 200), s ?? 0.4, '[]');
           results.push({ ok: true, type: a.type, summary: `bond ${from.name} → ${to.name} ${row ? 'updated' : 'created'}` });
+          break;
+        }
+        case 'remove_character': {
+          const c = charById(a.character_id);
+          if (!c) throw new Error('no such character');
+          if (world.player_character_id === c.id) throw new Error(`${c.name} is the player character — they cannot be removed`);
+          db.transaction(() => {
+            db.prepare('DELETE FROM relationships WHERE from_id=? OR to_id=?').run(c.id, c.id);
+            db.prepare('DELETE FROM state_patches WHERE entity_id=?').run(c.id);
+            db.prepare('DELETE FROM characters WHERE id=?').run(c.id);
+          })();
+          results.push({ ok: true, type: a.type, summary: `${c.name} removed from the cast (bonds and state history cleared; past scenes are untouched)` });
           break;
         }
         case 'create_location': {

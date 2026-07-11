@@ -2366,7 +2366,7 @@ async function stageScreen() {
       $('#veil').innerHTML = ''; const adv = $('#advance'); if (adv) adv.disabled = false;
       if (e.name === 'AbortError') return;                   // we cancelled it on purpose (nav / new advance)
       if (e.code === 'TICK_IN_PROGRESS') toast('A scene is still generating — give it a moment, then try again. (Reloading also cancels a stuck one.)', 'err');
-      else fail(e);
+      else toast(`⚠ The scene could not be generated: ${e.message || 'unknown error'}`, 'err', 10000);   // stay long enough to actually read (credits/caps/provider errors)
     }
   }
 }
