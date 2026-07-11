@@ -558,3 +558,16 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .bp-opt.bp-primary .bp-d{color:rgba(255,255,255,.92)}
 .bp-opt.bp-primary:hover{box-shadow:0 8px 22px rgba(132,101,255,.4)}
 .bp-opt:disabled{opacity:.6;cursor:default}
+
+
+/* mobile hardening (shared with the RPG fork): the thinking veil must cover the screen —
+   at z-index:8 it hid behind the storybook on phones and looked like a dead button. */
+.thinking-veil{z-index:70}
+#veil:not(:empty){position:fixed;inset:0;z-index:70}
+.stage-bottom{z-index:61}
+.storybox{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.panel-toggle{min-width:52px;min-height:36px}
+@media(max-width:760px){
+  .stage-bottom{bottom:calc(76px + env(safe-area-inset-bottom, 0px))}
+  #dock{padding-bottom:env(safe-area-inset-bottom, 0px)}
+}

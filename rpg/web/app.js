@@ -2192,8 +2192,8 @@ async function stageScreen() {
       }).join('')}
       ${!present.length ? `<div class="empty-hint" style="position:absolute;inset:30% 0;color:#cfc9f2">Nobody is at ${esc(loc?.name || 'this place')} right now.</div>` : ''}
     </div>
-    <div id="veil"></div>
   </div>
+  <div id="veil"></div>
   <div class="stage-hud" style="display:flex;gap:9px;align-items:center">
     <div class="glasschip" style="color:#efeaff;background:rgba(34,31,69,.6);border-color:rgba(255,255,255,.15)">
       <b>${esc(world.title)}</b><span style="opacity:.75">· ${esc(loc?.name || '')} · tick ${world.tick_index}</span><span style="opacity:.75">🕐 ${fmtClock(world.sim_time)}</span></div>
@@ -2396,8 +2396,22 @@ async function stageScreen() {
     const _w = S.worldData?.world;
     const _future = (S.worldData?.characters || []).filter(c => (c.intro_tick_idx || 0) > (_w?.tick_index ?? 0));
     if (!opts.force && _future.length) { branchFromPastModal(_future, intervention); return; }
-    $('#veil').innerHTML = `<div class="thinking-veil"><div class="pageturn"></div><div>the world is thinking…</div></div>`;
+    // Robust progress UI: the veil shows a LIVE elapsed timer (so "thinking" is visibly
+    // distinct from "hung"), the latest server status, and a ✕ cancel that always recovers.
+    $('#veil').innerHTML = `<div class="thinking-veil"><div class="pageturn"></div>
+      <div id="veil-status">the world is thinking…</div>
+      <div id="veil-secs" style="font-size:12px;opacity:.75">0s</div>
+      <button class="btn btn-ghost small" id="veil-cancel" style="margin-top:6px;color:#fff;border-color:rgba(255,255,255,.4)">✕ cancel</button></div>`;
     $('#advance').disabled = true;
+    const goBtn = $('#act-go');
+    const goLabel = goBtn ? goBtn.innerHTML : null;
+    if (goBtn) { goBtn.disabled = true; goBtn.innerHTML = '⏳'; }         // the tap visibly registered
+    const t0 = Date.now();
+    let lastByte = Date.now();                                            // stall watchdog anchor
+    const secsTimer = setInterval(() => { const el = $('#veil-secs'); if (el) el.textContent = Math.round((Date.now() - t0) / 1000) + 's'; }, 1000);
+    let watchdog = null;                                                  // declared here so the catch can clear it
+    const restoreUI = () => { clearInterval(secsTimer); clearInterval(watchdog); if (goBtn) { goBtn.disabled = false; goBtn.innerHTML = goLabel; } };
+    $('#veil-cancel').onclick = () => { stageState.advanceAbort?.abort(); };   // catch path clears the veil
     let cinema = null;   // declared out here so the catch can release a stuck film on stream errors
     stageState.castSugs = [];   // GM cast suggestions arriving with this advance (shown at the end)
     try {
@@ -2412,11 +2426,16 @@ async function stageScreen() {
       });
       const reader = res.body.getReader(); const dec = new TextDecoder();
       let buf = '', errored = null;
+      // STALL WATCHDOG: phones (screen lock, network flaps, the tunnel) can kill the SSE
+      // stream without an error — the read() then never resolves and the veil spins forever.
+      // The server heartbeats every 9s, so >75s without a byte means the connection is dead.
+      watchdog = setInterval(() => { if (Date.now() - lastByte > 75000) { clearInterval(watchdog); ctrl.abort(); } }, 5000);
       // Cinematic streaming: a 'chapter' SSE event announces K scenes. Each following
       // 'tick' event is one finished scene — we push it into the cinema queue and start
       // PLAYING scene 1 immediately, while the server is still generating scenes 2..K.
       while (true) {
         const { done, value } = await reader.read(); if (done) break;
+        lastByte = Date.now();
         buf += dec.decode(value, { stream: true });
         let idx;
         while ((idx = buf.indexOf('\n\n')) !== -1) {
@@ -2424,7 +2443,7 @@ async function stageScreen() {
           const ev = /event: (\w+)/.exec(raw)?.[1]; const dataLine = /data: (.*)/.exec(raw)?.[1];
           if (!ev || !dataLine) continue;
           const data = JSON.parse(dataLine);
-          if (ev === 'status') { const v = $('.thinking-veil div:last-child'); if (v) v.textContent = data.message; }
+          if (ev === 'status') { const v = $('#veil-status'); if (v) v.textContent = data.message; lastByte = Date.now(); }
           if (ev === 'chapter') { cinema = { expected: data.count, scenes: [], done: false, cancelled: false }; }
           if (ev === 'tick') {
             // The GM may attach ONE cast suggestion and/or ONE outfit suggestion per scene —
@@ -2444,14 +2463,23 @@ async function stageScreen() {
           if (ev === 'done') { const c = $('#credits-num'); if (c) c.textContent = data.credits; }
         }
       }
+      clearInterval(watchdog);
       if (errored) throw Object.assign(new Error(errored.message), { code: errored.code });
+      restoreUI();
       if (cinema) { cinema.done = true; return; }             // playCinema handles the final re-render
       S.worldData = null; stageState.justAdvanced = true; await stageScreen();
       showCastSuggestions();
     } catch (e) {
       if (cinema) cinema.done = true;                         // release a film waiting on scenes that will never come
+      restoreUI();
       $('#veil').innerHTML = ''; const adv = $('#advance'); if (adv) adv.disabled = false;
-      if (e.name === 'AbortError') return;                   // we cancelled it on purpose (nav / new advance)
+      if (e.name === 'AbortError') {
+        // cancelled — by the ✕, by a newer advance, or by the stall watchdog. If it took
+        // long enough to be the watchdog, say so: the player must know it died, not wonder.
+        if (Date.now() - t0 > 70000) toast('⚠ The connection stalled and was cancelled — nothing was lost; press Continue to try again.', 'err', 8000);
+        return;
+      }
+      if (e.message && /fetch|network|load failed/i.test(e.message)) { toast('⚠ Network hiccup — the scene did not start. Check your connection and press Continue again.', 'err', 8000); return; }
       if (e.code === 'TICK_IN_PROGRESS') toast('A scene is still generating — give it a moment, then try again. (Reloading also cancels a stuck one.)', 'err');
       else toast(`⚠ The scene could not be generated: ${e.message || 'unknown error'}`, 'err', 10000);   // stay long enough to actually read (credits/caps/provider errors)
     }

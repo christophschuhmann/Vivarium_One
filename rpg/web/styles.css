@@ -594,3 +594,40 @@ body.rpg .here-rail .rail-face.places { display:none }
   .action-bar .skip-chips{flex:1;justify-content:flex-start}
   #act-go{flex:none;margin-left:auto}
 }
+
+/* ── mobile hardening (Samsung & friends) ─────────────────────────────────────
+   The action bar must always float ABOVE the dock and never slip under the
+   browser chrome or the gesture bar; the storybook stays touch-scrollable and
+   collapsible; landscape gets a compact layout. */
+/* stacking: storybook+action bar must beat the dock (tap safety), and the thinking veil
+   must beat EVERYTHING — at its old z-index:8 it hid BEHIND the storybook on phones, so
+   "thinking" was invisible and looked exactly like a dead button. */
+.stage-bottom{z-index:61}
+.action-bar{position:relative;z-index:62}
+.thinking-veil{z-index:70}
+#veil:not(:empty){position:fixed;inset:0;z-index:70}
+.storybox{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.storylines{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.panel-toggle{min-width:52px;min-height:36px}   /* comfortable thumb target for collapse/expand */
+@media(max-width:760px){
+  .stage-bottom{bottom:calc(76px + env(safe-area-inset-bottom, 0px))}
+  #dock{padding-bottom:env(safe-area-inset-bottom, 0px)}
+  .action-bar{padding-bottom:calc(9px + env(safe-area-inset-bottom, 0px) / 2)}
+  #act-go{min-height:40px;min-width:104px}      /* big, unmissable tap target */
+  .decision-card{font-size:13px;padding:9px 11px;max-height:30vh;overflow-y:auto}
+}
+/* phone LANDSCAPE: little height — compact everything, keep the scene visible */
+@media(max-height:520px) and (orientation:landscape){
+  .stage-bottom{bottom:8px;gap:4px;left:70px;right:70px}
+  #dock{transform:scale(.82);transform-origin:bottom center}
+  .storybox{max-height:26vh}
+  .storylines{max-height:18vh;font-size:12px}
+  .here-rail .rail-face{width:34px;height:34px}
+  .here-rail{gap:4px}
+  #topbar .glasschip{padding:4px 8px;font-size:11px}
+  .action-bar{padding:6px 8px;gap:5px}
+  .action-bar .field input{padding:6px 9px;font-size:12.5px}
+  .decision-card{max-height:24vh;overflow-y:auto;font-size:12.5px;padding:8px 10px}
+  .skip-chips .tchip{padding:3px 6px;font-size:10px}
+  .thinking-veil{gap:8px}
+}
