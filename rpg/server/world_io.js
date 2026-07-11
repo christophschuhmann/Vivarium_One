@@ -124,6 +124,8 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
     genesis_state: remapJsonCol(w.genesis_state, idMap),
     created_at: w.created_at, updated_at: now(),
     current_music: w.current_music || null, curiosity: w.curiosity || '{}',
+    // RPG fork: the player character follows the clone/import (id remapped like every other)
+    player_character_id: remapId(w.player_character_id, idMap) ?? null,
   };
   const chars = (manifest.characters || []).map((c) => ({
     id: idMap.get(c.id), world_id: newWorldId, name: c.name,
@@ -162,6 +164,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
     cost: t.cost, created_at: t.created_at, pov_location_id: remapId(t.pov_location_id, idMap),
     branch_id: remapId(t.branch_id, idMap), rel_snapshot: remapJsonCol(t.rel_snapshot, idMap),
     seq: t.seq || null, music: t.music || null,   // sequence membership + scene score
+    decision: t.decision || null,                 // RPG decision stop rides along
   }));
   const memRows = (manifest.memory_chunks || []).map((mchunk) => ({
     id: idMap.get(mchunk.id), world_id: newWorldId, branch_id: remapId(mchunk.branch_id, idMap),
@@ -185,8 +188,8 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
 
   // ── commit rows atomically ──
   const tx = db.transaction(() => {
-    db.prepare(`INSERT INTO worlds(id,user_id,title,art_style,sim_time,tick_index,genre,mood,pacing,directives,status,cover_asset_id,active_branch_id,genesis_state,created_at,updated_at,current_music,curiosity)
-      VALUES (@id,@user_id,@title,@art_style,@sim_time,@tick_index,@genre,@mood,@pacing,@directives,@status,@cover_asset_id,@active_branch_id,@genesis_state,@created_at,@updated_at,@current_music,@curiosity)`).run(worldRow);
+    db.prepare(`INSERT INTO worlds(id,user_id,title,art_style,sim_time,tick_index,genre,mood,pacing,directives,status,cover_asset_id,active_branch_id,genesis_state,created_at,updated_at,current_music,curiosity,player_character_id)
+      VALUES (@id,@user_id,@title,@art_style,@sim_time,@tick_index,@genre,@mood,@pacing,@directives,@status,@cover_asset_id,@active_branch_id,@genesis_state,@created_at,@updated_at,@current_music,@curiosity,@player_character_id)`).run(worldRow);
     const ins = (sql, rows) => { const st = db.prepare(sql); for (const r of rows) st.run(r); };
     ins(`INSERT INTO characters(id,world_id,name,base_profile,materialised,reference_asset_id,voice,created_at,voice_ref_asset_id,voice_ref_prompt,intro_tick_idx)
          VALUES (@id,@world_id,@name,@base_profile,@materialised,@reference_asset_id,@voice,@created_at,@voice_ref_asset_id,@voice_ref_prompt,@intro_tick_idx)`, chars);
@@ -197,8 +200,8 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
          VALUES (@id,@world_id,@from_id,@to_id,@description,@strength,@history,@attributes)`, rels);
     ins(`INSERT INTO branches(id,world_id,parent_branch_id,fork_tick_idx,label,created_at)
          VALUES (@id,@world_id,@parent_branch_id,@fork_tick_idx,@label,@created_at)`, branchRows);
-    ins(`INSERT INTO ticks(id,world_id,idx,sim_time,time_delta,intervention,states,narration,mood_tag,summary,cost,created_at,pov_location_id,branch_id,rel_snapshot,seq,music)
-         VALUES (@id,@world_id,@idx,@sim_time,@time_delta,@intervention,@states,@narration,@mood_tag,@summary,@cost,@created_at,@pov_location_id,@branch_id,@rel_snapshot,@seq,@music)`, tickRows);
+    ins(`INSERT INTO ticks(id,world_id,idx,sim_time,time_delta,intervention,states,narration,mood_tag,summary,cost,created_at,pov_location_id,branch_id,rel_snapshot,seq,music,decision)
+         VALUES (@id,@world_id,@idx,@sim_time,@time_delta,@intervention,@states,@narration,@mood_tag,@summary,@cost,@created_at,@pov_location_id,@branch_id,@rel_snapshot,@seq,@music,@decision)`, tickRows);
     ins(`INSERT INTO memory_chunks(id,world_id,branch_id,level,start_idx,end_idx,text,created_at)
          VALUES (@id,@world_id,@branch_id,@level,@start_idx,@end_idx,@text,@created_at)`, memRows);
     ins(`INSERT INTO state_patches(id,world_id,entity_ref,entity_id,idx,tick_ref,author,category,op,path,value,reason,created_at)

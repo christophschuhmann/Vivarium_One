@@ -743,7 +743,7 @@ export default async function apiRoutes(app) {
       manifest.world = { ...manifest.world, genesis_state: JSON.stringify(genesis) };
     }
     manifest.world = { ...manifest.world, tick_index: targetIdx, active_branch_id: targetBranch, status: 'live',
-      title: `${manifest.world.title} · branch @${targetIdx}` };
+      title: String(req.body?.title || '').slice(0, 80) || `${manifest.world.title} · branch @${targetIdx}` };
 
     const res = importWorldManifest(u, manifest, null, { reuseAssets: true });   // shares the original's asset files
     return { ok: true, worldId: res.worldId, title: manifest.world.title };

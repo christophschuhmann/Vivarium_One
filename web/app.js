@@ -557,6 +557,18 @@ async function homeScreen() {
     $$('.world-card').forEach(c => {
       c.onclick = async (e) => {
         if (e.target.closest('[data-del]')) { if (confirm('Delete this world forever?')) { await api(`/api/worlds/${c.dataset.id}`, { method: 'DELETE' }); homeScreen(); } return; }
+        if (e.target.closest('[data-clone]')) {
+          // full independent copy (story, cast, places; asset files shared on disk)
+          const src = worlds.find(x => x.id === c.dataset.id);
+          const title = prompt('Name the copy:', `${src?.title || 'World'} · copy`); if (!title) return;
+          const btn = e.target.closest('[data-clone]'); btn.disabled = true; btn.textContent = '…';
+          try {
+            await api(`/api/worlds/${c.dataset.id}/fork-clean`, { method: 'POST', body: { tickIdx: src?.tick_index, title } });
+            toast(`⧉ "${title}" created — an independent copy`, 'gold');
+            homeScreen();
+          } catch (err) { btn.disabled = false; btn.textContent = '⧉'; fail(err); }
+          return;
+        }
         S.world = c.dataset.id; S.worldData = null;
         const w = worlds.find(x => x.id === c.dataset.id);
         if (e.target.closest('[data-editintro]')) { introEditor(c.dataset.id); return; }
@@ -582,6 +594,7 @@ function worldCard(w, featured = false) {
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary small" style="flex:1">▶ ${w.status === 'live' ? t('resume', 'Resume') : t('continue_building', 'Continue building')}</button>
         ${w.has_intro && w.status === 'live' ? `<button class="btn btn-teal small" data-intro title="Watch the opening sequence — scenes, music and voices — then take over">🎬 ${t('from_beginning', 'From the beginning')}</button><button class="btn btn-ghost small" data-editintro title="Edit the opening: script lines, summaries, music">✏️</button>` : ''}
+        <button class="btn btn-ghost small" data-clone title="Clone this scenario — a full independent copy you can play differently">⧉</button>
         <button class="btn btn-ghost small" data-del title="Delete">🗑</button>
       </div>
     </div></div>`;
