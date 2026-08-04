@@ -82,6 +82,7 @@ REALITY-BENDER CONCEPTS: when the player picks something like this, one of your 
 ASK BEFORE YOU ASSUME (crucial): when the player names only an ARCHETYPE ("a billionaire", "a vampire", "a wizard") or explicitly asks you to ask first, DO NOT draft a full plan yet. First ask 2-3 sharp, flavourful defining questions with contrasting example answers — e.g. for a billionaire: self-made tech founder, old-money heir, or ruthless corporate raider? philanthropist facade or open shark? which city? — so the player shapes who they are before you invent it. Sketch at most a rough title/genre in the plan during this phase. Only once they've answered (or say "surprise me" / "just go ahead") draft the FULL plan.
 CONVERSATION STYLE: interview briefly, propose boldly — but only after the defining questions above are answered. Then draft the complete player character and present a readable summary, walk through the NPCs one by one, then locations. Refine the plan on every turn. Keep replies compact (a tight summary + one or two questions), never dump raw JSON into the reply text.
 ${lang !== 'en' && GAME_LANGS[lang] ? `LANGUAGE: converse in ${GAME_LANGS[lang]} and write player-facing plan text (personalities, backstories, bond descriptions) in ${GAME_LANGS[lang]} — EXCEPT: appearance, outfit, extra_outfits, location description and voice_desc MUST stay in ENGLISH (they feed image/voice generators directly).` : ''}
+SCALE DETAIL TO CAST SIZE — CRITICAL so the plan JSON always FINISHES and stays valid: for a LARGE cast (more than ~8 people, e.g. a scenario with extended family, exes and side characters), give the 2-4 CENTRAL characters full rich backstories (5-6 sentences) but keep BACKGROUND/peripheral people concise (name, 1-2 sentence backstory, their bond to the protagonist) — the storyteller fleshes them out further during play. NEVER drop or merge requested people to save space; NEVER stop mid-JSON. Finish the complete, valid JSON object even if that means shorter entries for minor characters. Prioritise a COMPLETE plan over long prose.
 Return ONLY a JSON object, no fences:
 {"reply": "your conversational reply (the human-readable plan summary lives HERE)",
  "plan": {  // the CURRENT full plan, or null if you truly have nothing yet — keep it complete & self-consistent on every turn
@@ -107,13 +108,22 @@ export async function wizardChat(user, message, history = [], lang = 'en') {
   // are far bigger than the old 6k cap — truncation here surfaced as a generic
   // "something went wrong" after a long think. llmJson retries a truncated reply at 1.5×,
   // so worst case is ~24k, well within the model's window.
-  const res = await llmJson(msgs, { maxTokens: 16000 });
+  // Big pasted scenarios (a dozen+ named people, each with a rich backstory) produce a
+  // large plan JSON. A generous ceiling lets it finish; if the model still truncates,
+  // llmJson salvages a partial-but-valid plan (res.truncated) rather than hard-failing.
+  const res = await llmJson(msgs, { maxTokens: 16000, timeoutMs: 150000, reasoningEffort: 'low' });
   debitCall(user.id, res, 'wizard_chat');
   logCall({ userId: user.id, kind: 'llm', surface: 'wizard_chat', request: msgs, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const out = res.json || {};
   // Price the plan server-side on every turn so the player always sees a current, trustworthy
   // estimate next to the proposal (the LLM never computes costs — we do).
   if (out.plan) out.estimate = estimatePlan(out.plan);
+  // If the model's reply was truncated and we salvaged a partial plan, tell the player so
+  // they can ask to fill in the rest instead of silently getting an incomplete cast.
+  if (res.truncated) {
+    out.truncated = true;
+    out.reply = (out.reply ? out.reply + '\n\n' : '') + '⚠️ That was a large scenario, so I drafted as much as fit in one pass — a few of the later characters or details may be missing. Say "continue the plan" or name who\'s still missing and I\'ll add them.';
+  }
   return out;
 }
 

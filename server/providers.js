@@ -34,10 +34,10 @@ export function route(role) {
 // world's tick lock. glm-5.2 legitimately takes ~2 min on the largest contexts, so the cap
 // sits a little above that to catch true HANGS without killing honest slow generations.
 export const LLM_TIMEOUT_MS = 150000;
-export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, signal = null } = {}) {
+export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, signal = null, timeoutMs = LLM_TIMEOUT_MS, reasoningEffort = null } = {}) {
   const r = route('reasoning_llm');
   if (MOCK) return mockLlm(messages);
-  const timeout = AbortSignal.timeout(LLM_TIMEOUT_MS);
+  const timeout = AbortSignal.timeout(timeoutMs);
   const abortSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
   let resp;
   try {
@@ -45,10 +45,13 @@ export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, s
       dispatcher: PATIENT, signal: abortSignal,
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key(r)}` },
-      body: JSON.stringify({ model: r.model, messages, max_tokens: maxTokens, temperature }),
+      // reasoning_effort:'low' makes heavy reasoning models (grok-4.5 etc.) stop over-thinking
+      // structured planning — cuts a >140s wizard call to ~100s and stops it timing out;
+      // fast/non-reasoning models (gemini) accept and ignore it. Only sent when requested.
+      body: JSON.stringify({ model: r.model, messages, max_tokens: maxTokens, temperature, ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}) }),
     });
   } catch (e) {
-    if (timeout.aborted) throw Object.assign(new Error(`The AI model took longer than ${Math.round(LLM_TIMEOUT_MS / 1000)}s and was stopped. Try again, or switch to a faster model in the admin panel.`), { code: 'LLM_TIMEOUT', statusCode: 504 });
+    if (timeout.aborted) throw Object.assign(new Error(`The AI model took longer than ${Math.round(timeoutMs / 1000)}s and was stopped. Try again, or switch to a faster model in the admin panel.`), { code: 'LLM_TIMEOUT', statusCode: 504 });
     if (signal?.aborted) throw Object.assign(new Error('Generation cancelled.'), { code: 'ABORTED', statusCode: 499 });
     throw e;
   }
@@ -66,6 +69,34 @@ export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, s
   }
   if (content == null) throw new Error(`LLM (${r.model}) returned no content: ${JSON.stringify(data).slice(0, 200)}`);
   return { content, usage, rawUsd, provider: 'hyprlab', model: r.model };
+}
+
+// Best-effort recovery of a TRUNCATED JSON object: the model hit its token budget
+// mid-stream (huge wizard plans, dense ticks). Walk the text tracking the container stack
+// and string state, remember the last position where the structure was cleanly closeable
+// (right after a container-close or a separating comma), cut there and close every still-open
+// container. Complete elements survive; the half-written last one is dropped — a partial but
+// VALID object beats a hard failure ("😔 I lost my train of thought").
+export function repairTruncatedJson(raw) {
+  let t = String(raw).trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) t = fence[1].trim();
+  const start = t.indexOf('{');
+  if (start > 0) t = t.slice(start);
+  try { return JSON.parse(t); } catch { /* truncated — repair below */ }
+  const stack = []; let inStr = false, esc = false, safeCut = -1, safeStack = null;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') { inStr = true; continue; }
+    if (ch === '{' || ch === '[') { stack.push(ch); continue; }
+    if (ch === '}' || ch === ']') { stack.pop(); safeCut = i + 1; safeStack = stack.slice(); continue; }
+    if (ch === ',') { safeCut = i; safeStack = stack.slice(); continue; }  // cut BEFORE the comma
+  }
+  if (safeCut < 0 || !safeStack) throw new Error('JSON unrepairable (no complete element)');
+  let out = t.slice(0, safeCut);
+  for (let k = safeStack.length - 1; k >= 0; k--) out += safeStack[k] === '{' ? '}' : ']';
+  return JSON.parse(out);
 }
 
 export function parseJsonLoose(text) {
@@ -95,12 +126,19 @@ export async function llmJson(messages, opts = {}) {
     // max_tokens thinking, and a long think cuts the JSON off mid-stream. The repair
     // re-ask therefore gets a 1.5× budget — retrying with the same cap would truncate
     // identically (this exact failure killed time-skips intermittently).
+    // FIRST try to SALVAGE the truncated reply — a partial-but-valid object is far better
+    // than a hard failure, and it avoids a second expensive (and likely also-truncated) call.
+    try {
+      const salvaged = repairTruncatedJson(res.content);
+      if (salvaged && typeof salvaged === 'object') return { ...res, json: salvaged, truncated: true };
+    } catch { /* not salvageable — fall through to the re-ask */ }
     const retryOpts = { ...opts, maxTokens: Math.ceil((opts.maxTokens || 6000) * 1.5) };
     const retry = await llmChat([...messages, { role: 'assistant', content: res.content },
       { role: 'user', content: `Your previous reply was not valid JSON (${e.message}). Reply again with ONLY the corrected valid JSON object, no prose, no fences.` }], retryOpts);
     retry.rawUsd += res.rawUsd;
     retry.usage = { prompt_tokens: (res.usage.prompt_tokens || 0) + (retry.usage.prompt_tokens || 0), completion_tokens: (res.usage.completion_tokens || 0) + (retry.usage.completion_tokens || 0) };
-    return { ...retry, json: parseJsonLoose(retry.content) };
+    try { return { ...retry, json: parseJsonLoose(retry.content) }; }
+    catch (e2) { return { ...retry, json: repairTruncatedJson(retry.content), truncated: true }; }  // last resort: salvage the re-ask too
   }
 }
 

@@ -71,6 +71,7 @@ const voiceList = () => getTtsProvider() === 'laionbox'
 const CHAT_SYS = (lang) => `You are Vivarium's WORLD WIZARD — a warm, imaginative collaborator who helps a player design a brand-new playable scenario, then hands a precise build plan to the game engine.
 CONVERSATION STYLE: interview briefly, propose boldly. When the player gives you a seed idea, DRAFT A FULL CONCRETE PLAN immediately (names, personalities, locations, bonds) and present a readable summary in your reply — then invite revisions. Refine the plan on every turn. Keep replies compact (a tight summary + one or two questions), never dump raw JSON into the reply text.
 ${lang !== 'en' && GAME_LANGS[lang] ? `LANGUAGE: converse in ${GAME_LANGS[lang]} and write player-facing plan text (personalities, backstories, bond descriptions) in ${GAME_LANGS[lang]} — EXCEPT: appearance, outfit, extra_outfits, location description and voice_desc MUST stay in ENGLISH (they feed image/voice generators directly).` : ''}
+SCALE DETAIL TO CAST SIZE — CRITICAL so the plan JSON always FINISHES and stays valid: for a LARGE cast (more than ~8 people, e.g. a scenario with extended family, exes and side characters), give the 2-4 CENTRAL characters full rich backstories (5-6 sentences) but keep BACKGROUND/peripheral people concise (name, 1-2 sentence backstory, their bond to the protagonist) — the storyteller fleshes them out further during play. NEVER drop or merge requested people to save space; NEVER stop mid-JSON. Finish the complete, valid JSON object even if that means shorter entries for minor characters. Prioritise a COMPLETE plan over long prose.
 Return ONLY a JSON object, no fences:
 {"reply": "your conversational reply (the human-readable plan summary lives HERE)",
  "plan": {  // the CURRENT full plan, or null if you truly have nothing yet — keep it complete & self-consistent on every turn
@@ -91,13 +92,19 @@ export async function wizardChat(user, message, history = [], lang = 'en') {
   const msgs = [{ role: 'system', content: CHAT_SYS(lang) },
     ...history.slice(-16).map(m => ({ role: m.role, content: m.content })),
     { role: 'user', content: message }];
-  const res = await llmJson(msgs, { maxTokens: 6000 });
+    // Big pasted scenarios produce a large plan JSON; a generous ceiling lets it finish, and
+  // llmJson salvages a partial-but-valid plan if the model still truncates.
+  const res = await llmJson(msgs, { maxTokens: 16000, timeoutMs: 150000, reasoningEffort: 'low' });
   debitCall(user.id, res, 'wizard_chat');
   logCall({ userId: user.id, kind: 'llm', surface: 'wizard_chat', request: msgs, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const out = res.json || {};
   // Price the plan server-side on every turn so the player always sees a current, trustworthy
   // estimate next to the proposal (the LLM never computes costs — we do).
   if (out.plan) out.estimate = estimatePlan(out.plan);
+  if (res.truncated) {
+    out.truncated = true;
+    out.reply = (out.reply ? out.reply + '\n\n' : '') + '⚠️ That was a large scenario, so I drafted as much as fit in one pass — a few later characters or details may be missing. Say "continue the plan" and I\'ll add the rest.';
+  }
   return out;
 }
 
