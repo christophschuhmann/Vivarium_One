@@ -94,7 +94,7 @@ export async function wizardChat(user, message, history = [], lang = 'en') {
     { role: 'user', content: message }];
     // Big pasted scenarios produce a large plan JSON; a generous ceiling lets it finish, and
   // llmJson salvages a partial-but-valid plan if the model still truncates.
-  const res = await llmJson(msgs, { maxTokens: 16000, timeoutMs: 150000, reasoningEffort: 'low' });
+  const res = await llmJson(msgs, { maxTokens: 32000, timeoutMs: 200000, reasoningEffort: 'low' });
   debitCall(user.id, res, 'wizard_chat');
   logCall({ userId: user.id, kind: 'llm', surface: 'wizard_chat', request: msgs, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const out = res.json || {};
