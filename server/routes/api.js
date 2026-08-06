@@ -546,11 +546,23 @@ export default async function apiRoutes(app) {
   // ---------- World Wizard (chat-driven scenario generator; see server/wizard.js) ----------
   // One chat turn: the assistant refines a structured plan; every reply carrying a plan also
   // carries a server-computed credit estimate (never LLM-computed).
-  app.post('/api/wizard/chat', async (req) => {
+  // SSE: building a big scenario plan can take MINUTES on a heavy model. A plain POST held
+  // open that long is killed by proxies/tunnels/phones (no bytes → 5xx). Streaming a heartbeat
+  // every 9s keeps the connection alive indefinitely; the finished plan rides a 'done' event.
+  app.post('/api/wizard/chat', async (req, reply) => {
     const u = requireVerified(req);
-    const out = await wizardChat(u, String(req.body?.message || ''), req.body?.history || [], req.body?.lang || 'en');
-    if (out.estimate) delete out.estimate._estMicro; // internal preflight number, not for clients
-    return out;
+    reply.raw.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+    let finished = false;
+    const send = (event, data) => { if (!finished) { try { reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch {} } };
+    const hb = setInterval(() => send('status', { message: 'still dreaming up your world…' }), 9000);
+    try {
+      const out = await wizardChat(u, String(req.body?.message || ''), req.body?.history || [], req.body?.lang || 'en');
+      if (out.estimate) delete out.estimate._estMicro; // internal preflight number, not for clients
+      send('done', out);
+    } catch (e) {
+      console.error('[wizard] chat failed:', e.code || '', e.message);
+      send('error', { code: e.code || 'WIZARD_FAILED', message: e.message });
+    } finally { finished = true; clearInterval(hb); try { reply.raw.end(); } catch {} }
   });
   // Kick the agentic background build after the player approved the estimate.
   // Validates + preflights credits synchronously; the heavy work runs async (poll the job).

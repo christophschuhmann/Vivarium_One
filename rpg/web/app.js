@@ -70,6 +70,43 @@ async function api(path, opts = {}) {
   if (!res.ok) { const e = new Error(data.error?.message || res.statusText); e.code = data.error?.code; throw e; }
   return data;
 }
+// POST that consumes a Server-Sent-Events response: the server heartbeats ('status' events)
+// while it works — those bytes keep proxies/tunnels/phones from killing a minutes-long
+// request — then delivers the result on a 'done' event (or a fault on 'error'). onStatus gets
+// each heartbeat message. Resolves with the 'done' payload; rejects on 'error'/network/stall.
+async function apiSSE(path, { body = null, onStatus = null } = {}) {
+  const ctrl = new AbortController();
+  let lastByte = Date.now();
+  const watchdog = setInterval(() => { if (Date.now() - lastByte > 90000) ctrl.abort(); }, 5000);  // >90s silent (hb is 9s) = dead
+  try {
+    const res = await fetch(path, { method: 'POST', credentials: 'same-origin', signal: ctrl.signal,
+      headers: body != null ? { 'Content-Type': 'application/json' } : {}, body: body != null ? JSON.stringify(body) : undefined });
+    if (!res.ok || !res.body) { const d = await res.json().catch(() => ({})); const e = new Error(d.error?.message || res.statusText); e.code = d.error?.code; throw e; }
+    const reader = res.body.getReader(); const dec = new TextDecoder();
+    let buf = '', result = null, failure = null;
+    while (true) {
+      const { done, value } = await reader.read(); if (done) break;
+      lastByte = Date.now();
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf('\n\n')) !== -1) {
+        const raw = buf.slice(0, idx); buf = buf.slice(idx + 2);
+        const ev = /event: (\w+)/.exec(raw)?.[1], dl = /data: (.*)/.exec(raw)?.[1];
+        if (!ev || !dl) continue;
+        const data = JSON.parse(dl);
+        if (ev === 'status') onStatus?.(data.message);
+        else if (ev === 'done') result = data;
+        else if (ev === 'error') failure = data;
+      }
+    }
+    if (failure) { const e = new Error(failure.message || 'Something went wrong.'); e.code = failure.code; throw e; }
+    if (result == null) throw new Error('The server closed the connection before finishing.');
+    return result;
+  } catch (e) {
+    if (e.name === 'AbortError') { const err = new Error('The connection stalled and was cancelled — please try again.'); err.code = 'STALLED'; throw err; }
+    throw e;
+  } finally { clearInterval(watchdog); }
+}
 // ms=0 → sticky toast (won't auto-dismiss). Always returns a dismiss fn so callers can
 // clear a progress toast ("Transcribing…") when the work finishes. Back-compatible: existing
 // two-arg calls keep the 3.4s auto-dismiss and simply ignore the return value.
@@ -1288,7 +1325,7 @@ async function wizardScreen() {
     addMsg('user', text); W.history.push({ role: 'user', content: text });
     const status = addMsg('status', '🧙 conjuring…');
     try {
-      const out = await api('/api/wizard/chat', { method: 'POST', body: { message: text, history: W.history.slice(0, -1), lang: getLang() } });
+      const out = await apiSSE('/api/wizard/chat', { body: { message: text, history: W.history.slice(0, -1), lang: getLang() }, onStatus: (m) => { if (status) status.textContent = '🧙 ' + m; } });
       status.remove();
       addMsg('assistant', out.reply || '…'); W.history.push({ role: 'assistant', content: out.reply || '' });
       if (out.plan) { W.plan = out.plan; W.estimate = out.estimate; renderPlan(); }
