@@ -33,7 +33,7 @@ export function route(role) {
 // /ticks route) so a generation the client walked away from stops instead of holding the
 // world's tick lock. glm-5.2 legitimately takes ~2 min on the largest contexts, so the cap
 // sits a little above that to catch true HANGS without killing honest slow generations.
-export const LLM_TIMEOUT_MS = 150000;
+export const LLM_TIMEOUT_MS = 280000;  // heavy reasoners (gpt-5.6-sol) need >150s per tick; SSE routes heartbeat so the connection survives
 export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, signal = null, timeoutMs = LLM_TIMEOUT_MS, reasoningEffort = null } = {}) {
   const r = route('reasoning_llm');
   if (MOCK) return mockLlm(messages);

@@ -613,7 +613,7 @@ ${intervention ? `The player just nudged the world (${intervention.kind}): "${in
 The skip: ${timeDelta} starting ${fmtClock(world.sim_time)}.`;
   // generous token budget: the model may spend tokens on internal reasoning before the JSON,
   // and a truncated reply fails parsing (the repair re-ask would truncate identically)
-  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: usr }], { maxTokens: 4000, signal });
+  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: usr }], { maxTokens: 4000, signal, reasoningEffort: 'low' });
   debitCall(user.id, res, 'chapter_plan', { worldId: world.id });
   logCall({ userId: user.id, worldId: world.id, kind: 'llm', surface: 'chapter_plan', request: usr, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const raw = (res.json?.events || []).slice(0, CHAPTER_MAX_EVENTS)
@@ -734,7 +734,10 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
   // 14000: the tick JSON itself is ~3-4k tokens, but reasoning models (esp. glm-5.2) burn a
   // VARIABLE — sometimes huge — share of the budget thinking first; 9000 exhausted entirely
   // on reasoning once the schema grew (music/fact/location tools). Output is cheap; be generous.
-  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: userMsg }], { maxTokens: 14000, signal });
+  // reasoning_effort:'low' keeps heavy reasoners (gpt-5.6-sol, grok-4.5) from over-thinking
+  // each tick; timeoutMs 280s (the tick route is SSE with a 9s heartbeat, so a long call
+  // can't drop the connection) prevents a slow model from failing an advance with LLM_TIMEOUT.
+  const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: userMsg }], { maxTokens: 14000, signal, reasoningEffort: 'low', timeoutMs: 280000 });
   const micro = debitCall(user.id, res, 'tick_llm', { worldId: world.id, tickRef: idx });
   logCall({ userId: user.id, worldId: world.id, tickRef: idx, kind: 'llm', surface: 'tick', request: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }], response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const out = res.json;
