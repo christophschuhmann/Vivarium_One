@@ -57,6 +57,7 @@ const t = (key, fallback) => (I18N[getLang()] || {})[key] || fallback || key;
 
 /* ───────── helpers ───────── */
 async function api(path, opts = {}) {
+  if(S.livingWorld===S.world&&/^\/api\/characters\//.test(path)){path=path.replace('/api/characters/',`/api/living/worlds/${S.world}/sims/`).replace('/inner-voice','/inner');}
   // Only send a JSON Content-Type when there's actually a JSON body — Fastify's
   // JSON parser rejects an empty body sent with that header (e.g. bodyless POSTs
   // like logout or "render video").
@@ -122,7 +123,7 @@ async function refreshMe() {
   try { const me = await api('/api/me'); S.user = me.user; S.ttsProvider = me.ttsProvider || 'gemini'; S.byok = !!me.byok; const c = $('#credits-num'); if (c) { c.textContent = S.byok ? 'Own API' : me.user.credits; c.closest('#credits-chip')?.setAttribute('title', S.byok ? 'Your provider account · no Vivarium credits' : 'Your credits'); } } catch { S.user = null; }
   return S.user;
 }
-const assetUrl = (id) => id ? `/api/assets/${id}` : '';
+const assetUrl = (id) => id ? (String(id).startsWith('/api/living/library/')?id:`/api/assets/${id}`) : '';
 // Based on the winner of a controlled experiment (scripts/tts_narrator_experiment.py,
 // 2026-07-02; results: scripts/tts_experiment_summary.md), hand-tuned 2026-07-04 ("audio
 // book" framing + explicit no-emphasis close). BYTE-IDENTICAL to server/export_cues.js
@@ -158,7 +159,7 @@ const ttsPrefs = () => {
 const skipPrefs = () => ({ animate: true, detail: 'full', ...JSON.parse(localStorage.getItem('viv_skip') || '{}') });
 const saveSkipPrefs = (p) => localStorage.setItem('viv_skip', JSON.stringify({ ...skipPrefs(), ...p }));
 const saveTtsPrefs = (p) => localStorage.setItem('viv_tts', JSON.stringify({ ...ttsPrefs(), ...p }));
-const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', {...(S.worldData?.world.simulation_mode==='living'?{timeZone:'UTC'}:{}), weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const cutoutFor = (ch) => { const o = (ch.state.outfits || []).find(o => o.name === (ch.state.outfit || 'everyday')) || (ch.state.outfits || [])[0]; return o?.cutout_asset_id; };
 
 /* ── mic component: 🎙 → record (pulse+✕) → click again → transcribe → insert ── */
@@ -478,7 +479,7 @@ function bindChrome() {
   });
   const av = $('#avatar-chip'); if (av) av.onclick = accountModal;
   const gmc = $('#gm-chip'); if (gmc) gmc.onclick = gmChatOverlay;
-  const tlc = $('#tl-chip'); if (tlc) tlc.onclick = () => timelineModal();
+  const tlc = $('#tl-chip'); if (tlc) tlc.onclick = () => S.worldData?.world.simulation_mode==='living'?livingTimeline():timelineModal();
   const mc = $('#music-chip'); if (mc) mc.onclick = musicWidget;
   // 🌐 chip cycles EN→DE→FR→ES and re-renders the current screen. From the next tick on,
   // the Game Master also writes the story in the chosen language (lang rides in tick calls).
@@ -506,7 +507,10 @@ async function route() {
 }
 async function loadWorld(force = false) {
   if (!force && S.worldData?.world.id === S.world) return S.worldData;
-  S.worldData = await api(`/api/worlds/${S.world}`);
+  const pov=typeof stageState!=='undefined'?stageState.pov:null;
+  const query=pov?(pov.type==='character'?'sim=':'place=')+encodeURIComponent(pov.id||''):'';
+  S.worldData = await api(`/api/worlds/${S.world}`+(S.livingWorld===S.world&&pov?.id?'?'+query:''));
+  if(S.worldData.world.simulation_mode==='living')S.livingWorld=S.world;
   return S.worldData;
 }
 
@@ -609,7 +613,7 @@ async function homeScreen() {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
         <h1 class="title" style="margin:0">${t('my_worlds', 'My Worlds')}</h1>
         <div style="display:flex;gap:9px">
-          <a class="btn btn-teal" href="/living.html">🌳 Living World</a>
+          <button class="btn btn-teal" id="newliving">🌳 Living World</button>
           <button class="btn btn-teal" id="wizardbtn" title="Chat a whole new scenario into being">${t('wizard', '🧙 World Wizard')}</button>
           <button class="btn btn-soft" id="importworld" title="Restore a saved game from a .vivarium.zip">${t('import_save', '⬆ Import save')}</button>
           <button class="btn btn-primary" id="newworld">${t('new_world', '+ New world')}</button>
@@ -627,6 +631,7 @@ async function homeScreen() {
     };
     $('#newworld').onclick = create; $('#create2').onclick = create;
     $('#importworld').onclick = () => importGamePicker();
+    $('#newliving').onclick=livingTownModal;
     $('#wizardbtn').onclick = () => nav('#/wizard');
     $$('.world-card').forEach(c => {
       c.onclick = async (e) => {
@@ -645,7 +650,7 @@ async function homeScreen() {
         }
         S.world = c.dataset.id; S.worldData = null;
         const w = worlds.find(x => x.id === c.dataset.id);
-        if(w.simulation_mode==='living'){location.href='/living.html?world='+encodeURIComponent(w.id);return;}
+        if(w.simulation_mode==='living'){stageState.pov=null;nav(`#/stage?w=${w.id}`);return;}
         if (e.target.closest('[data-editintro]')) { introEditor(c.dataset.id); return; }
         if (e.target.closest('[data-intro]')) {
           // enter like a game intro: the opening sequence plays as a film (scenes, music,
@@ -866,6 +871,7 @@ async function forgeScreen() {
 
 /* ───────── cast ───────── */
 async function castScreen() {
+  if((await loadWorld(true)).world.simulation_mode==='living')return livingCastScreen();
   const { world, characters } = await loadWorld(true);
   app.innerHTML = chrome('cast', { worldTitle: 'The Cast', sub: `${world.title} · ${characters.length} character${characters.length === 1 ? '' : 's'}` }) + `
   <div class="screen"><div class="container">
@@ -1047,6 +1053,7 @@ function nowStateHtml(st) {
     ${(st.intentions || []).length ? `<p style="margin-top:4px">${st.intentions.map(i => `<span class="intent-chip">→ ${esc(i)}</span>`).join('')}</p>` : ''}`;
 }
 async function profileDrawer(charId) {
+  if((await loadWorld()).world.simulation_mode==='living')return livingProfileDrawer(charId);
   const { characters, world } = await loadWorld();
   const c = characters.find(x => x.id === charId); if (!c) return;
   const { patches } = await api(`/api/characters/${charId}/patches`);
@@ -1739,6 +1746,7 @@ function panZoom(wrap, viewport, opts = {}) {
 
 /* ───────── bonds (the Web) ───────── */
 async function bondsScreen() {
+  if((await loadWorld(true)).world.simulation_mode==='living')return livingBondsScreen();
   const { world, characters, relationships } = await loadWorld(true);
   app.innerHTML = chrome('bonds', { worldTitle: 'The Web', sub: 'bonds · who feels what about whom' }) + `
   <div class="screen bare"><div class="canvas-wrap" id="wrap">
@@ -1978,6 +1986,7 @@ async function worldDirectionModal(world) {
 }
 
 async function atlasScreen() {
+  if((await loadWorld(true)).world.simulation_mode==='living')return livingAtlasScreen();
   const { world, locations, paths, characters } = await loadWorld(true);
   app.innerHTML = chrome('world', { worldTitle: 'The Atlas', sub: 'world · places & paths' }) + `
   <div class="screen bare"><div class="canvas-wrap" id="wrap"><svg id="asvg"><g id="vp"></g></svg></div></div>
@@ -2178,7 +2187,8 @@ let stageState = { pov: null, playing: null, castSugs: [] };
 async function stageScreen() {
   const { world, characters, locations } = await loadWorld(true);
   if (world.status !== 'live') return nav(`#/genesis?w=${S.world}`);
-  const [{ ticks }, branchInfo] = await Promise.all([
+  const living=world.simulation_mode==='living';
+  const [{ ticks }, branchInfo] = living?[{ticks:[S.worldData.lastTick]},{canUndo:false,canRedo:false}]:await Promise.all([
     api(`/api/worlds/${S.world}/ticks?after=${Math.max(-1, world.tick_index - 2)}`),
     api(`/api/worlds/${S.world}/branches`),
   ]);
@@ -2240,7 +2250,7 @@ async function stageScreen() {
       <button class="tchip ${stageState.pov.type === 'character' ? 'sel' : ''}" id="pc">${t('character', 'Character')}</button>
       <button class="tchip ${stageState.pov.type === 'location' ? 'sel' : ''}" id="pl">${t('location', 'Location')}</button>
       <span style="width:1px;height:18px;background:rgba(255,255,255,.2)"></span>
-      ${['+1m', '+5m', '+30m', '+1h', '+3h', '+1d'].map(d => `<button class="tchip ${d === stageState.delta ? 'sel' : ''}" data-delta="${d}">${d}</button>`).join('')}
+      ${(living?['+1m','+5m','+30m','+1h']:['+1m', '+5m', '+30m', '+1h', '+3h', '+1d']).map(d => `<button class="tchip ${d === stageState.delta ? 'sel' : ''}" data-delta="${d}">${d}</button>`).join('')}
       <button class="tchip ${!['+1m', '+5m', '+30m', '+1h', '+3h', '+1d'].includes(stageState.delta) ? 'sel' : ''}" id="customdelta" title="Choose any time jump">⏱ ${!['+1m', '+5m', '+30m', '+1h', '+3h', '+1d'].includes(stageState.delta) ? stageState.delta.slice(1) : 'custom'}</button>
       <button class="btn btn-primary small" id="advance">${t('advance', '▶ Advance')}</button>
       <button class="btn btn-coral small" id="intervene">${t('intervene', '⚡ Intervene')}</button>
@@ -2258,6 +2268,7 @@ async function stageScreen() {
   <nav id="dock">${['home', 'cast', 'bonds', 'world', 'play', 'share'].map(k => `
     <button class="dock-btn ${k === 'play' ? 'active' : ''}" data-nav="${k}">${ICONS[k]}<span>${dockLabel(k)}</span></button>`).join('')}</nav>`;
   bindChrome();
+  if(living)await livingStageExtras(loc,present);
   // "From the beginning"/replay pending: cover the stage instantly so the current scene
   // never flashes before the film's first transition card takes over.
   if (S.replay && !$('#cine-blackout')) {
@@ -2325,7 +2336,7 @@ async function stageScreen() {
     stopNarration();
     try { await api(`/api/worlds/${S.world}/redo`, { method: 'POST', body: { steps: 1 } }); toast('⟳ Redone'); S.worldData = null; stageScreen(); } catch (e) { fail(e); }
   };
-  $('#timelinebtn').onclick = () => timelineModal(world);
+  $('#timelinebtn').onclick = () => living?livingTimeline():timelineModal(world);
 
   // Prompt shown when the player advances from a rewound position where later-joining
   // characters don't exist yet. Three ways forward + cancel. (See /fork-clean & /strip-future-chars.)
@@ -2378,6 +2389,7 @@ async function stageScreen() {
   }
 
   async function advanceTick(intervention, opts = {}) {
+    if(living)return livingAdvance(intervention);
     // Branching from a PAST tick: if we're positioned before some character joined the story,
     // advancing here spins off an alternative branch that should not contain them. Ask the
     // player how to handle it (clean copy / strip them / keep everyone) before generating.
@@ -3234,6 +3246,8 @@ async function playIntroSequence() {
    approved changes reach the story as ordinary world state. History persists
    per world (the model itself only remembers the newest ~20k tokens).        */
 const GM_ACTION_LABELS = {
+  set_anchor:a=>'⚓ '+(a.name||a.id)+' · '+(a.enabled?'Anker setzen':'Anker lösen'),
+  write_biography:a=>'✍ '+(a.name||a.id)+' · '+(a.instruction||'Biografie ausarbeiten'),
   create_character: (a) => `🎭 Create character “${a.draft?.name}”${a.bonds?.length ? ` with ${a.bonds.length} bonds` : ' (bonds auto-drafted)'} — paints a portrait (~30s)`,
   patch_character: (a) => `🧬 ${(a.patches || []).length} attribute change(s) for a character (persistent)`,
   update_state: (a) => `📍 Update a character's immediate state (place/activity/mood)`,
@@ -3310,7 +3324,7 @@ async function gmChatOverlay() {
     addMsg('user', text);
     const status = addMsg('status', '🎭 the Game Master is thinking…');
     try {
-      const out = await api(`/api/worlds/${S.world}/gm-chat`, { method: 'POST', body: { message: text, lang: getLang() } });
+      const out = await api(`/api/worlds/${S.world}/gm-chat`, { method: 'POST', body: { message: text, lang: getLang(), perspective:stageState.pov } });
       status.remove();
       addAssistant(out.reply, out.actions);
       refreshMe();
@@ -3867,6 +3881,7 @@ async function timelineModal() {
 
 /* ── stage jump overlays ── */
 function locationPickerModal(locations, characters, currentId, onPick, opts = {}) {
+  if(S.livingWorld===S.world)return livingLocationPicker(onPick);
   const groups = {};
   locations.forEach(l => (groups[l.place_group || 'Elsewhere'] = groups[l.place_group || 'Elsewhere'] || []).push(l));
   const nowTick = S.worldData?.world?.tick_index ?? Infinity;   // hide not-yet-introduced characters
@@ -3889,6 +3904,7 @@ function locationPickerModal(locations, characters, currentId, onPick, opts = {}
   $$('.jump-loc', m).forEach(el => el.onclick = () => { const l = locations.find(x => x.id === el.dataset.id); m.remove(); onPick(l); });
 }
 function characterPickerModal(characters, locations, currentId, onPick) {
+  if(S.livingWorld===S.world)return livingSimPicker(async c=>{await livingSelectSim(c.id);onPick(S.worldData.characters.find(x=>x.id===c.id));});
   const locName2 = (id) => locations.find(l => l.id === id)?.name || '—';
   const m = document.createElement('div');
   m.className = 'modal-bg';
@@ -3966,6 +3982,7 @@ async function mindModal(charId) {
       try { await api(`/api/characters/${c.id}`, { method: 'PATCH', body: { location_id: l.id } }); toast(`${c.name} moved to ${l.name} 📍`); S.worldData = null; m.remove(); if (typeof stageScreen === 'function' && location.hash.includes('stage')) stageScreen(); } catch (e) { fail(e); }
     }, { title: `📍 Move ${c.name}`, sub: 'teleport them to any location' });
   };
+  if(S.worldData?.world.simulation_mode==='living')livingMindExtras(m,c);
   $('#mm-profile', m).onclick = () => { m.remove(); profileDrawer(c.id); };
   $('#mm-pov', m).onclick = () => { m.remove(); stopNarration(); stageState.pov = { type: 'character', id: c.id }; stageScreen(); };
 }
@@ -4028,7 +4045,7 @@ function interventionModal(characters, onApply) {
     const text = $('#iv-text', m).value.trim(); if (!text) return;
     const tname = target ? (characters.find(c => c.id === target)?.name || null) : null;
     m.remove();
-    onApply({ kind, target: tname, text });
+    onApply({ kind, target: tname, targetId:target||undefined, text });
   };
 }
 
@@ -4060,6 +4077,7 @@ function importGamePicker() {
 /* ───────── share & account ───────── */
 async function shareModal() {
   const data = await loadWorld();
+  if(data.world.simulation_mode==='living')return livingShareModal();
   const m = document.createElement('div');
   m.className = 'modal-bg';
   m.innerHTML = `<div class="modal"><div class="modal-head violet"><div><b>Share “${esc(data.world.title)}”</b><small>export, back up, or turn your story into a film</small></div><span class="x">✕</span></div>

@@ -50,7 +50,7 @@ try {
  await page.locator('[data-settings-tab="storage"]').click();await page.getByRole('heading',{name:'Storage & scenarios'}).waitFor();
  assert.equal(await page.locator('.storage-metrics article').count(),4);
  const summary=await (await context.request.get(base+'/api/storage')).json();assert.equal(summary.projects.count,1);assert.ok(summary.assets.count>10);
- page.once('dialog',dialog=>dialog.accept('Browser independent copy'));await page.locator('[data-duplicate-world]').first().click();await page.getByText('Browser independent copy',{exact:true}).waitFor();
+ page.once('dialog',dialog=>dialog.accept('Browser independent copy'));await page.locator('[data-duplicate-world]').first().click();await page.getByLabel('Storage',{exact:true}).getByText('Browser independent copy',{exact:true}).waitFor();
  const copiedSummary=await (await context.request.get(base+'/api/storage')).json();assert.equal(copiedSummary.projects.count,2);assert.ok(copiedSummary.assets.count>summary.assets.count);
  await page.locator('[data-select-asset]').first().check();const assetDownloadEvent=page.waitForEvent('download');await page.locator('[data-export-assets]').click();const assetDownload=await assetDownloadEvent;assert.equal(await assetDownload.failure(),null);assert.ok(assetDownload.suggestedFilename().endsWith('.zip'));
  const downloadEvent=page.waitForEvent('download');await page.locator('.storage-row a[download]').first().click();const download=await downloadEvent;assert.ok(download.suggestedFilename().endsWith('.zip'));assert.equal(await download.failure(),null);

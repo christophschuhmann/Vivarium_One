@@ -1,3 +1,5 @@
+import {directorChat,directorApply} from '../living/director.js';
+import {stageView} from '../living/vivarium.js';
 // Player API — every UI action is exactly one endpoint here.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -211,6 +213,7 @@ export default async function apiRoutes(app) {
   app.get('/api/worlds/:id', async (req) => {
     const u = requireUser(req);
     const w = ownWorld(u, req.params.id);
+    if(w.simulation_mode==='living')return stageView(w,req.query);
     return {
       world: w,
       characters: db.prepare('SELECT * FROM characters WHERE world_id=?').all(w.id).map(charOut),
@@ -557,12 +560,14 @@ export default async function apiRoutes(app) {
   app.post('/api/worlds/:id/gm-chat', async (req) => {
     const u = requireVerified(req);
     const w = ownWorld(u, req.params.id);
+    if(w.simulation_mode==='living')return directorChat(u,w,String(req.body?.message||''),req.body?.lang,undefined,req.body?.perspective);
     return gm.gmChat(u, w, String(req.body?.message || '').slice(0, 4000), req.body?.lang || 'en');
   });
   // Execute the player-APPROVED actions (may generate images — can take a minute).
   app.post('/api/worlds/:id/gm-apply', async (req) => {
     const u = requireVerified(req);
     const w = ownWorld(u, req.params.id);
+    if(w.simulation_mode==='living')return directorApply(u,w,req.body?.actions||[]);
     const results = await gm.gmApplyActions(u, w, req.body?.actions || []);
     return { results };
   });
@@ -1293,6 +1298,7 @@ export default async function apiRoutes(app) {
     db.prepare('UPDATE worlds SET current_music=?, updated_at=? WHERE id=?').run(j(music), now(), w.id);
     if (b.locationId && db.prepare('SELECT 1 FROM locations WHERE id=? AND world_id=?').get(b.locationId, w.id))
       db.prepare('UPDATE locations SET music=? WHERE id=?').run(j(music), b.locationId);
+    if(w.simulation_mode==='living'&&b.locationId&&db.prepare('SELECT 1 FROM lw_places WHERE id=? AND world_id=?').get(b.locationId,w.id))db.prepare('INSERT INTO lw_place_music VALUES (?,?,?) ON CONFLICT(location_id) DO UPDATE SET music=excluded.music').run(w.id,b.locationId,j(music));
     // the tick that carries the currently-active score: explicit idx, else newest with music
     const t = b.tickIdx != null
       ? db.prepare('SELECT id FROM ticks WHERE world_id=? AND idx=?').get(w.id, +b.tickIdx)

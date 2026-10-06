@@ -207,7 +207,7 @@ The generation, review and packaging scripts are in `scripts/`. Large generated 
 
 ## Living World: a town with procedural Sims and anchored stories
 
-The `living-world` branch adds a separate **Living World** view. Classic scenarios continue to use the existing studio. There is no player/NPC split in this view: every resident is a Sim with goals, needs, relationships and a personal journal. An anchor changes how that Sim is narrated, while preserving their identity and history.
+The `living-world` branch runs the Living World simulation inside the **original Vivarium stage and studio**. The stage, thought bubbles, narrator/character voices, private inner-voice dialogue, interventions, Game Master chat and scene music use the familiar interface. There is no player/NPC split: every resident is a Sim with goals, needs, relationships and a personal journal. An anchor changes how that Sim is narrated, while preserving their identity and history.
 
 ### Install this branch
 
@@ -237,33 +237,35 @@ For subsequent server starts, set the same `VIV_LIVING_LIBRARY` path in your loc
 
 ### Start small, then grow
 
-1. Sign in with the local player and connect **one** HyprLab or OpenRouter key through Settings, or **Mein API-Key** inside Living World. No admin login or credit purchase is required.
-2. Open **Living World** from the studio, or visit `/living.html`.
-3. Click **Neue Stadt**, begin with **10 Sims**, and choose a reproducible seed. The initial two Sim anchors get written biographies when **Anker-Biografien vom Sprachmodell schreiben lassen** is enabled. Other residents receive procedural backgrounds, household ties and ambitions.
-4. If you are trying it without a key, disable that biography checkbox and the main **Storyteller für Anker & Kontakte** checkbox. Pending authored backgrounds remain visibly labelled; no AI output is fabricated.
-5. Advance **5**, **15**, or **60 minutes**. Time advances only after a successful committed step. With Storyteller enabled, the procedural proposals run first, then actual anchored encounters are narrated together.
-6. Use **Stadt erweitern** in the Sims tab to grow to 20, 50, 100 and finally 500 residents. Existing residents, anchors, states and journals are preserved. The seed-73 town at 500 has 200 households and 1,032 hierarchical places.
+1. Sign in with the local player and connect **one** HyprLab or OpenRouter key through **Settings → Models & API keys**. No admin login or credit purchase is required.
+2. Open **Living World** from the home screen, name your town and start with **10 Sims**. The town opens on the original **Stage**; existing `/living.html?world=…` bookmarks redirect there.
+3. Click a sprite to open the original **Mind** window. Use **Inner voice** for private reflection, **In Ruhe sprechen** for a calm conversation, and **Stats & Protokoll** for needs, goals, biography, relationships and personal memories. Both kinds of conversation leave the simulation clock paused.
+4. Choose **+1m**, **+5m**, **+30m** or **+1h**, then **Advance**. The clock advances only after a committed step. **Intervene** passes an event, idea, condition or directorial instruction to that step. Selecting an unanchored Sim for an intervention also includes that Sim's encounters in the narrated field for this step.
+5. Use **⚓ Anker** to change Sim/location anchors and add residents, gradually growing to 20, 50, 100 and finally 500. Existing states and journals are preserved. You can switch off **Storyteller für Anker & Kontakte** here to inspect procedural simulation without a provider call.
+6. **GM** opens the original Game Master chat. Ask about the focused scene or propose anchor changes and authored biographies. Changes are shown as a review card and run when you choose **Apply**. A Sim's **Biografie ausarbeiten** button also lets you supply instructions for its background.
 
 You can also create 500 directly. Starting small makes it easier to inspect why individual Sims move and react. A village does not become more visually expensive merely because more residents are simulated.
 
 ### Choose anchors and inspect perspectives
 
-- **Sim anchor:** select any person, then **Sim verankern**. Their anchor follows them through rooms, travel and phone calls. Removing it does not erase memories or relationships. A procedural biography is marked for authored completion on the next hybrid step.
-- **Location anchor:** open a room or the **Anker** tab and choose **Diesen Ort verankern**. Building, neighborhood, district and city anchors also include their descendant locations. All actual occupants encountered during the step become eligible for the Storyteller.
+- **Sim anchor:** click a sprite, then **Anker setzen**, or select a Sim through the **Anker & Simulation** menu. Their anchor follows them through rooms, travel and phone calls. Removing it does not erase memories or relationships. A procedural biography is marked for authored completion on the next hybrid step.
+- **Location anchor:** open the Atlas and right-click a neighborhood, house or room to set its anchor. On touch devices use **Anker → Ort auswählen** and the graph focus controls. Building, neighborhood, district and city anchors also include their descendant locations. All actual occupants encountered during the step become eligible for the Storyteller.
 - **Visitors and contacts:** an unanchored Sim joining an anchored room or another anchored Sim's room is included. Explicit phone contacts extend the field across locations. Shared travel segments are also treated as fields. Field membership is based on timed presence and actual contacts, rather than distance or a global all-knowing cast.
 - **Personal journal:** select a Sim to inspect their age, family/neighbor ties, needs, ambitions and biography. Every recorded perception links to an actual event. Interpretation and confidence are shown separately. Older entries are paginated and personal BM25 retrieval gives the Storyteller relevant memories belonging to that Sim only.
-- **Written background:** **Mit Assistenten ausarbeiten** accepts instructions for motives and formative memories. It records a new authored background entry while leaving already witnessed events intact.
-- **Felder:** inspect how many Sims were selected, how many model calls ran, and which invalid proposals were rejected. Removing all anchors makes the town entirely procedural.
+- **Written background:** **Biografie ausarbeiten** accepts instructions for motives and formative memories. It records a new authored background entry while leaving already witnessed events intact.
+- **Erzählfokus:** the anchor menu shows selected Sims and field counts from the latest step. Removing all anchors makes the town procedural unless a targeted intervention adds a temporary focus.
 
 A failed, cancelled or stale tick leaves world time, current states and new journals unchanged. Provider calls already made remain billable on your provider account. Selecting a city-wide anchor intentionally involves many Sims; large fields are split into groups of at most 24 owned Sims per model call.
 
 ### Navigate without loading the whole town
 
-Click district → neighborhood → house → room. Breadcrumbs and **Eine Ebene zurück** move out; drag the map background to pan. Ctrl + mouse wheel over a card moves in; Ctrl + wheel down or double-clicking the empty map moves out. On touch screens, use the cards and breadcrumbs.
+The **World / Atlas** tab remains an SVG graph of place nodes connected by the actual projected route graph. Click a neighborhood to expand its houses; click a house to expand its rooms; click a room to watch it on the original Stage. The stage also has a collapsible **Minimap** with the same graph and a shortcut to the full Atlas.
 
-Only the current region has thumbnail cards, with at most 64 on a page. Other districts and important public places use text/icon chips. A room shows at most eight character sprites, with pagination when needed. The old region's image elements are removed before the next one is displayed. Reused sprites are distinguished by name and frame colour. The full asset library is not preloaded into the browser.
+Drag the graph to pan. Mouse-wheel zoom and **+ / −** change scale; sufficient zoom expands the nearby branch or collapses it to its parent. **↖** moves one detail level out. At city scale you see neighborhoods and civic landmarks. At house scale other neighborhoods use inexpensive labeled circles while the focused house shows room thumbnails. The selected branch is expanded as a whole; panning moves its graph without loading neighboring branches automatically.
 
-In **Assets**, enter a caption, inspect the five BM25 candidates and their metadata, and either select one or let the model choose among those exact IDs. Automatic generation selects age/gender-compatible sprites and caption-matched backgrounds. House previews currently use representative existing entrance/street backgrounds; dedicated facade illustrations can be added to the library without changing the simulation.
+A graph response contains at most **60 nodes and 40 image references**. The stage displays at most 16 residents with name tags and individual colors; **Character** opens a searchable, paginated picker with 12 portraits per page. Old graph images are removed when detail changes. Places and events beyond the displayed subset continue to simulate. The API sends a bounded scene snapshot rather than every resident, every room and their complete journals.
+
+**🎨 Sprite / Hintergrund** selects from five BM25 library candidates and displays their captions. Library portraits may be reused by many residents; their name tags and colors keep them distinct. Missing age-appropriate portraits use placeholders. Dedicated facades can be added to the library later.
 
 Room actions appear in text even when the drawing cannot animate sitting at a desk, reading, using a shower or performing a job. Sprites show presence, rather than furniture poses or continuous walking animations.
 
@@ -273,12 +275,13 @@ Use **Settings → Storage & scenarios** to export, duplicate or delete a Living
 
 ```bash
 npm run test:living
+npm run test:living-browser
 npm run benchmark:living
 ```
 
-The engine test uses temporary databases and injected model responses; it does not call a paid provider. The benchmark runs five-minute steps and a full simulated day at 10, 20, 50, 100 and 500 residents, writing `artifacts/living-world/benchmark.json`. A separate manual browser review is available in `scripts/test-living-browser.mjs`; it targets an explicitly prepared preview on port 8891 and changes that preview's towns.
+The engine test uses temporary databases and injected model responses; it does not call a paid provider. The benchmark runs five-minute steps and a full simulated day at 10, 20, 50, 100 and 500 residents, writing `artifacts/living-world/benchmark.json`. The browser test starts its own temporary server and database, uses a fixture model, and checks the original Stage, Mind, paused conversations, Stats, interventions, GM review cards, hierarchical Atlas, 500-Sim image limits and mobile layout. It does not modify a running installation. The optional `scripts/review-living-real.mjs` explicitly targets a prepared demo preview and makes paid calls using that player's configured key.
 
-The [HTML implementation report](docs/living-world.html) explains the coordinator, causal checks and measured limits. This is an initial playable implementation capped at 500 residents. The Python adapter uses the actual Open Sims needs, action rules, psychology, social consent checks, affect and career progression. It does not yet reproduce its complete inventory/cooking economy, every institution or university system. Continuous real-time animation, distributed million-resident simulation and Living World rewind/replay controls remain future work. Classic studio music/voices remain available; the new Living World view currently presents text and still sprites.
+The [HTML implementation report](docs/living-world.html) explains the coordinator, causal checks and measured limits. This is an initial playable implementation capped at 500 residents. The Python adapter uses the actual Open Sims needs, action rules, psychology, social consent checks, affect and career progression. It does not yet reproduce its complete inventory/cooking economy, every institution or university system. Continuous real-time animation, distributed million-resident simulation and Living World rewind/replay controls remain future work. Living World now uses the original narrator/character TTS and music player. Its timeline lists completed steps; physical undo, branch replay and offline cinematic export of Living World steps remain future work. Scenes show text and still sprites, rather than walking or furniture animations.
 
 Open Sims is a separately versioned Git submodule at `c968251faffb99e012af4795902ef643802f14d5`; its README currently specifies that an upstream license has not yet been selected. This repository's MIT license applies to Vivarium code, without relicensing the upstream submodule.
 

@@ -75,7 +75,7 @@ export async function synthesizeLine(user, { text, voice = 'Sulafat', style = ''
   if (!byok && provider === 'laionbox') {
     let speakerVoice = voice;                       // narrator default: the requested voice name
     if (characterId) {
-      const c = db.prepare(`SELECT c.* FROM characters c JOIN worlds w ON w.id=c.world_id WHERE c.id=? AND w.user_id=?`).get(characterId, user.id);
+      const c = db.prepare(`SELECT c.* FROM characters c JOIN worlds w ON w.id=c.world_id WHERE c.id=? AND w.user_id=?`).get(characterId, user.id) || db.prepare(`SELECT s.*,CASE WHEN s.gender='female' THEN 'Leda' ELSE 'Puck' END voice FROM lw_sims s JOIN worlds w ON w.id=s.world_id WHERE s.id=? AND w.user_id=?`).get(characterId,user.id);
       if (!c) throw httpErr(404, 'NOT_FOUND', 'Character not found.');
       if (c.voice_ref_asset_id) {
         // player-uploaded custom reference wins (language is their call)

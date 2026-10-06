@@ -10,11 +10,27 @@ import {library,assetFile,searchAssets} from '../living/library.js';
 import {llmChat} from '../providers.js';
 import {withPrincipal} from '../byok.js';
 import {preflight,debitCall,EST} from '../credits.js';
+import {stageView,graphView,character,converse,chatHistory,clearChat} from '../living/vivarium.js';
 const limit=(value,max=50)=>Math.max(1,Math.min(max,Number(value)||20));
 function own(req,verified=false){const user=verified?requireVerified(req):requireUser(req);const world=db.prepare('SELECT * FROM worlds WHERE id=? AND user_id=? AND simulation_mode=\'living\'').get(req.params.worldId,user.id);if(!world)throw httpErr(404,'NOT_FOUND','Living world not found.');return {user,world};}
 function mutable(req){const result=own(req,true);if(busy.has(result.world.id))throw httpErr(409,'WORLD_BUSY','Wait for the current tick to finish.');return result;}
 const simView=p=>({...p,profile:pj(p.profile,{}),state:pj(p.state,{})});
 export default async function livingRoutes(app) {
+  app.get('/api/living/worlds/:worldId/history',async req=>{const {world}=own(req);return {beats:db.prepare('SELECT version,start,end,story,metrics FROM lw_beats WHERE world_id=? ORDER BY version DESC LIMIT 40').all(world.id).map(b=>({...b,story:pj(b.story,[]),metrics:pj(b.metrics,{})}))};});
+  app.get('/api/living/worlds/:worldId/view',async req=>stageView(own(req).world,req.query));
+  app.get('/api/living/worlds/:worldId/graph',async req=>graphView(own(req).world.id,req.query));
+  for(const channel of ['inner','talk']){
+    app.get('/api/living/worlds/:worldId/sims/:id/'+channel,async req=>{const {world}=own(req);if(!db.prepare('SELECT 1 FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id))throw httpErr(404,'NOT_FOUND','Sim not found.');return {history:chatHistory(world.id,req.params.id,channel)};});
+    app.post('/api/living/worlds/:worldId/sims/:id/'+channel,async req=>{const {user,world}=mutable(req);return converse(user,world.id,req.params.id,{message:String(req.body?.message||''),lang:req.body?.lang,channel});});
+    app.delete('/api/living/worlds/:worldId/sims/:id/'+channel,async req=>{const {world}=mutable(req);if(!db.prepare('SELECT 1 FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id))throw httpErr(404,'NOT_FOUND','Sim not found.');return clearChat(world.id,req.params.id,channel);});
+  }
+  app.patch('/api/living/worlds/:worldId/sims/:id',async req=>{
+    const {world}=mutable(req),p=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id);if(!p)throw httpErr(404,'NOT_FOUND','Sim not found.');const state=pj(p.state,{}),b=req.body||{};
+    if(b.location_id&&!db.prepare("SELECT 1 FROM lw_places WHERE world_id=? AND id=? AND kind='room'").get(world.id,b.location_id))throw httpErr(400,'BAD_PLACE','Choose a room.');
+    if(b.needs)for(const [key,value] of Object.entries(b.needs)){if(!(key in state.needs)||typeof value!=='number'||value<0||value>1)throw httpErr(400,'BAD_NEED','Needs must be between 0 and 1.');state.needs[key]=value;}
+    if(b.location_id){state.location_id=b.location_id;state.route=null;state.action=null;}
+    db.transaction(()=>{const clock=db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(world.id),id=uid('le_');db.prepare('UPDATE lw_sims SET state=?,location_id=?,name=? WHERE id=?').run(j(state),state.location_id,String(b.name||p.name).slice(0,100),p.id);db.prepare('INSERT INTO lw_events VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(id,world.id,null,clock.seconds,clock.seconds,state.location_id,'user_edit',j([p.id]),j({changes:{location_id:b.location_id,needs:b.needs,name:b.name}}),'Eine ausdrückliche Intervention verändert meinen aktuellen Zustand.','user_intervention');db.prepare('INSERT INTO lw_journal VALUES (?,?,?,?,?,?,?)').run(p.id,id,clock.seconds,'intervention','Mein Zustand wurde durch eine Intervention verändert.','Diese Veränderung ist Teil meines tatsächlichen Protokolls.',1);db.prepare('UPDATE lw_worlds SET version=version+1 WHERE world_id=?').run(world.id);})();return {ok:true};
+  });
   app.post('/api/living/towns',async req=>createTown(requireVerified(req),req.body || {}));
   app.get('/api/living/library',async req=>{requireUser(req);return {count:library().length,characters:library().filter(e=>e.kind==='character').length,ready:library().length>0};});
   app.get('/api/living/library/:id',async(req,reply)=>{requireUser(req);const file=assetFile(req.params.id,req.query?.variant);if(!file)throw httpErr(404,'MISSING_ASSET','Library media missing. Run the sprite preparation script.');const handle=fs.openSync(file,'r'),magic=Buffer.alloc(2);try{fs.readSync(handle,magic,0,2,0);}finally{fs.closeSync(handle);}reply.header('Cache-Control','private, max-age=86400').type(magic[0]===255&&magic[1]===216?'image/jpeg':'image/png');return reply.send(fs.createReadStream(file));});
@@ -58,13 +74,13 @@ export default async function livingRoutes(app) {
   });
   app.post('/api/living/worlds/:worldId/ticks',async(req,reply)=>{
     const {user,world}=own(req,true);
-    if(!String(req.headers.accept || '').includes('text/event-stream'))return advanceTown(user,world.id,{minutes:req.body?.minutes ?? 5,story:req.body?.story ?? true,expectedVersion:req.body?.expectedVersion});
+    if(!String(req.headers.accept || '').includes('text/event-stream'))return advanceTown(user,world.id,{minutes:req.body?.minutes ?? 5,story:req.body?.story ?? true,expectedVersion:req.body?.expectedVersion,intervention:req.body?.intervention});
     reply.hijack();reply.raw.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache',Connection:'keep-alive'});
     const controller=new AbortController();let finished=false;
     const send=(event,data)=>{if(!finished)reply.raw.write('event: '+event+'\ndata: '+j(data)+'\n\n');};
     reply.raw.on('close',()=>{if(!finished)controller.abort();});
     const heartbeat=setInterval(()=>send('status',{phase:'thinking'}),9000);
-    try{const result=await advanceTown(user,world.id,{minutes:req.body?.minutes ?? 5,story:req.body?.story ?? true,expectedVersion:req.body?.expectedVersion,signal:controller.signal,onProgress:data=>send('status',data)});send('done',result);}catch(error){send('error',{message:error.message});}finally{finished=true;clearInterval(heartbeat);reply.raw.end();}
+    try{const result=await advanceTown(user,world.id,{minutes:req.body?.minutes ?? 5,story:req.body?.story ?? true,expectedVersion:req.body?.expectedVersion,intervention:req.body?.intervention,signal:controller.signal,onProgress:data=>send('status',data)});send('done',result);}catch(error){send('error',{message:error.message});}finally{finished=true;clearInterval(heartbeat);reply.raw.end();}
   });
   app.post('/api/living/worlds/:worldId/sims/:id/biography',async req=>{
     const {user,world}=mutable(req),p=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id);if(!p)throw httpErr(404,'NOT_FOUND','Sim not found.');busy.add(world.id);

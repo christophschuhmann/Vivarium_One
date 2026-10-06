@@ -19,7 +19,8 @@
     "test:settings": "node scripts/test-settings-browser.mjs",
     "living:setup": "node scripts/setup-living.mjs",
     "test:living": "node scripts/test-living.mjs",
-    "benchmark:living": "node scripts/benchmark-living.mjs"
+    "benchmark:living": "node scripts/benchmark-living.mjs",
+    "test:living-browser": "node scripts/test-living-browser.mjs"
   },
   "license": "MIT",
   "dependencies": {

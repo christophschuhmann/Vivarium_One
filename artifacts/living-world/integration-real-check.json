@@ -1,0 +1,47 @@
+{
+  "worldId": "w_91U9o3pjdbRG",
+  "simId": "w_91U9o3pjdbRG_s_0",
+  "model": "player configured HyprLab",
+  "clockBefore": 30000,
+  "clockAfterConversations": 30000,
+  "clockAfterTick": "2026-09-21T08:21:00.000Z",
+  "innerReply": "Ich denke an Theo und den kleinen Noah. Jeder Schnitt im Holz, jedes geschliffene Stück erinnert mich daran, wofür ich das alles mache: um ein sicheres, stabiles Zuhause für uns zu bauen. Die Arbeit hier gibt mir Halt, aber ich vermisse sie auch ein wenig. Mein Herz sehnt sich nach ihrer Nähe, nach einem einfachen Gespräch am Abend. Es ist dieser Ausgleich zwischen dem Handwerk und der Familie, der mir zeigt, worauf es wirklich ankommt.",
+  "talkReply": "Hallo. Für heute möchte ich vor allem meine Arbeit hier mit der nötigen Sorgfalt und Geduld zu Ende bringen. Jeder Handgriff am Holz zählt. Am meisten helfe ich damit wohl meiner kleinen Familie – Theo und unserem kleinen Noah. Indem ich verlässlich arbeite, baue ich an einem stabilen Fundament für uns. Aber ehrlich gesagt sehne ich mich heute auch einfach nach ihrer Nähe und einem ruhigen Gespräch am Abend.",
+  "tickMetrics": {
+    "population": 10,
+    "events": 10,
+    "journalEntries": 10,
+    "eligible": 2,
+    "fields": 2,
+    "modelCalls": 2,
+    "cpuMs": 7,
+    "totalMs": 10008,
+    "rejections": []
+  },
+  "scene": [
+    {
+      "speaker": "w_91U9o3pjdbRG_s_0",
+      "text": "Ein kleiner geschnitzter Handschmeichler für Theo... das wäre genau das Richtige nach einem langen Tag.",
+      "mode": "thought",
+      "emotion": "contemplative"
+    }
+  ],
+  "audio": {
+    "status": 200,
+    "bytes": 100412,
+    "cached": false,
+    "format": {
+      "streams": [
+        {
+          "codec_name": "mp3",
+          "sample_rate": "24000",
+          "channels": 1
+        }
+      ],
+      "format": {
+        "duration": "16.728000"
+      }
+    }
+  },
+  "credits": 0
+}
