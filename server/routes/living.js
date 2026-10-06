@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {positionIndex,simPosition,relationsView} from '../living/navigation.js';
 import {circleMap,searchMap,mapAnchors} from '../living/map.js';
 import {evaluateMind} from '../living/cognition.js';
 import {activity} from '../living/presentation.js';
@@ -73,9 +74,11 @@ export default async function livingRoutes(app) {
       where.push('s.household_id IN (WITH RECURSIVE home_places(id) AS (SELECT id FROM lw_places WHERE world_id=? AND id=? UNION SELECT p.id FROM lw_places p JOIN home_places h ON p.parent_id=h.id WHERE p.world_id=?) SELECT id FROM home_places)');args.push(world.id,query.neighborhood,world.id);
     }
     if(query.anchored==='1')where.push('s.anchored=1');
-    const sql=where.join(' AND '),rows=db.prepare(`SELECT s.id,s.name,s.age,s.gender,s.asset_id,s.colour,s.anchored,s.location_id,s.household_id,json_extract(s.state,'$.action.kind') activity,json_extract(s.state,'$.thought') thought,p.name location FROM lw_sims s LEFT JOIN lw_places p ON p.id=s.location_id WHERE ${sql} ORDER BY s.name LIMIT ? OFFSET ?`).all(...args,n,offset);
-    const catalog=await openSimsCatalog();return {sims:rows.map(s=>({...s,activityText:activity(s.activity,catalog)})),total:db.prepare('SELECT count(*) n FROM lw_sims s WHERE '+sql).get(...args).n,offset,limit:n};
+    const sql=where.join(' AND '),rows=db.prepare(`SELECT s.id,s.name,s.age,s.gender,s.asset_id,s.colour,s.anchored,s.location_id,s.household_id,json_extract(s.state,'$.route') route,json_extract(s.state,'$.action.kind') activity,json_extract(s.state,'$.thought') thought,p.name location FROM lw_sims s LEFT JOIN lw_places p ON p.id=s.location_id WHERE ${sql} ORDER BY s.name LIMIT ? OFFSET ?`).all(...args,n,offset);
+    const catalog=await openSimsCatalog(),locate=positionIndex(world.id);return {sims:rows.map(s=>{const {route,...visible}=s;return {...visible,...locate(s),activityText:activity(s.activity,catalog)};}),total:db.prepare('SELECT count(*) n FROM lw_sims s WHERE '+sql).get(...args).n,offset,limit:n};
   });
+  app.get('/api/living/worlds/:worldId/sims/:id/position',async req=>simPosition(own(req).world.id,req.params.id));
+  app.get('/api/living/worlds/:worldId/sims/:id/relations',async req=>relationsView(own(req).world.id,req.params.id,req.query));
   app.get('/api/living/worlds/:worldId/sims/:id',async req=>{
     const {world}=own(req),p=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id);if(!p)throw httpErr(404,'NOT_FOUND','Sim not found.');
     const relations=db.prepare('SELECT r.to_id,r.payload,s.name FROM lw_relations r JOIN lw_sims s ON s.id=r.to_id WHERE r.world_id=? AND r.from_id=? ORDER BY json_extract(r.payload,\'$.closeness\') DESC LIMIT 30').all(world.id,p.id).map(r=>({...r,payload:pj(r.payload,{})}));

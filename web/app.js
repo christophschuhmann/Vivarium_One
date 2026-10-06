@@ -18,7 +18,8 @@ const S = { user: null, world: null, worldData: null, forge: { history: [], draf
         Under LAIONBox TTS the DramaBox instruction stays English while the quoted
         spoken text is whatever language the narration was written in — that is
         exactly the prompt convention the model expects (see laionbox-tts.txt).
-   Preference persists in localStorage 'viv_lang'; the 🌐 chip in the top bar cycles it. */
+   Classic-world preferences persist in localStorage 'viv_lang'. Living World keeps
+   German originals; its language chip optionally translates the display locally. */
 const LANGS = ['en', 'de', 'fr', 'es'];
 const I18N = {
   en: {}, // English text lives inline in t() call sites as the fallback
@@ -50,7 +51,7 @@ const I18N = {
     sign_out: 'Cerrar sesión', credits: 'créditos', spent_today: 'gastado hoy',
   },
 };
-const getLang = () => { const l = localStorage.getItem('viv_lang'); return LANGS.includes(l) ? l : 'en'; };
+const getLang = () => { if(S.world&&S.livingWorld===S.world)return 'de'; const l = localStorage.getItem('viv_lang'); return LANGS.includes(l) ? l : 'en'; };
 const setLang = (l) => localStorage.setItem('viv_lang', l);
 // t('key', 'English fallback') — dictionary lookup with graceful English fallback.
 const t = (key, fallback) => (I18N[getLang()] || {})[key] || fallback || key;
@@ -159,7 +160,7 @@ const ttsPrefs = () => {
 const skipPrefs = () => ({ animate: true, detail: 'full', ...JSON.parse(localStorage.getItem('viv_skip') || '{}') });
 const saveSkipPrefs = (p) => localStorage.setItem('viv_skip', JSON.stringify({ ...skipPrefs(), ...p }));
 const saveTtsPrefs = (p) => localStorage.setItem('viv_tts', JSON.stringify({ ...ttsPrefs(), ...p }));
-const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', {...(S.worldData?.world.simulation_mode==='living'?{timeZone:'UTC'}:{}), weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const fmtClock = (iso) => new Date(iso).toLocaleString(S.livingWorld===S.world&&S.world?'de-DE':'en-GB', {...(S.worldData?.world.simulation_mode==='living'?{timeZone:'UTC'}:{}), weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const cutoutFor = (ch) => { const o = (ch.state.outfits || []).find(o => o.name === (ch.state.outfit || 'everyday')) || (ch.state.outfits || [])[0]; return o?.cutout_asset_id; };
 
 /* ── mic component: 🎙 → record (pulse+✕) → click again → transcribe → insert ── */
@@ -469,6 +470,7 @@ function chrome(active, { worldTitle = null, sub = null, showDock = true } = {})
   </nav>` : ''}`;
 }
 function bindChrome() {
+  document.documentElement.lang=getLang();
   $$('#dock .dock-btn').forEach(b => b.onclick = () => {
     const k = b.dataset.nav;
     if (k === 'home') return nav('#/home');
@@ -485,6 +487,7 @@ function bindChrome() {
   // the Game Master also writes the story in the chosen language (lang rides in tick calls).
   const lc = $('#lang-chip');
   if (lc) lc.onclick = () => {
+    if(S.livingWorld===S.world&&S.world)return livingLanguageModal();
     const next = LANGS[(LANGS.indexOf(getLang()) + 1) % LANGS.length];
     setLang(next);
     toast('🌐 ' + { en: 'English', de: 'Deutsch', fr: 'Français', es: 'Español' }[next]);
@@ -496,6 +499,7 @@ function bindChrome() {
 const nav = (h) => { location.hash = h; };
 window.addEventListener('hashchange', route);
 async function route() {
+  S.graphPan?.dispose();
   if (typeof stopNarration === 'function') stopNarration();
   const [path, q] = location.hash.slice(2).split('?');
   const params = new URLSearchParams(q || '');
@@ -1727,21 +1731,17 @@ async function introEditor(worldId) {
 
 /* ───────── pan/zoom helper ───────── */
 function panZoom(wrap, viewport, opts = {}) {
-  let tx = opts.x ?? 40, ty = opts.y ?? 40, scale = opts.scale ?? 1;
-  const apply = () => viewport.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`);
-  apply();
-  let drag = null;
-  wrap.addEventListener('pointerdown', (e) => { if (e.button === 2 || e.target.closest('.gnode,.lnode,.gedge,.gedge-label')) return; drag = { x: e.clientX - tx, y: e.clientY - ty }; wrap.setPointerCapture(e.pointerId); });
-  wrap.addEventListener('pointermove', (e) => { if (drag) { tx = e.clientX - drag.x; ty = e.clientY - drag.y; apply(); } });
-  wrap.addEventListener('pointerup', () => drag = null);
-  wrap.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const f = e.deltaY < 0 ? 1.12 : 0.89;
-    const ns = Math.min(2.5, Math.max(0.3, scale * f));
-    const r = wrap.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
-    tx = mx - (mx - tx) * (ns / scale); ty = my - (my - ty) * (ns / scale); scale = ns; apply();
-  }, { passive: false });
-  return { zoom: (f) => { scale = Math.min(2.5, Math.max(0.3, scale * f)); apply(); }, getScale: () => scale, cancelDrag: () => { drag = null; } };
+  wrap._panZoom?.dispose();const events=new AbortController(),options={signal:events.signal};
+  let tx=opts.x??40,ty=opts.y??40,scale=opts.scale??1,drag=null,enabled=opts.enabled??true,moved=false;
+  const apply=()=>viewport.setAttribute('transform',`translate(${tx},${ty}) scale(${scale})`);
+  const cancel=()=>{if(drag&&wrap.hasPointerCapture(drag.id))wrap.releasePointerCapture(drag.id);drag=null;wrap.classList.remove('panning');};
+  apply();wrap.classList.toggle('pan-enabled',enabled);
+  wrap.addEventListener('pointerdown',e=>{moved=false;if(!enabled||e.button!==0||e.target.closest('.gnode,.lnode,.gedge,.gedge-label,.lw-bond-edge,button,input,select'))return;drag={x:e.clientX-tx,y:e.clientY-ty,startX:e.clientX,startY:e.clientY,id:e.pointerId};wrap.setPointerCapture(e.pointerId);wrap.classList.add('panning');},options);
+  wrap.addEventListener('pointermove',e=>{if(drag){moved ||= Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>5;tx=e.clientX-drag.x;ty=e.clientY-drag.y;apply();}},options);
+  for(const name of ['pointerup','pointercancel','lostpointercapture'])wrap.addEventListener(name,cancel,options);
+  window.addEventListener('blur',cancel,options);window.addEventListener('keydown',e=>{if(e.key==='Escape')cancel();},options);
+  wrap.addEventListener('wheel',e=>{e.preventDefault();const ns=Math.min(2.5,Math.max(.15,scale*(e.deltaY<0?1.12:.89))),r=wrap.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;tx=mx-(mx-tx)*(ns/scale);ty=my-(my-ty)*(ns/scale);scale=ns;apply();},{...options,passive:false});
+  const controller={zoom:f=>{const ns=Math.min(2.5,Math.max(.15,scale*f)),mx=wrap.clientWidth/2,my=wrap.clientHeight/2;tx=mx-(mx-tx)*(ns/scale);ty=my-(my-ty)*(ns/scale);scale=ns;apply();},getScale:()=>scale,cancelDrag:cancel,setEnabled:value=>{enabled=value;cancel();wrap.classList.toggle('pan-enabled',enabled);},wasDragged:()=>moved,dispose:()=>{cancel();events.abort();}};wrap._panZoom=controller;S.graphPan=controller;return controller;
 }
 
 /* ───────── bonds (the Web) ───────── */
