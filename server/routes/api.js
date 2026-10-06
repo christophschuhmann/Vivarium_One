@@ -15,9 +15,10 @@ import * as branches from '../branches.js';
 import { assembleCues, cueVoiceStyle, ttsCacheKey, cueCacheVoice } from '../export_cues.js';
 import { synthesizeLine, findReusableAudio } from '../tts_service.js';
 import { PROFILES } from '../voice_profiles.js';
-import { buildWorldManifest, worldAssetFiles, importWorldManifest } from '../world_io.js';
+import { buildWorldManifest, worldAssetFiles, importWorldManifest, assetIdsIn } from '../world_io.js';
 import { wizardChat, estimatePlan, startWizardBuild, getWizardJob } from '../wizard.js';
 import { byokActive } from '../byok.js';
+import { searchMusicCandidates } from '../music_client.js';
 
 // Temp scratch for zip pack/unpack; cleaned per request.
 const EXPORT_TMP = path.join(DATA_DIR, 'tmp_export');
@@ -228,16 +229,37 @@ export default async function apiRoutes(app) {
   app.delete('/api/worlds/:id', async (req) => {
     const u = requireUser(req);
     const w = ownWorld(u, req.params.id);
-    const assets = db.prepare('SELECT file FROM assets WHERE world_id=?').all(w.id);
+    const usedElsewhere = new Set();
+    for (const other of db.prepare('SELECT id FROM worlds WHERE user_id=? AND id!=?').all(u.id,w.id)) {
+      const manifest = buildWorldManifest(other.id);
+      for (const id of assetIdsIn({...manifest,assets:[]})) usedElsewhere.add(id);
+    }
+    const assets = db.prepare('SELECT id,file FROM assets WHERE world_id=? AND user_id=?').all(w.id,u.id);
+    const deleting = assets.filter(a => !usedElsewhere.has(a.id));
     const tx = db.transaction(() => {
-      for (const t of ['relationships', 'paths', 'state_patches', 'memory_chunks', 'chat_logs', 'assets', 'branches', 'video_jobs', 'provider_calls']) {
+      for (const a of assets) {
+        if (usedElsewhere.has(a.id)) db.prepare('UPDATE assets SET world_id=NULL WHERE id=?').run(a.id);
+        else db.prepare('DELETE FROM assets WHERE id=?').run(a.id);
+      }
+      for (const t of ['relationships', 'paths', 'state_patches', 'memory_chunks', 'chat_logs', 'branches', 'video_jobs', 'provider_calls']) {
         db.prepare(`DELETE FROM ${t} WHERE world_id=?`).run(w.id);
       }
       db.prepare('DELETE FROM worlds WHERE id=?').run(w.id); // cascades characters, locations, ticks
     });
     tx();
-    for (const a of assets) fs.rmSync(assetPath({ file: a.file }), { force: true });
+    for (const a of deleting) {
+      const filename=assetPath(a);fs.rmSync(filename,{force:true});
+      for(const variant of fs.readdirSync(path.dirname(filename)))if(variant.startsWith(a.file+'_w'))fs.rmSync(path.join(path.dirname(filename),variant),{force:true});
+    }
     return { ok: true };
+  });
+  app.post('/api/worlds/:id/duplicate',async req => {
+    const user=requireVerified(req),world=ownWorld(user,req.params.id);
+    const manifest=buildWorldManifest(world.id);
+    if(manifest.assets.some(a=>!fs.existsSync(assetPath(a))))throw httpErr(409,'MISSING_ASSET','Restore the missing asset files before duplicating this scenario.');
+    manifest.world.title=String(req.body?.title || world.title+' · copy').slice(0,80);
+    const result=importWorldManifest(user,manifest,path.dirname(assetPath({file:'placeholder'})));
+    return {ok:true,...result};
   });
 
   // ---------- forge ----------
@@ -1118,22 +1140,16 @@ export default async function apiRoutes(app) {
   app.post('/api/music/search', async (req) => {
     requireVerified(req);
     const b = req.body || {};
-    // same policy as the storyteller's tool: top-10 by CAPTION similarity (or BM25 keyword
-    // matching for the manual search bar), available only, sorted by aesthetics score
-    const field = b.field === 'bm25_caption' ? 'bm25_caption' : 'caption';
-    const body = { query: [String(b.query || '').slice(0, 200), String(b.emotion || '').slice(0, 80)].filter(Boolean).join(', '), genre: gm.MUSIC_GENRES.includes(b.genre) ? b.genre : '', search_field: field, top_k: 10, singing_filter: 'no_singing', nsfw_filter: 'sfw_only', rank_by: 'similarity' };
-    const r = await fetch(`${gm.MUSIC_API}/api/search`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) }).catch(() => null);
-    if (!r || !r.ok) throw httpErr(503, 'MUSIC_DOWN', 'The music server is not reachable right now.');
-    const { results } = await r.json();
-    const out = [];
-    for (const t of (results || []).slice(0, 10)) {
-      try {
-        const h = await fetch(`${gm.MUSIC_API}/api/audio/${t.row_id}`, { method: 'HEAD', signal: AbortSignal.timeout(4000) });
-        if (h.ok) out.push({ row_id: t.row_id, title: t.title, url: `/api/music/audio/${t.row_id}`, duration: t.duration_seconds, tags: (t.tags_text || '').slice(0, 80), upvotes: t.upvote_count || 0, aesthetics: t.score_average != null ? +(+t.score_average).toFixed(2) : null });
-      } catch { /* skip unavailable */ }
-    }
-    out.sort((a2, b2) => (b2.aesthetics ?? 0) - (a2.aesthetics ?? 0));
-    return { candidates: out.slice(0, field === 'bm25_caption' ? 5 : 6) };
+    // Same BM25 policy as the storyteller: available instrumental tracks,
+    // relevance first, with optional explicit caption matching.
+    try { return {candidates:await searchMusicCandidates(b)}; }
+    catch { throw httpErr(503,'MUSIC_DOWN','Music is unavailable. Run npm run music:setup, then restart Vivarium.'); }
+  });
+  app.get('/api/music/status', async req => {
+    requireUser(req);
+    try { const response=await fetch(`${gm.MUSIC_API}/api/stats`,{signal:AbortSignal.timeout(2000)});if(response.ok)return await response.json(); }
+    catch { /* optional service */ }
+    return {ready:false,message:'Download the music library with npm run music:setup, then restart Vivarium.'};
   });
   // Own soundtrack upload (mp3/ogg/m4a) → a normal asset; playable via /api/assets/:id.
   app.post('/api/music/upload', async (req) => {
@@ -1281,16 +1297,21 @@ export default async function apiRoutes(app) {
 
   // ---------- background music (proxied same-origin so it works through HTTPS tunnels) ----------
   // Streams a track from the local RPG-music search server (see server/gm.js MUSIC_API).
-  app.get('/api/music/audio/:rowId', async (req, reply) => {
+  app.route({ method: ['GET','HEAD'], url: '/api/music/audio/:rowId', handler: async (req, reply) => {
     requireUser(req);
-    const rid = String(req.params.rowId).replace(/[^0-9]/g, '');
-    const up = await fetch(`${gm.MUSIC_API}/api/audio/${rid}`, { signal: AbortSignal.timeout(30000) }).catch(() => null);
+    const rid = String(req.params.rowId);
+    if (!/^\d+$/.test(rid)) throw httpErr(404,'NO_TRACK','That track is not available.');
+    const up = await fetch(`${gm.MUSIC_API}/api/audio/${rid}`, {method:req.method === 'HEAD'?'HEAD':'GET',headers:req.headers.range?{Range:req.headers.range}:{},signal: AbortSignal.timeout(30000) }).catch(() => null);
+    if (up?.status === 416) return reply.code(416).header('Content-Range',up.headers.get('content-range')).send();
     if (!up || !up.ok) throw httpErr(404, 'NO_TRACK', 'That track is not available.');
+    reply.code(up.status);
+    for (const header of ['accept-ranges','content-range','content-length']) if (up.headers.has(header)) reply.header(header,up.headers.get(header));
     reply.header('Cache-Control', 'private, max-age=31536000, immutable');
     reply.type(up.headers.get('content-type') || 'audio/mpeg');
+    if (req.method === 'HEAD') return reply.send();
     const { Readable } = await import('node:stream');
     return reply.send(Readable.fromWeb(up.body));
-  });
+  }});
 
   app.get('/api/assets/:id', async (req, reply) => {
     const u = requireUser(req);

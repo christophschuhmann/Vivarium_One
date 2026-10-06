@@ -631,12 +631,12 @@ async function homeScreen() {
       c.onclick = async (e) => {
         if (e.target.closest('[data-del]')) { if (confirm('Delete this world forever?')) { await api(`/api/worlds/${c.dataset.id}`, { method: 'DELETE' }); homeScreen(); } return; }
         if (e.target.closest('[data-clone]')) {
-          // full independent copy (story, cast, places; asset files shared on disk)
+          // full independent copy (story, cast, places and their asset files)
           const src = worlds.find(x => x.id === c.dataset.id);
           const title = prompt('Name the copy:', `${src?.title || 'World'} · copy`); if (!title) return;
           const btn = e.target.closest('[data-clone]'); btn.disabled = true; btn.textContent = '…';
           try {
-            await api(`/api/worlds/${c.dataset.id}/fork-clean`, { method: 'POST', body: { tickIdx: src?.tick_index, title } });
+            await api(`/api/worlds/${c.dataset.id}/duplicate`, { method: 'POST', body: { tickIdx: src?.tick_index, title } });
             toast(`⧉ "${title}" created — an independent copy`, 'gold');
             homeScreen();
           } catch (err) { btn.disabled = false; btn.textContent = '⧉'; fail(err); }
@@ -2611,6 +2611,7 @@ async function musicWidget() {
       <button class="btn btn-ghost small" id="mw-close">✕</button>
     </div>
     ${meta?.query ? `<div style="font-size:10.5px;color:var(--soft);margin-top:2px">chosen for: ${esc(meta.query)}</div>` : ''}
+    <small style="display:block;margin-top:6px"><a href="https://huggingface.co/datasets/laion/laion-tunes-rpg-music" target="_blank" rel="noopener">LAION-Tunes RPG Music</a> · CC BY 4.0</small>
     <div id="mw-cands" style="margin-top:10px"><div class="empty-hint" style="padding:12px"><span class="spinner dark"></span> fetching suggestions…</div></div>`;
   document.body.appendChild(panel);
   $('#mw-close', panel).onclick = () => panel.remove();
@@ -4176,7 +4177,7 @@ async function accountModal() {
   const m = document.createElement('div');
   m.className = 'modal-bg';
   m.innerHTML = `<div class="modal settings-dialog" role="dialog" aria-modal="true" aria-label="Settings"><div class="modal-head violet"><div><b>Settings</b> · ${esc(user.displayName)}<small>${esc(user.email)}</small></div><span class="x">✕</span></div>
-  <div class="settings-layout"><nav class="settings-nav" role="tablist" aria-label="Settings sections">${[['account','Account'],['ai','AI & models'],['voice','Voice & music'],['mic','Microphone'],['time','Time skips']].map(([id,label])=>`<button role="tab" id="settings-tab-${id}" aria-controls="settings-page-${id}" data-settings-tab="${id}" aria-selected="${id==='account'}">${label}</button>`).join('')}</nav><div class="modal-body settings-content"><section data-settings-page="account" id="settings-page-account" role="tabpanel" aria-labelledby="settings-tab-account">
+  <div class="settings-layout"><nav class="settings-nav" role="tablist" aria-label="Settings sections">${[['account','Account'],['ai','AI & models'],['voice','Voice & music'],['mic','Microphone'],['time','Time skips'],['storage','Storage']].map(([id,label])=>`<button role="tab" id="settings-tab-${id}" aria-controls="settings-page-${id}" data-settings-tab="${id}" aria-selected="${id==='account'}">${label}</button>`).join('')}</nav><div class="modal-body settings-content"><section data-settings-page="account" id="settings-page-account" role="tabpanel" aria-labelledby="settings-tab-account">
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <div class="panel" style="flex:1;text-align:center"><div style="font-size:24px;font-weight:700;color:#a86f0d">🪙 ${user.credits}</div><small style="color:var(--soft)">credits</small></div>
       <div class="panel" style="flex:1;text-align:center"><div style="font-size:24px;font-weight:700">${(+spentToday).toFixed(1)}</div><small style="color:var(--soft)">spent today</small></div>
@@ -4243,12 +4244,20 @@ async function accountModal() {
         <small style="color:var(--soft)">Applies to skips over ~20 minutes. Each scene is a real moment in the world — it costs the same as a normal tick and lands in your timeline (undo works).</small>
       </div>
     </div>
+    <div class="panel" data-settings-page="storage" hidden><div id="storage-settings">Open this tab to load your storage.</div></div>
     <button class="btn btn-ghost small" id="logout" style="margin-top:14px">Sign out</button>
   </div></div></div>`;
   document.body.appendChild(m);
   const previousFocus = document.activeElement;
   const settingsTabs = [...m.querySelectorAll('[data-settings-tab]')];
+  let storageLoaded=false;
   const showSettingsPage = id => {
+    if(id==='storage'&&!storageLoaded){storageLoaded=true;window.VivariumStorage.mount($('#storage-settings',m),{api,esc,toast,onChange:async()=>{
+      S.worldData=null;
+      const {worlds}=await api('/api/worlds');
+      if(S.world&&!worlds.some(world=>world.id===S.world)){S.world=null;nav('#/home');}
+      else if(!S.world)await homeScreen();
+    }});}
     settingsTabs.forEach(t => { t.setAttribute('aria-selected', String(t.dataset.settingsTab === id)); t.tabIndex = t.dataset.settingsTab === id ? 0 : -1; });
     m.querySelectorAll('[data-settings-page]').forEach(p => { p.hidden = p.dataset.settingsPage !== id; p.id = 'settings-page-'+p.dataset.settingsPage; p.setAttribute('role','tabpanel');p.setAttribute('aria-labelledby','settings-tab-'+p.dataset.settingsPage); });
   };

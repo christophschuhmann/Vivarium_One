@@ -41,7 +41,7 @@ export function buildWorldManifest(worldId) {
   const world = db.prepare('SELECT * FROM worlds WHERE id=?').get(worldId);
   if (!world) return null;
   const q = (sql) => db.prepare(sql).all(worldId);
-  return {
+  const manifest = {
     format: BUNDLE_FORMAT,
     version: BUNDLE_VERSION,
     exported_at: now(),
@@ -57,17 +57,38 @@ export function buildWorldManifest(worldId) {
     // asset ROWS only (metadata); the binaries are added to the zip separately by the route
     assets: q('SELECT * FROM assets WHERE world_id=?'),
   };
+  // Same-server branches from older versions share asset IDs. Include those files
+  // too, so exporting or duplicating a branch produces a self-contained world.
+  const references = assetIdsIn({...manifest,assets:[]});
+  const already = new Set(manifest.assets.map(a => a.id));
+  for (const asset of db.prepare('SELECT * FROM assets WHERE user_id=?').all(world.user_id)) {
+    if (references.has(asset.id) && !already.has(asset.id)) manifest.assets.push(asset);
+  }
+  return manifest;
+}
+export function assetIdsIn(value) {
+  const ids = new Set();
+  const walk = item => {
+    if (typeof item === 'string') for (const id of item.match(/a_[A-Za-z0-9_-]+/g) || []) ids.add(id);
+    else if (Array.isArray(item)) item.forEach(walk);
+    else if (item && typeof item === 'object') Object.values(item).forEach(walk);
+  };
+  walk(value);
+  return ids;
 }
 
 // The list of asset {id, file} pairs whose binaries the zip must include.
 export function worldAssetFiles(worldId) {
-  return db.prepare('SELECT id, file FROM assets WHERE world_id=?').all(worldId);
+  return buildWorldManifest(worldId)?.assets.map(({id,file}) => ({id,file})) || [];
 }
 
 // Recursively replace any string that is a known old id with its new id, everywhere in a
 // parsed-JSON value. Keys are never ids, so only values are remapped.
 function remapDeep(value, idMap) {
-  if (typeof value === 'string') return idMap.get(value) || value;
+  if (typeof value === 'string') {
+    if(idMap.has(value))return idMap.get(value);
+    return value.replace(/^\/api\/assets\/(a_[A-Za-z0-9_-]+)(?=$|[/?#])/,(_,id)=>'/api/assets/'+(idMap.get(id)||id));
+  }
   if (Array.isArray(value)) return value.map((v) => remapDeep(v, idMap));
   if (value && typeof value === 'object') {
     const out = {};
@@ -123,7 +144,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
     active_branch_id: remapId(w.active_branch_id, idMap),
     genesis_state: remapJsonCol(w.genesis_state, idMap),
     created_at: w.created_at, updated_at: now(),
-    current_music: w.current_music || null, curiosity: w.curiosity || '{}',
+    current_music: remapJsonCol(w.current_music,idMap), curiosity: w.curiosity || '{}',
   };
   const chars = (manifest.characters || []).map((c) => ({
     id: idMap.get(c.id), world_id: newWorldId, name: c.name,
@@ -141,7 +162,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
     id: idMap.get(l.id), world_id: newWorldId, name: l.name, type: l.type,
     place_group: l.place_group, description: l.description,
     background_asset_id: remapId(l.background_asset_id, idMap), x: l.x, y: l.y,
-    music: l.music || null,
+    music: remapJsonCol(l.music,idMap),
   }));
   const paths = (manifest.paths || []).map((p) => ({
     id: idMap.get(p.id), world_id: newWorldId, from_id: remapId(p.from_id, idMap), to_id: remapId(p.to_id, idMap), label: p.label,
@@ -161,7 +182,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
     narration: remapJsonCol(t.narration, idMap), mood_tag: t.mood_tag, summary: t.summary,
     cost: t.cost, created_at: t.created_at, pov_location_id: remapId(t.pov_location_id, idMap),
     branch_id: remapId(t.branch_id, idMap), rel_snapshot: remapJsonCol(t.rel_snapshot, idMap),
-    seq: t.seq || null, music: t.music || null,   // sequence membership + scene score
+    seq: t.seq || null, music: remapJsonCol(t.music,idMap),   // sequence membership + scene score
   }));
   const memRows = (manifest.memory_chunks || []).map((mchunk) => ({
     id: idMap.get(mchunk.id), world_id: newWorldId, branch_id: remapId(mchunk.branch_id, idMap),

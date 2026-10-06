@@ -1,6 +1,6 @@
 import { db, getSetting, setSetting, pj, j, uid, now } from '../db.js';
 import { requireUser, requireVerified, requireAdmin, httpErr } from '../auth.js';
-import { PROVIDERS, ROLES, byokPolicy, byokActive, prefsFor, userKey, operatorKey, encryptSecret, maskKey, enterPrincipal } from '../byok.js';
+import { PROVIDERS, ROLES, byokPolicy, byokActive, prefsFor, resolvePersonalRoles, userKey, operatorKey, encryptSecret, maskKey, enterPrincipal } from '../byok.js';
 import { providerCatalog, checkProviderKey, validateRoles } from '../provider_catalog.js';
 import { voicesFor } from '../openrouter.js';
 const routeRole = role => role === 'llm' ? 'reasoning_llm' : role;
@@ -12,7 +12,7 @@ function status(user, admin) {
     enabled: admin ? true : !!user.or_enabled, active: admin ? true : byokActive(user), policyEnabled: byokPolicy().enabled,
     keys: Object.fromEntries(Object.keys(PROVIDERS).map(p => { const key = admin ? operatorKey(p) : userKey(user,p); return [p, { configured: !!key, masked: maskKey(key), source: admin && getSetting('provider_credentials')?.[p] ? 'settings' : admin && key ? 'environment' : 'personal' }]; })),
     defaults: Object.fromEntries(Object.entries(PROVIDERS).map(([p,c])=>[p,c.defaults])), central: centralRoles(), voices: voicesFor(prefs.roles.tts.model),
-    hasKey: !!user?.or_key, keyMasked: maskKey(userKey(user)), ttsProvider: getSetting('tts_provider') || 'gemini' };
+    hasKey: Object.keys(PROVIDERS).some(p => !!userKey(user,p)), keyMasked: maskKey(userKey(user) || userKey(user,'hyprlab')), ttsProvider: getSetting('tts_provider') || 'gemini' };
 }
 export default async function providerSettingsRoutes(app) {
   for (const admin of [false,true]) {
@@ -43,15 +43,22 @@ export default async function providerSettingsRoutes(app) {
         db.transaction(()=> { setSetting('provider_credentials', credentials); db.prepare('INSERT INTO admin_audit(id,admin_id,action,target,payload,created_at) VALUES (?,?,?,?,?,?)').run(uid('au_'),u.id,'provider.key',provider,j({ removed:remove }),now()); })();
       } else {
         const column = provider === 'hyprlab' ? 'hypr_key' : 'or_key';
-        const inUse = Object.values(prefsFor(u).roles).some(c => c.provider === provider);
-        db.prepare(`UPDATE users SET ${column}=?, or_enabled=CASE WHEN ? THEN 0 ELSE or_enabled END WHERE id=?`).run(remove ? null : encryptSecret(key),remove && inUse ? 1 : 0,u.id);
+        const otherProvider = provider === 'hyprlab' ? 'openrouter' : 'hyprlab';
+        db.prepare(`UPDATE users SET ${column}=?, or_enabled=CASE WHEN ? THEN 0 ELSE or_enabled END WHERE id=?`).run(remove ? null : encryptSecret(key),remove && !userKey(u,otherProvider) ? 1 : 0,u.id);
+        const fresh = db.prepare('SELECT * FROM users WHERE id=?').get(u.id);
+        db.prepare('UPDATE users SET provider_prefs=? WHERE id=?').run(j({roles:prefsFor(fresh).roles,ttsVoice:prefsFor(fresh).tts_voice}),u.id);
       }
       return { ok:true, ...status(db.prepare('SELECT * FROM users WHERE id=?').get(u.id),admin) };
     });
     app.put(prefix + '/settings', async req => {
       const u = writeAuth(req), b = req.body || {}, old = status(u,admin);
       if (!admin && b.enabled && !byokPolicy().enabled) throw httpErr(403,'BYOK_DISABLED','Persönliche Schlüssel sind auf diesem Server deaktiviert.');
-      const roles = Object.fromEntries(ROLES.map(role=>[role,b.roles?.[role] || old.roles[role]]));
+      let roles = Object.fromEntries(ROLES.map(role=>[role,b.roles?.[role] || old.roles[role]]));
+      if (Object.values(roles).some(c => !c || !PROVIDERS[c.provider] && !(admin && c.provider === 'custom') || typeof c.model !== 'string' || !c.model.trim())) throw httpErr(400,'BAD_PROVIDER','Ungültiger Anbieter oder Modellname.');
+      if (!admin && b.enabled) {
+        if (!Object.keys(PROVIDERS).some(p => userKey(u,p))) throw httpErr(400,'NO_KEY','Bitte mindestens einen HyprLab- oder OpenRouter-Schlüssel hinterlegen.');
+        roles = resolvePersonalRoles(u, roles);
+      }
       // Preserve custom central routes when the UI only changes a hosted modality.
       const changed = Object.fromEntries(Object.entries(roles).filter(([r,c]) => JSON.stringify(c) !== JSON.stringify(old.roles[r])));
       if (Object.values(changed).some(c => !c || !PROVIDERS[c.provider])) throw httpErr(400,'BAD_PROVIDER','Unbekannter Anbieter.');
@@ -59,13 +66,15 @@ export default async function providerSettingsRoutes(app) {
       await validateRoles(changed, p=>admin ? operatorKey(p) : userKey(u,p));
       if (!admin && b.enabled && ROLES.some(role => !userKey(u,roles[role].provider))) throw httpErr(400,'NO_KEY','Für jede gewählte Aufgabe muss ein eigener Schlüssel hinterlegt sein.');
       const ttsVoice = String(b.ttsVoice || old.ttsVoice).slice(0,60);
+      if(roles.tts.provider==='hyprlab'&&roles.tts.model.startsWith('eleven-')&&!/^[A-Za-z0-9]{20}$/.test(ttsVoice))
+        throw httpErr(400,'BAD_VOICE','Enter a 20-character ElevenLabs voice ID.');
       db.transaction(()=> {
         if (admin) {
           for (const [role,c] of Object.entries(changed)) {
             const base = c.provider === 'hyprlab' && role === 'tts' && /gemini/.test(c.model) ? 'https://api.hyprlab.io/v1beta' : PROVIDERS[c.provider].base;
             const previous = db.prepare('SELECT * FROM model_routes WHERE role=?').get(routeRole(role));
             const sameProvider = providerOf(previous) === c.provider;
-            const costs = c.provider === 'hyprlab' && role === 'tts' && /gemini-3\.1/.test(c.model) ? {in_per_mtok:0.5,out_per_mtok:10} : c.provider === 'hyprlab' && role === 'tts' && /gemini-3\.8/.test(c.model) ? {in_per_mtok:0.5,out_per_mtok:9} : sameProvider ? pj(previous.unit_cost,{}) : c.provider === 'hyprlab' ? role === 'tts' ? {in_per_mtok:0.5,out_per_mtok:9} : role === 'image' ? {per_image:0.02} : role === 'asr' ? {per_minute:0.0042} : {in_per_mtok:0.75,out_per_mtok:4.5} : {};
+            const costs = c.provider === 'hyprlab' && role === 'tts' && /gemini-3\.1/.test(c.model) ? {in_per_mtok:0.5,out_per_mtok:10} : c.provider === 'hyprlab' && role === 'tts' && /gemini-3\.8/.test(c.model) ? {in_per_mtok:0.25,out_per_mtok:4.5} : sameProvider ? pj(previous.unit_cost,{}) : c.provider === 'hyprlab' ? role === 'tts' ? {in_per_mtok:0.25,out_per_mtok:4.5} : role === 'image' ? {per_image:0.02} : role === 'asr' ? {per_minute:0.0042} : {in_per_mtok:0.75,out_per_mtok:4.5} : {};
             db.prepare('UPDATE model_routes SET model=?,base_url=?,key_env=?,enabled=1,unit_cost=? WHERE role=?').run(c.model,base,PROVIDERS[c.provider].env,j(costs),routeRole(role));
           }
           setSetting('central_tts_voice',ttsVoice);

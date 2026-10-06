@@ -36,7 +36,7 @@ export function route(role) {
   if (p?.byok && ['llm','image','tts','asr'].includes(prefKey)) {
     const config = p.prefs.roles[prefKey], provider = config.provider;
     const base = provider === 'hyprlab' && role === 'tts' && /gemini/.test(config.model) ? 'https://api.hyprlab.io/v1beta' : PROVIDERS[provider].base;
-    return { role, provider, model: config.model, base_url: base, key_env: 'PERSONAL', api_key: p.keys[provider], byok: true, unit_cost: { in_per_mtok: 0.5, out_per_mtok: 9, per_image: 0.02, per_minute: 0.0042 }, params: {} };
+    return { role, provider, model: config.model, base_url: base, key_env: 'PERSONAL', api_key: p.keys[provider], byok: true, unit_cost: { in_per_mtok: 0.25, out_per_mtok: 4.5, per_image: 0.02, per_minute: 0.0042 }, params: {} };
   }
   const r = db.prepare('SELECT * FROM model_routes WHERE role=? AND enabled=1').get(role);
   if (!r) throw new Error(`no enabled model route for role ${role}`);
@@ -200,9 +200,14 @@ export function getTtsProvider() {
   return getSetting('tts_provider') === 'laionbox' ? 'laionbox' : 'gemini';
 }
 
+function hyprlabVoice(model,voice,preferred) {
+  if(model.startsWith('eleven-'))return /^[A-Za-z0-9]{20}$/.test(preferred || '')?preferred:/^[A-Za-z0-9]{20}$/.test(voice || '')?voice:'JBFqnCBsd6RMkjVDRZzb';
+  return voiceFor('openai/'+model,voice,preferred);
+}
 export function hostedTtsCacheVoice(voice) {
   const r = route('tts'), p = currentPrincipal();
-  const mapped = r.provider === 'openrouter' || !/gemini/.test(r.model) ? voiceFor(r.provider === 'hyprlab' ? 'openai/'+r.model : r.model, voice, p?.prefs.tts_voice || getSetting('central_tts_voice')) : voice;
+  const preferred=p?.prefs.tts_voice || getSetting('central_tts_voice');
+  const mapped=r.provider==='hyprlab'&&!/gemini/.test(r.model)?hyprlabVoice(r.model,voice,preferred):r.provider==='openrouter'?voiceFor(r.model,voice,preferred):voice;
   return `${p?.id || 'central'}:${r.provider}:${r.model}:${mapped}`;
 }
 
@@ -223,9 +228,13 @@ export async function tts(text, { voice = 'Sulafat', style = '', referenceB64 = 
   if (MOCK) return { ...mockTts(), provider: r.provider, model: r.model, byok: !!r.byok };
   if (r.provider === 'openrouter') return { ...await orSynthesizeSpeech(key(r), { model: r.model, text, voice: voiceFor(r.model, voice, currentPrincipal()?.prefs.tts_voice || getSetting('central_tts_voice')), style }), byok: !!r.byok };
   if (r.provider === 'hyprlab' && !/gemini/.test(r.model)) {
-    const resp = await fetch(`${r.base_url}/audio/speech`, { method: 'POST', headers: { 'Content-Type':'application/json', Authorization:`Bearer ${key(r)}` }, body:JSON.stringify({model:r.model,input:text,voice:voiceFor('openai/'+r.model,voice,currentPrincipal()?.prefs.tts_voice),response_format:'mp3'}),signal:AbortSignal.timeout(180000) });
+    const selected=hyprlabVoice(r.model,voice,currentPrincipal()?.prefs.tts_voice || getSetting('central_tts_voice'));
+    const eleven=r.model.startsWith('eleven-');
+    const body={model:r.model,...(eleven?{text,voice_id:selected}:{input:text,voice:selected}),response_format:'mp3'};
+    const resp = await fetch(`${r.base_url}/audio/speech`, { method: 'POST', headers: { 'Content-Type':'application/json', Authorization:`Bearer ${key(r)}` }, body:JSON.stringify(body),signal:AbortSignal.timeout(180000) });
     if (!resp.ok) throw new Error(`HyprLab TTS ${resp.status}`);
-    return {buffer:Buffer.from(await resp.arrayBuffer()),mime:'audio/mpeg',rawUsd:text.length*0.000015,meter:{characters:text.length},provider:r.provider,model:r.model,byok:!!r.byok};
+    const perThousand={'eleven-v4':0.04,'eleven-v4-turbo':0.02,'eleven-v3':0.05,'eleven-multilingual-v2':0.05,'eleven-flash-v2.5':0.025,'eleven-turbo-v2.5':0.025,'tts-1':0.0105,'tts-1-hd':0.021}[r.model] || 0.015;
+    return {buffer:Buffer.from(await resp.arrayBuffer()),mime:'audio/mpeg',rawUsd:text.length*perThousand/1000,meter:{characters:text.length},provider:r.provider,model:r.model,byok:!!r.byok};
   }
   return ttsGemini(text, { voice, style });
 }

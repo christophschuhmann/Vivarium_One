@@ -1,0 +1,1345 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-10-06",
+  "source": "User-provided HyprLab dashboard model list, matched against live /v1/models. Dedicated generation endpoints only; chat-image, video, music, embedding and moderation entries remain outside game role menus.",
+  "models": [
+    {
+      "id": "qwen-3.8-max",
+      "provider": "alibaba",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "qwen-image-3-pro",
+      "provider": "alibaba",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "qwen-image-3",
+      "provider": "alibaba",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "wan-2.7-image-pro",
+      "provider": "alibaba",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "wan-2.7-image",
+      "provider": "alibaba",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "qwen-image-2-pro",
+      "provider": "alibaba",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "qwen-image-2",
+      "provider": "alibaba",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "wan-2.7-i2v",
+      "provider": "alibaba",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "wan-2.7-t2v",
+      "provider": "alibaba",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "claude-opus-5-5",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-sonnet-5-5",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-fable-5-1",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-opus-5",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-sonnet-5",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-fable-5",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-opus-4-8",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-opus-4-7",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-opus-4-6",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-sonnet-4-6",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-opus-4-5",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "provider": "anthropic",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "flux-3-video",
+      "provider": "black-forest-labs",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "flux-2-max",
+      "provider": "black-forest-labs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "flux-2-pro",
+      "provider": "black-forest-labs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "flux-2-flex",
+      "provider": "black-forest-labs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "flux-2-dev",
+      "provider": "black-forest-labs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "flux-krea-dev",
+      "provider": "black-forest-labs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "flux-kontext-max",
+      "provider": "black-forest-labs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "flux-kontext-pro",
+      "provider": "black-forest-labs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "flux-kontext-dev",
+      "provider": "black-forest-labs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "flux-1.1-pro-ultra",
+      "provider": "black-forest-labs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "flux-1.1-pro",
+      "provider": "black-forest-labs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "seedream-5-pro",
+      "provider": "bytedance",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "seedream-5-lite",
+      "provider": "bytedance",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "seedream-4.5",
+      "provider": "bytedance",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "seedream-4",
+      "provider": "bytedance",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "seedance-2.5",
+      "provider": "bytedance",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "seedance-2.0",
+      "provider": "bytedance",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "seedance-2.0-mini",
+      "provider": "bytedance",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "command-a-plus",
+      "provider": "cohere",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "provider": "deepseek",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "deepseek-v4-flash",
+      "provider": "deepseek",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "eleven-v4",
+      "provider": "elevenlabs",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "eleven-v4-turbo",
+      "provider": "elevenlabs",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "eleven-v3",
+      "provider": "elevenlabs",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "eleven-multilingual-v2",
+      "provider": "elevenlabs",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "eleven-flash-v2.5",
+      "provider": "elevenlabs",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "eleven-turbo-v2.5",
+      "provider": "elevenlabs",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "gemini-3.8-flash",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.7-flash",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.6-flash",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.5-flash-lite",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.1-flash-lite-image",
+      "provider": "google",
+      "role": null,
+      "type": "chat-image"
+    },
+    {
+      "id": "gemini-3.5-flash",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.1-pro",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.1-flash-image",
+      "provider": "google",
+      "role": null,
+      "type": "chat-image"
+    },
+    {
+      "id": "gemini-3.1-flash-lite",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3-pro-image",
+      "provider": "google",
+      "role": null,
+      "type": "chat-image"
+    },
+    {
+      "id": "gemini-3-flash",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-2.5-pro",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-2.5-flash",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-2.5-flash-lite",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-2.5-flash-image",
+      "provider": "google",
+      "role": null,
+      "type": "chat-image"
+    },
+    {
+      "id": "lyria-3.5",
+      "provider": "google",
+      "role": null,
+      "type": "other-audio"
+    },
+    {
+      "id": "lyria-3-pro",
+      "provider": "google",
+      "role": null,
+      "type": "other-audio"
+    },
+    {
+      "id": "lyria-3-clip",
+      "provider": "google",
+      "role": null,
+      "type": "other-audio"
+    },
+    {
+      "id": "gemini-3.8-flash-tts",
+      "provider": "google",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "gemini-3.8-flash-lite-tts",
+      "provider": "google",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "gemini-3.1-flash-tts",
+      "provider": "google",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "gemini-2.5-pro-tts",
+      "provider": "google",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "gemini-2.5-flash-tts",
+      "provider": "google",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "gemini-3.8-flash-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.7-flash-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.6-flash-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.5-flash-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.5-flash-lite-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.1-pro-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3.1-flash-lite-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-3-flash-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-2.5-pro-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-2.5-flash-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-2.5-flash-lite-online",
+      "provider": "google",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gemini-omni-1.1-flash",
+      "provider": "google",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "gemini-omni-flash",
+      "provider": "google",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "veo-3.1",
+      "provider": "google",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "veo-3.1-fast",
+      "provider": "google",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "veo-3.1-lite",
+      "provider": "google",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "nano-banana-2-lite",
+      "provider": "google",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "nano-banana-2",
+      "provider": "google",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "nano-banana-pro",
+      "provider": "google",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "nano-banana",
+      "provider": "google",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "imagen-4-ultra",
+      "provider": "google",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "imagen-4-fast",
+      "provider": "google",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "imagen-4",
+      "provider": "google",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "ideogram-v4-quality",
+      "provider": "ideogram",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "ideogram-v4-balanced",
+      "provider": "ideogram",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "ideogram-v4-turbo",
+      "provider": "ideogram",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "mercury-2.5",
+      "provider": "inception",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "kling-v2.6",
+      "provider": "kling",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "kling-v2.5-turbo-pro",
+      "provider": "kling",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "kling-v2.1-master",
+      "provider": "kling",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "kling-v2.1-pro",
+      "provider": "kling",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "kling-v2.1-standard",
+      "provider": "kling",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "kling-v2",
+      "provider": "kling",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "kling-v1.6-pro",
+      "provider": "kling",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "kling-v1.6-standard",
+      "provider": "kling",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "photon",
+      "provider": "lumalabs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "photon-flash",
+      "provider": "lumalabs",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "minimax-m3",
+      "provider": "minimax",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "hailuo-3",
+      "provider": "minimax",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "mistral-large-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "mistral-medium-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "mistral-small-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "mistral-tiny-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "mistral-saba-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "magistral-medium-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "magistral-small-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "pixtral-large-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "pixtral-12b-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "codestral-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "devstral-medium-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "devstral-small-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "ministral-14b-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "ministral-8b-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "ministral-3b-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "voxtral-small-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "voxtral-mini-latest",
+      "provider": "mistral",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "mistral-embed",
+      "provider": "mistral",
+      "role": null,
+      "type": "embedding"
+    },
+    {
+      "id": "kimi-k3",
+      "provider": "moonshot",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "kimi-k2.7-code",
+      "provider": "moonshot",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "nemotron-3-ultra",
+      "provider": "nvidia",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-6-astra",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-6-sol",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-6-luna",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "chat-latest",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.6-sol",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.6-luna",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.5-pro",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.5",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.4-pro",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.4",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.4-mini",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.4-nano",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.3-codex",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.2-pro",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.2",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5.1",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5-pro",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5-mini",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-5-nano",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "o4-mini",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "o3-pro",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "o3",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "o3-mini",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "o1-pro",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "o1",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-audio-1.5",
+      "provider": "openai",
+      "role": null,
+      "type": "other-audio"
+    },
+    {
+      "id": "gpt-audio",
+      "provider": "openai",
+      "role": null,
+      "type": "other-audio"
+    },
+    {
+      "id": "gpt-audio-mini",
+      "provider": "openai",
+      "role": null,
+      "type": "other-audio"
+    },
+    {
+      "id": "gpt-4.1",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-4.1-mini",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-4.1-nano",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-4o",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-4o-mini",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-4-turbo",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-4",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-3.5-turbo",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-oss-120b",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-oss-20b",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "gpt-image-2.5-sunburst",
+      "provider": "openai",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "gpt-image-2.5-flare",
+      "provider": "openai",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "gpt-image-2",
+      "provider": "openai",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "chatgpt-image-latest",
+      "provider": "openai",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "gpt-image-1.5",
+      "provider": "openai",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "gpt-image-1",
+      "provider": "openai",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "gpt-image-1-mini",
+      "provider": "openai",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "gpt-4o-mini-tts",
+      "provider": "openai",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "tts-1-hd",
+      "provider": "openai",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "tts-1",
+      "provider": "openai",
+      "role": "tts",
+      "type": "tts"
+    },
+    {
+      "id": "gpt-4o-transcribe",
+      "provider": "openai",
+      "role": "asr",
+      "type": "asr"
+    },
+    {
+      "id": "gpt-4o-mini-transcribe",
+      "provider": "openai",
+      "role": "asr",
+      "type": "asr"
+    },
+    {
+      "id": "whisper-1",
+      "provider": "openai",
+      "role": "asr",
+      "type": "asr"
+    },
+    {
+      "id": "text-embedding-3-large",
+      "provider": "openai",
+      "role": null,
+      "type": "embedding"
+    },
+    {
+      "id": "text-embedding-3-small",
+      "provider": "openai",
+      "role": null,
+      "type": "embedding"
+    },
+    {
+      "id": "text-embedding-ada-002",
+      "provider": "openai",
+      "role": null,
+      "type": "embedding"
+    },
+    {
+      "id": "omni-moderation-latest",
+      "provider": "openai",
+      "role": null,
+      "type": "moderation"
+    },
+    {
+      "id": "free:gpt-5.4",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "free:gpt-4.1-mini",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "free:gpt-4o",
+      "provider": "openai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "sonar-deep-research",
+      "provider": "perplexity",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "sonar-reasoning-pro",
+      "provider": "perplexity",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "sonar-pro",
+      "provider": "perplexity",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "sonar",
+      "provider": "perplexity",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "p-image-upscale",
+      "provider": "pruna",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "p-image-edit",
+      "provider": "pruna",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "p-image",
+      "provider": "pruna",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "p-video",
+      "provider": "pruna",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "recraft-v4.1-pro",
+      "provider": "recraft",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "recraft-v4.1",
+      "provider": "recraft",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "stable-diffusion-3.5-large",
+      "provider": "stability",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "stable-diffusion-3.5-large-turbo",
+      "provider": "stability",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "stable-diffusion-3.5-medium",
+      "provider": "stability",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "stable-diffusion-3.5-flash",
+      "provider": "stability",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "stable-image-ultra",
+      "provider": "stability",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "stable-image-core",
+      "provider": "stability",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "grok-4.7",
+      "provider": "x.ai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "grok-4.6",
+      "provider": "x.ai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "grok-4.5",
+      "provider": "x.ai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "grok-build-0.1",
+      "provider": "x.ai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "grok-4.3",
+      "provider": "x.ai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "grok-4.20-multi-agent",
+      "provider": "x.ai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "grok-4.20",
+      "provider": "x.ai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "grok-imagine-image-2",
+      "provider": "x.ai",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "grok-imagine-image-quality",
+      "provider": "x.ai",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "grok-imagine-image",
+      "provider": "x.ai",
+      "role": "image",
+      "type": "image"
+    },
+    {
+      "id": "grok-imagine-video-1.5",
+      "provider": "x.ai",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "grok-imagine-video",
+      "provider": "x.ai",
+      "role": null,
+      "type": "video"
+    },
+    {
+      "id": "glm-5.3",
+      "provider": "z.ai",
+      "role": "llm",
+      "type": "llm"
+    },
+    {
+      "id": "glm-5.3-flash",
+      "provider": "z.ai",
+      "role": "llm",
+      "type": "llm"
+    }
+  ]
+}

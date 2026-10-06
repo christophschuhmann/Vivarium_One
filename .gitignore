@@ -19,3 +19,6 @@ e2e/shots/
 Thumbs.db
 .claude/
 rpg/node_modules
+.venv/
+assets/living-world-library/
+assets/living-world-library.wds.*

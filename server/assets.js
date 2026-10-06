@@ -41,7 +41,8 @@ export function matte(buffer) {
     const inFile = path.join(ASSET_DIR, `tmp_${uid()}.png`);
     const outFile = inFile.replace('.png', '_cut.png');
     fs.writeFileSync(inFile, buffer);
-    const py = spawn('python3', [path.join(ROOT, 'scripts', 'matte.py'), inFile, outFile]);
+    const virtualPython=path.join(ROOT,'.venv','bin','python');
+    const py = spawn(process.env.VIV_PYTHON_BIN || (fs.existsSync(virtualPython)?virtualPython:'python3'), [path.join(ROOT, 'scripts', 'matte.py'), inFile, outFile]);
     let err = '';
     py.stderr.on('data', d => err += d);
     py.on('close', code => {

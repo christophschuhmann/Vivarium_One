@@ -67,9 +67,14 @@ export function normalizePrefs(raw) {
 export function prefsFor(user, policy = byokPolicy()) {
   const old = normalizePrefs(pj(user?.or_prefs, {})), saved = pj(user?.provider_prefs, {}) || {};
   const roles = {}, models = {};
-  const defaultProvider = user?.hypr_key && !user?.or_key ? 'hyprlab' : 'openrouter';
+  const connected = Object.keys(PROVIDERS).filter(provider => userKey(user, provider));
+  const defaultProvider = connected.length === 1 ? connected[0] : 'openrouter';
   for (const role of ROLES) {
-    roles[role] = saved.roles?.[role] || { provider: defaultProvider, model: defaultProvider === 'openrouter' ? old[role] || policy.defaults?.[role] || FALLBACK_DEFAULTS[role] : PROVIDERS.hyprlab.defaults[role] };
+    const selected = saved.roles?.[role];
+    // Older preferences may still name the other provider after a key was removed.
+    // One connected account powers every role; never fall back to an operator key.
+    roles[role] = selected && (connected.length !== 1 || selected.provider === defaultProvider)
+      ? selected : { provider: defaultProvider, model: defaultProvider === 'openrouter' ? old[role] || policy.defaults?.[role] || FALLBACK_DEFAULTS[role] : PROVIDERS.hyprlab.defaults[role] };
     models[role] = roles[role].model;
   }
   return { roles, models, tts_voice: saved.ttsVoice || old.tts_voice || 'Sulafat' };
@@ -84,6 +89,13 @@ export function byokActive(user, policy = byokPolicy()) {
   if (!policy.enabled || !user?.or_enabled) return false;
   const prefs = prefsFor(user, policy);
   return ROLES.every(role => !!userKey(user, prefs.roles[role].provider));
+}
+export function resolvePersonalRoles(user, roles) {
+  const connected = Object.keys(PROVIDERS).filter(provider => userKey(user, provider));
+  if (connected.length !== 1) return roles;
+  const provider = connected[0];
+  return Object.fromEntries(Object.entries(roles).map(([role, selected]) => [role,
+    selected.provider === provider ? selected : { provider, model: PROVIDERS[provider].defaults[role] }]));
 }
 const als = new AsyncLocalStorage();
 export function principalOf(user, policy = byokPolicy()) {

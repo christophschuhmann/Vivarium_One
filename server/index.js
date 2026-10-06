@@ -14,6 +14,7 @@ import testRoutes from './routes/test.js';
 import './db.js';
 import providerSettingsRoutes from './routes/provider_settings.js';
 import { isolatedRequest } from './byok.js';
+import storageRoutes from './routes/storage.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 12 * 1024 * 1024 });
@@ -56,6 +57,7 @@ app.setErrorHandler((err, req, reply) => {
 });
 
 await app.register(providerSettingsRoutes);
+await app.register(storageRoutes);
 await app.register(apiRoutes);
 await app.register(adminRoutes);
 if (process.env.TEST_MODE === '1' && process.env.NODE_ENV !== 'production') await app.register(testRoutes);
@@ -69,5 +71,5 @@ app.setNotFoundHandler((req, reply) => {
 });
 
 const port = Number(process.env.PORT || 8890);
-await app.listen({ port, host: '0.0.0.0' });
+await app.listen({ port, host: process.env.VIV_HOST || '0.0.0.0' });
 console.log(`Vivarium listening on :${port}  (TEST_MODE=${process.env.TEST_MODE || '0'}, MOCK_PROVIDERS=${process.env.MOCK_PROVIDERS || '0'})`);

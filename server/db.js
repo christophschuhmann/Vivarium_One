@@ -206,7 +206,7 @@ seedRoute.run('reasoning_llm', 'gemini-3.5-flash', 'https://api.hyprlab.io/v1', 
 seedRoute.run('image', 'nano-banana-2', 'https://api.hyprlab.io/v1', 'HYPRLAB_API_KEY',
   JSON.stringify({ per_image: 0.02 }), JSON.stringify({ resolution: '1K' }));
 seedRoute.run('tts', 'gemini-3.8-flash-tts', 'https://api.hyprlab.io/v1beta', 'HYPRLAB_API_KEY',
-  JSON.stringify({ in_per_mtok: 0.5, out_per_mtok: 10 }), JSON.stringify({ temperature: 0.9 }));
+  JSON.stringify({ in_per_mtok: 0.25, out_per_mtok: 4.5 }), JSON.stringify({ temperature: 0.9 }));
 seedRoute.run('asr', 'whisper-1', 'https://api.hyprlab.io/v1', 'HYPRLAB_API_KEY',
   JSON.stringify({ per_minute: 0.0042 }), JSON.stringify({}));
 // LAIONBox TTS (self-hosted expressive voice-acting server, see laionbox-tts.txt). No API key —
@@ -265,8 +265,16 @@ export function setSetting(key, value) { db.prepare('INSERT INTO settings(key,va
 
 // One-time requested default upgrade; later explicit model selections survive restarts.
 if (!getSetting('migration_tts_38')) {
-  db.prepare("UPDATE model_routes SET model='gemini-3.8-flash-tts', unit_cost=? WHERE role='tts' AND base_url LIKE '%hyprlab.io%'").run(JSON.stringify({ in_per_mtok: 0.5, out_per_mtok: 9 }));
+  db.prepare("UPDATE model_routes SET model='gemini-3.8-flash-tts', unit_cost=? WHERE role='tts' AND base_url LIKE '%hyprlab.io%'").run(JSON.stringify({ in_per_mtok: 0.25, out_per_mtok: 4.5 }));
   const policy = getSetting('byok') || { enabled: true, defaults: {} };
   policy.defaults = { ...policy.defaults, tts: 'google/gemini-3.8-flash-tts' };
   setSetting('byok', policy); setSetting('tts_provider', 'gemini'); setSetting('migration_tts_38', true);
+}
+// Correct the earlier built-in estimate while retaining custom operator pricing.
+if (!getSetting('migration_tts_38_pricing')) {
+  const r=db.prepare("SELECT unit_cost FROM model_routes WHERE role='tts' AND model='gemini-3.8-flash-tts' AND base_url LIKE '%hyprlab.io%'").get();
+  const cost=pj(r?.unit_cost,{});
+  if(cost.in_per_mtok===0.5 && [9,10].includes(cost.out_per_mtok))
+    db.prepare("UPDATE model_routes SET unit_cost=? WHERE role='tts'").run(j({in_per_mtok:0.25,out_per_mtok:4.5}));
+  setSetting('migration_tts_38_pricing',true);
 }

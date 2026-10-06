@@ -37,6 +37,7 @@ export function signup({ email, password, displayName, rating }) {
     .run(id, email, hashPassword(password), displayName.trim(), toMicro(pricing.default_daily_cap_credits),
       rating === 'teen' ? 'teen' : 'adult', now());   // content rating: teen = PG fade-to-black prompts
   record(id, { delta: toMicro(pricing.signup_bonus_credits), reason: 'signup_bonus', createdBy: 'system' });
+  if(process.env.VIV_PERSONAL_MODE==='1')db.prepare('UPDATE users SET or_enabled=1 WHERE id=?').run(id);
   issueVerification(id, email);
   return { id, email };
 }

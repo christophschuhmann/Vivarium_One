@@ -1,109 +1,286 @@
-# 🌱 Vivarium
+# Vivarium
 
-A warm, browser-based **life-simulation sandbox**. You create small illustrated worlds — a shared
-student flat, a medieval keep, anything — and AI-driven characters live in them: they move between
-places, pursue goals, feel things, talk, and remember. An AI Game Master narrates every step as an
-illustrated, **fully voiced** visual novel, and you can nudge the world like a quiet god, rewind it
-like a git repository, or export the whole story as a self-playing bundle.
+Vivarium is a browser-based life simulation and visual-novel sandbox. Create an illustrated world, give its characters relationships and goals, advance time, and watch the story unfold with character sprites, narration, voices and an automatically selected soundtrack.
 
-**[→ Full feature & architecture documentation](docs/DOCUMENTATION.md)** ·
-**[→ Original implementation plan / design log](plan/implementation-plan.html)**
+The default local installation runs on **your own HyprLab or OpenRouter API key**. You only need **one** of those accounts. You do not need an admin login or Vivarium credits. Provider charges still apply to your own provider account.
 
----
+[Full architecture documentation](docs/DOCUMENTATION.md) · [Design log](plan/implementation-plan.html) · [Living World implementation plan](living-world-implementierungsplan.html)
 
-## Quick start
+## Install locally
 
-Requirements: **Node 20.6+**, `ffmpeg`, `zip`/`unzip` on PATH, Python 3 with `Pillow` +
-`rembg` (for character-sprite chroma matting). One [HyprLab](https://hyprlab.io) API key powers
-the LLM, image generation, TTS and speech recognition.
+Supported setup: Linux, macOS, or Windows through WSL. Install **Node 22 or newer** (minimum supported by the installer: Node 20.12), Python 3, `ffmpeg`, `zip` and `unzip`.
+
+On Debian/Ubuntu/WSL, the system dependencies are:
 
 ```bash
-npm install
-npx playwright install chromium      # only needed for the E2E tests
-cp .env.example .env                 # put your HYPRLAB_API_KEY in .env
-
-npm run seed                         # creates admin + demo player + the "Alice & Bob" world
-npm start                            # → http://localhost:8890
+sudo apt install ffmpeg zip unzip python3 python3-venv
 ```
 
-| Surface | URL | Credentials (seeded) |
-|---|---|---|
-| Game | `/` | `demo@vivarium.local` / `alice-and-bob` |
-| Admin console | `/admin` | `admin@vivarium.local` / `admin-vivarium-2026` |
-| Offline story player | `/player.html` | — (no login; also shipped inside every story zip) |
+Install a recent Node version from [nodejs.org](https://nodejs.org/en/download) or your existing Node version manager. Then:
 
-New sign-ups get a 200-credit gift. With no SMTP configured, e-mail verification codes land in
-**admin console → Mailbox** (and the server log).
+```bash
+git clone https://github.com/christophschuhmann/Vivarium_One.git
+cd Vivarium_One
+npm run setup
+npm start
+```
 
-## What's inside (short tour)
+Open **http://localhost:8890**. The setup command prints the initial login for a verified local player, normally `player@vivarium.local`, and a randomly generated password. Save that password. The player is also the local installation owner for shared music management; no admin account is needed.
 
-- **Forge** — talk a character into existence; portraits + outfit variants are generated with
-  identity consistency, greenscreen-matted into sprites.
-- **World Wizard** 🧙 — describe a whole scenario in chat; the assistant drafts the full plan
-  (cast, places, bonds), prices it in credits, and after your approval an agentic background job
-  builds everything: images, map, relationships, voices.
-- **Stage** — advance time and watch the tick play out with sprites, speech/thought bubbles and
-  pipelined voice-over (line *n+1* generates while *n* plays). Intervene in natural language or
-  by voice (Whisper ASR mic on every input).
-- **Time skips as films** — skip an hour, a day, a week: a planner LLM decides which meaningful
-  events happen in between, each becomes a real scene, and they play back cinema-style with
-  transition cards ("Meanwhile, at the Mage Tower…") while later scenes are still generating.
-- **Time travel** — undo/redo/jump anywhere; diverging futures fork into named branches, nothing
-  is ever lost.
-- **Voices** — Gemini prebuilt voices, or the self-hosted **LAIONBox** cloning engine with
-  21 curated **voice profiles** (Anna, Ian, Lily, Peter, …) — one clean reference clip *per
-  language* per identity, so characters keep their voice when the story switches language
-  (custom audio uploads remain available as an override).
-- **Multilingual** — 🌐 EN·DE·FR·ES: UI chrome and, from the next tick on, the whole story.
-- **Exports** — full save-game ZIP (restorable), time-zero seed JSON, and the **story bundle**:
-  a small zip that plays offline in any browser via the bundled `player.html`.
-- **Admin console** — users, credits, model routes & pricing, TTS engine switch, audit log, and
-  a per-user data explorer over every provider call.
+`npm run setup`:
+
+1. Checks Node, Python and the command-line dependencies.
+2. Installs the Node dependencies.
+3. Creates `.env` if it does not exist, with local-only binding and personal-provider mode.
+4. Creates `.venv` and installs Pillow, NumPy and the Hugging Face downloader. Character greenscreen matting does not require a GPU or a background-removal model.
+5. Creates a verified local player with personal-provider mode enabled and no requirement for credits.
+6. Preserves existing `.env`, accounts, passwords, worlds and saved keys on repeat runs.
+
+To choose the account yourself, set `VIV_PLAYER_EMAIL` and optionally `VIV_PLAYER_PASSWORD` in your shell before setup. These are installer inputs; avoid committing them. `npm run setup -- --no-install --no-python` is useful when dependencies are already installed. `npm run setup -- --with-music` also downloads the optional music library; see below.
+
+A fresh `.env` binds to `127.0.0.1`. To serve other computers, deliberately change `VIV_HOST` to `0.0.0.0` and configure your HTTPS reverse proxy. Existing installations retain their current configuration.
+
+## First session: connect one provider
+
+1. Sign in with the local player's credentials printed by setup.
+2. Open **Settings → AI & models**.
+3. Enter **either a HyprLab key or an OpenRouter key**. Leave the other field empty.
+4. Choose **My own providers** and select your models.
+5. Click **Save my settings**. This saves and tests any key you just entered, as well as your model choices. A separate click on Save key is optional.
+
+A single connected provider is used for all four tasks: story/dialogue, images, speech and microphone transcription. An older saved choice pointing at an unconnected provider is moved to the connected account's defaults. If both accounts are connected, you can mix providers by task, such as HyprLab images and OpenRouter dialogue.
+
+The model lists are fetched from the providers. HyprLab's `/models` response has model IDs but no modality metadata, so the game uses an explicit dashboard classification snapshot in `config/hyprlab_models.json` and intersects it with the live API response. This prevents video, music, embeddings or moderation models from appearing in the story-model picker. The 2026-10-06 snapshot includes 115 chat models, 53 dedicated image models, 14 speech models and three transcription models. Chat-image models are kept out of the dedicated image-generation menu because they use a different endpoint.
+
+Default HyprLab personal choices:
+
+| Task | Model |
+|---|---|
+| Story and dialogue | `gemini-3.5-flash` |
+| Images | `nano-banana-2` |
+| Voices | `gemini-3.8-flash-tts` |
+| Microphone | `whisper-1` |
+
+`gemini-3.1-flash-tts` remains selectable. Selecting a HyprLab ElevenLabs model reveals a voice-ID field, initially set to George; you can paste another ID from the [ElevenLabs voice library](https://elevenlabs.io/docs/eleven-api/quickstart). The adapter uses ElevenLabs-specific `text` and `voice_id` parameters. The newer Gemini 3.8 voice API receives performance direction separately from the text to speak.
+
+Personal keys are validated and encrypted at rest with AES-256-GCM. The browser receives a masked preview, never the stored key. Requests are scoped to the signed-in account; your choices do not change another player's models. When personal mode is active, model calls use your keys and bypass the Vivarium credit ledger. A missing personal key produces a settings error rather than silently using an operator's account.
+
+If you remove one provider while the other remains connected, personal mode stays available through the remaining provider. Removing the last key disables personal mode. The operator can optionally offer **Server AI** with central credentials and credits; that is separate from the default local BYOK workflow.
+
+## Create and play a scenario
+
+### Build a world
+
+From the home screen, open the **World Wizard**. Describe the setting, desired characters, relationships and tone. For example:
+
+> A present-day seaside university town. Two postgraduate flatmates, their retired neighbour and a visiting researcher. A quiet mystery about a missing laboratory notebook, with warm everyday scenes and restrained suspense.
+
+Discuss the proposed plan with the wizard. Refine character profiles, locations, connected paths and the opening scenes. Review the image count and provider usage before starting the build. With personal mode enabled, the build uses your own provider account rather than requiring Vivarium credits.
+
+The wizard creates location backgrounds, character portraits and greenscreen-matted sprites. It can author a cinematic opening sequence which plays scene by scene. Larger requests stream progress to the browser. Image and voice generation take time and incur provider charges.
+
+You can also start a blank world, use **Forge** to develop characters through conversation, and populate the cast and map incrementally. Generated characters retain an identity reference when outfits are added.
+
+### Advance time and intervene
+
+Open the world on the **Stage**. Use the action bar to advance 30 seconds, five minutes, an hour, a day, or a custom interval. Each meaningful scene records character states, location, dialogue, thoughts and narration.
+
+Type what you want to happen, give a character a nudge, or use the microphone. Select a viewpoint character or location to control which scene you watch. The GM uses the cast's goals, relationships, recent events and memories when deciding what happens next.
+
+Long skips can play as a sequence of scenes. **Settings → Time skips** lets you choose the animated film or a direct jump, and whether the film includes side plots and relationship moments. The timeline stores each generated moment.
+
+### Voices, microphone and language
+
+**Settings → Voice & music** controls autoplay, narrator voice, character performance directions, voice volume and playback speed. Voice preparation can pre-generate the next lines while the current one is playing. Changing a provider or model changes the hosted voice cache identity, so a newly requested line respects your selected model.
+
+**Settings → Microphone** provides a device picker and a live input test. The browser needs microphone permission, and remote browser microphone use requires HTTPS. Speech input is normalized for the transcription endpoint; OpenRouter audio-input models receive WAV when the browser can convert it.
+
+Use the language selector for English, German, French or Spanish. The UI and subsequent narration follow the selected language.
+
+### Rewind, branch and duplicate
+
+The timeline supports undo, redo and jumps into earlier scenes. Continuing from an earlier moment creates an alternative future. Full duplicates are available from the home-screen copy button or **Settings → Storage**: they copy the world, cast, locations, timelines and their media to new IDs and files.
+
+Older same-server branches may share asset IDs with the original. Exports include those referenced files, and deleting the original preserves files still used by another world. A full new duplicate is independent of those shared files.
+
+## Enable automatic music
+
+Vivarium selects background music from the pre-generated [LAION-Tunes RPG Music dataset](https://huggingface.co/datasets/laion/laion-tunes-rpg-music). The dataset contains 2,580 annotated tracks across 18 setting genres, with scene descriptions, moods and music captions. There are 2,075 tracks labelled instrumental. The game searches locally and does not call a music-generation API.
+
+The dataset is gated on Hugging Face. Accept its access conditions on the dataset page and use a Hugging Face token with access to it. Enter the token into your shell without placing it in command history:
+
+```bash
+read -r -s -p "Hugging Face token: " HF_TOKEN
+printf '\n'
+export HF_TOKEN
+npm run music:setup
+unset HF_TOKEN
+npm start
+```
+
+On shells where `read -p` is unsupported, set `HF_TOKEN` using that shell's secure input facility. The downloader uses the token for authenticated download; it is not written into the repository or the music metadata.
+
+The audio TARs total roughly **14.2 GB**, with additional metadata, indices and a local search cache. Allow approximately **15 GB** for the library. Setup pins the source revision for its download, keeps the original annotations and indices, and builds `audio-index.json` containing offsets into the three TAR shards. The MP3s stay inside the shards, so there is no second unpacked audio copy. Running the command again resumes/reuses completed files.
+
+`npm start` starts the music service automatically when `audio-index.json` exists. The game is on port 8890; the internal music service binds only to `127.0.0.1:8930`. It uses the same Node installation and requires **no GPU, Torch or embedding-model download**. If the optional music dataset is missing, Vivarium still runs.
+
+### How scoring works
+
+- The GM requests music using an English scene description, genre and mood when a scene's atmosphere changes.
+- A world without a score receives a starter track based on the current location, scene summary and mood.
+- The local server uses SQLite FTS5 BM25 over the supplied scene annotations, captions, emotions and tags, with genre filtering.
+- Automatic selection prioritizes search relevance. The alternatives retain aesthetic scores and popularity information for manual choice.
+- Results are restricted to locally available files labelled SFW and instrumental.
+- Each location remembers its soundtrack. Moving between differently scored locations crossfades the tracks.
+- The **🎶 music button** shows the current query, suggested alternatives and playable previews. You can choose another track, search by descriptive caption, mute or change the music volume in Settings.
+- The application proxies the audio through the signed-in browser's same-origin API, including HTTP Range requests, so seeking works through HTTPS tunnels.
+
+Music attribution is shown in the music picker, metadata and Storage view. The dataset declares **CC BY 4.0**; preserve the dataset attribution when sharing music exports. Music selection is optional and a search-service failure does not prevent a story tick.
+
+Useful commands:
+
+```bash
+npm run music                            # run only the music service
+npm run music:setup -- --index-only       # rebuild audio offsets from existing TARs
+```
+
+For a separately managed compatible search server, set `MUSIC_API_URL`. Set `MUSIC_SEARCH_FIELD=caption` for a server with vector-caption search; the bundled service defaults to `bm25_situation`. With an explicit external URL, the launcher does not start a second local server.
+
+## Storage monitor and library management
+
+Open **Settings → Storage**. This view works with the normal player login and shows:
+
+- Your asset bytes and file count, including generated thumbnails.
+- Unused asset bytes that can be reclaimed.
+- Each scenario's linked media bytes, story/state bytes and current tick.
+- Shared music-library storage, track availability and search engine status.
+- The pre-generated image library's footprint, shared database size and free disk space.
+
+The database and music library are shared installation resources. Scenario byte totals can overlap for older shared branches; the account-wide asset total counts each file once.
+
+### Scenario actions
+
+| Action | Result |
+|---|---|
+| Export ZIP | Downloads a complete `.vivarium.zip`-compatible save: world state, cast, places, all timelines and linked assets. |
+| Duplicate | Creates a new independent scenario with copied files and remapped IDs. No model calls or credits. |
+| Delete | Removes the scenario and media not needed by another scenario. The UI asks for confirmation. Export a backup first if you want to keep it. |
+| Restore a scenario ZIP | Imports the archive as a new world owned by the signed-in account. Existing worlds remain intact. |
+
+Scenario ZIP import currently has a 300 MB upload limit. Shared soundtrack files are not duplicated into each scenario save: the music library can be exported separately by the installation owner. For an offline narrated film including its chosen music, use the story export below.
+
+### Asset actions
+
+Filter assets by kind or **Only unused**. Images have previews; audio has playback controls. The view is paginated in groups of 30 so large voice caches do not overload the browser.
+
+Select individual assets or a page and choose **Export selected ZIP**. The archive includes the binaries, JSON sidecars and an asset manifest, with prompts and metadata. Up to 1,000 assets can be exported in one bundle.
+
+**Download** saves one original file. **Duplicate** creates a separate, unused asset copy. **Delete** removes an unused file and its thumbnails. The server refuses deletion when a location, character, saved scene or world snapshot still references the asset. You cannot read, duplicate, export or delete another player's assets by changing an ID in a URL.
+
+The asset ZIP is an archival media bundle; scenario restore uses the scenario ZIP format. Standalone duplicated assets appear in the library but are not automatically assigned to a character or location.
+
+### Shared music actions
+
+The verified player created by `npm run setup` is the local installation owner. That account can export the shared music library as a ZIP, rebuild its BM25 cache, or remove the downloaded library. On multi-user installations these shared actions require the installation owner or an authenticated operator session; ordinary players can see the shared footprint and manage only their own files.
+
+Music cache and removal controls require the supervised `npm start` launcher. Removing the library asks you to type `DELETE MUSIC LIBRARY`; it affects music availability for the installation. Restore it with `npm run music:setup`, then restart Vivarium. Exporting music may create an additional ZIP approximately the size of the library, so free disk space should cover it.
+
+The pre-generated image library is shown as a shared footprint. This monitor does not remove system files, another account's media, or files outside the configured libraries.
+
+## Export a narrated story
+
+The world's export menu provides a **story bundle**: a self-playing visual-novel film with the bundled offline `player.html`, scene cues, backgrounds, sprites, cached/generated voice clips and score changes. It plays in a browser without the Vivarium server.
+
+Before export, the app checks which narration is already cached. Choose to generate missing audio on your provider account or export with those lines silent. Cached audio does not incur regeneration charges. This differs from a scenario save: a story bundle is for watching, while a scenario ZIP is for restoring and continuing the simulation.
+
+API keys, passwords and account settings are not part of scenario or story exports. Back up `.env` and the full runtime database separately if you are migrating the whole installation and want to retain encrypted provider credentials.
+
+## Pre-generated Living World image assets
+
+The complete offline image library is stored separately as a private Hugging Face dataset:
+
+**[TTS-AGI/vivarium-living-world-assets](https://huggingface.co/datasets/TTS-AGI/vivarium-living-world-assets)**
+
+It contains a verified WebDataset TAR with 167 canonical image samples: 47 existing unique backgrounds, 30 newly generated locations and 90 greenscreen characters. Images are paired with original JSON sidecars and captions. Metadata also contains the offline gallery, references, previews and revision history. Authorized Hugging Face access is required to download it.
+
+The generation, review and packaging scripts are in `scripts/`. Large generated image libraries and audio downloads stay out of Git. This asset library is a prepared resource; it does not replace every game's runtime image-generation path automatically.
+
+## Optional operator deployment
+
+An operator may set central `HYPRLAB_API_KEY` or `OPENROUTER_API_KEY` credentials in `.env` or the admin provider console. Player-specific settings override central models only for that account. The console also controls the credit ledger, users, prompts, context configuration and model routes.
+
+For the original bundled Alice & Bob demo and operator account, run `npm run seed` explicitly. It creates `demo@vivarium.local` / `alice-and-bob` and `admin@vivarium.local` / `admin-vivarium-2026`. These are convenience demo credentials, not the randomly generated local account from setup. Replace them before exposing the deployment publicly.
+
+New sign-ups need email verification. Without SMTP, the verification code is printed in the server log and appears in the operator mailbox. The local setup account is already verified, so the personal installation flow does not depend on an operator mailbox.
+
+Keep a stable `VIV_SECRET` when moving a database with encrypted keys. The installer creates it for a fresh database. Existing databases without an environment secret retain their stored per-installation secret; setup does not replace their encryption identity.
+
+## Configuration
+
+See [.env.example](.env.example). Important options:
+
+| Variable | Purpose |
+|---|---|
+| `PORT` | Game HTTP port; default 8890. |
+| `VIV_HOST` | Listen interface. Fresh setup uses `127.0.0.1`. |
+| `VIV_DATA_DIR` | Runtime database and generated media; default `./data`. |
+| `VIV_PERSONAL_MODE=1` | New accounts start in personal-provider mode. Existing choices are preserved. |
+| `VIV_SECRET` | Stable encryption identity for saved keys. |
+| `VIV_PYTHON_BIN` | Python for greenscreen matting and music download; `.venv/bin/python` is used automatically when present. |
+| `MUSIC_DATA_DIR` | Downloaded music directory; default `<VIV_DATA_DIR>/music-library`. |
+| `MUSIC_API_URL` | Existing external/independently managed search service; disables bundled autostart. |
+| `MUSIC_PORT` | Bundled loopback search port; default 8930. |
+| `MUSIC_AUTOSTART=0` | Start the game without starting the local music process. |
+| `MUSIC_SEARCH_FIELD` | Search mode; default `bm25_situation`. |
+| `MOCK_PROVIDERS=1` | Deterministic fake model responses for testing; no external model charges. |
+| `TEST_MODE=1` | Test helper endpoints; never enable on a public production deployment. |
+
+Stop `npm start` with Ctrl-C to stop both the game and its supervised music process. If port 8930 is already occupied, stop the old music server or point `MUSIC_API_URL` at it.
+
+## Troubleshooting
+
+**Saving says a key is missing.** Enter one complete key in AI & models and click Save my settings. A blank second provider is supported. If both keys were removed, reconnect one. A rejected or expired key must be replaced; it cannot be used for generation.
+
+**Provider credit errors.** Personal mode bypasses Vivarium credits, not the provider's balance or quotas. Fund the selected provider account or choose an available model in that account.
+
+**A model is missing from the HyprLab menu.** Use Refresh catalog. Only IDs present in the live API and explicitly classified for the matching endpoint are offered. A new dashboard model may require updating `config/hyprlab_models.json`; video/music/embedding and chat-image entries are intentionally outside the game's dedicated task menus.
+
+**No background music.** Check Settings → Storage for availability. Accept dataset access on Hugging Face, run music:setup with an authorized token, and restart. Missing music never blocks a story scene. Browser autoplay may require an initial click, and Voice & music can mute the score.
+
+**Broken image cutouts.** Run setup again to install Pillow and NumPy in `.venv`, or set `VIV_PYTHON_BIN` to a Python environment with them.
+
+**The browser has an old UI after updating.** Reload the page. Static application files are served with revalidation; an already-open tab continues executing the version it loaded.
+
+**An asset cannot be deleted.** It is referenced by a live scenario or saved scene. Export or delete the appropriate scenario, then refresh Only unused. This protects earlier timelines from losing their artwork or voices.
+
+## Development and tests
+
+```bash
+npm run test:providers     # provider routing, encrypted keys, one-key BYOK and credit isolation
+npm run test:music         # real BM25 queries and TAR audio ranges (needs downloaded library)
+npm run test:storage       # account ownership, export/duplicate/delete and scenario independence
+npm run test:settings      # isolated browser: BYOK, storage, music, mobile and five-minute tick
+npm run test:e2e           # existing browser suites; requires installed Playwright Chromium
+```
+
+`npx playwright install chromium` is needed only for browser testing, not normal play. Automated mutation tests use separate temporary runtime directories. Do not run destructive test endpoints against your live database.
 
 ## Repository layout
 
+```text
+server/             Game API, provider routing, world simulation, storage tools and music service
+web/                No-build browser app, settings studio, storage monitor and offline player
+config/             Voice data and explicit HyprLab modality classification
+scripts/setup.mjs   Local installer and verified personal account
+scripts/start.mjs   Game + optional music supervisor
+scripts/setup-music.py  Resumable dataset download and TAR offset index
+scripts/            Seed/demo tools, asset generation and validation scripts
+e2e/                Browser regression tests
+docs/               Detailed architecture and feature documentation
+rpg/                Existing first-person RPG variant, maintained as a separate app
+data/               Ignored runtime DB, generated media, music downloads and caches
 ```
-server/          Fastify API — one module per concern, each with a header comment:
-  index.js         boot + static + route registration
-  db.js            SQLite schema, migrations, seeds (model routes, pricing)
-  auth.js          sessions, password + Google sign-in, e-mail verification
-  credits.js       credit ledger, pricing policy, preflight/debit guardrails
-  providers.js     the ONLY module that talks to model APIs (LLM/image/TTS/ASR,
-                   Gemini + LAIONBox dispatch, MOCK_PROVIDERS=1 for free CI)
-  tts_service.js   one line of narration → cached audio (shared by Stage & exports)
-  gm.js            the Game Master: tick pipeline, chapter planner, Forge, memory
-  wizard.js        World Wizard: chat → plan → priced, agentic world build
-  branches.js      git-like tick history (undo/redo/fork/jump)
-  export_cues.js   story "film script" assembly (single source of truth)
-  world_io.js      save-game ZIP export/import with full id remapping
-  assets.js        asset store + chroma matting; telemetry.js: provider-call log
-  routes/          api.js (player), admin.js (operator), test.js (TEST_MODE only)
-web/             no-build vanilla SPA: app.js (game), admin.js (console),
-                 player.html (self-contained offline story player)
-scripts/         seed_demo.js / reset_demo.js, matte.py (rembg sidecar), experiments
-e2e/             Playwright end-to-end suites (real browser, real server)
-docs/            DOCUMENTATION.md — every feature in detail
-plan/            implementation-plan.html — the living design document
-```
-
-## Testing
-
-```bash
-npm run test:e2e        # io_features, timetravel, scene — real browser E2E
-MOCK_PROVIDERS=1 …      # run the server with deterministic fake providers (no API cost)
-```
-
-The E2E suites drive a real Chromium against a real server and make screenshots in `e2e/shots/`.
-
-## Configuration notes
-
-- **API keys stay server-side.** Model endpoints/keys are *routes* in the DB (admin → Models):
-  swap a model, change unit costs or point `tts_laionbox` at your own box without a deploy.
-- **Credits**: every metered call (LLM/image/TTS/ASR) debits an internal credit ledger with
-  configurable USD→credit markup, per-user daily caps and admin top-ups.
-- **Data** lives in `./data` (SQLite + generated media). Deleting a world/user cascades
-  everywhere, including files on disk.
 
 ## License
 
-MIT (see `package.json`). Model outputs are subject to the respective provider terms.
+Application code: MIT. Model outputs are subject to provider terms. The downloaded music dataset declares CC BY 4.0; its original README is retained with the library and the game supplies dataset attribution.

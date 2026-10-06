@@ -616,6 +616,21 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .settings-dialog .x { background:transparent;border:0;color:inherit;font-family:inherit;font-size:20px;cursor:pointer; }
 .admin-tabs { overflow-x:auto; }
 .admin-tabs button { white-space:nowrap; }
+.storage-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}
+.storage-metrics article{border:1px solid var(--line);border-radius:12px;padding:15px;background:#fcfbff;display:flex;flex-direction:column;gap:6px}
+.storage-metrics b{font-size:22px;color:var(--violet)}
+.storage-metrics small,.storage-metrics span,.storage-note{font-size:11px;color:var(--soft);line-height:1.6}
+.storage-section{border-top:1px solid var(--line);padding:15px 0;font-size:12px;line-height:1.6}
+.storage-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.storage-row small,.storage-asset>small{display:block;color:var(--soft);font-size:10px;overflow-wrap:anywhere}
+.storage-import{display:block;margin-top:14px}
+.storage-filters,.storage-pager{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:14px 0}
+.storage-assets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.storage-asset{min-width:0;border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.storage-asset img{height:140px;width:100%;object-fit:contain;background:#f5f2fb;border-radius:8px}
+.storage-asset audio{width:100%;height:34px}.storage-file{padding:30px 10px;text-align:center;background:#f5f2fb}
+.storage-delete{color:#ad3650!important}.storage-pager{justify-content:space-between}
+@media(max-width:700px){.storage-assets{grid-template-columns:1fr}.storage-row{align-items:flex-start;flex-direction:column}.storage-metrics article{padding:10px}.storage-metrics b{font-size:18px}}
 
 /* mobile hardening (shared with the RPG fork): the thinking veil must cover the screen —
    at z-index:8 it hid behind the storybook on phones and looked like a dead button. */
