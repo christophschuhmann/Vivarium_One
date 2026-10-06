@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {circleMap,searchMap,mapAnchors} from '../living/map.js';
 import {activity} from '../living/presentation.js';
 import {openSimsCatalog} from '../living/open_sims.js';
 import {db} from '../living/schema.js';
@@ -19,6 +20,9 @@ export default async function livingRoutes(app) {
   app.get('/api/living/worlds/:worldId/history',async req=>{const {world}=own(req);return {beats:db.prepare('SELECT version,start,end,story,metrics FROM lw_beats WHERE world_id=? ORDER BY version DESC LIMIT 40').all(world.id).map(b=>({...b,story:pj(b.story,[]),metrics:pj(b.metrics,{})}))};});
   app.get('/api/living/worlds/:worldId/view',async req=>stageView(own(req).world,req.query));
   app.get('/api/living/worlds/:worldId/graph',async req=>graphView(own(req).world.id,req.query));
+  app.get('/api/living/worlds/:worldId/map',async req=>circleMap(own(req).world.id,req.query));
+  app.get('/api/living/worlds/:worldId/map/search',async req=>searchMap(own(req).world.id,req.query.q));
+  app.get('/api/living/worlds/:worldId/map/anchors',async req=>mapAnchors(own(req).world.id));
   for(const channel of ['inner','talk']){
     app.get('/api/living/worlds/:worldId/sims/:id/'+channel,async req=>{const {world}=own(req);if(!db.prepare('SELECT 1 FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id))throw httpErr(404,'NOT_FOUND','Sim not found.');return {history:chatHistory(world.id,req.params.id,channel)};});
     app.post('/api/living/worlds/:worldId/sims/:id/'+channel,async req=>{const {user,world}=mutable(req);return converse(user,world.id,req.params.id,{message:String(req.body?.message||''),lang:req.body?.lang,channel});});
@@ -52,12 +56,21 @@ export default async function livingRoutes(app) {
     const overview=db.prepare(`SELECT ${columns} FROM lw_places WHERE world_id=? AND kind IN ('district','neighborhood') ORDER BY rowid LIMIT 64`).all(world.id);
     return {children,ancestors,landmarks,overview,total:db.prepare('SELECT count(*) n FROM lw_places WHERE world_id=? AND parent_id=?').get(world.id,parent).n,offset,limit:n};
   });
+  app.get('/api/living/worlds/:worldId/sims/filters',async req=>{const {world}=own(req);return {neighborhoods:db.prepare("SELECT id,name FROM lw_places WHERE world_id=? AND kind='neighborhood' ORDER BY rowid").all(world.id)};});
   app.get('/api/living/worlds/:worldId/sims',async req=>{
     const {world}=own(req),query=req.query || {},n=limit(query.limit,50),offset=Math.max(0,Number(query.offset)||0),where=['s.world_id=?'],args=[world.id];
     if(query.search){where.push('s.name LIKE ?');args.push('%'+String(query.search).slice(0,100)+'%');}
     if(query.place){if(!db.prepare('SELECT 1 FROM lw_places WHERE world_id=? AND id=?').get(world.id,query.place))throw httpErr(404,'NOT_FOUND','Place not found.');where.push('s.location_id=?');args.push(query.place);}
+    if(query.anchored==='0')where.push('s.anchored=0');
+    for(const [key,op] of [['minAge','>='],['maxAge','<=']])if(query[key]!==undefined&&query[key]!==''){const age=Number(query[key]);if(!Number.isInteger(age)||age<0||age>120)throw httpErr(400,'BAD_AGE','Choose an age from 0 to 120.');where.push('s.age'+op+'?');args.push(age);}
+    if(query.firstName){where.push("(CASE WHEN instr(s.name,' ')>0 THEN substr(s.name,1,instr(s.name,' ')-1) ELSE s.name END) LIKE ?");args.push('%'+String(query.firstName).slice(0,80)+'%');}
+    if(query.familyName){where.push("substr(s.name,instr(s.name,' ')+1) LIKE ?");args.push('%'+String(query.familyName).slice(0,80)+'%');}
+    if(query.neighborhood){
+      if(!db.prepare("SELECT 1 FROM lw_places WHERE world_id=? AND id=? AND kind='neighborhood'").get(world.id,query.neighborhood))throw httpErr(404,'BAD_NEIGHBORHOOD','Neighborhood not found.');
+      where.push('s.household_id IN (WITH RECURSIVE home_places(id) AS (SELECT id FROM lw_places WHERE world_id=? AND id=? UNION SELECT p.id FROM lw_places p JOIN home_places h ON p.parent_id=h.id WHERE p.world_id=?) SELECT id FROM home_places)');args.push(world.id,query.neighborhood,world.id);
+    }
     if(query.anchored==='1')where.push('s.anchored=1');
-    const sql=where.join(' AND '),rows=db.prepare(`SELECT s.id,s.name,s.age,s.gender,s.asset_id,s.colour,s.anchored,s.location_id,json_extract(s.state,'$.action.kind') activity,json_extract(s.state,'$.thought') thought,p.name location FROM lw_sims s LEFT JOIN lw_places p ON p.id=s.location_id WHERE ${sql} ORDER BY s.name LIMIT ? OFFSET ?`).all(...args,n,offset);
+    const sql=where.join(' AND '),rows=db.prepare(`SELECT s.id,s.name,s.age,s.gender,s.asset_id,s.colour,s.anchored,s.location_id,s.household_id,json_extract(s.state,'$.action.kind') activity,json_extract(s.state,'$.thought') thought,p.name location FROM lw_sims s LEFT JOIN lw_places p ON p.id=s.location_id WHERE ${sql} ORDER BY s.name LIMIT ? OFFSET ?`).all(...args,n,offset);
     const catalog=await openSimsCatalog();return {sims:rows.map(s=>({...s,activityText:activity(s.activity,catalog)})),total:db.prepare('SELECT count(*) n FROM lw_sims s WHERE '+sql).get(...args).n,offset,limit:n};
   });
   app.get('/api/living/worlds/:worldId/sims/:id',async req=>{

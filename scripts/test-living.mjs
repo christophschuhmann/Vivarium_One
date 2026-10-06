@@ -11,6 +11,7 @@ const {createSession}=await import('../server/auth.js');
 const {buildWorldManifest,importWorldManifest}=await import('../server/world_io.js');
 const {recall}=await import('../server/living/memory.js');
 const {stageView,graphView,converse,chatHistory,clearChat}=await import('../server/living/vivarium.js');
+const {circleMap,searchMap,mapAnchors}=await import('../server/living/map.js');
 const {directorChat,directorApply}=await import('../server/living/director.js');
 const {default:Fastify}=await import('fastify');const {default:cookie}=await import('@fastify/cookie');
 const {default:livingRoutes}=await import('../server/routes/living.js');const {default:apiRoutes}=await import('../server/routes/api.js');
@@ -62,6 +63,43 @@ try {
   assert.ok(cityGraph.nodes.every(p=>p.kind!=='room'));assert.ok(streetGraph.nodes.some(p=>p.kind==='building'&&!p.landmark));assert.ok(houseGraph.nodes.some(p=>p.kind==='room'));assert.ok(houseGraph.nodes.filter(p=>p.kind==='neighborhood'&&p.id!==neighborhood).every(p=>p.coarse&&!p.thumbnail));
   for(const graph of [cityGraph,streetGraph,houseGraph]){assert.ok(graph.nodes.length<=60);assert.ok(graph.nodes.filter(n=>n.thumbnail).length<=60);for(const e of graph.edges){assert.ok(graph.nodes.some(n=>n.id===e.from_id));assert.ok(graph.nodes.some(n=>n.id===e.to_id));}}
   assert.throws(()=>graphView(iw,{focus:'foreign'}));
+  const clockBeforeMap=JSON.stringify(initial.world),neighborhoodIds=[...initial.places.values()].filter(p=>p.kind==='neighborhood').map(p=>p.id);
+  const circles=circleMap(iw,{expanded:JSON.stringify([neighborhoodIds[0],neighborhoodIds[1],person.household_id])});
+  assert.ok(circles.expanded.includes(neighborhoodIds[0])&&circles.expanded.includes(neighborhoodIds[1]));
+  assert.ok(circles.nodes.some(n=>n.parent_id===person.household_id&&n.kind==='room'));
+  const street='map:street:'+neighborhoodIds[0];assert.ok(circles.nodes.some(n=>n.id===street&&n.virtual&&n.placeId===neighborhoodIds[0]));
+  assert.ok(circles.edges.some(e=>e.from_id===street||e.to_id===street));
+  assert.ok(circles.edges.some(e=>[e.from_id,e.to_id].includes(street)&&[e.from_id,e.to_id].includes('map:street:'+neighborhoodIds[1])));
+  assert.ok(circles.nodes.length<=180&&circles.nodes.filter(n=>n.thumbnail).length<=50);
+  for(const roomNode of circles.nodes.filter(n=>n.kind==='room'))assert.ok(circles.edges.some(e=>e.from_id===roomNode.id||e.to_id===roomNode.id),'Every visible room has a doorway path');
+  const partyRows=db.prepare('SELECT id,state,location_id FROM lw_sims WHERE world_id=? ORDER BY id LIMIT 8').all(iw),partyPlace=circles.nodes.find(n=>n.kind==='room').id;
+  for(const s of partyRows){const state=JSON.parse(s.state);state.location_id=partyPlace;state.route=null;db.prepare('UPDATE lw_sims SET location_id=?,state=? WHERE id=?').run(partyPlace,JSON.stringify(state),s.id);}
+  const partyMap=circleMap(iw,{expanded:JSON.stringify([person.household_id])}),partyNode=partyMap.nodes.find(n=>n.id===partyPlace);assert.ok(partyNode.presentCount>=8);assert.equal(partyNode.presentSims.length,4);assert.equal(partyNode.overflow,partyNode.presentCount-4);
+  for(const s of partyRows)db.prepare('UPDATE lw_sims SET location_id=?,state=? WHERE id=?').run(s.location_id,s.state,s.id);
+  const selectedNames=new URLSearchParams({firstName:person.name.split(' ')[0],familyName:person.name.split(' ').slice(1).join(' '),neighborhood,minAge:String(person.age),maxAge:String(person.age)});
+  const filtered=(await request('GET',`/api/living/worlds/${iw}/sims?${selectedNames}`)).json();assert.ok(filtered.sims.some(p=>p.id===person.id));assert.ok(filtered.sims.every(p=>p.age===person.age));
+  const unanchored=(await request('GET',`/api/living/worlds/${iw}/sims?anchored=0&limit=50`)).json();assert.ok(unanchored.total>=498);assert.ok(unanchored.sims.every(p=>!p.anchored));
+  assert.equal((await request('GET',`/api/living/worlds/${iw}/sims?minAge=bad`)).statusCode,400);assert.equal((await request('GET',`/api/living/worlds/${iw}/sims?neighborhood=foreign`)).statusCode,404);
+  assert.equal((await request('GET',`/api/living/worlds/${iw}/sims/filters`,null,'bob')).statusCode,404);
+  assert.throws(()=>circleMap(iw,{expanded:'["foreign"]'}));
+  assert.equal(searchMap(iw,'Library').results[0].id,searchMap(iw,'Bibliothek').results[0].id);
+  assert.ok(searchMap(iw,'Library').results[0].path.some(p=>p.kind==='city'));
+  const navAnchors=mapAnchors(iw).anchors;assert.ok(navAnchors.some(a=>a.id===person.id&&a.target.type==='character'&&a.revealId===person.location_id));
+  assert.equal(JSON.stringify(loadTown(iw).world),clockBeforeMap);
+  assert.equal((await request('GET',`/api/living/worlds/${iw}/map`,null,'bob')).statusCode,404);
+  assert.equal((await request('GET',`/api/living/worlds/${iw}/map/search?q=library`,null,'bob')).statusCode,404);
+  assert.equal((await request('GET',`/api/living/worlds/${iw}/map/anchors`,null,'bob')).statusCode,404);
+  const originalPerson=db.prepare('SELECT state,location_id FROM lw_sims WHERE id=?').get(person.id),travelState=JSON.parse(originalPerson.state);
+  const routeNode=initial.places.get(person.household_id).parent_id;
+  travelState.location_id=null;travelState.route={from:originalPerson.location_id,destination:originalPerson.location_id,index:1,path:[{id:routeNode,seconds:120},{id:originalPerson.location_id,seconds:120}],remaining:60};
+  db.prepare('UPDATE lw_sims SET state=?,location_id=NULL WHERE id=?').run(JSON.stringify(travelState),person.id);
+  const travellingScene=await stageView(worldRow,{sim:person.id});assert.equal(travellingScene.locations[0].id,routeNode);assert.equal(travellingScene.journey.simId,person.id);assert.equal(travellingScene.characters.length,1);assert.equal(travellingScene.characters[0].state.location_id,null);
+  const travellingAnchor=mapAnchors(iw).anchors.find(a=>a.id===person.id);assert.equal(travellingAnchor.revealId,routeNode);assert.equal(travellingAnchor.travelling,true);
+  db.prepare('UPDATE lw_sims SET state=?,location_id=? WHERE id=?').run(originalPerson.state,originalPerson.location_id,person.id);
+  // Budget holds even with many independent neighborhoods added through growth.
+  const extraPlaces=[];for(let k=0;k<90;k++){const district='test_d_'+k,neighbor='test_n_'+k;extraPlaces.push(district,neighbor);db.prepare('INSERT INTO lw_places(id,world_id,parent_id,name,kind,purpose) VALUES (?,?,?,?,?,?)').run(district,iw,cityGraph.ancestors.find(p=>p.kind==='city').id,'Extra district '+k,'district','district');db.prepare('INSERT INTO lw_places(id,world_id,parent_id,name,kind,purpose) VALUES (?,?,?,?,?,?)').run(neighbor,iw,district,'Extra neighborhood '+k,'neighborhood','street');}
+  const manyRoots=circleMap(iw,{focus:'test_n_89',expanded:JSON.stringify(['test_d_89'])});assert.ok(manyRoots.nodes.length<=180);assert.ok(manyRoots.omittedRoots>0);assert.ok(manyRoots.nodes.some(n=>n.id==='test_n_89'));
+  for(const id of extraPlaces.reverse())db.prepare('DELETE FROM lw_places WHERE id=?').run(id);
   const view=await stageView(worldRow,{sim:person.id});assert.equal(view.world.simulation_mode,'living');assert.ok(view.characters.length<=17);assert.ok(view.locations[0].background_asset_id.startsWith('/api/living/library/'));assert.ok(view.characters[0].state.outfits[0].cutout_asset_id.includes('variant=sprite'));
   assert.equal((await request('GET',`/api/worlds/${iw}?sim=${person.id}`,null,'bob')).statusCode,404);
   assert.equal((await request('GET',`/api/living/worlds/${iw}/graph`,null,'bob')).statusCode,404);
@@ -78,6 +116,6 @@ try {
   const dm=await directorChat(user,worldRow,'Setze einen Anker.', 'de',async()=>({content:JSON.stringify({reply:'Ich schlage diesen Anker vor.',actions:[{type:'set_anchor',kind:'sim',id:person.id,enabled:false},{type:'set_anchor',kind:'sim',id:'foreign',enabled:true}]})}));assert.equal(dm.actions.length,1);assert.equal(loadTown(iw).byId.get(person.id).anchored,1);
   await directorApply(user,worldRow,dm.actions);assert.equal(loadTown(iw).byId.get(person.id).anchored,0);assert.equal(loadTown(iw).world.seconds,beforeTalk+60);await assert.rejects(directorApply(user,worldRow,[{type:'set_anchor',kind:'sim',id:'foreign',enabled:true}]));
   const replay=buildWorldManifest(iw),copy2=importWorldManifest(user,replay,null);assert.equal(db.prepare('SELECT count(*) n FROM lw_scene_lines WHERE world_id=?').get(copy2.worldId).n,replay.living.lw_scene_lines.length);assert.ok((await stageView(db.prepare('SELECT * FROM worlds WHERE id=?').get(copy2.worldId))).lastTick.narration.length);
-  console.log('PASS original stage adapter, bounded hierarchical graph with actual projected paths, private paused conversations and personal memory, conversation clearing and rollback, targeted interventions, validated scene dialogue, GM proposed anchors and ZIP restoration');
+  console.log('PASS original stage adapter, bounded circular multi-group map, bilingual search, travelling anchor view and actual projected paths, private paused conversations and personal memory, conversation clearing and rollback, targeted interventions, validated scene dialogue, GM proposed anchors and ZIP restoration');
   console.log('PASS actual Open Sims registry, seeded biographies/families, workplaces, anchor fields/contact closure, personal memories, atomic failure/cancellation, bounded model contexts, invalid proposal rejection, ownership, mutation locks, growth and complete snapshot copying');
 }finally{await app.close();closeOpenSims();db.close();fs.rmSync(scratch,{recursive:true,force:true});}

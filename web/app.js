@@ -2201,7 +2201,7 @@ async function stageScreen() {
   const locId = stageState.pov.type === 'location' ? stageState.pov.id : povChar?.state.location_id;
   const loc = locations.find(l => l.id === locId) || locations[0];
   // not-yet-introduced characters (rewound below their intro tick) don't exist in this era
-  const present = characters.filter(c => c.state.location_id === loc?.id && (c.intro_tick_idx || 0) <= world.tick_index);
+  const present = characters.filter(c => (c.state.location_id === loc?.id || living && S.worldData.journey?.simId === c.id) && (c.intro_tick_idx || 0) <= world.tick_index);
   const scene = buildScene(lastTick, loc, present, povChar);
 
   app.innerHTML = `
@@ -2224,7 +2224,7 @@ async function stageScreen() {
   <div id="veil"></div>
   <div class="stage-hud" style="display:flex;gap:9px;align-items:center">
     <div class="glasschip" style="color:#efeaff;background:rgba(34,31,69,.6);border-color:rgba(255,255,255,.15)">
-      <b>${esc(world.title)}</b><span style="opacity:.75">· ${esc(loc?.name || '')} · tick ${world.tick_index}</span><span style="opacity:.75">🕐 ${fmtClock(world.sim_time)}</span></div>
+      <b>${esc(world.title)}</b><span style="opacity:.75">· ${esc(loc?.name || '')}${living && S.worldData.journey ? ' · unterwegs → '+esc(S.worldData.journey.destination||'') : ''} · tick ${world.tick_index}</span><span style="opacity:.75">🕐 ${fmtClock(world.sim_time)}</span></div>
     <div class="glasschip" style="background:rgba(34,31,69,.6);border-color:rgba(255,255,255,.15);gap:2px;padding:4px">
       <button class="tchip" id="undobtn" title="Undo the last tick" ${branchInfo.canUndo ? '' : 'disabled style="opacity:.35"'}>⟲</button>
       <button class="tchip" id="redobtn" title="Redo" ${branchInfo.canRedo ? '' : 'disabled style="opacity:.35"'}>⟳</button>
@@ -3300,6 +3300,7 @@ async function gmChatOverlay() {
           (r.backgroundId ? `<img src="${assetUrl(r.backgroundId)}" style="width:100%;border-radius:9px;margin:4px 0">` : '')).join('');
         btn.textContent = '✓ Applied';
         S.worldData = null; refreshMe();   // world state changed — next screen render picks it up
+        if(S.livingWorld===S.world)await livingRefreshAnchorNavigation();
         scroll();
       } catch (e2) { btn.disabled = false; btn.textContent = '✨ Apply'; fail(e2); }
     };

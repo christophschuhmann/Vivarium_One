@@ -3,3 +3,8 @@ const activities={eat:['bereitet eine Mahlzeit zu','Eine richtige Mahlzeit würd
 const leisure={host_party:'lädt zu einem Treffen ein',attend_party:'besucht ein Treffen',ask_on_date:'fragt nach einer Verabredung',go_on_date:'geht zu einer Verabredung',dance:'tanzt',karaoke:'singt Karaoke',board_games:'spielt ein Brettspiel',video_games:'spielt ein Videospiel',read_for_fun:'liest zum Vergnügen',write_story:'schreibt eine Geschichte',paint:'malt',play_instrument:'spielt ein Instrument',craft_project:'bastelt',garden:'gärtnert',cook_for_fun:'kocht zum Vergnügen',bake_treats:'backt etwas',go_for_walk:'geht spazieren',hike:'wandert',jog:'joggt',work_out:'trainiert',play_team_sport:'spielt Mannschaftssport',swim:'schwimmt',visit_museum:'besucht ein Museum',see_live_music:'hört Live-Musik',watch_movie:'sieht einen Film',volunteer:'hilft ehrenamtlich',shop_for_fun:'bummelt durch Geschäfte',relax_at_home:'entspannt zu Hause',meditate:'meditiert',make_friends:'knüpft neue Kontakte'};
 export function activity(kind,catalog){return activities[kind]?.[0] || leisure[kind?.replace(/^leisure_/,'')] || catalog.actions[kind]?.label || kind;}
 export function thought(kind,catalog){return activities[kind]?.[1] || (leisure[kind?.replace(/^leisure_/,'')]?'Das möchte ich tun: '+leisure[kind.replace(/^leisure_/,'')]+'.':catalog.actions[kind]?.thought || 'Ich orientiere mich.');}
+// A traveller is between nodes; maps and scenes use the last reached node as
+// a visual reference and keep the actual location null in simulation state.
+export function currentPlaceId(sim,state){
+  return sim.location_id||((state?.route?.index>0)?state.route.path?.[state.route.index-1]?.id:state?.route?.from)||null;
+}

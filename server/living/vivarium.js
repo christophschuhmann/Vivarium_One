@@ -1,7 +1,7 @@
 // Present the same live state to the original Vivarium stage. No second simulation.
 import {db} from './schema.js';
 import {pj,j,uid} from '../db.js';
-import {activity} from './presentation.js';
+import {activity,currentPlaceId} from './presentation.js';
 import {openSimsCatalog} from './open_sims.js';
 import {busy} from './engine.js';
 import {recall} from './memory.js';
@@ -19,17 +19,18 @@ export async function stageView(world,query={}){
   let selected=query.sim?db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,query.sim):null;
   if(query.sim&&!selected)throw err(404,'Sim not found.');
   if(!selected&&!query.place)selected=db.prepare('SELECT * FROM lw_sims WHERE world_id=? ORDER BY anchored DESC,rowid LIMIT 1').get(world.id);
-  const placeId=query.place||selected?.location_id||pj(selected?.state,{}).route?.from;
+  const selectedState=pj(selected?.state,{}),journey=selected&&!selected.location_id&&selectedState.route;
+  const placeId=query.place||currentPlaceId(selected||{},selectedState);
   const place=db.prepare('SELECT * FROM lw_places WHERE world_id=? AND id=?').get(world.id,placeId);
   if(!place)throw err(404,'Place not found.');
-  const cast=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND location_id=? ORDER BY anchored DESC,name LIMIT 16').all(world.id,place.id);
+  const cast=journey&&!query.place?[selected]:db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND location_id=? ORDER BY anchored DESC,name LIMIT 16').all(world.id,place.id);
   if(selected&&!cast.some(p=>p.id===selected.id)){if(selected.location_id===place.id&&cast.length===16)cast.pop();cast.unshift(selected);}
   const beat=db.prepare('SELECT * FROM lw_beats WHERE world_id=? ORDER BY version DESC LIMIT 1').get(world.id);
   const events=beat?db.prepare('SELECT * FROM lw_events WHERE world_id=? AND beat_id=? AND location_id=? ORDER BY end DESC,rowid DESC LIMIT 20').all(world.id,beat.id,place.id).reverse():[];
   const authored=beat?db.prepare('SELECT speaker,text,mode,emotion FROM lw_scene_lines WHERE world_id=? AND beat_id=? AND location_id=? ORDER BY rowid LIMIT 40').all(world.id,beat.id,place.id):[];
   const narration=authored.length?authored:events.map(e=>({speaker:'narrator',text:e.description,mode:'speech'}));
   if(!narration.length)for(const p of cast.slice(0,12))narration.push({speaker:'narrator',text:p.name+': '+(activity(pj(p.state,{}).action?.kind,catalog)||'unterwegs')+'.'});
-  return {world:{...world,status:'live',tick_index:clock.version,sim_time:new Date(Date.UTC(2026,8,21)+clock.seconds*1000).toISOString()},simulation:clock,characters:cast.map(p=>character(p,catalog)),locations:[{...place,type:place.kind,description:place.purpose,music:db.prepare('SELECT music FROM lw_place_music WHERE world_id=? AND location_id=?').get(world.id,place.id)?.music,background_asset_id:media(place.asset_id,'full')}],paths:[],relationships:[],population:db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=?').get(world.id).n,occupants:db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=? AND location_id=?').get(world.id,place.id).n,lastTick:{idx:beat?.version||clock.version,pov_location_id:place.id,narration,mood_tag:world.mood,time_delta:beat?'+'+Math.round((beat.end-beat.start)/60)+'m':'jetzt'}};
+  return {journey:journey?{simId:selected.id,destination:db.prepare('SELECT name FROM lw_places WHERE world_id=? AND id=?').get(world.id,journey.destination)?.name}:null,world:{...world,status:'live',tick_index:clock.version,sim_time:new Date(Date.UTC(2026,8,21)+clock.seconds*1000).toISOString()},simulation:clock,characters:cast.map(p=>character(p,catalog)),locations:[{...place,type:place.kind,description:place.purpose,music:db.prepare('SELECT music FROM lw_place_music WHERE world_id=? AND location_id=?').get(world.id,place.id)?.music,background_asset_id:media(place.asset_id,'full')}],paths:[],relationships:[],population:db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=?').get(world.id).n,occupants:db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=? AND location_id=?').get(world.id,place.id).n,lastTick:{idx:beat?.version||clock.version,pov_location_id:place.id,narration,mood_tag:world.mood,time_delta:beat?'+'+Math.round((beat.end-beat.start)/60)+'m':'jetzt'}};
 }
 // One detailed branch, coarse distant branches. The response itself has a hard bound.
 export function graphView(worldId,{focus,depth=0}={}){
