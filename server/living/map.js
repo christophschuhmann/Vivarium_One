@@ -12,6 +12,7 @@ function index(worldId){
 }
 export function circleMap(worldId,{expanded='[]',focus}={}){
   const {places,byId,children,path}=index(worldId);let requested;
+  const communities=pj(db.prepare('SELECT rules FROM lw_worlds WHERE world_id=?').get(worldId)?.rules,{}).neighborhoods||{};
   try{requested=JSON.parse(expanded);}catch{throw error('Expanded groups must be a JSON array.');}
   if(!Array.isArray(requested)||requested.length>24||requested.some(id=>typeof id!=='string'||!byId.has(id)))throw error('Choose at most 24 groups from this world.');
   if(focus&&!byId.has(focus))throw error('Map focus not found.');
@@ -32,9 +33,9 @@ export function circleMap(worldId,{expanded='[]',focus}={}){
     const kids=children.get(p.id)||[],canExpand=kids.length>0;
     const open=wanted.has(p.id)&&canExpand&&kids.length<=40&&nodes.length+kids.length+(['building','neighborhood'].includes(p.kind)?1:0)+roots.length<180;
     if(wanted.has(p.id)&&canExpand&&!open)refused.push(p.id);
-    const n={...p,parent_id:parent,placeId:p.id,expanded:open,leaf:!canExpand,occupants:occupants.get(p.id)||0,simAnchors:anchors.get(p.id)||0,thumbnail:null};nodes.push(n);
+    const n={...p,community:communities[p.id],parent_id:parent,placeId:p.id,expanded:open,leaf:!canExpand,occupants:occupants.get(p.id)||0,simAnchors:anchors.get(p.id)||0,thumbnail:null};nodes.push(n);
     if(!open)return;accepted.push(p.id);
-    if(p.kind==='neighborhood'&&!kids.some(k=>k.kind==='street'))nodes.push({...n,id:'map:street:'+p.id,placeId:p.id,parent_id:p.id,name:'Straße · '+p.name,kind:'street',expanded:false,leaf:true,virtual:true,thumbnail:null});
+    if(p.kind==='neighborhood'&&!kids.some(k=>k.kind==='street'))nodes.push({...n,id:'map:street:'+p.id,placeId:p.id,parent_id:p.id,name:communities[p.id]?.street||'Straße · '+p.name,kind:'street',expanded:false,leaf:true,virtual:true,thumbnail:null});
     if(p.kind==='building')nodes.push({...n,id:'map:entry:'+p.id,placeId:p.id,parent_id:p.id,name:'Eingang · '+p.name,purpose:'Zugang von der Straße zu den Räumen',kind:'entry',expanded:false,leaf:true,virtual:true,asset_id:null,thumbnail:null,landmark:0,anchored:0,simAnchors:0,occupants:0});
     for(const k of kids)visit(k,p.id);
   };

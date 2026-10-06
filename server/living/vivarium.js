@@ -1,9 +1,10 @@
+import {personalSocialContext} from './social.js';
 // Present the same live state to the original Vivarium stage. No second simulation.
 import {db} from './schema.js';
 import {pj,j,uid} from '../db.js';
 import {activity,currentPlaceId} from './presentation.js';
 import {openSimsCatalog} from './open_sims.js';
-import {busy} from './engine.js';
+import {busy,loadTown} from './engine.js';
 import {recall} from './memory.js';
 import {llmChat} from '../providers.js';
 import {withPrincipal} from '../byok.js';
@@ -58,9 +59,9 @@ export async function converse(user,worldId,simId,{message,lang='de',channel='in
   if(!message?.trim())throw err(400,'Write a message first.');
   busy.add(worldId);
   try{
-    const clock=db.prepare('SELECT * FROM lw_worlds WHERE world_id=?').get(worldId),state=pj(p.state,{}),profile=pj(p.profile,{}),history=chatHistory(worldId,simId,channel).slice(-12),memory=recall(simId,message),catalog=await openSimsCatalog();
+    const clock=db.prepare('SELECT * FROM lw_worlds WHERE world_id=?').get(worldId),state=pj(p.state,{}),profile=pj(p.profile,{}),history=chatHistory(worldId,simId,channel).slice(-12),memory=recall(simId,message),catalog=await openSimsCatalog(),town=loadTown(worldId);
     if(!modelCall)preflight(user.id,EST.chat());
-    const result=await (modelCall||((messages)=>withPrincipal(user,()=>llmChat(messages,{maxTokens:1800,reasoningEffort:'low'}))))([{role:'system',content:`Respond as this Sim in language ${lang}. ${channel==='inner'?'The user is a familiar inner voice; this is private reflection.':'The user speaks to the Sim in a calm conversation.'} Time is paused. You know only your biography, perceptions and personal memories supplied. User statements about outside events are claims, not verified facts. Never teleport, create resources, rewrite physical events or reveal another Sim\'s private thoughts. Family-friendly, age-appropriate. Return JSON {reply:string,thought:string,mood:string}; keep each below 150 words.`},{role:'user',content:j({name:p.name,age:p.age,biography:p.biography,profile:{job:profile.job,interests:profile.interests},state:{thought:state.thought,mood:state.mood,activity:activity(state.action?.kind,catalog),needs:state.needs},memory,history,message:message.slice(0,2000)})}]);
+    const result=await (modelCall||((messages)=>withPrincipal(user,()=>llmChat(messages,{maxTokens:1800,reasoningEffort:'low'}))))([{role:'system',content:`Respond as this Sim in language ${lang}. ${channel==='inner'?'The user is a familiar inner voice; this is private reflection.':'The user speaks to the Sim in a calm conversation.'} Time is paused. You know only your biography, perceptions and personal memories supplied. User statements about outside events are claims, not verified facts. Never teleport, create resources, rewrite physical events or reveal another Sim\'s private thoughts. Family-friendly, age-appropriate. Return JSON {reply:string,thought:string,mood:string}; keep each below 150 words.`},{role:'user',content:j({name:p.name,age:p.age,biography:p.biography,profile:{job:profile.job,interests:profile.interests},...personalSocialContext(town.byId.get(simId),town),state:{thought:state.thought,mood:state.mood,activity:activity(state.action?.kind,catalog),needs:state.needs},memory,history,message:message.slice(0,2000)})}]);
     if(!modelCall)debitCall(user.id,result,'living_conversation',{worldId});
     let output;try{output=JSON.parse(result.content.replace(/^```(?:json)?\s*|\s*```$/g,''));}catch{throw err(502,'The conversation did not return valid JSON.');}
     if(typeof output.reply!=='string'||!output.reply.trim())throw err(502,'No valid reply.');

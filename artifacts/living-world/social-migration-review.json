@@ -1,0 +1,17 @@
+{
+  "migrationVerifiedAgainstBackup": true,
+  "worlds": [
+    {
+      "population": 10,
+      "oldEventsPreserved": 250,
+      "oldJournalEntriesPreserved": 265,
+      "statesBiographiesAnchorsRelationsTimePreserved": true
+    },
+    {
+      "population": 500,
+      "oldEventsPreserved": 2603,
+      "oldJournalEntriesPreserved": 2764,
+      "statesBiographiesAnchorsRelationsTimePreserved": true
+    }
+  ]
+}

@@ -257,6 +257,20 @@ You can also create 500 directly. Starting small makes it easier to inspect why 
 
 A failed, cancelled or stale tick leaves world time, current states and new journals unchanged. Provider calls already made remain billable on your provider account. Selecting a city-wide anchor intentionally involves many Sims; large fields are split into groups of at most 24 owned Sims per model call.
 
+### Neighborhoods with a shared everyday life
+
+Neighborhoods now have recognizable names such as **Am Mühlbach**, **Bücherhof**, **Alte Weberei** and **Lindenhöfe**, their own street names, atmosphere and recurring informal meeting places. Selecting a neighborhood in World shows its character and local gathering habit. New areas added through the anchor menu receive distinct names rather than numbered extensions. Search also finds their street names.
+
+Sims begin with a bounded network of reciprocal family, neighborhood, school, work and interest-based friendships. School friendships respect age differences; workplace ties require a shared workplace. Each relationship can have several contexts, shared background, trust and small unresolved tensions. Personal wishes differ: belonging, care, recognition, stability, independence or curiosity. These influence actual procedural conversation choices and personal interpretations. Existing tensions can lead to setting boundaries, apologies or reconciliation; Open Sims continues to check feasibility, adulthood, kinship and consent.
+
+After work or school, eligible Sims can follow mutual plans to visit a friend's living room or gather at their neighborhood's public meeting place. Visits follow the actual route graph and room capacities. School/work, urgent needs, sleep and the existing child supervision rules take priority. A proposed visit is a plan, not an accomplished event; only an actual encounter changes relationships and creates witnessed memories. The map's current focus never controls who is simulated.
+
+Open **Stats & Protokoll** from a Sim's thought window or **Cast → Alle Sims**. **Was mir wichtig ist** shows personal wishes and neighborhood context. **Beziehungen** shows shared history and tension alongside trust and closeness. Click a contact's name to open their profile. Paused conversations and anchored Storyteller scenes receive the Sim's own motives and known relationships; other Sims' private motives remain private.
+
+On first startup after this update, existing Living World towns are upgraded automatically, with a SQLite backup named `data/before-social-neighborhoods-<timestamp>.db`. Old generated neighborhood labels are replaced; custom names, IDs, anchors, physical states, authored biographies, numeric relationship values and past journals are retained. Supplemental background is explicitly recorded as initialization, rather than newly witnessed history. The upgrade runs once and increments the world version without advancing time. Scenario ZIP exports/duplicates retain the new context and remap its entity references.
+
+The isolated social benchmark includes a full simulated day at 10, 20, 50, 100 and 500 residents. At 500 residents on the development host, a five-minute procedural step took **450 ms median** and a full day **47.3 s**; these measurements exclude language-model latency. A new town seeds at most 12 directed contacts per Sim; actual encounters may add more. Results are saved in `artifacts/living-world/social-benchmark.json`.
+
 ### Navigate without loading the whole town
 
 The **World / Atlas** tab is the main navigation map. Collapsed neighborhoods and houses are round thumbnails; opening them reveals smaller circles inside a soft colored group boundary. A house contains its rooms, and a neighborhood contains houses and a street node. Several neighborhoods and houses can remain open at the same time. Public buildings use larger circles; the same hierarchy can contain a campus with buildings and rooms.
@@ -267,7 +281,7 @@ The **World / Atlas** tab is the main navigation map. Collapsed neighborhoods an
 - The **Deine Anker** sidebar shows anchored Sims and their current locations, plus anchored places. Filter it by Sims or places. Click a row to find the anchor on the map; **↗** opens its scene immediately.
 - Play has a compact **anchor navigation bar** instead of a small unreadable map. Use its **← / →** buttons or the left/right arrow keys to jump between anchors without advancing simulation time. Choose **Alle Anker**, **Sims** or **Orte**. Location anchors on houses/neighborhoods open a descendant room; Sim anchors follow the Sim's current location. Keys do not navigate while a text input or a dialogue window is active. **World ↗** opens the full map.
 
-The map projects actual routes onto visible circles. In the initial town generator a neighborhood itself is the simulated street; its expanded street circle is a presentation of that same location, rather than an additional invented road. Group boundaries express containment, while route lines express movement. Existing worlds, anchors, memories and saved games need no data migration. Very large sets of independently generated districts are bounded to 60 overview groups; search brings a district outside that overview into the current map. While inspecting a house, distant unrelated routes are hidden so they do not cross its rooms. Travelling Sims remain visible and accessible in their scene, marked as unterwegs; their real simulation location remains between places.
+The map projects actual routes onto visible circles. In the initial town generator a neighborhood itself is the simulated street; its expanded street circle is a presentation of that same location, rather than an additional invented road. Group boundaries express containment, while route lines express movement. The map keeps existing world IDs, anchors, memories and saved-game references intact. Very large sets of independently generated districts are bounded to 60 overview groups; search brings a district outside that overview into the current map. While inspecting a house, distant unrelated routes are hidden so they do not cross its rooms. Travelling Sims remain visible and accessible in their scene, marked as unterwegs; their real simulation location remains between places.
 
 A graph response contains at most **180 nodes and 50 thumbnail references**. The map attaches at most **50 visible images, including the small Sim portraits**, removes image elements outside the viewport and shares that 50-image budget with open scene/picker panels. Small distant nodes hide long labels until zoomed in; focused labels remain readable. The stage displays at most 16 residents with name tags and individual colors; **Character** opens a searchable, paginated picker with 12 portraits per page. All other places continue to simulate. The API sends a bounded scene snapshot rather than every resident, every room and their complete journals. Browser caching can retain earlier decoded images, so the element budget is not a hard limit on browser process memory.
 
@@ -287,6 +301,7 @@ Use **Settings → Storage & scenarios** to export, duplicate or delete a Living
 
 ```bash
 npm run test:living
+npm run test:living-social
 npm run test:living-browser
 npm run benchmark:living
 ```

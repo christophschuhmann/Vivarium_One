@@ -7,6 +7,7 @@ import {requireUser,requireVerified,httpErr} from '../auth.js';
 import {uid,j,pj,now} from '../db.js';
 import {createTown,advanceTown,loadTown,authorBiographies,recordBiography,busy} from '../living/engine.js';
 import {generateTown} from '../living/generate.js';
+import {weaveSocial,socialPerspective} from '../living/social.js';
 import {library,assetFile,searchAssets} from '../living/library.js';
 import {llmChat} from '../providers.js';
 import {withPrincipal} from '../byok.js';
@@ -15,7 +16,7 @@ import {stageView,graphView,character,converse,chatHistory,clearChat} from '../l
 const limit=(value,max=50)=>Math.max(1,Math.min(max,Number(value)||20));
 function own(req,verified=false){const user=verified?requireVerified(req):requireUser(req);const world=db.prepare('SELECT * FROM worlds WHERE id=? AND user_id=? AND simulation_mode=\'living\'').get(req.params.worldId,user.id);if(!world)throw httpErr(404,'NOT_FOUND','Living world not found.');return {user,world};}
 function mutable(req){const result=own(req,true);if(busy.has(result.world.id))throw httpErr(409,'WORLD_BUSY','Wait for the current tick to finish.');return result;}
-const simView=p=>({...p,profile:pj(p.profile,{}),state:pj(p.state,{})});
+const simView=p=>{const person={...p,profile:pj(p.profile,{}),state:pj(p.state,{})};if(person.profile.social)person.profile.social=socialPerspective(person);return person;};
 export default async function livingRoutes(app) {
   app.get('/api/living/worlds/:worldId/history',async req=>{const {world}=own(req);return {beats:db.prepare('SELECT version,start,end,story,metrics FROM lw_beats WHERE world_id=? ORDER BY version DESC LIMIT 40').all(world.id).map(b=>({...b,story:pj(b.story,[]),metrics:pj(b.metrics,{})}))};});
   app.get('/api/living/worlds/:worldId/view',async req=>stageView(own(req).world,req.query));
@@ -112,12 +113,12 @@ export default async function livingRoutes(app) {
     const {world}=mutable(req),count=db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=?').get(world.id).n,add=Number(req.body?.count);
     if(!Number.isInteger(add)||add<1||count+add>500)throw httpErr(400,'BAD_POPULATION','Add enough Sims to reach at most 500.');busy.add(world.id);
     try{
-      const existing=loadTown(world.id),prefix=world.id+'_x'+count,generated=await generateTown(prefix,{population:add,seed:existing.world.seed+count,title:world.title}),map=new Map();
+      const existing=loadTown(world.id),prefix=world.id+'_x'+count,generated=await generateTown(prefix,{population:add,seed:existing.world.seed+count,title:world.title,neighborhoodOffset:[...existing.places.values()].filter(p=>p.kind==='neighborhood').length,reservedNames:[...existing.places.values()].filter(p=>['neighborhood','district'].includes(p.kind)).map(p=>p.name)}),map=new Map();
       for(const place of generated.places)if(['country','city'].includes(place.kind)||place.landmark||place.parent_id&&generated.places.find(p=>p.id===place.parent_id)?.landmark){const match=[...existing.places.values()].find(p=>p.kind===place.kind&&(['country','city'].includes(place.kind)||p.name===place.name));if(match)map.set(place.id,match.id);}
       const rename=value=>typeof value==='string'?map.get(value)||value:Array.isArray(value)?value.map(rename):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,rename(v)])):value;
       const houseOffset=db.prepare('SELECT count(DISTINCT household_id) n FROM lw_sims WHERE world_id=?').get(world.id).n;
       const fresh=generated.places.filter(p=>!map.has(p.id)).map(p=>({...rename(p),world_id:world.id}));
-      for(const p of fresh){p.name=p.name.replace(/Haus (\d+)/g,(_,n)=>'Haus '+(houseOffset+Number(n)));if(['district','neighborhood'].includes(p.kind))p.name+=' · Erweiterung '+(count+1);}
+      for(const p of fresh)p.name=p.name.replace(/Haus (\d+)/g,(_,n)=>'Haus '+(houseOffset+Number(n)));
       const firstNew=fresh.find(p=>p.kind==='neighborhood'),firstOld=[...existing.places.values()].find(p=>p.kind==='neighborhood');
       db.transaction(()=>{
         for(const p of fresh)db.prepare('INSERT INTO lw_places(id,world_id,parent_id,name,kind,purpose,asset_id,x,y,capacity,anchored,landmark,affordances) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)').run(p.id,world.id,p.parent_id,p.name,p.kind,p.purpose,p.asset_id,p.x,p.y,p.capacity,0,p.landmark,j(p.affordances));
@@ -126,7 +127,11 @@ export default async function livingRoutes(app) {
           db.prepare('INSERT INTO lw_sims(id,world_id,household_id,name,age,gender,asset_id,colour,anchored,biography_mode,biography,profile,state,location_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(p.id,world.id,p.household_id,p.name,p.age,p.gender,p.asset_id,p.colour,0,'procedural',p.biography,j(profile),j(p.state),p.state.location_id);
           for(const [other,relation] of Object.entries(p.relations))db.prepare('INSERT INTO lw_relations VALUES (?,?,?,?)').run(world.id,p.id,other,j(relation));
           const id=uid('le_');db.prepare('INSERT INTO lw_events VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(id,world.id,null,existing.world.seconds,existing.world.seconds,p.state.location_id,'initialization_expansion',j([p.id]),j({coverage:'initialized_background'}),p.biography,'procedural_initialization');db.prepare('INSERT INTO lw_journal VALUES (?,?,?,?,?,?,?)').run(p.id,id,existing.world.seconds,'initialization',p.biography,'Mein bisheriger Lebensweg ist als Ausgangshintergrund angelegt.',1);
-        }db.prepare('UPDATE lw_worlds SET version=version+1 WHERE world_id=?').run(world.id);
+        }
+        const rules={...pj(existing.world.rules,{}),neighborhoods:{...pj(existing.world.rules,{}).neighborhoods,...generated.identities}},combined=loadTown(world.id);
+        weaveSocial(combined.people,combined.places,rules.neighborhoods,{seed:existing.world.seed,existing:true});
+        for(const p of combined.people){db.prepare('UPDATE lw_sims SET profile=? WHERE id=?').run(j(p.profile),p.id);for(const [other,r] of Object.entries(p.relations))db.prepare('INSERT INTO lw_relations VALUES (?,?,?,?) ON CONFLICT(world_id,from_id,to_id) DO UPDATE SET payload=excluded.payload').run(world.id,p.id,other,j(r));}
+        db.prepare('UPDATE lw_worlds SET version=version+1,rules=? WHERE world_id=?').run(j(rules),world.id);
       })();return {ok:true,population:count+add};
     }finally{busy.delete(world.id);}
   });

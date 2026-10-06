@@ -39,7 +39,22 @@ def handle(request):
             # Include variation instead of deterministically picking the same top category.
             if not possible:
                 results.append({'allowed': False}); continue
-            weights = [max(.01, c['score']) ** 2 for c in possible]
+            # Personal wishes and existing tensions shape the encounter, while
+            # Open Sims remains responsible for feasibility and consent.
+            motive = a.get('profile', {}).get('social', {}).get('motive')
+            tension = float(a.get('relations', {}).get(b['id'], {}).get('tension', 0))
+            favored = {'belonging': {'check_in', 'small_talk', 'invite_activity'},
+                       'care': {'offer_help', 'comfort', 'check_in'},
+                       'recognition': {'share_interest', 'confide', 'collaborate_project'},
+                       'stability': {'check_in', 'reconcile', 'deep_talk'},
+                       'independence': {'set_boundary', 'share_interest'},
+                       'curiosity': {'ask_advice', 'share_interest', 'play_together'}}.get(motive, set())
+            def weight(candidate):
+                score = candidate['score'] + (.18 if candidate['category'] in favored else 0)
+                if tension > .035 and candidate['category'] in {'apologize', 'reconcile', 'set_boundary'}:
+                    score += min(.35, tension * 1.5)
+                return max(.01, score) ** 2
+            weights = [weight(c) for c in possible]
             chosen = rng.choices(possible, weights=weights)[0]
             outcome = pair.get('outcome') or ('accepted' if rng.random() < chosen['willingness'] else 'declined')
             if chosen['requires_consent'] and pair.get('outcome') == 'accepted' and not pair.get('consent_checked') and rng.random() >= chosen['willingness']:

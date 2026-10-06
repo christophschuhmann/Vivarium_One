@@ -1,14 +1,16 @@
-import {createHash} from 'node:crypto';
+import {rng} from './random.js';
+export {rng} from './random.js';
+import {nameNeighborhoods} from './neighborhoods.js';
+import {weaveSocial,socialBackground,interestLabel} from './social.js';
 import {searchAssets} from './library.js';
 import {openSims,openSimsCatalog} from './open_sims.js';
-export function rng(key){let n=createHash('sha256').update(String(key)).digest().readUInt32LE();return ()=>{n+=0x6D2B79F5;let t=n;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
 const names={female:['Fiona','Lea','Mira','Hana','Amira','Nora','Jana','Emma','Priya','Lina','Maya','Sofia','Aiko','Ella','Clara'],male:['Jonas','Noah','Ben','Elias','Kenji','Samir','Lukas','Ravi','Theo','Alex','Leon','Luis','Omar','Paul','Felix']};
 const surnames=['Weber','Chen','Keller','Patel','Diaz','Okafor','Sato','Becker','Ali','Santos','Fischer','Tanaka','Singh','Morgan','Schmidt'];
 const jobs=['Teacher','Illustrator','Programmer','Gardener','Physician','Baker','Civic planner','Carpenter','Bookseller','Researcher'];
 const interests=['reading','cooking','walking','craft','gardening','socializing','music'];
 const heritage=['white','white','white','white','black','latino','japanese','indian'];
 const pick=(a,r)=>a[Math.floor(r()*a.length)];
-export async function generateTown(worldId,{population=10,seed=73,title='Lindenstadt'}={}) {
+export async function generateTown(worldId,{population=10,seed=73,title='Lindenstadt',neighborhoodOffset=0,reservedNames=[]}={}) {
   const r=rng(seed),catalog=await openSimsCatalog(),places=[],edges=[],people=[],households=[],childCounts=new Map();
   const add=(key,parent,name,kind,purpose,affordances=[],extra={})=>{
     const id=worldId+'_l_'+key,index=childCounts.get(parent)||0;childCounts.set(parent,index+1);
@@ -71,19 +73,17 @@ export async function generateTown(worldId,{population=10,seed=73,title='Lindens
     for(const person of members.slice(2))person.family.parent_ids=members.slice(0,2).map(p=>p.id);
     households.push({id:home,members:members.map(p=>p.id),rooms});index++;
   }
+  const identities=nameNeighborhoods(places,seed,{offset:neighborhoodOffset,reserved:reservedNames});
   const initialized=await openSims('initialize',{people,seed});
+  weaveSocial(initialized,places,identities,{seed});
+  const byId=new Map(initialized.map(p=>[p.id,p]));
   const groups=new Map();for(const p of initialized){if(!groups.has(p.household_id))groups.set(p.household_id,[]);groups.get(p.household_id).push(p);}
   for(const person of initialized) {
     const relatives=groups.get(person.household_id).filter(p=>p.id!==person.id).map(p=>p.name);
-    person.biography=`${person.name} ist ${person.age} Jahre alt und ${person.profile.job==='Retired'?'im Ruhestand':person.profile.job==='Pupil'?'geht zur Schule':person.profile.job==='Kindergarten child'?'besucht den Kindergarten':'arbeitet als '+person.profile.job}. ${relatives.length?'Lebt mit '+relatives.join(', ')+' im gemeinsamen Haushalt.':'Lebt allein und pflegt Kontakte in der Nachbarschaft.'} ${person.age<18?'Wächst in einer betreuten Familie auf und möchte Freundschaften schließen.':'Hat nach mehreren prägenden Lebensphasen hier ein Zuhause gefunden.'} Interessiert sich für ${person.profile.interests.join(' und ')}. Ziel: ${person.psychology.ambitions.map(a=>a.title).join('; ')}.`;
+    person.biography=`${person.name} ist ${person.age} Jahre alt und ${person.profile.job==='Retired'?'im Ruhestand':person.profile.job==='Pupil'?'geht zur Schule':person.profile.job==='Kindergarten child'?'besucht den Kindergarten':'arbeitet als '+person.profile.job}. ${relatives.length?'Lebt mit '+relatives.join(', ')+' im gemeinsamen Haushalt.':'Lebt allein und pflegt Kontakte in der Nachbarschaft.'} Zuhause ist ${person.profile.neighborhood?.name||'die Stadt'}. Interessiert sich für ${[...new Set(person.profile.interests)].map(interestLabel).join(' und ')}. ${socialBackground(person,byId)} Ziel: ${person.psychology.ambitions.map(a=>a.title).join('; ')}.`;
     person.biography_mode=person.anchored?'written_pending':'procedural';
     person.location_id=person.home.kitchen;
     person.state={needs:person.needs,psychology:person.psychology,career:person.career,location_id:person.location_id,action:null,route:null,goal:null,mood:'zuversichtlich',thought:'Ein neuer Tag beginnt.',last_social:-99999};
   }
-  // Sparse neighbor ties: no all-to-all social graph as population grows.
-  for(let i=0;i<initialized.length;i++) {
-    const person=initialized[i],other=initialized[(i+3)%initialized.length];
-    if(other.id!==person.id&&!person.relations[other.id])person.relations[other.id]={kind:'Neighbor',closeness:.2,trust:.4,respect:.4,attraction:0,tension:0};
-  }
-  return {places,edges,people:initialized,households,city,seed,catalog};
+  return {places,edges,people:initialized,households,city,seed,catalog,identities};
 }
