@@ -25,7 +25,7 @@ try {
   const catalog=await openSimsCatalog();assert.equal(catalog.manifest.version,'3.3.0');assert.ok(Object.keys(catalog.actions).length>=80);
   const a=await generateTown('one',{population:100,seed:73}),b=await generateTown('two',{population:100,seed:73});assert.deepEqual(a.people.map(p=>[p.name,p.age,p.psychology.big_five]),b.people.map(p=>[p.name,p.age,p.psychology.big_five]));
   for(const p of a.people){assert.ok(p.biography.length>100);assert.ok(p.psychology.ambitions.length);for(const parent of p.family.parent_ids)assert.ok(a.people.find(q=>q.id===parent).age-p.age>=18);if(p.age<18)assert.equal(p.family.partner_id,null);if(p.workplace_id&&p.age>=18)assert.ok(a.places.find(l=>l.id===p.workplace_id).affordances.includes(catalog.jobStations[p.profile.job]?.[0]));}
-  const {worldId}=await createTown(user,{population:10});let town=loadTown(worldId);assert.equal(town.people.length,10);assert.equal(db.prepare('SELECT count(*) n FROM lw_journal').get().n,30);
+  const {worldId}=await createTown(user,{population:10});let town=loadTown(worldId);assert.equal(town.people.length,10);assert.equal(db.prepare('SELECT count(*) n FROM lw_journal').get().n,40);
   const sim=town.people[0],visitor=town.people[2],other=town.people[3],room=sim.location_id;
   // Any resident has bounded navigation metadata and an independently focusable graph.
   const position=(await request('GET',`/api/living/worlds/${worldId}/sims/${visitor.id}/position`)).json();assert.ok(position.path.some(p=>p.kind==='neighborhood'));assert.equal(position.path.at(-1).id,visitor.location_id);assert.equal(position.target.id,visitor.id);
@@ -71,7 +71,7 @@ try {
   assert.ok(cityGraph.nodes.every(p=>p.kind!=='room'));assert.ok(streetGraph.nodes.some(p=>p.kind==='building'&&!p.landmark));assert.ok(houseGraph.nodes.some(p=>p.kind==='room'));assert.ok(houseGraph.nodes.filter(p=>p.kind==='neighborhood'&&p.id!==neighborhood).every(p=>p.coarse&&!p.thumbnail));
   for(const graph of [cityGraph,streetGraph,houseGraph]){assert.ok(graph.nodes.length<=60);assert.ok(graph.nodes.filter(n=>n.thumbnail).length<=60);for(const e of graph.edges){assert.ok(graph.nodes.some(n=>n.id===e.from_id));assert.ok(graph.nodes.some(n=>n.id===e.to_id));}}
   assert.throws(()=>graphView(iw,{focus:'foreign'}));
-  const clockBeforeMap=JSON.stringify(initial.world),neighborhoodIds=[...initial.places.values()].filter(p=>p.kind==='neighborhood').map(p=>p.id);
+  const clockBeforeMap=JSON.stringify(initial.world),neighborhoodIds=[...initial.places.values()].filter(p=>p.kind==='neighborhood'&&![...initial.places.values()].some(q=>q.parent_id===p.id&&q.kind==='street')).map(p=>p.id);
   const circles=circleMap(iw,{expanded:JSON.stringify([neighborhoodIds[0],neighborhoodIds[1],person.household_id])});
   assert.ok(circles.expanded.includes(neighborhoodIds[0])&&circles.expanded.includes(neighborhoodIds[1]));
   assert.ok(circles.nodes.some(n=>n.parent_id===person.household_id&&n.kind==='room'));

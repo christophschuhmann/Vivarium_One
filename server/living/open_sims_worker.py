@@ -52,7 +52,7 @@ def handle(request):
                        'independence': {'set_boundary', 'share_interest'},
                        'curiosity': {'ask_advice', 'share_interest', 'play_together'}}.get(motive, set())
             def weight(candidate):
-                score = candidate['score'] + (.18 if candidate['category'] in favored else 0)
+                score = candidate['score'] + max(-.2, min(.2, float(a.get('expectation_bias', {}).get(b['id'], {}).get(candidate['category'], 0)))) + (.18 if candidate['category'] in favored else 0)
                 if candidate.get('tone') == 'romance' or candidate['category'] in {'flirt','ask_date','express_affection'}:
                     score += min(.3, float(a.get('needs', {}).get('romantic_affection', 0)) * .3)
                 if tension > .035 and candidate['category'] in {'apologize', 'reconcile', 'set_boundary'}:

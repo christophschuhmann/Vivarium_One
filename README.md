@@ -4,7 +4,7 @@ Vivarium is a browser-based life simulation and visual-novel sandbox. Create an 
 
 The default local installation runs on **your own HyprLab or OpenRouter API key**. You only need **one** of those accounts. You do not need an admin login or Vivarium credits. Provider charges still apply to your own provider account.
 
-[Full architecture documentation](docs/DOCUMENTATION.md) · [Design log](plan/implementation-plan.html) · [Living World implementation plan](living-world-implementierungsplan.html) · [Implemented Living World, measurements and roadmap](docs/living-world.html)
+[Expanded town: implementation, usage and measurements](docs/living-world-expanded.html) · [Full architecture documentation](docs/DOCUMENTATION.md) · [Design log](plan/implementation-plan.html) · [Living World implementation plan](living-world-implementierungsplan.html) · [Implemented Living World, measurements and roadmap](docs/living-world.html)
 
 ## Install locally
 
@@ -19,13 +19,14 @@ sudo apt install ffmpeg zip unzip python3 python3-venv
 Install a recent Node version from [nodejs.org](https://nodejs.org/en/download) or your existing Node version manager. Then:
 
 ```bash
-git clone https://github.com/christophschuhmann/Vivarium_One.git
+git clone --branch living-world-expanded --recurse-submodules https://github.com/christophschuhmann/Vivarium_One.git
 cd Vivarium_One
 npm run setup
+npm run living:setup
 npm start
 ```
 
-Open **http://localhost:8890**. The setup command prints the initial login for a verified local player, normally `player@vivarium.local`, and a randomly generated password. Save that password. The player is also the local installation owner for shared music management; no admin account is needed.
+Open **http://localhost:8890**. The setup command prints the initial login for a verified local player, normally `player@vivarium.local`, and a randomly generated password. Save that password. The player is also the local installation owner for shared music management; no admin account is needed. `main` contains the previously merged stable version; use `living-world-expanded` for the economy, ToM and town-life extensions described here.
 
 `npm run setup`:
 
@@ -183,7 +184,7 @@ The asset ZIP is an archival media bundle; scenario restore uses the scenario ZI
 
 The verified player created by `npm run setup` is the local installation owner. That account can export the shared music library as a ZIP, rebuild its BM25 cache, or remove the downloaded library. On multi-user installations these shared actions require the installation owner or an authenticated operator session; ordinary players can see the shared footprint and manage only their own files.
 
-Music cache and removal controls require the supervised `npm start` launcher. Removing the library asks you to type `DELETE MUSIC LIBRARY`; it affects music availability for the installation. Restore it with `npm run music:setup`, then restart Vivarium. Exporting music may create an additional ZIP approximately the size of the library, so free disk space should cover it.
+Set `MUSIC_READ_ONLY=1` when this installation uses another instance's music directory: storage remains visible and exportable, while cache rebuild and deletion are refused. Music cache and removal controls otherwise require the supervised `npm start` launcher. Removing the library asks you to type `DELETE MUSIC LIBRARY`; it affects music availability for the installation. Restore it with `npm run music:setup`, then restart Vivarium. Exporting music may create an additional ZIP approximately the size of the library, so free disk space should cover it.
 
 The pre-generated image library is shown as a shared footprint. This monitor does not remove system files, another account's media, or files outside the configured libraries.
 
@@ -193,7 +194,7 @@ The world's export menu provides a **story bundle**: a self-playing visual-novel
 
 Before export, the app checks which narration is already cached. Choose to generate missing audio on your provider account or export with those lines silent. Cached audio does not incur regeneration charges. This differs from a scenario save: a story bundle is for watching, while a scenario ZIP is for restoring and continuing the simulation.
 
-API keys, passwords and account settings are not part of scenario or story exports. Back up `.env` and the full runtime database separately if you are migrating the whole installation and want to retain encrypted provider credentials.
+API keys, passwords and login-account settings are not part of scenario or story exports. Simulated personal/household accounts, all financial ledger legs, obligations, property/loan contracts and source references ARE included in Living World scenario ZIPs and duplicates. Back up `.env` and the full runtime database separately if you are migrating the whole installation and want to retain encrypted provider credentials.
 
 ## Pre-generated Living World image assets
 
@@ -207,12 +208,12 @@ The generation, review and packaging scripts are in `scripts/`. Large generated 
 
 ## Living World: a town with procedural Sims and anchored stories
 
-The `living-world` branch runs the Living World simulation inside the **original Vivarium stage and studio**. The stage, thought bubbles, narrator/character voices, private inner-voice dialogue, interventions, Game Master chat and scene music use the familiar interface. There is no player/NPC split: every resident is a Sim with goals, needs, relationships and a personal journal. An anchor changes how that Sim is narrated, while preserving their identity and history.
+The `living-world-expanded` branch runs the Living World simulation inside the **original Vivarium stage and studio**. The stage, thought bubbles, narrator/character voices, private inner-voice dialogue, interventions, Game Master chat and scene music use the familiar interface. There is no player/NPC split: every resident is a Sim with goals, needs, relationships and a personal journal. An anchor changes how that Sim is narrated, while preserving their identity and history.
 
 ### Install this branch
 
 ```bash
-git clone --branch living-world --recurse-submodules https://github.com/christophschuhmann/Vivarium_One.git
+git clone --branch living-world-expanded --recurse-submodules https://github.com/christophschuhmann/Vivarium_One.git
 cd Vivarium_One
 npm run setup
 npm run living:setup
@@ -450,7 +451,7 @@ The policy is centralized in `config/living_social_policy.json`, enforced in the
 
 Read [the standalone German HTML proposal](docs/living-world-social-tom-plan.html): overview, bounded probabilistic expectations, third-party awareness, duties, sessions, thought templates, existing W100 formula, Storyteller handoff, memory and scaling, rollout and acceptance tests. The appendix contains **600 fully documented examples in six catalogs of 100**, with trigger conditions, descriptions, outcomes, effects, both perspectives, witnesses, checks and linked constructive counterparts. It includes search, pagination, an expectation demo, a W100 calculator and JSON export. [The taxonomy JSON](docs/living-world-social-taxonomy.json) is also available separately. Rebuild both using `python3 scripts/build-social-tom-plan.py`.
 
-The large taxonomy and expanded ToM/W100 execution flow are **a proposal, not installed simulation rules**. The two need dimensions and their age boundaries above are implemented independently.
+The taxonomy is the original design catalog. This branch now implements guarded duties, contextual social topics, private probabilistic expectations and W100 checks through the modules in `server/living/expanded/`. Catalog examples describe possible situations, not evidence that those situations have happened. See [the implementation report](docs/living-world-expanded.html) for the precise operators and limits.
 
 ### Individual wellbeing: PERMA-inspired game scores
 
@@ -458,10 +459,82 @@ Every Living-World Sim now has five **0–100** wellbeing indicators: **Positive
 
 Completed activities, actual ambition progress and final validated encounters affect the appropriate pillars. Interests personalize engagement; support and conflict affect relationships. Current feelings and urgent bodily needs affect P. Storyteller and paused conversations receive own scores as read-only context and can contribute bounded subjective emotional responses; they cannot invent accomplishments or set wellbeing numbers. Money, possessions, romance and sexual activity are not requirements or automatic happiness bonuses. All age and consent boundaries remain authoritative.
 
-This is a **fictional heuristic inspired by Seligman**, not the validated PERMA-Profiler or a psychological diagnosis. V1 retains at most 128 recent contributing sources per Sim, caps daily effects and uses different illustrative decay rates. The complete personal event history remains intact; older sources outside that window do not directly contribute to the current v1 score. Startup backs up and initializes older worlds from their current state without inventing past happy experiences. Clear a paused conversation to remove its sources while preserving later actual activity; exports/duplicates preserve and remap source IDs. See [the detailed PERMA rules and limits](docs/living-world-social-tom-plan.html#wellbeing); run `npm run test:living-wellbeing` for the isolated functional checks. The larger economic/ToM expansion below remains a proposal.
+This is a **fictional heuristic inspired by Seligman**, not the validated PERMA-Profiler or a psychological diagnosis. This branch retains 128 recent detailed contributing sources per Sim and up to 365 days of compact older contributions, caps daily effects and uses different illustrative decay rates. Older contributions still affect scores through the daily archive; the complete personal event history remains on disk. Startup backs up and initializes older worlds from their current state without inventing past happy experiences. Clear a paused conversation to remove its sources while preserving later actual activity; exports/duplicates preserve and remap source IDs. See [the detailed PERMA rules and limits](docs/living-world-social-tom-plan.html#wellbeing); run `npm run test:living-wellbeing` for the isolated functional checks. The integrated expansion is described below.
 
-### Economy, housing and civic expansion design
+### Economy, housing and civic expansion
 
 The [same HTML proposal](docs/living-world-social-tom-plan.html#economy) now includes a connected euro economy: personal and household accounts, exact cent transfers, earned versus paid wages, fictional German-inspired tax/social-insurance rules, property ownership/rentals, housing search and support, food stocks, subscriptions, inventory, funded loans, local businesses and separately financed public services. It connects material security, ambitions, skills, preferences, reputation and limited personal knowledge to the existing simulation and UI. The plan includes adult-only abstract crime/addiction/support paths, source-based news, staged migration and acceptance criteria, **32 activity offers, 28 special items and 100 additional case designs**. Existing youth/consent boundaries remain mandatory.
 
-An interactive household-budget example and profile layout show the intended UI without changing the live world. [The economy design JSON](docs/living-world-economy-design.json) includes the fictional policy and catalogs. Prices, thresholds, distributions and tax bands are design parameters, not current German legal/tax rates. Economy gameplay is **not implemented or enabled by this documentation update**. Rebuild with `python3 scripts/build-social-tom-plan.py`; review the served HTML using `node scripts/review-social-plan.mjs` (Playwright Chromium required, `LIVING_REVIEW_URL` overrides the default local port 8891).
+An interactive household-budget example and profile layout show the intended UI without changing the live world. [The economy design JSON](docs/living-world-economy-design.json) includes the fictional policy and catalogs. Prices, thresholds, distributions and tax bands are design parameters, not current German legal/tax rates. Economy gameplay is implemented on `living-world-expanded`; the plan remains the historical design reference. The implemented policy values live in `server/living/expanded/catalog.js`, and the UI is under **City / Stadtleben**. Rebuild with `python3 scripts/build-social-tom-plan.py`; review the served HTML using `node scripts/review-social-plan.mjs` (Playwright Chromium required, `LIVING_REVIEW_URL` overrides the default local port 8891).
+
+
+## Expanded town life: practical usage
+
+This branch adds the connected economy, individual capabilities, private Theory of Mind and PERMA history to the existing Living World. [The standalone German implementation report](docs/living-world-expanded.html) contains the exact rules, module map, active job/activity/item/duty catalogs, verification and measured limits. The original design HTML remains a historical catalog, rather than a claim that every example is a separate physical mechanic.
+
+### Start small and keep your current world
+
+Create a new **Living World town** from Home, initially with 10 or 20 residents. The existing Stage/Play, Mind, Bonds, World and Sim Explorer remain the main navigation. Any Sim can be anchored; any actual location can also be anchored. Residents present in an anchored location, or in actual contact with an anchored resident, join the relevant narrated field. Unanchored residents still keep their needs, goals, personal histories, resources and relationships.
+
+Disable Storyteller to advance purely procedurally without provider calls. Enable it when you want important encounters narrated through your own provider. All economic operations remain validated code rules; a model cannot invent money, grant a credential, teleport a resident or replace consent with a successful roll.
+
+On first opening an older Living World save, the expansion backs up the database and adds missing current resources/structures. Subsequent rule upgrades preserve money, world time and lived history. Initial resources and aptitude are explicitly marked as initial state, rather than fabricated previous experiences. For an independently managed test install, use a separate checkout and `VIV_DATA_DIR`, with its own `PORT`.
+
+### City / Stadtleben
+
+The new dock item opens six connected sections for the selected resident:
+
+| Section | Usage |
+|---|---|
+| **Mein Alltag** | Inspect personal money, joint household budget, actual transactions, open bills, pending earned wages and the 30/90-day forecast. Pay invoices, inspect skills/attributes/W100, review needs/goals/PERMA, decline or reschedule duties, and report a personally experienced case. |
+| **Stellenbörse** | Change the selected Sim's minimum expected monthly net income and commute limit. Inspect why a vacancy is eligible or blocked, then apply. Actual unemployed Sims also search during simulated daytime. |
+| **Wohnungsbörse** | Compare a maximum of five suitable vacant homes. Renting requires the real deposit; buying requires real funds or an affordable funded mortgage and explicit consent. A move creates a contract and then actual movement, rather than teleporting. |
+| **Freizeit & Besitz** | Plan reachable free or paid activities, purchase special items, inspect actual possession and show it publicly. Memberships incur real renewed costs and can be cancelled. Owning an item does not claim you have already used it. |
+| **Soziale Sicht** | Inspect the selected Sim's uncertain interpretations and their own sources. "They might expect something of me" remains a belief, distinct from another Sim's private mind. |
+| **Rundblick & Rathaus** | Read canonical local news, inspect separately funded institutions, contribute voluntarily and request a funded public festival. Optional AI commentary is labelled separately and does not replace the source facts. |
+
+The selected Sim picker includes unanchored residents. **▶ Szene** jumps to their actual Play location. **Profil → Ressourcen** opens the same household/capability view; the Mind action bar also links to **Soziale Sicht**. The circular World viewer adds a named public quarter, **Marktbogen**, connected through its actual street and rooms.
+
+### Work, reputation and family money
+
+Vacancies require adequate practical skill, a required existing credential, suitable expected income and a reachable commute. A current negative impression held by that specific employer or strong publicly verified negative reliability can block hiring. Another Sim's secret opinion or unverified gossip does not. Only work actually completed at the workplace creates earned wages; payment additionally needs the employer's funds. Unpaid wages remain claims. Training develops ability, without magically issuing professional certificates.
+
+For ages 15–17, a parent can enable safe holiday work in **Mein Alltag**. It is limited to the game's holiday calendar, weekdays, four hours daily and 20 days annually. The birthday transition ends that youth contract without deleting earned wage claims. Parents caring for children under three can receive a separately approved, funded care benefit instead of a fictitious simultaneous full-time wage.
+
+Each child has their own savings/pocket money. Households show agreed shared resources and projected obligations, while individual savings remain separate. A voluntary household merger needs all adults' consent, reciprocal trust and enough space. Food is stocked, carried or purchased with actual money; if unaffordable, a reachable and funded community kitchen remains available. A poor Sim no longer waits endlessly at an empty public refrigerator.
+
+Rent, utilities, subscriptions and loan installments fall due on actual simulation dates. Monthly membership renewal is based on 30 elapsed days. Partial payments pay interest only once. Restricted deposits are separate from spendable cash. Former homes become available only after actual vacancy; paid unused rent can create a funded prorated refund or an outstanding refund claim.
+
+### Happiness, expectations and sources
+
+PERMA-inspired **P, E, R, M, A** scores measure five fictional wellbeing dimensions. Own feelings, actual engagement, accepted contact, care, purpose and real progress contribute separately; wealth is not an automatic happiness bonus. The view shows recent contributing sources. Up to 128 recent detailed sources and 365 days of compact historical contributions remain effective; full personal history remains on disk. Clearing a paused conversation removes its own contributions while preserving subsequent real activity. These values are game heuristics, not a validated questionnaire or diagnosis.
+
+Theory of Mind tracks at most 24 contacts, three topics per contact and eight evidence references per topic. Normalized alternatives always leave room for uncertainty. Private finances, diagnoses and thoughts do not become general shared knowledge. The player can inspect profiles, but model agents receive only the selected Sim's permitted personal context.
+
+**Social warmth** and **romantic affection** are separate. Under 14, romantic affection is always zero. Ages 14–17 are capped at 0.35, with only harmless nonsexual dates/conversation between two teens no more than one year apart. Sexual acts, erotic thoughts and sexualized narration involving anyone under 18 are prohibited, including model responses and imported saves. Higher adult romance values never replace independent consent. Optional abstract adult risk/private service roles are 18+ only; private service roles default to off and never narrate intimate details.
+
+### Save, verify and understand the limits
+
+**Settings → Storage** still exports, duplicates and deletes scenarios and assets. Living World ZIPs include all economic accounts, ledger legs, contracts, duties, sources and private views with remapped IDs. They exclude login-account passwords and provider keys. Shared music can be reused without copying roughly 14 GB: set `MUSIC_DATA_DIR` to the existing library, `MUSIC_API_URL` to its server, `MUSIC_AUTOSTART=0` and `MUSIC_READ_ONLY=1` in the second install. That copy displays shared storage and supports export, while refusing music deletion/reindexing.
+
+```bash
+npm run test:expanded-regressions          # all isolated suites; optional music if MUSIC_DATA_DIR exists
+npm run test:expanded
+npm run test:expanded-semantics
+npm run test:expanded-lifecycle
+npm run test:living
+npm run test:living-mind
+npm run test:living-social
+npm run test:living-romance
+npm run test:living-wellbeing
+npm run test:providers
+npm run test:storage
+npm run benchmark:expanded
+LIVING_REVIEW_URL=http://localhost:8890 npm run review:expanded
+```
+
+Browser review requires Playwright Chromium (`npx playwright install chromium`, plus the platform dependencies) and a running demo install with `demo@vivarium.local / alice-and-bob`; it creates and removes its own fixture. Core/semantic/lifecycle tests use temporary databases and make no paid provider calls. The music test requires the downloaded library (`MUSIC_DATA_DIR=/path/to/music-library npm run test:music`). Real-provider review is a separate deliberate check and uses actual provider billing.
+
+The recorded load test covers **10, 20, 50, 100 and 500 Sims for a complete simulated day**, with balanced financial ledgers. The 500-Sim five-minute tick had a median around **1.03 seconds**, and the full day took **131 seconds**, without model latency. The cumulative test process used about **1.1 GiB RSS** and its cumulative SQLite file roughly **500 MiB**, largely due to detailed durable history. This implementation is capped at 500 and is not yet a distributed million-resident engine. Browser graph images remain capped at 50 visible thumbnails including Sim previews; CPU text simulation does not load all resident portraits.
+
+All economy rates, tax brackets and legal/administrative timelines are fictional game parameters. Physical Living World undo/replay, continuous walking animations, distributed processing, full legal proceedings and detailed divorce/custody are not exposed as finished features. The 100 duties use nine safe operator families; 600 social catalog entries provide guarded contexts and expectation variants, rather than 600 independent physical simulations. See the implementation report for the precise boundary between implemented behavior and later engine work.

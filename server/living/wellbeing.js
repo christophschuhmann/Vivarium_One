@@ -11,6 +11,10 @@ const distress=new Set(['fear','distress','sadness','anger','disappointment','em
 // Parsed snapshots are normalized once; repeated minute projections reuse a
 // bounded per-day cache. Weak collections never become durable game state.
 const validated=new WeakSet(),dayCache=new WeakMap();
+function zeroDay(){return Object.fromEntries(PERMA_KEYS.map(k=>[k,{plus:0,minus:0,plusRaw:0,minusRaw:0}]));}
+function addDay(day,e){for(const k of PERMA_KEYS){const raw=Number(e.delta[k])||0,value=raw*Math.pow(.5,-(e.at-Math.floor(e.at/86400)*86400)/(86400*halfDays[k])),side=value>=0?'plus':'minus';day[k][side]+=value;day[k][side+'Raw']+=Math.abs(raw);}}
+function archive(w,e){const day=String(Math.floor(e.at/86400)),group=e.erasableGroup||'experience';w.historyDays||={};w.historyDays[day]||={};const target=w.historyDays[day][group]||={values:zeroDay(),sources:[],count:0};addDay(target.values,e);target.sources=target.sources.concat(e.eventId).slice(-3);target.count++;}
+
 export function ensureWellbeing(p,time){
  let w=p.state.wellbeing;
  if(w?.version!==WELLBEING_VERSION){
@@ -22,6 +26,7 @@ export function ensureWellbeing(p,time){
   w.baseline=Object.fromEntries(PERMA_KEYS.map(k=>[k,clamp(w.baseline?.[k]??.5)]));
   w.evidence=(Array.isArray(w.evidence)?w.evidence:[]).filter(e=>e&&typeof e.eventId==='string'&&Number.isFinite(e.at)&&e.delta&&typeof e.delta==='object').slice(-128);
   for(const e of w.evidence)e.delta=Object.fromEntries(PERMA_KEYS.map(k=>[k,Math.max(-.04,Math.min(.04,Number.isFinite(e.delta[k])?e.delta[k]:0))]));
+  w.historyDays||={};for(const [day,groups] of Object.entries(w.historyDays)){if(!/^-?\d+$/.test(day)){delete w.historyDays[day];continue;}for(const group of Object.values(groups)){group.values=Object.fromEntries(PERMA_KEYS.map(k=>[k,Object.fromEntries(['plus','minus','plusRaw','minusRaw'].map(f=>[f,Math.max(f==='minus'?-100:0,Math.min(100,Number(group.values?.[k]?.[f])||0))]))]));group.sources=(group.sources||[]).filter(x=>typeof x==='string').slice(-3);}}
   validated.add(w);
  }
  return w;
@@ -30,6 +35,7 @@ export function projectWellbeing(p,time){
  const w=ensureWellbeing(p,time);let cached=dayCache.get(w.evidence);
  if(!cached||cached.latest>time){
   const byDay=new Map();let latest=-Infinity;
+  for(const [key,groups] of Object.entries(w.historyDays||{})){const day=Number(key);if(day>Math.floor(time/86400))continue;const values=zeroDay();for(const group of Object.values(groups))for(const k of PERMA_KEYS)for(const f of ['plus','minus','plusRaw','minusRaw'])values[k][f]+=group.values[k][f];byDay.set(day,values);}
   for(const e of w.evidence){if(e.at>time)continue;latest=Math.max(latest,e.at);const day=Math.floor(e.at/86400);if(!byDay.has(day))byDay.set(day,Object.fromEntries(PERMA_KEYS.map(k=>[k,{plus:0,minus:0,plusRaw:0,minusRaw:0}])));
    for(const k of PERMA_KEYS){const value=e.delta[k]*Math.pow(.5,-(e.at-day*86400)/(86400*halfDays[k])),side=value>=0?'plus':'minus';byDay.get(day)[k][side]+=value;byDay.get(day)[k][side+'Raw']+=Math.abs(e.delta[k]);}
   }
@@ -41,27 +47,27 @@ export function projectWellbeing(p,time){
  const needs=p.state.needs||{},bodily=Math.max(...['hunger','thirst','bladder','fatigue','hygiene','comfort'].map(k=>Number(needs[k])||0));scores.P+=joy*.04-strain*.06-Math.max(0,bodily-.55)*.08;
  w.scores=Object.fromEntries(PERMA_KEYS.map(k=>[k,clamp(scores[k])]));w.summary=PERMA_KEYS.reduce((s,k)=>s+w.scores[k],0)/5;w.updated_at=time;return w;
 }
-function record(p,event,time,channel,delta,reason){
+export function recordExperience(p,event,time,channel,delta,reason){
  const w=ensureWellbeing(p,time);if(!event?.id||w.evidence.some(e=>e.eventId===event.id&&e.channel===channel))return null;
  const changes=Object.fromEntries(PERMA_KEYS.map(k=>[k,Math.max(-.04,Math.min(.04,delta[k]||0))]));
  if(!Object.values(changes).some(Boolean))return null;
- w.evidence.push({eventId:event.id,at:time,channel,delta:changes,reason:(String(event.description||'').slice(0,90)+(event.description?' — ':'')+reason).slice(0,220)});w.evidence=w.evidence.slice(-128);projectWellbeing(p,time);return changes;
+ w.evidence.push({eventId:event.id,at:time,channel,...(event.conversationChannel?{erasableGroup:'conversation_'+event.conversationChannel}:{}),delta:changes,reason:(String(event.description||'').slice(0,90)+(event.description?' — ':'')+reason).slice(0,220)});while(w.evidence.length>128)archive(w,w.evidence.shift());for(const day of Object.keys(w.historyDays||{}))if(+day<Math.floor(time/86400)-365)delete w.historyDays[day];w.evidence=w.evidence.slice();projectWellbeing(p,time);return changes;
 }
 export function activityWellbeing(p,event,duration,goalGain,time){
  const kind=event.facts.action,scale=Math.min(2,Math.max(0,duration)/1800),interests=p.profile?.interests||[];
  const liked=interests.some(i=>({reading:/read/,craft:/creative|craft|paint/,gardening:/garden/,music:/instrument|music/,walking:/stroll|walk|hike/,cooking:/cook|bake/,socializing:/community|board_games|friends/}[i]||/$a/).test(kind));
  const active=!['wait','sleep','toilet','shower','eat','drink','relax'].includes(kind),learning=['school_day','kindergarten_day','read','creative_hobby'].includes(kind),gain=Math.max(0,Number(goalGain)||0);
- return record(p,event,time,'activity',{P:liked?.004*scale:0,E:active?.008*scale*(liked?1.4:1):0,M:gain>0?.004*scale:0,A:gain>0?Math.min(.02,.003+gain*.8):learning?.003*scale:0},liked?'Eine tatsächlich ausgeübte passende Tätigkeit verbindet Interesse und Engagement.':gain>0?'Ein tatsächlicher eigener Zielschritt stärkt Sinn und erlebtes Gelingen.':'Eine tatsächlich ausgeübte Tätigkeit bietet Engagement; sie behauptet keinen erfundenen Erfolg.');
+ return recordExperience(p,event,time,'activity',{P:liked?.004*scale:0,E:active?.008*scale*(liked?1.4:1):0,M:gain>0?.004*scale:0,A:gain>0?Math.min(.02,.003+gain*.8):learning?.003*scale:0},liked?'Eine tatsächlich ausgeübte passende Tätigkeit verbindet Interesse und Engagement.':gain>0?'Ein tatsächlicher eigener Zielschritt stärkt Sinn und erlebtes Gelingen.':'Eine tatsächlich ausgeübte Tätigkeit bietet Engagement; sie behauptet keinen erfundenen Erfolg.');
 }
 export function socialWellbeing(p,event,time){
  const category=event.facts.category,accepted=event.facts.outcome==='accepted',hostile=['argue','provoke','undermine','gossip'].includes(category),care=['offer_help','comfort','check_in','reconcile','apologize'].includes(category);
- return record(p,event,time,'social',!accepted?{P:-.003}:hostile?{P:-.009,R:-.012}:{P:.006,R:category==='greet'?.003:.012,M:care?.007:0,E:['play_together','share_interest','collaborate_project'].includes(category)?.008:0},!accepted?'Eine abgelehnte Begegnung kann enttäuschen; sie beweist keine schlechte Beziehung.':hostile?'Ein selbst erlebter konflikthafter Austausch belastet Gefühle und Beziehungserleben.':care?'Eine tatsächlich erlebte zugewandte Begegnung stärkt Verbundenheit und das Gefühl, füreinander da zu sein.':'Ein tatsächlich erlebter freiwilliger Kontakt stärkt Beziehungserleben.');
+ return recordExperience(p,event,time,'social',!accepted?{P:-.003}:hostile?{P:-.009,R:-.012}:{P:.006,R:category==='greet'?.003:.012,M:care?.007:0,E:['play_together','share_interest','collaborate_project'].includes(category)?.008:0},!accepted?'Eine abgelehnte Begegnung kann enttäuschen; sie beweist keine schlechte Beziehung.':hostile?'Ein selbst erlebter konflikthafter Austausch belastet Gefühle und Beziehungserleben.':care?'Eine tatsächlich erlebte zugewandte Begegnung stärkt Verbundenheit und das Gefühl, füreinander da zu sein.':'Ein tatsächlich erlebter freiwilliger Kontakt stärkt Beziehungserleben.');
 }
 export function reflectionWellbeing(p,effects,event,time){
  const feelings=effects.emotions||[],value=feelings.reduce((n,e)=>n+(positive.has(e.id)?1:distress.has(e.id)?-1:0)*e.intensity,0)/Math.max(1,feelings.length);
  // A subjective response can affect P; it cannot invent mastery, meaning,
  // friendships, wealth or accomplishments simply by supplying model numbers.
- return record(p,event,time,'reflection',{P:value*.012},'Die eigene begrenzte emotionale Deutung eines wirklichen Ereignisses beeinflusst positive Gefühle.');
+ return recordExperience(p,event,time,'reflection',{P:value*.012},'Die eigene begrenzte emotionale Deutung eines wirklichen Ereignisses beeinflusst positive Gefühle.');
 }
-export function removeWellbeingSources(p,ids,time){const w=ensureWellbeing(p,time);w.evidence=w.evidence.filter(e=>!ids.has(e.eventId));return projectWellbeing(p,time);}
+export function removeWellbeingSources(p,ids,time,{conversationChannel}={}){const w=ensureWellbeing(p,time);w.evidence=w.evidence.filter(e=>!ids.has(e.eventId));if(conversationChannel)for(const groups of Object.values(w.historyDays||{}))delete groups['conversation_'+conversationChannel];return projectWellbeing(p,time);}
 export function wellbeingContext(p){const w=p.state.wellbeing;return w?{scores:w.scores,summary:w.summary,interpretation:'PERMA-inspired game heuristic, not a diagnosis; higher means better supported wellbeing',recentOwnSources:w.evidence.slice(-5).map(({eventId,channel,reason})=>({eventId,channel,reason}))}:null;}

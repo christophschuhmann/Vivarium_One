@@ -1,0 +1,1863 @@
+{
+  "generatedAt": "2026-10-06T22:36:58.435Z",
+  "node": "v22.17.1",
+  "mode": "procedural, 5-minute ticks and 24 simulated hours, no model latency",
+  "results": [
+    {
+      "population": 10,
+      "households": 4,
+      "locations": 157,
+      "createMs": 92,
+      "fiveMinuteMedianMs": 35,
+      "fiveMinuteMaxMs": 65,
+      "dayMs": 1822,
+      "rssMiB": 175,
+      "events": [
+        {
+          "type": "action_completed",
+          "n": 336
+        },
+        {
+          "type": "action_failed",
+          "n": 3
+        },
+        {
+          "type": "action_interrupted",
+          "n": 13
+        },
+        {
+          "type": "action_started",
+          "n": 362
+        },
+        {
+          "type": "arrival",
+          "n": 546
+        },
+        {
+          "type": "bill_payment",
+          "n": 8
+        },
+        {
+          "type": "departure",
+          "n": 214
+        },
+        {
+          "type": "goal_deferred",
+          "n": 1
+        },
+        {
+          "type": "household_contribution",
+          "n": 3
+        },
+        {
+          "type": "initialization_family",
+          "n": 10
+        },
+        {
+          "type": "initialization_goal",
+          "n": 10
+        },
+        {
+          "type": "initialization_identity",
+          "n": 10
+        },
+        {
+          "type": "initialization_resources",
+          "n": 1
+        },
+        {
+          "type": "invoice_issued",
+          "n": 8
+        },
+        {
+          "type": "obligation_offer",
+          "n": 17
+        },
+        {
+          "type": "obligation_overdue",
+          "n": 1
+        },
+        {
+          "type": "obligation_rescheduled",
+          "n": 1
+        },
+        {
+          "type": "packed_meal",
+          "n": 16
+        },
+        {
+          "type": "pocket_money",
+          "n": 1
+        },
+        {
+          "type": "property_maintenance",
+          "n": 6
+        },
+        {
+          "type": "public_day",
+          "n": 2
+        },
+        {
+          "type": "social",
+          "n": 84
+        },
+        {
+          "type": "status",
+          "n": 94
+        }
+      ],
+      "social": [
+        {
+          "category": "ask_advice",
+          "n": 5
+        },
+        {
+          "category": "ask_date",
+          "n": 1
+        },
+        {
+          "category": "ask_favor",
+          "n": 1
+        },
+        {
+          "category": "ask_help",
+          "n": 1
+        },
+        {
+          "category": "celebrate",
+          "n": 2
+        },
+        {
+          "category": "challenge",
+          "n": 3
+        },
+        {
+          "category": "check_in",
+          "n": 5
+        },
+        {
+          "category": "collaborate_project",
+          "n": 3
+        },
+        {
+          "category": "comfort",
+          "n": 7
+        },
+        {
+          "category": "compliment",
+          "n": 3
+        },
+        {
+          "category": "coordinate_work",
+          "n": 1
+        },
+        {
+          "category": "debate",
+          "n": 2
+        },
+        {
+          "category": "deep_talk",
+          "n": 3
+        },
+        {
+          "category": "express_affection",
+          "n": 1
+        },
+        {
+          "category": "flirt",
+          "n": 2
+        },
+        {
+          "category": "greet",
+          "n": 3
+        },
+        {
+          "category": "invite_activity",
+          "n": 2
+        },
+        {
+          "category": "invite_to_dinner",
+          "n": 3
+        },
+        {
+          "category": "make_plans",
+          "n": 2
+        },
+        {
+          "category": "offer_help",
+          "n": 1
+        },
+        {
+          "category": "persuade",
+          "n": 4
+        },
+        {
+          "category": "phone_call",
+          "n": 4
+        },
+        {
+          "category": "play_together",
+          "n": 3
+        },
+        {
+          "category": "reconcile",
+          "n": 1
+        },
+        {
+          "category": "set_boundary",
+          "n": 2
+        },
+        {
+          "category": "share_interest",
+          "n": 2
+        },
+        {
+          "category": "share_news",
+          "n": 1
+        },
+        {
+          "category": "small_talk",
+          "n": 5
+        },
+        {
+          "category": "tease",
+          "n": 1
+        },
+        {
+          "category": "tell_joke",
+          "n": 7
+        },
+        {
+          "category": "tell_story",
+          "n": 3
+        }
+      ],
+      "samples": [
+        {
+          "hour": 8.916666666666666,
+          "atWorkOrSchool": 10,
+          "travelling": 0,
+          "asleep": 0,
+          "atHome": 0,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 12.916666666666666,
+          "atWorkOrSchool": 10,
+          "travelling": 0,
+          "asleep": 0,
+          "atHome": 0,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 16.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 2,
+          "asleep": 0,
+          "atHome": 8,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 23.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 0,
+          "asleep": 10,
+          "atHome": 10,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 7.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 0,
+          "asleep": 0,
+          "atHome": 10,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        }
+      ],
+      "careerHours": 26.28,
+      "journalEntries": 1885,
+      "databaseBytes": 5984256,
+      "economyBalanced": true,
+      "beatBytes": 2706983,
+      "criticalDetails": [],
+      "averageNeeds": {
+        "hunger": 0.225,
+        "thirst": 0.397,
+        "bladder": 0.343,
+        "fatigue": 0.05,
+        "hygiene": 0.397,
+        "social": 0.091,
+        "fun": 0.061,
+        "comfort": 0.021,
+        "romantic_affection": 0.553
+      }
+    },
+    {
+      "population": 20,
+      "households": 8,
+      "locations": 177,
+      "createMs": 39,
+      "fiveMinuteMedianMs": 49,
+      "fiveMinuteMaxMs": 86,
+      "dayMs": 3478,
+      "rssMiB": 237,
+      "events": [
+        {
+          "type": "action_completed",
+          "n": 658
+        },
+        {
+          "type": "action_failed",
+          "n": 39
+        },
+        {
+          "type": "action_interrupted",
+          "n": 54
+        },
+        {
+          "type": "action_started",
+          "n": 771
+        },
+        {
+          "type": "arrival",
+          "n": 1014
+        },
+        {
+          "type": "bill_payment",
+          "n": 14
+        },
+        {
+          "type": "departure",
+          "n": 418
+        },
+        {
+          "type": "goal_deferred",
+          "n": 1
+        },
+        {
+          "type": "household_contribution",
+          "n": 7
+        },
+        {
+          "type": "initialization_family",
+          "n": 20
+        },
+        {
+          "type": "initialization_goal",
+          "n": 20
+        },
+        {
+          "type": "initialization_identity",
+          "n": 20
+        },
+        {
+          "type": "initialization_resources",
+          "n": 1
+        },
+        {
+          "type": "invoice_issued",
+          "n": 14
+        },
+        {
+          "type": "obligation_offer",
+          "n": 40
+        },
+        {
+          "type": "obligation_overdue",
+          "n": 1
+        },
+        {
+          "type": "packed_meal",
+          "n": 29
+        },
+        {
+          "type": "pocket_money",
+          "n": 4
+        },
+        {
+          "type": "property_maintenance",
+          "n": 10
+        },
+        {
+          "type": "public_day",
+          "n": 2
+        },
+        {
+          "type": "social",
+          "n": 256
+        },
+        {
+          "type": "status",
+          "n": 185
+        },
+        {
+          "type": "support_payment",
+          "n": 2
+        }
+      ],
+      "social": [
+        {
+          "category": "apologize",
+          "n": 4
+        },
+        {
+          "category": "ask_advice",
+          "n": 13
+        },
+        {
+          "category": "ask_date",
+          "n": 3
+        },
+        {
+          "category": "ask_favor",
+          "n": 3
+        },
+        {
+          "category": "ask_help",
+          "n": 9
+        },
+        {
+          "category": "celebrate",
+          "n": 9
+        },
+        {
+          "category": "challenge",
+          "n": 5
+        },
+        {
+          "category": "check_in",
+          "n": 14
+        },
+        {
+          "category": "collaborate_project",
+          "n": 7
+        },
+        {
+          "category": "comfort",
+          "n": 11
+        },
+        {
+          "category": "compliment",
+          "n": 10
+        },
+        {
+          "category": "confide",
+          "n": 1
+        },
+        {
+          "category": "coordinate_work",
+          "n": 5
+        },
+        {
+          "category": "debate",
+          "n": 8
+        },
+        {
+          "category": "deep_talk",
+          "n": 10
+        },
+        {
+          "category": "express_affection",
+          "n": 4
+        },
+        {
+          "category": "flirt",
+          "n": 1
+        },
+        {
+          "category": "gossip",
+          "n": 4
+        },
+        {
+          "category": "greet",
+          "n": 9
+        },
+        {
+          "category": "invite_activity",
+          "n": 8
+        },
+        {
+          "category": "invite_to_dinner",
+          "n": 3
+        },
+        {
+          "category": "make_plans",
+          "n": 7
+        },
+        {
+          "category": "offer_help",
+          "n": 13
+        },
+        {
+          "category": "persuade",
+          "n": 9
+        },
+        {
+          "category": "phone_call",
+          "n": 2
+        },
+        {
+          "category": "play_together",
+          "n": 13
+        },
+        {
+          "category": "reconcile",
+          "n": 2
+        },
+        {
+          "category": "set_boundary",
+          "n": 6
+        },
+        {
+          "category": "share_interest",
+          "n": 14
+        },
+        {
+          "category": "share_news",
+          "n": 5
+        },
+        {
+          "category": "small_talk",
+          "n": 18
+        },
+        {
+          "category": "tease",
+          "n": 5
+        },
+        {
+          "category": "tell_joke",
+          "n": 11
+        },
+        {
+          "category": "tell_story",
+          "n": 10
+        }
+      ],
+      "samples": [
+        {
+          "hour": 8.916666666666666,
+          "atWorkOrSchool": 18,
+          "travelling": 0,
+          "asleep": 0,
+          "atHome": 2,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 12.916666666666666,
+          "atWorkOrSchool": 18,
+          "travelling": 0,
+          "asleep": 0,
+          "atHome": 2,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 16.916666666666668,
+          "atWorkOrSchool": 1,
+          "travelling": 2,
+          "asleep": 0,
+          "atHome": 16,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 23.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 0,
+          "asleep": 20,
+          "atHome": 20,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 7.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 0,
+          "asleep": 0,
+          "atHome": 20,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        }
+      ],
+      "careerHours": 44.39,
+      "journalEntries": 3982,
+      "databaseBytes": 18767872,
+      "economyBalanced": true,
+      "beatBytes": 6303705,
+      "criticalDetails": [],
+      "averageNeeds": {
+        "hunger": 0.298,
+        "thirst": 0.339,
+        "bladder": 0.221,
+        "fatigue": 0.048,
+        "hygiene": 0.415,
+        "social": 0.084,
+        "fun": 0.092,
+        "comfort": 0.034,
+        "romantic_affection": 0.547
+      }
+    },
+    {
+      "population": 50,
+      "households": 20,
+      "locations": 237,
+      "createMs": 70,
+      "fiveMinuteMedianMs": 107,
+      "fiveMinuteMaxMs": 174,
+      "dayMs": 9170,
+      "rssMiB": 309,
+      "events": [
+        {
+          "type": "action_completed",
+          "n": 1605
+        },
+        {
+          "type": "action_failed",
+          "n": 75
+        },
+        {
+          "type": "action_interrupted",
+          "n": 109
+        },
+        {
+          "type": "action_started",
+          "n": 1838
+        },
+        {
+          "type": "arrival",
+          "n": 2475
+        },
+        {
+          "type": "bill_payment",
+          "n": 31
+        },
+        {
+          "type": "departure",
+          "n": 996
+        },
+        {
+          "type": "goal_deferred",
+          "n": 2
+        },
+        {
+          "type": "grocery_purchase",
+          "n": 3
+        },
+        {
+          "type": "household_contribution",
+          "n": 3
+        },
+        {
+          "type": "initialization_family",
+          "n": 50
+        },
+        {
+          "type": "initialization_goal",
+          "n": 50
+        },
+        {
+          "type": "initialization_identity",
+          "n": 50
+        },
+        {
+          "type": "initialization_resources",
+          "n": 1
+        },
+        {
+          "type": "invoice_issued",
+          "n": 31
+        },
+        {
+          "type": "job_application",
+          "n": 2
+        },
+        {
+          "type": "job_search",
+          "n": 1
+        },
+        {
+          "type": "obligation_offer",
+          "n": 96
+        },
+        {
+          "type": "obligation_overdue",
+          "n": 7
+        },
+        {
+          "type": "obligation_rescheduled",
+          "n": 4
+        },
+        {
+          "type": "packed_meal",
+          "n": 76
+        },
+        {
+          "type": "parental_care_support",
+          "n": 2
+        },
+        {
+          "type": "pocket_money",
+          "n": 9
+        },
+        {
+          "type": "property_maintenance",
+          "n": 22
+        },
+        {
+          "type": "public_day",
+          "n": 2
+        },
+        {
+          "type": "social",
+          "n": 690
+        },
+        {
+          "type": "status",
+          "n": 471
+        },
+        {
+          "type": "support_payment",
+          "n": 6
+        }
+      ],
+      "social": [
+        {
+          "category": "apologize",
+          "n": 4
+        },
+        {
+          "category": "ask_advice",
+          "n": 34
+        },
+        {
+          "category": "ask_date",
+          "n": 2
+        },
+        {
+          "category": "ask_favor",
+          "n": 15
+        },
+        {
+          "category": "ask_help",
+          "n": 26
+        },
+        {
+          "category": "celebrate",
+          "n": 31
+        },
+        {
+          "category": "challenge",
+          "n": 18
+        },
+        {
+          "category": "check_in",
+          "n": 45
+        },
+        {
+          "category": "collaborate_project",
+          "n": 21
+        },
+        {
+          "category": "comfort",
+          "n": 29
+        },
+        {
+          "category": "compliment",
+          "n": 26
+        },
+        {
+          "category": "confide",
+          "n": 12
+        },
+        {
+          "category": "coordinate_work",
+          "n": 21
+        },
+        {
+          "category": "debate",
+          "n": 17
+        },
+        {
+          "category": "deep_talk",
+          "n": 17
+        },
+        {
+          "category": "express_affection",
+          "n": 6
+        },
+        {
+          "category": "flirt",
+          "n": 5
+        },
+        {
+          "category": "gossip",
+          "n": 14
+        },
+        {
+          "category": "greet",
+          "n": 27
+        },
+        {
+          "category": "invite_activity",
+          "n": 20
+        },
+        {
+          "category": "invite_to_dinner",
+          "n": 17
+        },
+        {
+          "category": "make_plans",
+          "n": 32
+        },
+        {
+          "category": "offer_help",
+          "n": 27
+        },
+        {
+          "category": "persuade",
+          "n": 15
+        },
+        {
+          "category": "phone_call",
+          "n": 9
+        },
+        {
+          "category": "play_together",
+          "n": 27
+        },
+        {
+          "category": "reconcile",
+          "n": 6
+        },
+        {
+          "category": "set_boundary",
+          "n": 14
+        },
+        {
+          "category": "share_interest",
+          "n": 36
+        },
+        {
+          "category": "share_news",
+          "n": 15
+        },
+        {
+          "category": "small_talk",
+          "n": 25
+        },
+        {
+          "category": "tease",
+          "n": 23
+        },
+        {
+          "category": "tell_joke",
+          "n": 32
+        },
+        {
+          "category": "tell_story",
+          "n": 22
+        }
+      ],
+      "samples": [
+        {
+          "hour": 8.916666666666666,
+          "atWorkOrSchool": 39,
+          "travelling": 0,
+          "asleep": 0,
+          "atHome": 11,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 12.916666666666666,
+          "atWorkOrSchool": 39,
+          "travelling": 0,
+          "asleep": 0,
+          "atHome": 10,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 16.916666666666668,
+          "atWorkOrSchool": 2,
+          "travelling": 2,
+          "asleep": 1,
+          "atHome": 42,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 23.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 2,
+          "asleep": 47,
+          "atHome": 48,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 7.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 1,
+          "asleep": 0,
+          "atHome": 49,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        }
+      ],
+      "careerHours": 94.36,
+      "journalEntries": 10204,
+      "databaseBytes": 52592640,
+      "economyBalanced": true,
+      "beatBytes": 16793155,
+      "criticalDetails": [],
+      "averageNeeds": {
+        "hunger": 0.286,
+        "thirst": 0.302,
+        "bladder": 0.308,
+        "fatigue": 0.049,
+        "hygiene": 0.389,
+        "social": 0.058,
+        "fun": 0.119,
+        "comfort": 0.036,
+        "romantic_affection": 0.571
+      }
+    },
+    {
+      "population": 100,
+      "households": 40,
+      "locations": 343,
+      "createMs": 121,
+      "fiveMinuteMedianMs": 213,
+      "fiveMinuteMaxMs": 330,
+      "dayMs": 20779,
+      "rssMiB": 411,
+      "events": [
+        {
+          "type": "action_completed",
+          "n": 3198
+        },
+        {
+          "type": "action_failed",
+          "n": 20
+        },
+        {
+          "type": "action_interrupted",
+          "n": 442
+        },
+        {
+          "type": "action_started",
+          "n": 3759
+        },
+        {
+          "type": "adult_health_risk",
+          "n": 2
+        },
+        {
+          "type": "arrival",
+          "n": 5440
+        },
+        {
+          "type": "bill_payment",
+          "n": 72
+        },
+        {
+          "type": "bill_payment_deferred",
+          "n": 2
+        },
+        {
+          "type": "departure",
+          "n": 2056
+        },
+        {
+          "type": "goal_deferred",
+          "n": 3
+        },
+        {
+          "type": "grocery_purchase",
+          "n": 2
+        },
+        {
+          "type": "household_contribution",
+          "n": 13
+        },
+        {
+          "type": "initialization_family",
+          "n": 100
+        },
+        {
+          "type": "initialization_goal",
+          "n": 100
+        },
+        {
+          "type": "initialization_identity",
+          "n": 100
+        },
+        {
+          "type": "initialization_resources",
+          "n": 1
+        },
+        {
+          "type": "invoice_issued",
+          "n": 73
+        },
+        {
+          "type": "job_application",
+          "n": 6
+        },
+        {
+          "type": "job_search",
+          "n": 1
+        },
+        {
+          "type": "obligation_offer",
+          "n": 199
+        },
+        {
+          "type": "obligation_overdue",
+          "n": 4
+        },
+        {
+          "type": "obligation_rescheduled",
+          "n": 4
+        },
+        {
+          "type": "packed_meal",
+          "n": 161
+        },
+        {
+          "type": "parental_care_support",
+          "n": 2
+        },
+        {
+          "type": "pocket_money",
+          "n": 20
+        },
+        {
+          "type": "property_maintenance",
+          "n": 43
+        },
+        {
+          "type": "public_day",
+          "n": 2
+        },
+        {
+          "type": "social",
+          "n": 1523
+        },
+        {
+          "type": "status",
+          "n": 950
+        },
+        {
+          "type": "support_payment",
+          "n": 10
+        }
+      ],
+      "social": [
+        {
+          "category": "apologize",
+          "n": 9
+        },
+        {
+          "category": "ask_advice",
+          "n": 62
+        },
+        {
+          "category": "ask_date",
+          "n": 10
+        },
+        {
+          "category": "ask_favor",
+          "n": 37
+        },
+        {
+          "category": "ask_help",
+          "n": 46
+        },
+        {
+          "category": "celebrate",
+          "n": 68
+        },
+        {
+          "category": "challenge",
+          "n": 29
+        },
+        {
+          "category": "check_in",
+          "n": 89
+        },
+        {
+          "category": "collaborate_project",
+          "n": 43
+        },
+        {
+          "category": "comfort",
+          "n": 63
+        },
+        {
+          "category": "compliment",
+          "n": 61
+        },
+        {
+          "category": "confide",
+          "n": 26
+        },
+        {
+          "category": "coordinate_work",
+          "n": 35
+        },
+        {
+          "category": "debate",
+          "n": 40
+        },
+        {
+          "category": "deep_talk",
+          "n": 58
+        },
+        {
+          "category": "express_affection",
+          "n": 14
+        },
+        {
+          "category": "flirt",
+          "n": 14
+        },
+        {
+          "category": "gossip",
+          "n": 27
+        },
+        {
+          "category": "greet",
+          "n": 56
+        },
+        {
+          "category": "invite_activity",
+          "n": 44
+        },
+        {
+          "category": "invite_to_dinner",
+          "n": 34
+        },
+        {
+          "category": "make_plans",
+          "n": 52
+        },
+        {
+          "category": "offer_help",
+          "n": 79
+        },
+        {
+          "category": "persuade",
+          "n": 38
+        },
+        {
+          "category": "phone_call",
+          "n": 6
+        },
+        {
+          "category": "play_together",
+          "n": 76
+        },
+        {
+          "category": "provoke",
+          "n": 1
+        },
+        {
+          "category": "reconcile",
+          "n": 11
+        },
+        {
+          "category": "set_boundary",
+          "n": 38
+        },
+        {
+          "category": "share_interest",
+          "n": 88
+        },
+        {
+          "category": "share_news",
+          "n": 63
+        },
+        {
+          "category": "small_talk",
+          "n": 61
+        },
+        {
+          "category": "tease",
+          "n": 36
+        },
+        {
+          "category": "tell_joke",
+          "n": 56
+        },
+        {
+          "category": "tell_story",
+          "n": 53
+        }
+      ],
+      "samples": [
+        {
+          "hour": 8.916666666666666,
+          "atWorkOrSchool": 83,
+          "travelling": 0,
+          "asleep": 0,
+          "atHome": 17,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 12.916666666666666,
+          "atWorkOrSchool": 80,
+          "travelling": 5,
+          "asleep": 0,
+          "atHome": 12,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 16.916666666666668,
+          "atWorkOrSchool": 5,
+          "travelling": 6,
+          "asleep": 3,
+          "atHome": 76,
+          "criticalNeeds": 1,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 1,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 23.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 0,
+          "asleep": 99,
+          "atHome": 100,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 7.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 1,
+          "asleep": 0,
+          "atHome": 99,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        }
+      ],
+      "careerHours": 216.58,
+      "journalEntries": 22514,
+      "databaseBytes": 128020480,
+      "economyBalanced": true,
+      "beatBytes": 36479721,
+      "criticalDetails": [],
+      "averageNeeds": {
+        "hunger": 0.329,
+        "thirst": 0.347,
+        "bladder": 0.295,
+        "fatigue": 0.05,
+        "hygiene": 0.408,
+        "social": 0.075,
+        "fun": 0.104,
+        "comfort": 0.035,
+        "romantic_affection": 0.557
+      }
+    },
+    {
+      "population": 500,
+      "households": 200,
+      "locations": 1197,
+      "createMs": 570,
+      "fiveMinuteMedianMs": 1027,
+      "fiveMinuteMaxMs": 1761,
+      "dayMs": 130912,
+      "rssMiB": 1096,
+      "events": [
+        {
+          "type": "action_completed",
+          "n": 15601
+        },
+        {
+          "type": "action_failed",
+          "n": 169
+        },
+        {
+          "type": "action_interrupted",
+          "n": 3410
+        },
+        {
+          "type": "action_started",
+          "n": 19672
+        },
+        {
+          "type": "adult_health_risk",
+          "n": 9
+        },
+        {
+          "type": "arrival",
+          "n": 32355
+        },
+        {
+          "type": "bill_payment",
+          "n": 345
+        },
+        {
+          "type": "bill_payment_deferred",
+          "n": 13
+        },
+        {
+          "type": "departure",
+          "n": 10016
+        },
+        {
+          "type": "goal_deferred",
+          "n": 40
+        },
+        {
+          "type": "grocery_purchase",
+          "n": 4
+        },
+        {
+          "type": "household_contribution",
+          "n": 108
+        },
+        {
+          "type": "initialization_family",
+          "n": 500
+        },
+        {
+          "type": "initialization_goal",
+          "n": 500
+        },
+        {
+          "type": "initialization_identity",
+          "n": 500
+        },
+        {
+          "type": "initialization_resources",
+          "n": 1
+        },
+        {
+          "type": "invoice_issued",
+          "n": 349
+        },
+        {
+          "type": "job_application",
+          "n": 38
+        },
+        {
+          "type": "job_search",
+          "n": 11
+        },
+        {
+          "type": "obligation_offer",
+          "n": 995
+        },
+        {
+          "type": "obligation_overdue",
+          "n": 42
+        },
+        {
+          "type": "obligation_rescheduled",
+          "n": 39
+        },
+        {
+          "type": "packed_meal",
+          "n": 748
+        },
+        {
+          "type": "parental_care_support",
+          "n": 12
+        },
+        {
+          "type": "pocket_money",
+          "n": 98
+        },
+        {
+          "type": "property_maintenance",
+          "n": 212
+        },
+        {
+          "type": "public_day",
+          "n": 2
+        },
+        {
+          "type": "social",
+          "n": 7624
+        },
+        {
+          "type": "status",
+          "n": 4714
+        },
+        {
+          "type": "support_payment",
+          "n": 48
+        }
+      ],
+      "social": [
+        {
+          "category": "apologize",
+          "n": 34
+        },
+        {
+          "category": "argue",
+          "n": 3
+        },
+        {
+          "category": "ask_advice",
+          "n": 277
+        },
+        {
+          "category": "ask_date",
+          "n": 47
+        },
+        {
+          "category": "ask_favor",
+          "n": 179
+        },
+        {
+          "category": "ask_help",
+          "n": 225
+        },
+        {
+          "category": "celebrate",
+          "n": 339
+        },
+        {
+          "category": "challenge",
+          "n": 179
+        },
+        {
+          "category": "check_in",
+          "n": 447
+        },
+        {
+          "category": "collaborate_project",
+          "n": 251
+        },
+        {
+          "category": "comfort",
+          "n": 315
+        },
+        {
+          "category": "compliment",
+          "n": 289
+        },
+        {
+          "category": "confide",
+          "n": 170
+        },
+        {
+          "category": "coordinate_work",
+          "n": 221
+        },
+        {
+          "category": "debate",
+          "n": 195
+        },
+        {
+          "category": "deep_talk",
+          "n": 229
+        },
+        {
+          "category": "express_affection",
+          "n": 61
+        },
+        {
+          "category": "flirt",
+          "n": 70
+        },
+        {
+          "category": "gossip",
+          "n": 132
+        },
+        {
+          "category": "greet",
+          "n": 276
+        },
+        {
+          "category": "invite_activity",
+          "n": 316
+        },
+        {
+          "category": "invite_to_dinner",
+          "n": 192
+        },
+        {
+          "category": "make_plans",
+          "n": 260
+        },
+        {
+          "category": "offer_help",
+          "n": 351
+        },
+        {
+          "category": "persuade",
+          "n": 161
+        },
+        {
+          "category": "phone_call",
+          "n": 19
+        },
+        {
+          "category": "play_together",
+          "n": 351
+        },
+        {
+          "category": "provoke",
+          "n": 5
+        },
+        {
+          "category": "reconcile",
+          "n": 30
+        },
+        {
+          "category": "set_boundary",
+          "n": 198
+        },
+        {
+          "category": "share_interest",
+          "n": 464
+        },
+        {
+          "category": "share_news",
+          "n": 200
+        },
+        {
+          "category": "small_talk",
+          "n": 368
+        },
+        {
+          "category": "tease",
+          "n": 213
+        },
+        {
+          "category": "tell_joke",
+          "n": 322
+        },
+        {
+          "category": "tell_story",
+          "n": 235
+        }
+      ],
+      "samples": [
+        {
+          "hour": 8.916666666666666,
+          "atWorkOrSchool": 388,
+          "travelling": 8,
+          "asleep": 0,
+          "atHome": 104,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 12.916666666666666,
+          "atWorkOrSchool": 330,
+          "travelling": 61,
+          "asleep": 0,
+          "atHome": 79,
+          "criticalNeeds": 2,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 2,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 16.916666666666668,
+          "atWorkOrSchool": 29,
+          "travelling": 60,
+          "asleep": 37,
+          "atHome": 355,
+          "criticalNeeds": 5,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 5,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 23.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 1,
+          "asleep": 489,
+          "atHome": 499,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        },
+        {
+          "hour": 7.916666666666668,
+          "atWorkOrSchool": 0,
+          "travelling": 8,
+          "asleep": 2,
+          "atHome": 492,
+          "criticalNeeds": 0,
+          "criticalByNeed": {
+            "hunger": 0,
+            "thirst": 0,
+            "bladder": 0,
+            "fatigue": 0,
+            "hygiene": 0,
+            "social": 0,
+            "fun": 0,
+            "comfort": 0,
+            "romantic_affection": 0
+          }
+        }
+      ],
+      "careerHours": 979.28,
+      "journalEntries": 123513,
+      "databaseBytes": 523616256,
+      "economyBalanced": true,
+      "beatBytes": 183015045,
+      "criticalDetails": [],
+      "averageNeeds": {
+        "hunger": 0.356,
+        "thirst": 0.368,
+        "bladder": 0.308,
+        "fatigue": 0.053,
+        "hygiene": 0.396,
+        "social": 0.072,
+        "fun": 0.098,
+        "comfort": 0.035,
+        "romantic_affection": 0.572
+      }
+    }
+  ]
+}

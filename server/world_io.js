@@ -24,13 +24,16 @@
 // Everything runs inside a single DB transaction; asset files are copied after it commits.
 // ─────────────────────────────────────────────────────────────────────────────
 import './living/schema.js';
+import {EXPANDED_TABLES} from './living/expanded/store.js';
+import {validateExpandedImport} from './living/expanded/import.js';
+import {loadTown} from './living/engine.js';
 import {normalizeImportedRomance} from './living/romance.js';
 import {libraryBundle,restoreLibraryBundle} from './living/library.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { db, uid, now, j, pj, ASSET_DIR } from './db.js';
 
-const LIVING_TABLES=['lw_worlds','lw_places','lw_edges','lw_sims','lw_relations','lw_beats','lw_events','lw_journal','lw_anchor_audit','lw_scene_lines','lw_place_music'];
+const LIVING_TABLES=['lw_worlds','lw_places','lw_edges','lw_sims','lw_relations','lw_beats','lw_events','lw_journal','lw_anchor_audit','lw_scene_lines','lw_place_music',...EXPANDED_TABLES];
 export const BUNDLE_FORMAT = 'vivarium-world-zip';
 export const BUNDLE_VERSION = 1;
 
@@ -139,7 +142,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
   if (!reuseAssets) freshen(manifest.assets, 'a');   // reuse → asset ids stay, references keep pointing at originals
 
   if(manifest.world.simulation_mode==='living'&&!manifest.living)throw new Error('Living World snapshot missing.');
-  for(const table of ['lw_places','lw_sims','lw_beats','lw_events'])freshen(manifest.living?.[table], 'lw');
+  for(const table of ['lw_places','lw_sims','lw_beats','lw_events',...EXPANDED_TABLES])freshen(manifest.living?.[table], 'lw');
   const newWorldId = idMap.get(manifest.world.id);
 
   // ── stage every row with columns + JSON blobs remapped (no DB writes yet) ──
@@ -216,9 +219,9 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
   const tx = db.transaction(() => {
     db.prepare(`INSERT INTO worlds(id,user_id,title,art_style,sim_time,tick_index,genre,mood,pacing,directives,status,cover_asset_id,active_branch_id,genesis_state,created_at,updated_at,current_music,curiosity)
       VALUES (@id,@user_id,@title,@art_style,@sim_time,@tick_index,@genre,@mood,@pacing,@directives,@status,@cover_asset_id,@active_branch_id,@genesis_state,@created_at,@updated_at,@current_music,@curiosity)`).run(worldRow);
-    if(manifest.living){db.prepare("UPDATE worlds SET simulation_mode='living' WHERE id=?").run(newWorldId);for(const table of LIVING_TABLES){const schema=db.prepare('PRAGMA table_info('+table+')').all(),columns=schema.map(c=>c.name).filter(k=>!(table==='lw_anchor_audit'&&k==='id'));const insert=db.prepare('INSERT INTO '+table+' ('+columns.join(',')+') VALUES ('+columns.map(()=>'?').join(',')+')');for(const row of manifest.living[table] || [])insert.run(...columns.map(column=>{let value=column==='world_id'?newWorldId:row[column];if(['parent_id','household_id','from_id','to_id','location_id','beat_id','sim_id','event_id','entity_id','speaker'].includes(column)&&value!=null&&value!=='narrator'&&!idMap.has(value))throw new Error('Foreign reference in Living World snapshot');if(value===undefined)throw new Error('Incomplete '+table+' snapshot');if(typeof value==='string'){const parsed=pj(value,Symbol.for('invalid-json'));if(parsed!==null&&typeof parsed==='object')value=j(remapDeep(parsed,idMap));else value=remapDeep(value,idMap);}return value;}));}}
+    if(manifest.living){db.prepare("UPDATE worlds SET simulation_mode='living' WHERE id=?").run(newWorldId);for(const table of LIVING_TABLES){const schema=db.prepare('PRAGMA table_info('+table+')').all(),columns=schema.map(c=>c.name).filter(k=>!(table==='lw_anchor_audit'&&k==='id'));const insert=db.prepare('INSERT INTO '+table+' ('+columns.join(',')+') VALUES ('+columns.map(()=>'?').join(',')+')');for(const row of manifest.living[table] || [])insert.run(...columns.map(column=>{let value=column==='world_id'?newWorldId:row[column];if(['parent_id','household_id','from_id','to_id','location_id','beat_id','sim_id','event_id','entity_id','speaker','account_id','transaction_id','owner_id'].includes(column)&&value!=null&&value!=='narrator'&&!idMap.has(value))throw new Error('Foreign reference in Living World snapshot');if(value===undefined)throw new Error('Incomplete '+table+' snapshot');if(typeof value==='string'){const parsed=pj(value,Symbol.for('invalid-json'));if(parsed!==null&&typeof parsed==='object')value=j(remapDeep(parsed,idMap));else value=remapDeep(value,idMap);}return value;}));}}
     const ins = (sql, rows) => { const st = db.prepare(sql); for (const r of rows) st.run(r); };
-    if(manifest.living)normalizeImportedRomance(db,newWorldId);
+    if(manifest.living){normalizeImportedRomance(db,newWorldId);validateExpandedImport(loadTown(newWorldId));}
     ins(`INSERT INTO characters(id,world_id,name,base_profile,materialised,reference_asset_id,voice,created_at,voice_ref_asset_id,voice_ref_prompt,intro_tick_idx)
          VALUES (@id,@world_id,@name,@base_profile,@materialised,@reference_asset_id,@voice,@created_at,@voice_ref_asset_id,@voice_ref_prompt,@intro_tick_idx)`, chars);
     ins(`INSERT INTO locations(id,world_id,name,type,place_group,description,background_asset_id,x,y,music)

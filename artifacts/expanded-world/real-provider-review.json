@@ -1,0 +1,1914 @@
+{
+  "provider": "player configured HyprLab",
+  "temporaryDuplicate": true,
+  "originalUnchanged": true,
+  "clockBefore": 30060,
+  "clockAfterConversations": 30060,
+  "clockAfterTick": 30360,
+  "physicalNeedsUnchangedByConversation": true,
+  "innerReply": "Gerade spüre ich, wie die Müdigkeit nach den konzentrierten Handgriffen langsam spürbar wird, aber da ist vor allem eine tiefe Wärme für Theo und Noah. Mein Kopf braucht jetzt diesen sauberen Abschluss an der Werkbank, damit ich innerlich ganz bei ihnen sein kann, sobald ich die Haustür öffne. Als Nächstes möchte ich mein Vorhaben 'Grow as a Carpenter' weiterverfolgen und dieses Stück Holz sorgfältig fertigstellen. Das gibt mir die Ruhe, die ich für den Feierabend brauche.",
+  "talkReply": "Ein ganz konkreter Schritt für mich ist, jetzt die Kanten an diesem Werkstück präzise zu glätten und die Werkbank ordentlich zu hinterlassen. Wenn die Handgriffe sauber sitzen, kann ich innerlich wirklich abschalten. Dieses kurze Innehalten und Reden tut mir gut – es nimmt ein wenig die Anspannung aus den Schultern. Ich merke, wie die Vorfreude auf das Heimkommen zu Theo und Noah dadurch noch greifbarer wird und mir die nötige Ruhe für die letzten Schnitte schenkt.",
+  "conversationEffects": [
+    {
+      "emotions": [
+        {
+          "id": "contentment",
+          "intensity": 0.35
+        },
+        {
+          "id": "affection",
+          "intensity": 0.38
+        },
+        {
+          "id": "concentration",
+          "intensity": 0.25
+        }
+      ],
+      "needsDelta": {
+        "social": -0.0055,
+        "comfort": -0.04000000000000001,
+        "romantic_affection": 0,
+        "fun": -0.020000000000000018,
+        "fatigue": 0
+      },
+      "focusGoalId": "ambition_career",
+      "wellbeingDelta": {
+        "P": 0.00292,
+        "E": 0,
+        "R": 0,
+        "M": 0,
+        "A": 0
+      }
+    },
+    {
+      "emotions": [
+        {
+          "id": "affection",
+          "intensity": 0.35
+        },
+        {
+          "id": "concentration",
+          "intensity": 0.28
+        },
+        {
+          "id": "fatigue_exhaustion",
+          "intensity": 0.22
+        }
+      ],
+      "needsDelta": {
+        "social": 0,
+        "romantic_affection": 0.01999999999999999,
+        "fun": 0,
+        "comfort": -0.01999999999999999,
+        "fatigue": 0.010000000000000009
+      },
+      "focusGoalId": "ambition_career",
+      "wellbeingDelta": {
+        "P": 0.0014,
+        "E": 0,
+        "R": 0,
+        "M": 0,
+        "A": 0
+      }
+    }
+  ],
+  "tickMetrics": {
+    "population": 10,
+    "events": 48,
+    "journalEntries": 54,
+    "eligible": 2,
+    "fields": 2,
+    "modelCalls": 2,
+    "biographyCalls": 0,
+    "cpuMs": 18,
+    "totalMs": 14196,
+    "rejections": [],
+    "warnings": []
+  },
+  "after": {
+    "emotions": {
+      "schema_version": 2,
+      "taxonomy_id": "emonet_face_40",
+      "states": [
+        {
+          "id": "affection",
+          "label": "Affection",
+          "label_de": "Zuneigung",
+          "components": [
+            {
+              "key": "event:le_4KAwNqq_Ul_V:affection",
+              "source": "event",
+              "intensity": 0.35,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                "evidence_id": "le_4KAwNqq_Ul_V",
+                "at": 30060
+              }
+            },
+            {
+              "key": "event:le_7EZqA3DS7Dei:affection",
+              "source": "event",
+              "intensity": 0.38,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+                "evidence_id": "le_7EZqA3DS7Dei",
+                "at": 30060
+              }
+            },
+            {
+              "key": "event:w_uUAqlSxMdwBF_e_37_21:affection",
+              "source": "event",
+              "intensity": 0.4,
+              "activated_at": 30360,
+              "expires_at": 31260,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Die Erledigung der laufenden Pflichten schafft Raum für Achtsamkeit gegenüber der Familie.",
+                "evidence_id": "w_uUAqlSxMdwBF_e_37_21",
+                "at": 30360
+              }
+            }
+          ],
+          "intensity": 0.4,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+              "evidence_id": "le_4KAwNqq_Ul_V",
+              "at": 30060
+            },
+            {
+              "kind": "subjective_reflection",
+              "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+              "evidence_id": "le_7EZqA3DS7Dei",
+              "at": 30060
+            },
+            {
+              "kind": "subjective_reflection",
+              "text": "Die Erledigung der laufenden Pflichten schafft Raum für Achtsamkeit gegenüber der Familie.",
+              "evidence_id": "w_uUAqlSxMdwBF_e_37_21",
+              "at": 30360
+            }
+          ],
+          "expires_at": 31260
+        },
+        {
+          "id": "contentment",
+          "label": "Contentment",
+          "label_de": "Zufriedenheit",
+          "components": [
+            {
+              "key": "event:le_7EZqA3DS7Dei:contentment",
+              "source": "event",
+              "intensity": 0.35,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+                "evidence_id": "le_7EZqA3DS7Dei",
+                "at": 30060
+              }
+            },
+            {
+              "key": "current:contentment",
+              "source": "event",
+              "intensity": 0.2786116555277071,
+              "activated_at": 30360,
+              "expires_at": 30480,
+              "cause": {
+                "kind": "current_state",
+                "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                "at": 30360
+              }
+            }
+          ],
+          "intensity": 0.35,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+              "evidence_id": "le_7EZqA3DS7Dei",
+              "at": 30060
+            },
+            {
+              "kind": "current_state",
+              "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+              "at": 30360
+            }
+          ],
+          "expires_at": 30960
+        },
+        {
+          "id": "relief",
+          "label": "Relief",
+          "label_de": "Erleichterung",
+          "components": [
+            {
+              "key": "event:w_uUAqlSxMdwBF_e_37_14:relief",
+              "source": "event",
+              "intensity": 0.3,
+              "activated_at": 30120,
+              "expires_at": 31020,
+              "cause": {
+                "kind": "financial_event",
+                "text": "Eine wirkliche fällige Rechnung ist bezahlt.",
+                "evidence_id": "w_uUAqlSxMdwBF_e_37_14",
+                "at": 30120
+              }
+            },
+            {
+              "key": "event:w_uUAqlSxMdwBF_e_37_15:relief",
+              "source": "event",
+              "intensity": 0.3,
+              "activated_at": 30120,
+              "expires_at": 31020,
+              "cause": {
+                "kind": "financial_event",
+                "text": "Eine wirkliche fällige Rechnung ist bezahlt.",
+                "evidence_id": "w_uUAqlSxMdwBF_e_37_15",
+                "at": 30120
+              }
+            },
+            {
+              "key": "event:w_uUAqlSxMdwBF_e_37_21:relief",
+              "source": "event",
+              "intensity": 0.35,
+              "activated_at": 30360,
+              "expires_at": 31260,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Die Erledigung der laufenden Pflichten schafft Raum für Achtsamkeit gegenüber der Familie.",
+                "evidence_id": "w_uUAqlSxMdwBF_e_37_21",
+                "at": 30360
+              }
+            }
+          ],
+          "intensity": 0.35,
+          "causes": [
+            {
+              "kind": "financial_event",
+              "text": "Eine wirkliche fällige Rechnung ist bezahlt.",
+              "evidence_id": "w_uUAqlSxMdwBF_e_37_14",
+              "at": 30120
+            },
+            {
+              "kind": "financial_event",
+              "text": "Eine wirkliche fällige Rechnung ist bezahlt.",
+              "evidence_id": "w_uUAqlSxMdwBF_e_37_15",
+              "at": 30120
+            },
+            {
+              "kind": "subjective_reflection",
+              "text": "Die Erledigung der laufenden Pflichten schafft Raum für Achtsamkeit gegenüber der Familie.",
+              "evidence_id": "w_uUAqlSxMdwBF_e_37_21",
+              "at": 30360
+            }
+          ],
+          "expires_at": 31260
+        },
+        {
+          "id": "concentration",
+          "label": "Concentration",
+          "label_de": "Konzentration",
+          "components": [
+            {
+              "key": "event:le_4KAwNqq_Ul_V:concentration",
+              "source": "event",
+              "intensity": 0.28,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                "evidence_id": "le_4KAwNqq_Ul_V",
+                "at": 30060
+              }
+            },
+            {
+              "key": "event:le_7EZqA3DS7Dei:concentration",
+              "source": "event",
+              "intensity": 0.25,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+                "evidence_id": "le_7EZqA3DS7Dei",
+                "at": 30060
+              }
+            },
+            {
+              "key": "current:activity",
+              "source": "event",
+              "intensity": 0.2732,
+              "activated_at": 30360,
+              "expires_at": 30480,
+              "cause": {
+                "kind": "ongoing_activity",
+                "text": "arbeitet an einer Aufgabe",
+                "category": "work",
+                "evidence_id": null,
+                "at": 30360
+              }
+            }
+          ],
+          "intensity": 0.28,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+              "evidence_id": "le_4KAwNqq_Ul_V",
+              "at": 30060
+            },
+            {
+              "kind": "subjective_reflection",
+              "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+              "evidence_id": "le_7EZqA3DS7Dei",
+              "at": 30060
+            },
+            {
+              "kind": "ongoing_activity",
+              "text": "arbeitet an einer Aufgabe",
+              "category": "work",
+              "evidence_id": null,
+              "at": 30360
+            }
+          ],
+          "expires_at": 30960
+        },
+        {
+          "id": "fatigue_exhaustion",
+          "label": "Fatigue/Exhaustion",
+          "label_de": "Müdigkeit/Erschöpfung",
+          "components": [
+            {
+              "key": "event:le_4KAwNqq_Ul_V:fatigue_exhaustion",
+              "source": "event",
+              "intensity": 0.22,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                "evidence_id": "le_4KAwNqq_Ul_V",
+                "at": 30060
+              }
+            },
+            {
+              "key": "current:fatigue",
+              "source": "need",
+              "intensity": 0.25869898542653824,
+              "activated_at": 30360,
+              "expires_at": 30480,
+              "cause": {
+                "kind": "modeled_need",
+                "need": "fatigue",
+                "text": "Der gegenwärtige Zustand ist ermüdend.",
+                "at": 30360
+              }
+            }
+          ],
+          "intensity": 0.25869898542653824,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+              "evidence_id": "le_4KAwNqq_Ul_V",
+              "at": 30060
+            },
+            {
+              "kind": "modeled_need",
+              "need": "fatigue",
+              "text": "Der gegenwärtige Zustand ist ermüdend.",
+              "at": 30360
+            }
+          ],
+          "expires_at": 30960
+        }
+      ],
+      "primary": "affection",
+      "updated_at": 30360,
+      "actual_narrative": "Zuneigung 40% · Zufriedenheit 35% · Erleichterung 35% · Konzentration 28% · Müdigkeit/Erschöpfung 26%",
+      "self_narrative": "Die Arbeit an der Werkbank sorgfältig beenden, um danach mit freiem Kopf für Theo und Noah da zu sein."
+    },
+    "currentDesire": "Die Arbeit an der Werkbank sorgfältig beenden, um danach mit freiem Kopf für Theo und Noah da zu sein.",
+    "needs": {
+      "hunger": 0.35894978668602917,
+      "thirst": 0.2995546875285607,
+      "bladder": 0.3956679328000174,
+      "fatigue": 0.4759222964819525,
+      "hygiene": 0.4084349824657052,
+      "social": 0,
+      "fun": 0.3820102765969917,
+      "comfort": 0.12029190673275494,
+      "romantic_affection": 0.20007992195338012
+    },
+    "goals": [
+      {
+        "id": "ambition_primary",
+        "kind": "mastery",
+        "title": "Build reliable mastery",
+        "progress": 0,
+        "completed": false,
+        "updated_at": 0,
+        "title_de": "Fähigkeiten verlässlich ausbauen",
+        "target_seconds": 144000,
+        "practice_seconds": 0
+      },
+      {
+        "id": "ambition_career",
+        "kind": "career",
+        "title": "Grow as a Carpenter",
+        "progress": 0,
+        "completed": false,
+        "updated_at": 0,
+        "title_de": "Im Beruf dazulernen",
+        "target_seconds": 144000,
+        "practice_seconds": 0
+      },
+      {
+        "id": "ambition_hobby",
+        "kind": "hobby",
+        "activity": "walking",
+        "title": "Practice walking",
+        "progress": 0,
+        "completed": false,
+        "updated_at": 0,
+        "title_de": "Zeit für mein Interesse finden",
+        "target_seconds": 144000,
+        "practice_seconds": 0
+      }
+    ],
+    "dailyGoals": {
+      "day": 0,
+      "items": [
+        {
+          "id": "daily_care",
+          "kind": "selfcare",
+          "title": "Mich heute gut versorgen",
+          "target": 2,
+          "value": 0,
+          "unit": "Handlungen"
+        },
+        {
+          "id": "daily_practice",
+          "kind": "career",
+          "title": "Eine Aufgabe bei der Arbeit voranbringen",
+          "target": 900,
+          "value": 0,
+          "unit": "Sekunden",
+          "interest": "walking"
+        },
+        {
+          "id": "daily_connection",
+          "kind": "connection",
+          "title": "Einen guten Moment mit jemandem teilen",
+          "target": 1,
+          "value": 1,
+          "unit": "Begegnungen",
+          "last_evidence_id": "lw_5-AcxyFtHTxy"
+        }
+      ]
+    },
+    "thought": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen."
+  },
+  "biographyMode": "written",
+  "biographyWarnings": [],
+  "interventionRecorded": true,
+  "recentJournal": [
+    {
+      "cursor": 14808,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_28",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Für Freie Wohnung · 2 wird eine tatsächlich finanzierte Instandhaltung beauftragt.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "property_maintenance",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "propertyId": "lw_ECKKcUDjcARy",
+        "amountCents": 4500,
+        "private": true
+      },
+      "description": "Für Freie Wohnung · 2 wird eine tatsächlich finanzierte Instandhaltung beauftragt.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14807,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_27",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Für Freie Wohnung · 1 wird eine tatsächlich finanzierte Instandhaltung beauftragt.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "property_maintenance",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "propertyId": "lw_qJg9Pm06zhmI",
+        "amountCents": 4500,
+        "private": true
+      },
+      "description": "Für Freie Wohnung · 1 wird eine tatsächlich finanzierte Instandhaltung beauftragt.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14806,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_26",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Für Haus 3 · Ali wird eine tatsächlich finanzierte Instandhaltung beauftragt.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "property_maintenance",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "propertyId": "lw_IXzMR1ImZEmY",
+        "amountCents": 3480,
+        "private": true
+      },
+      "description": "Für Haus 3 · Ali wird eine tatsächlich finanzierte Instandhaltung beauftragt.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14805,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_25",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Für Haus 1 · Okafor wird eine tatsächlich finanzierte Instandhaltung beauftragt.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "property_maintenance",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "propertyId": "lw_0NKy1BsoqJCg",
+        "amountCents": 4020,
+        "private": true
+      },
+      "description": "Für Haus 1 · Okafor wird eine tatsächlich finanzierte Instandhaltung beauftragt.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14803,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_23",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Noah Okafor bittet um einen anderen Zeitpunkt für: Hausaufgaben beginnen.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "obligation_offer",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_e06c0MC9EOr4",
+      "facts": {
+        "catalogId": "A031",
+        "title": "Hausaufgaben beginnen",
+        "issuerId": "lw_AMTA8WMhPOOY",
+        "targetId": null,
+        "status": "declined",
+        "private": true
+      },
+      "description": "Noah Okafor bittet um einen anderen Zeitpunkt für: Hausaufgaben beginnen.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14800,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_21",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Aiko Okafor übernimmt eine machbare Aufgabe: Wäsche aufhängen.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "obligation_offer",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "catalogId": "A014",
+        "title": "Wäsche aufhängen",
+        "issuerId": null,
+        "targetId": null,
+        "status": "accepted",
+        "private": true,
+        "mentalEffects": {
+          "lw_AMTA8WMhPOOY": {
+            "emotions": [
+              {
+                "id": "relief",
+                "intensity": 0.35
+              },
+              {
+                "id": "affection",
+                "intensity": 0.4
+              }
+            ],
+            "needsDelta": {
+              "social": -0.004583333333333333,
+              "romantic_affection": 0,
+              "fun": 0.020000000000000018,
+              "comfort": -0.04000000000000001,
+              "fatigue": 0.020000000000000018
+            },
+            "focusGoalId": "ambition_career",
+            "wellbeingDelta": {
+              "P": 0.0045000000000000005,
+              "E": 0,
+              "R": 0,
+              "M": 0,
+              "A": 0
+            }
+          }
+        }
+      },
+      "description": "Aiko Okafor übernimmt eine machbare Aufgabe: Wäsche aufhängen.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14794,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_15",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Aiko Okafor bezahlt 64.67 € für utilities.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "bill_payment",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "invoiceId": "ee_gXLyb1hanA6o",
+        "kind": "utilities",
+        "amountCents": 6467,
+        "private": true
+      },
+      "description": "Aiko Okafor bezahlt 64.67 € für utilities.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14793,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_14",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Aiko Okafor bezahlt 223.33 € für rent.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.9,
+      "type": "bill_payment",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "invoiceId": "ee_ZHpTQSatz0t2",
+        "kind": "rent",
+        "amountCents": 22333,
+        "private": true
+      },
+      "description": "Aiko Okafor bezahlt 223.33 € für rent.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14787,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_8",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Noah Okafor bekommt 5.00 € Taschengeld von Aiko Okafor.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "pocket_money",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_e06c0MC9EOr4",
+      "facts": {
+        "amountCents": 500,
+        "private": true
+      },
+      "description": "Noah Okafor bekommt 5.00 € Taschengeld von Aiko Okafor.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14785,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_7",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Aiko Okafor hat eine fällige Verpflichtung: utilities · 64.67 €.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "invoice_issued",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "kind": "utilities",
+        "amountCents": 6467,
+        "private": true,
+        "period": "2026-09"
+      },
+      "description": "Aiko Okafor hat eine fällige Verpflichtung: utilities · 64.67 €.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14784,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_6",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Aiko Okafor hat eine fällige Verpflichtung: rent · 223.33 €.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "invoice_issued",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "kind": "rent",
+        "amountCents": 22333,
+        "private": true,
+        "leaseId": "lw_Ees2J03oDok4",
+        "period": "2026-09"
+      },
+      "description": "Aiko Okafor hat eine fällige Verpflichtung: rent · 223.33 €.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14779,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_1",
+      "observed_at": 30120,
+      "channel": "direct",
+      "perception": "Der neue Tag bringt ruhiges Wetter. Der Stadtmarkt meldet seine reguläre Lieferung.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "public_day",
+      "start": 30120,
+      "end": 30120,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "public": true,
+        "weather": "clear",
+        "supplyFactor": 1
+      },
+      "description": "Der neue Tag bringt ruhiges Wetter. Der Stadtmarkt meldet seine reguläre Lieferung.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 14778,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "w_uUAqlSxMdwBF_e_37_0",
+      "observed_at": 30060,
+      "channel": "direct",
+      "perception": "Regieimpuls: Überlege, wie du heute einer vertrauten Person freundlich helfen kannst.",
+      "interpretation": "Die Rechnungen sind beglichen. Wenn ich die Werkbank gleich sauber hinterlasse, kann ich Theo daheim die Wäsche abnehmen und ihm eine kleine Freude machen.",
+      "confidence": 0.65,
+      "type": "intervention",
+      "start": 30060,
+      "end": 30060,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "kind": "idea",
+        "text": "Überlege, wie du heute einer vertrauten Person freundlich helfen kannst.",
+        "status": "direction"
+      },
+      "description": "Regieimpuls: Überlege, wie du heute einer vertrauten Person freundlich helfen kannst.",
+      "source": "user_intervention"
+    },
+    {
+      "cursor": 14777,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "le_7EZqA3DS7Dei",
+      "observed_at": 30060,
+      "channel": "conversation",
+      "perception": "Ich höre, was dir gerade wichtig ist. Was wäre ein kleiner machbarer Schritt, und wie verändert dieses Gespräch dein Gefühl dabei?\nEin ganz konkreter Schritt für mich ist, jetzt die Kanten an diesem Werkstück präzise zu glätten und die Werkbank ordentlich zu hinterlassen. Wenn die Handgriffe sauber sitzen, kann ich innerlich wirklich abschalten. Dieses kurze Innehalten und Reden tut mir gut – es nimmt ein wenig die Anspannung aus den Schultern. Ich merke, wie die Vorfreude auf das Heimkommen zu Theo und Noah dadurch noch greifbarer wird und mir die nötige Ruhe für die letzten Schnitte schenkt.",
+      "interpretation": "Der kurze Austausch hilft mir, den Fokus zu behalten. Noch die Kanten säubern, dann kann ich guten Gewissens nach Hause gehen.",
+      "confidence": 0.6,
+      "type": "conversation",
+      "start": 30060,
+      "end": 30060,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "previousMind": {
+          "wellbeing": {
+            "version": 1,
+            "baseline": {
+              "P": 0.5,
+              "E": 0.5,
+              "R": 0.4971334967769682,
+              "M": 0.5,
+              "A": 0.5
+            },
+            "scores": {
+              "P": 0.5154,
+              "E": 0.5,
+              "R": 0.4971334967769682,
+              "M": 0.5,
+              "A": 0.5
+            },
+            "initialized_at": 30060,
+            "updated_at": 30060,
+            "origin": "current_state_initialization",
+            "evidence": [
+              {
+                "eventId": "le_4KAwNqq_Ul_V",
+                "at": 30060,
+                "channel": "reflection",
+                "erasableGroup": "conversation_inner",
+                "delta": {
+                  "P": 0.0014,
+                  "E": 0,
+                  "R": 0,
+                  "M": 0,
+                  "A": 0
+                },
+                "reason": "Die eigene begrenzte emotionale Deutung eines wirklichen Ereignisses beeinflusst positive Gefühle."
+              }
+            ],
+            "summary": 0.5025066993553937,
+            "historyDays": {}
+          },
+          "needs": {
+            "hunger": 0.3497831200193624,
+            "thirst": 0.2853880208618939,
+            "bladder": 0.3856679328000174,
+            "fatigue": 0.45117229648195245,
+            "hygiene": 0.4041016491323718,
+            "social": 0.0055,
+            "fun": 0.37576027659699185,
+            "comfort": 0.19487524006608833,
+            "romantic_affection": 0.1978299219533801
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "affection",
+                "label": "Affection",
+                "label_de": "Zuneigung",
+                "components": [
+                  {
+                    "key": "event:w_91U9o3pjdbRG_e_21_4:affection",
+                    "source": "event",
+                    "intensity": 0.3,
+                    "activated_at": 29460,
+                    "expires_at": 30360,
+                    "cause": {
+                      "kind": "social_complete",
+                      "category": "tell_story",
+                      "outcome": "accepted",
+                      "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                      "evidence_id": "lw_5-AcxyFtHTxy",
+                      "at": 29460
+                    }
+                  },
+                  {
+                    "key": "event:le_4KAwNqq_Ul_V:affection",
+                    "source": "event",
+                    "intensity": 0.35,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                      "evidence_id": "le_4KAwNqq_Ul_V",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.35,
+                "causes": [
+                  {
+                    "kind": "social_complete",
+                    "category": "tell_story",
+                    "outcome": "accepted",
+                    "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                    "evidence_id": "lw_5-AcxyFtHTxy",
+                    "at": 29460
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                    "evidence_id": "le_4KAwNqq_Ul_V",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.2823241555277071,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2823241555277071,
+                "causes": [
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "concentration",
+                "label": "Concentration",
+                "label_de": "Konzentration",
+                "components": [
+                  {
+                    "key": "event:le_4KAwNqq_Ul_V:concentration",
+                    "source": "event",
+                    "intensity": 0.28,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                      "evidence_id": "le_4KAwNqq_Ul_V",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.2732,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "arbeitet an einer Aufgabe",
+                      "category": "work",
+                      "evidence_id": null,
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.28,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                    "evidence_id": "le_4KAwNqq_Ul_V",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "arbeitet an einer Aufgabe",
+                    "category": "work",
+                    "evidence_id": null,
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "fatigue_exhaustion",
+                "label": "Fatigue/Exhaustion",
+                "label_de": "Müdigkeit/Erschöpfung",
+                "components": [
+                  {
+                    "key": "event:le_4KAwNqq_Ul_V:fatigue_exhaustion",
+                    "source": "event",
+                    "intensity": 0.22,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                      "evidence_id": "le_4KAwNqq_Ul_V",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "current:fatigue",
+                    "source": "need",
+                    "intensity": 0.22652398542653818,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "modeled_need",
+                      "need": "fatigue",
+                      "text": "Der gegenwärtige Zustand ist ermüdend.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.22652398542653818,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                    "evidence_id": "le_4KAwNqq_Ul_V",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "modeled_need",
+                    "need": "fatigue",
+                    "text": "Der gegenwärtige Zustand ist ermüdend.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              }
+            ],
+            "primary": "affection",
+            "updated_at": 30060,
+            "actual_narrative": "Zuneigung 35% · Zufriedenheit 28% · Konzentration 28% · Müdigkeit/Erschöpfung 23%",
+            "self_narrative": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht."
+          },
+          "focus_goal_id": "ambition_career",
+          "current_desire": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht.",
+          "thought_source": "conversation",
+          "thought_at": 30060
+        },
+        "afterMind": {
+          "wellbeing": {
+            "version": 1,
+            "baseline": {
+              "P": 0.5,
+              "E": 0.5,
+              "R": 0.4971334967769682,
+              "M": 0.5,
+              "A": 0.5
+            },
+            "scores": {
+              "P": 0.51952,
+              "E": 0.5,
+              "R": 0.4971334967769682,
+              "M": 0.5,
+              "A": 0.5
+            },
+            "initialized_at": 30060,
+            "updated_at": 30060,
+            "origin": "current_state_initialization",
+            "evidence": [
+              {
+                "eventId": "le_4KAwNqq_Ul_V",
+                "at": 30060,
+                "channel": "reflection",
+                "erasableGroup": "conversation_inner",
+                "delta": {
+                  "P": 0.0014,
+                  "E": 0,
+                  "R": 0,
+                  "M": 0,
+                  "A": 0
+                },
+                "reason": "Die eigene begrenzte emotionale Deutung eines wirklichen Ereignisses beeinflusst positive Gefühle."
+              },
+              {
+                "eventId": "le_7EZqA3DS7Dei",
+                "at": 30060,
+                "channel": "reflection",
+                "erasableGroup": "conversation_talk",
+                "delta": {
+                  "P": 0.00292,
+                  "E": 0,
+                  "R": 0,
+                  "M": 0,
+                  "A": 0
+                },
+                "reason": "Die eigene begrenzte emotionale Deutung eines wirklichen Ereignisses beeinflusst positive Gefühle."
+              }
+            ],
+            "summary": 0.5033306993553937,
+            "historyDays": {}
+          },
+          "needs": {
+            "hunger": 0.3497831200193624,
+            "thirst": 0.2853880208618939,
+            "bladder": 0.3856679328000174,
+            "fatigue": 0.45117229648195245,
+            "hygiene": 0.4041016491323718,
+            "social": 0,
+            "fun": 0.35576027659699183,
+            "comfort": 0.15487524006608833,
+            "romantic_affection": 0.1978299219533801
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "affection",
+                "label": "Affection",
+                "label_de": "Zuneigung",
+                "components": [
+                  {
+                    "key": "event:w_91U9o3pjdbRG_e_21_4:affection",
+                    "source": "event",
+                    "intensity": 0.3,
+                    "activated_at": 29460,
+                    "expires_at": 30360,
+                    "cause": {
+                      "kind": "social_complete",
+                      "category": "tell_story",
+                      "outcome": "accepted",
+                      "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                      "evidence_id": "lw_5-AcxyFtHTxy",
+                      "at": 29460
+                    }
+                  },
+                  {
+                    "key": "event:le_4KAwNqq_Ul_V:affection",
+                    "source": "event",
+                    "intensity": 0.35,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                      "evidence_id": "le_4KAwNqq_Ul_V",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "event:le_7EZqA3DS7Dei:affection",
+                    "source": "event",
+                    "intensity": 0.38,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+                      "evidence_id": "le_7EZqA3DS7Dei",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.38,
+                "causes": [
+                  {
+                    "kind": "social_complete",
+                    "category": "tell_story",
+                    "outcome": "accepted",
+                    "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                    "evidence_id": "lw_5-AcxyFtHTxy",
+                    "at": 29460
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                    "evidence_id": "le_4KAwNqq_Ul_V",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+                    "evidence_id": "le_7EZqA3DS7Dei",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "event:le_7EZqA3DS7Dei:contentment",
+                    "source": "event",
+                    "intensity": 0.35,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+                      "evidence_id": "le_7EZqA3DS7Dei",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.2823241555277071,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.35,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+                    "evidence_id": "le_7EZqA3DS7Dei",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "concentration",
+                "label": "Concentration",
+                "label_de": "Konzentration",
+                "components": [
+                  {
+                    "key": "event:le_4KAwNqq_Ul_V:concentration",
+                    "source": "event",
+                    "intensity": 0.28,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                      "evidence_id": "le_4KAwNqq_Ul_V",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "event:le_7EZqA3DS7Dei:concentration",
+                    "source": "event",
+                    "intensity": 0.25,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+                      "evidence_id": "le_7EZqA3DS7Dei",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.2732,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "arbeitet an einer Aufgabe",
+                      "category": "work",
+                      "evidence_id": null,
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.28,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                    "evidence_id": "le_4KAwNqq_Ul_V",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das ruhige Gespräch stärkt das Gefühl von Halt und hilft, die restliche Arbeit an der Werkbank gelassen zu beenden.",
+                    "evidence_id": "le_7EZqA3DS7Dei",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "arbeitet an einer Aufgabe",
+                    "category": "work",
+                    "evidence_id": null,
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "fatigue_exhaustion",
+                "label": "Fatigue/Exhaustion",
+                "label_de": "Müdigkeit/Erschöpfung",
+                "components": [
+                  {
+                    "key": "event:le_4KAwNqq_Ul_V:fatigue_exhaustion",
+                    "source": "event",
+                    "intensity": 0.22,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                      "evidence_id": "le_4KAwNqq_Ul_V",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "current:fatigue",
+                    "source": "need",
+                    "intensity": 0.22652398542653818,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "modeled_need",
+                      "need": "fatigue",
+                      "text": "Der gegenwärtige Zustand ist ermüdend.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.22652398542653818,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                    "evidence_id": "le_4KAwNqq_Ul_V",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "modeled_need",
+                    "need": "fatigue",
+                    "text": "Der gegenwärtige Zustand ist ermüdend.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              }
+            ],
+            "primary": "affection",
+            "updated_at": 30060,
+            "actual_narrative": "Zuneigung 38% · Zufriedenheit 35% · Konzentration 28% · Müdigkeit/Erschöpfung 23%",
+            "self_narrative": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht."
+          },
+          "focus_goal_id": "ambition_career",
+          "current_desire": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht.",
+          "thought_source": "conversation",
+          "thought_at": 30060
+        },
+        "effects": {
+          "emotions": [
+            {
+              "id": "contentment",
+              "intensity": 0.35
+            },
+            {
+              "id": "affection",
+              "intensity": 0.38
+            },
+            {
+              "id": "concentration",
+              "intensity": 0.25
+            }
+          ],
+          "needsDelta": {
+            "social": -0.0055,
+            "comfort": -0.04000000000000001,
+            "romantic_affection": 0,
+            "fun": -0.020000000000000018,
+            "fatigue": 0
+          },
+          "focusGoalId": "ambition_career",
+          "wellbeingDelta": {
+            "P": 0.00292,
+            "E": 0,
+            "R": 0,
+            "M": 0,
+            "A": 0
+          }
+        },
+        "channel": "talk",
+        "message": "Ich höre, was dir gerade wichtig ist. Was wäre ein kleiner machbarer Schritt, und wie verändert dieses Gespräch dein Gefühl dabei?",
+        "reply": "Ein ganz konkreter Schritt für mich ist, jetzt die Kanten an diesem Werkstück präzise zu glätten und die Werkbank ordentlich zu hinterlassen. Wenn die Handgriffe sauber sitzen, kann ich innerlich wirklich abschalten. Dieses kurze Innehalten und Reden tut mir gut – es nimmt ein wenig die Anspannung aus den Schultern. Ich merke, wie die Vorfreude auf das Heimkommen zu Theo und Noah dadurch noch greifbarer wird und mir die nötige Ruhe für die letzten Schnitte schenkt.",
+        "previousThought": "Noch ein paar saubere Schnitte, dann kann ich den Hobel niederlegen und mit freiem Kopf nach Hause gehen.",
+        "previousMood": "Zuneigung",
+        "newThought": "Der kurze Austausch hilft mir, den Fokus zu behalten. Noch die Kanten säubern, dann kann ich guten Gewissens nach Hause gehen.",
+        "newMood": "Zuneigung"
+      },
+      "description": "Gespräch mit Aiko Okafor: Ein ganz konkreter Schritt für mich ist, jetzt die Kanten an diesem Werkstück präzise zu glätten und die Werkbank ordentlich zu hinterlassen. Wenn die Handgriffe sauber sitzen, kann ich innerlich wirklich abschalten. Dieses kurze Innehalten und Reden tut mir gut – es nimmt ein wenig die Anspannung aus den Schultern. Ich merke, wie die Vorfreude auf das Heimkommen zu Theo und Noah dadurch noch greifbarer wird und mir die nötige Ruhe für die letzten Schnitte schenkt.",
+      "source": "user_conversation"
+    },
+    {
+      "cursor": 14776,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "le_4KAwNqq_Ul_V",
+      "observed_at": 30060,
+      "channel": "inner_dialogue",
+      "perception": "Was brauchst du gerade, wie fühlst du dich damit, und welches deiner vorhandenen Vorhaben möchtest du als Nächstes angehen? Ich höre dir in Ruhe zu.\nGerade spüre ich, wie die Müdigkeit nach den konzentrierten Handgriffen langsam spürbar wird, aber da ist vor allem eine tiefe Wärme für Theo und Noah. Mein Kopf braucht jetzt diesen sauberen Abschluss an der Werkbank, damit ich innerlich ganz bei ihnen sein kann, sobald ich die Haustür öffne. Als Nächstes möchte ich mein Vorhaben 'Grow as a Carpenter' weiterverfolgen und dieses Stück Holz sorgfältig fertigstellen. Das gibt mir die Ruhe, die ich für den Feierabend brauche.",
+      "interpretation": "Noch ein paar saubere Schnitte, dann kann ich den Hobel niederlegen und mit freiem Kopf nach Hause gehen.",
+      "confidence": 0.6,
+      "type": "conversation",
+      "start": 30060,
+      "end": 30060,
+      "location_id": "lw_hzV209LFbSR3",
+      "facts": {
+        "previousMind": {
+          "wellbeing": {
+            "version": 1,
+            "baseline": {
+              "P": 0.5,
+              "E": 0.5,
+              "R": 0.4971334967769682,
+              "M": 0.5,
+              "A": 0.5
+            },
+            "scores": {
+              "P": 0.512,
+              "E": 0.5,
+              "R": 0.4971334967769682,
+              "M": 0.5,
+              "A": 0.5
+            },
+            "initialized_at": 30060,
+            "updated_at": 30060,
+            "origin": "current_state_initialization",
+            "evidence": [],
+            "summary": 0.5018266993553937,
+            "historyDays": {}
+          },
+          "needs": {
+            "hunger": 0.3497831200193624,
+            "thirst": 0.2853880208618939,
+            "bladder": 0.3856679328000174,
+            "fatigue": 0.44117229648195244,
+            "hygiene": 0.4041016491323718,
+            "social": 0.0055,
+            "fun": 0.37576027659699185,
+            "comfort": 0.21487524006608832,
+            "romantic_affection": 0.1778299219533801
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "affection",
+                "label": "Affection",
+                "label_de": "Zuneigung",
+                "components": [
+                  {
+                    "key": "event:w_91U9o3pjdbRG_e_21_4:affection",
+                    "source": "event",
+                    "intensity": 0.3,
+                    "activated_at": 29460,
+                    "expires_at": 30360,
+                    "cause": {
+                      "kind": "social_complete",
+                      "category": "tell_story",
+                      "outcome": "accepted",
+                      "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                      "evidence_id": "lw_5-AcxyFtHTxy",
+                      "at": 29460
+                    }
+                  }
+                ],
+                "intensity": 0.3,
+                "causes": [
+                  {
+                    "kind": "social_complete",
+                    "category": "tell_story",
+                    "outcome": "accepted",
+                    "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                    "evidence_id": "lw_5-AcxyFtHTxy",
+                    "at": 29460
+                  }
+                ],
+                "expires_at": 30360
+              },
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.2838241555277071,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2838241555277071,
+                "causes": [
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "concentration",
+                "label": "Concentration",
+                "label_de": "Konzentration",
+                "components": [
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.2732,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "arbeitet an einer Aufgabe",
+                      "category": "work",
+                      "evidence_id": null,
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2732,
+                "causes": [
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "arbeitet an einer Aufgabe",
+                    "category": "work",
+                    "evidence_id": null,
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "fatigue_exhaustion",
+                "label": "Fatigue/Exhaustion",
+                "label_de": "Müdigkeit/Erschöpfung",
+                "components": [
+                  {
+                    "key": "current:fatigue",
+                    "source": "need",
+                    "intensity": 0.21352398542653817,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "modeled_need",
+                      "need": "fatigue",
+                      "text": "Der gegenwärtige Zustand ist ermüdend.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.21352398542653817,
+                "causes": [
+                  {
+                    "kind": "modeled_need",
+                    "need": "fatigue",
+                    "text": "Der gegenwärtige Zustand ist ermüdend.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              }
+            ],
+            "primary": "affection",
+            "updated_at": 30060,
+            "actual_narrative": "Zuneigung 30% · Zufriedenheit 28% · Konzentration 27% · Müdigkeit/Erschöpfung 21%",
+            "self_narrative": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht."
+          },
+          "focus_goal_id": null,
+          "current_desire": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht.",
+          "thought_source": null,
+          "thought_at": null
+        },
+        "afterMind": {
+          "wellbeing": {
+            "version": 1,
+            "baseline": {
+              "P": 0.5,
+              "E": 0.5,
+              "R": 0.4971334967769682,
+              "M": 0.5,
+              "A": 0.5
+            },
+            "scores": {
+              "P": 0.5154,
+              "E": 0.5,
+              "R": 0.4971334967769682,
+              "M": 0.5,
+              "A": 0.5
+            },
+            "initialized_at": 30060,
+            "updated_at": 30060,
+            "origin": "current_state_initialization",
+            "evidence": [
+              {
+                "eventId": "le_4KAwNqq_Ul_V",
+                "at": 30060,
+                "channel": "reflection",
+                "erasableGroup": "conversation_inner",
+                "delta": {
+                  "P": 0.0014,
+                  "E": 0,
+                  "R": 0,
+                  "M": 0,
+                  "A": 0
+                },
+                "reason": "Die eigene begrenzte emotionale Deutung eines wirklichen Ereignisses beeinflusst positive Gefühle."
+              }
+            ],
+            "summary": 0.5025066993553937,
+            "historyDays": {}
+          },
+          "needs": {
+            "hunger": 0.3497831200193624,
+            "thirst": 0.2853880208618939,
+            "bladder": 0.3856679328000174,
+            "fatigue": 0.45117229648195245,
+            "hygiene": 0.4041016491323718,
+            "social": 0.0055,
+            "fun": 0.37576027659699185,
+            "comfort": 0.19487524006608833,
+            "romantic_affection": 0.1978299219533801
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "affection",
+                "label": "Affection",
+                "label_de": "Zuneigung",
+                "components": [
+                  {
+                    "key": "event:w_91U9o3pjdbRG_e_21_4:affection",
+                    "source": "event",
+                    "intensity": 0.3,
+                    "activated_at": 29460,
+                    "expires_at": 30360,
+                    "cause": {
+                      "kind": "social_complete",
+                      "category": "tell_story",
+                      "outcome": "accepted",
+                      "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                      "evidence_id": "lw_5-AcxyFtHTxy",
+                      "at": 29460
+                    }
+                  },
+                  {
+                    "key": "event:le_4KAwNqq_Ul_V:affection",
+                    "source": "event",
+                    "intensity": 0.35,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                      "evidence_id": "le_4KAwNqq_Ul_V",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.35,
+                "causes": [
+                  {
+                    "kind": "social_complete",
+                    "category": "tell_story",
+                    "outcome": "accepted",
+                    "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                    "evidence_id": "lw_5-AcxyFtHTxy",
+                    "at": 29460
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                    "evidence_id": "le_4KAwNqq_Ul_V",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.2823241555277071,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2823241555277071,
+                "causes": [
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "concentration",
+                "label": "Concentration",
+                "label_de": "Konzentration",
+                "components": [
+                  {
+                    "key": "event:le_4KAwNqq_Ul_V:concentration",
+                    "source": "event",
+                    "intensity": 0.28,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                      "evidence_id": "le_4KAwNqq_Ul_V",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.2732,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "arbeitet an einer Aufgabe",
+                      "category": "work",
+                      "evidence_id": null,
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.28,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                    "evidence_id": "le_4KAwNqq_Ul_V",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "arbeitet an einer Aufgabe",
+                    "category": "work",
+                    "evidence_id": null,
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "fatigue_exhaustion",
+                "label": "Fatigue/Exhaustion",
+                "label_de": "Müdigkeit/Erschöpfung",
+                "components": [
+                  {
+                    "key": "event:le_4KAwNqq_Ul_V:fatigue_exhaustion",
+                    "source": "event",
+                    "intensity": 0.22,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                      "evidence_id": "le_4KAwNqq_Ul_V",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "current:fatigue",
+                    "source": "need",
+                    "intensity": 0.22652398542653818,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "modeled_need",
+                      "need": "fatigue",
+                      "text": "Der gegenwärtige Zustand ist ermüdend.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.22652398542653818,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Die Sehnsucht nach Theo und Noah bestärkt den Wunsch, die Zimmermannsarbeit verlässlich und ordentlich zu beenden, um danach ganz für die Familie da zu sein.",
+                    "evidence_id": "le_4KAwNqq_Ul_V",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "modeled_need",
+                    "need": "fatigue",
+                    "text": "Der gegenwärtige Zustand ist ermüdend.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              }
+            ],
+            "primary": "affection",
+            "updated_at": 30060,
+            "actual_narrative": "Zuneigung 35% · Zufriedenheit 28% · Konzentration 28% · Müdigkeit/Erschöpfung 23%",
+            "self_narrative": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht."
+          },
+          "focus_goal_id": "ambition_career",
+          "current_desire": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht.",
+          "thought_source": "conversation",
+          "thought_at": 30060
+        },
+        "effects": {
+          "emotions": [
+            {
+              "id": "affection",
+              "intensity": 0.35
+            },
+            {
+              "id": "concentration",
+              "intensity": 0.28
+            },
+            {
+              "id": "fatigue_exhaustion",
+              "intensity": 0.22
+            }
+          ],
+          "needsDelta": {
+            "social": 0,
+            "romantic_affection": 0.01999999999999999,
+            "fun": 0,
+            "comfort": -0.01999999999999999,
+            "fatigue": 0.010000000000000009
+          },
+          "focusGoalId": "ambition_career",
+          "wellbeingDelta": {
+            "P": 0.0014,
+            "E": 0,
+            "R": 0,
+            "M": 0,
+            "A": 0
+          }
+        },
+        "channel": "inner",
+        "message": "Was brauchst du gerade, wie fühlst du dich damit, und welches deiner vorhandenen Vorhaben möchtest du als Nächstes angehen? Ich höre dir in Ruhe zu.",
+        "reply": "Gerade spüre ich, wie die Müdigkeit nach den konzentrierten Handgriffen langsam spürbar wird, aber da ist vor allem eine tiefe Wärme für Theo und Noah. Mein Kopf braucht jetzt diesen sauberen Abschluss an der Werkbank, damit ich innerlich ganz bei ihnen sein kann, sobald ich die Haustür öffne. Als Nächstes möchte ich mein Vorhaben 'Grow as a Carpenter' weiterverfolgen und dieses Stück Holz sorgfältig fertigstellen. Das gibt mir die Ruhe, die ich für den Feierabend brauche.",
+        "previousThought": "Vielleicht kann ich Theo heute Abend mit einer kleinen Schnitzerei überraschen. Eine aufmerksame Geste würde uns allen guttun.",
+        "previousMood": "Zuneigung",
+        "newThought": "Noch ein paar saubere Schnitte, dann kann ich den Hobel niederlegen und mit freiem Kopf nach Hause gehen.",
+        "newMood": "Zuneigung"
+      },
+      "description": "Gespräch mit Aiko Okafor: Gerade spüre ich, wie die Müdigkeit nach den konzentrierten Handgriffen langsam spürbar wird, aber da ist vor allem eine tiefe Wärme für Theo und Noah. Mein Kopf braucht jetzt diesen sauberen Abschluss an der Werkbank, damit ich innerlich ganz bei ihnen sein kann, sobald ich die Haustür öffne. Als Nächstes möchte ich mein Vorhaben 'Grow as a Carpenter' weiterverfolgen und dieses Stück Holz sorgfältig fertigstellen. Das gibt mir die Ruhe, die ich für den Feierabend brauche.",
+      "source": "user_conversation"
+    },
+    {
+      "cursor": 14182,
+      "sim_id": "lw_AMTA8WMhPOOY",
+      "event_id": "lw_Ji7BGXfCKwH4",
+      "observed_at": 30060,
+      "channel": "initialization",
+      "perception": "Die Erweiterungsregeln werden für den aktuellen Zeitpunkt ergänzt. Geschützte Wohnhilfe und bestätigte Betreuungspausen stehen zur Verfügung; Konten, bereits verdiente Löhne, Protokolle und Weltzeit bleiben erhalten.",
+      "interpretation": "Eine aktuelle Ergänzung; keine nachträglich erfundene Erfahrung.",
+      "confidence": 1,
+      "type": "expansion_rules_updated",
+      "start": 30060,
+      "end": 30060,
+      "location_id": null,
+      "facts": {
+        "version": 3,
+        "coverage": "current_rules_update"
+      },
+      "description": "Die Erweiterungsregeln werden für den aktuellen Zeitpunkt ergänzt. Geschützte Wohnhilfe und bestätigte Betreuungspausen stehen zur Verfügung; Konten, bereits verdiente Löhne, Protokolle und Weltzeit bleiben erhalten.",
+      "source": "expanded_migration"
+    }
+  ]
+}

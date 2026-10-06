@@ -7,6 +7,7 @@ import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import fstatic from '@fastify/static';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import apiRoutes from './routes/api.js';
 import adminRoutes from './routes/admin.js';
@@ -16,9 +17,12 @@ import providerSettingsRoutes from './routes/provider_settings.js';
 import { isolatedRequest } from './byok.js';
 import storageRoutes from './routes/storage.js';
 import livingRoutes from './routes/living.js';
+import expandedRoutes from './routes/expanded.js';
 import {upgradeAllNeighborhoods} from './living/upgrade.js';
 import {upgradeAllLife} from './living/upgrade-life.js';
 import {upgradeAllRomance} from './living/upgrade-romance.js';
+import {loadTown} from './living/engine.js';
+import {upgradeExpanded} from './living/expanded/index.js';
 import {upgradeAllWellbeing} from './living/upgrade-wellbeing.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -35,6 +39,9 @@ await app.register(multipart, { limits: { fileSize: 300 * 1024 * 1024 } });
 // runs whatever it loaded — a plain reload now always brings it current.)
 await app.register(fstatic, { root: path.join(ROOT, 'web'), prefix: '/', cacheControl: false, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') });
 await app.register(fstatic, {root:path.join(ROOT,'docs'),prefix:'/docs/',decorateReply:false,cacheControl:false,setHeaders:res=>res.setHeader('Cache-Control','no-cache')});
+// Only committed review artifacts are exposed; runtime data and keys stay private.
+await app.register(fstatic,{root:path.join(ROOT,'artifacts','expanded-world'),prefix:'/artifacts/expanded-world/',decorateReply:false,cacheControl:false});
+app.get('/artifacts/living-world/benchmark-expanded.json',async(_req,reply)=>reply.type('application/json').send(fs.readFileSync(path.join(ROOT,'artifacts','living-world','benchmark-expanded.json'))));
 // Voice-profile reference clips (assets/voice_profiles/<Voice>/<lang>.mp3) — served for the
 // in-game profile picker's ▶ preview. Public but non-sensitive (curated dataset excerpts);
 // content changes rarely, so an hour of caching is fine.
@@ -65,6 +72,7 @@ app.setErrorHandler((err, req, reply) => {
 await app.register(providerSettingsRoutes);
 await app.register(storageRoutes);
 await app.register(livingRoutes);
+await app.register(expandedRoutes);
 await app.register(apiRoutes);
 await app.register(adminRoutes);
 if (process.env.TEST_MODE === '1' && process.env.NODE_ENV !== 'production') await app.register(testRoutes);
@@ -85,6 +93,7 @@ if(lifeUpgrade.worlds)app.log.info(lifeUpgrade,'Living World feelings, goals and
 const romanceUpgrade=await upgradeAllRomance();
 if(romanceUpgrade.worlds)app.log.info(romanceUpgrade,'Living World social warmth and age-bounded romantic affection initialized.');
 const wellbeingUpgrade=await upgradeAllWellbeing();
+const expandedUpgrade=await upgradeExpanded(loadTown);if(expandedUpgrade.worlds)app.log.info(expandedUpgrade,'Expanded town resources initialized; previous clock and witnessed history retained.');
 if(wellbeingUpgrade.worlds)app.log.info(wellbeingUpgrade,'Living World individual PERMA wellbeing initialized from current state.');
 await app.listen({ port, host: process.env.VIV_HOST || '0.0.0.0' });
 console.log(`Vivarium listening on :${port}  (TEST_MODE=${process.env.TEST_MODE || '0'}, MOCK_PROVIDERS=${process.env.MOCK_PROVIDERS || '0'})`);

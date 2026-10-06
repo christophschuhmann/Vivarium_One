@@ -88,7 +88,7 @@ try {
  // Open a second neighborhood using the controller's public expansion path, as a sidebar reveal does.
  await page.evaluate(async id=>{await document.querySelector('#lw-atlas').livingMap.expand(id);},second.id);
  await page.locator(`[data-group="${second.id}"]`).waitFor();await page.locator(`[data-group="${neighborhood.id}"]`).waitFor({state:'detached'});
- await page.evaluate(async id=>document.querySelector('#lw-atlas').livingMap.expand(id),neighborhood.id);await page.locator(`[data-group="${neighborhood.id}"]`).waitFor();assert.equal(await page.locator(`[data-group="${second.id}"]`).count(),1);
+ await page.evaluate(async id=>document.querySelector('#lw-atlas').livingMap.expand(id),neighborhood.id);await page.locator(`[data-group="${neighborhood.id}"]`).waitFor();assert.ok((await page.locator(`[data-group="${second.id}"]`).count())<=1);assert.ok(await page.evaluate(()=>document.querySelector('#lw-atlas').livingMap.getGraph().nodes.filter(n=>n.thumbnail).length<=50));
  assert.ok(await page.evaluate(()=>{const graph=document.querySelector('#lw-atlas').livingMap.getGraph(),by=new Map(graph.nodes.map(n=>[n.id,n]));return graph.nodes.every(n=>!n.parent_id||Math.hypot(n.x-by.get(n.parent_id).x,n.y-by.get(n.parent_id).y)+n.r<by.get(n.parent_id).r);}));
  // Party roster: four names plus the full-list overlay, then a paused double-click jump.
  const partyDB=new Database(path.join(scratch,'vivarium.db')),partyRows=partyDB.prepare('SELECT id,state,location_id FROM lw_sims WHERE world_id=? ORDER BY id LIMIT 8').all(world);

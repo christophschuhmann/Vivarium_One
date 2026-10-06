@@ -1,3 +1,4 @@
+import {initializeNewPopulation} from '../living/expanded/population.js';
 import {projectWellbeing} from '../living/wellbeing.js';
 import {normalizeRomance,romanticCap} from '../living/romance.js';
 import fs from 'node:fs';
@@ -138,6 +139,7 @@ export default async function livingRoutes(app) {
           for(const [other,relation] of Object.entries(p.relations))db.prepare('INSERT INTO lw_relations VALUES (?,?,?,?)').run(world.id,p.id,other,j(relation));
           const id=uid('le_');db.prepare('INSERT INTO lw_events VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(id,world.id,null,existing.world.seconds,existing.world.seconds,p.state.location_id,'initialization_expansion',j([p.id]),j({coverage:'initialized_background'}),p.biography,'procedural_initialization');db.prepare('INSERT INTO lw_journal VALUES (?,?,?,?,?,?,?)').run(p.id,id,existing.world.seconds,'initialization',p.biography,'Mein bisheriger Lebensweg ist als Ausgangshintergrund angelegt.',1);
         }
+        initializeNewPopulation(loadTown(world.id));
         const rules={...pj(existing.world.rules,{}),neighborhoods:{...pj(existing.world.rules,{}).neighborhoods,...generated.identities}},combined=loadTown(world.id);
         weaveSocial(combined.people,combined.places,rules.neighborhoods,{seed:existing.world.seed,existing:true});
         for(const p of combined.people){db.prepare('UPDATE lw_sims SET profile=? WHERE id=?').run(j(p.profile),p.id);for(const [other,r] of Object.entries(p.relations))db.prepare('INSERT INTO lw_relations VALUES (?,?,?,?) ON CONFLICT(world_id,from_id,to_id) DO UPDATE SET payload=excluded.payload').run(world.id,p.id,other,j(r));}

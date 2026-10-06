@@ -73,7 +73,7 @@ export async function converse(user,worldId,simId,{message,lang='de',channel='in
     db.transaction(()=>{
       if(db.prepare('SELECT version FROM lw_worlds WHERE world_id=?').get(worldId).version!==clock.version)throw err(409,'The world changed. Please retry.');
       const id=uid('le_'),previousMind={wellbeing:structuredClone(state.wellbeing),needs:structuredClone(state.needs),affect:structuredClone(state.affect),focus_goal_id:state.focus_goal_id||null,current_desire:state.current_desire||null,thought_source:state.thought_source||null,thought_at:state.thought_at||null};
-      state.thought=thought;state.thought_source='conversation';state.thought_at=clock.seconds;const person={...town.byId.get(simId),state},effects=reflect(person,conversationReflection(output),{id},clock.seconds);evaluateMind(person,clock.seconds,catalog);
+      state.thought=thought;state.thought_source='conversation';state.thought_at=clock.seconds;const person={...town.byId.get(simId),state},effects=reflect(person,conversationReflection(output),{id,conversationChannel:channel},clock.seconds);evaluateMind(person,clock.seconds,catalog);
       const afterMind={wellbeing:structuredClone(state.wellbeing),needs:structuredClone(state.needs),affect:structuredClone(state.affect),focus_goal_id:state.focus_goal_id||null,current_desire:state.current_desire||null,thought_source:state.thought_source||null,thought_at:state.thought_at||null},facts={previousMind,afterMind,effects,channel,message:message.slice(0,2000),reply,previousThought:town.byId.get(simId).state.thought||null,previousMood:town.byId.get(simId).state.mood||null,newThought:thought,newMood:state.mood};
       db.prepare('INSERT INTO lw_events VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(id,worldId,null,clock.seconds,clock.seconds,p.location_id,'conversation',j([simId]),j(facts),'Gespräch mit '+p.name+': '+reply,'user_conversation');
       db.prepare('INSERT INTO lw_journal VALUES (?,?,?,?,?,?,?)').run(simId,id,clock.seconds,channel==='inner'?'inner_dialogue':'conversation',message.slice(0,2000)+'\n'+reply,thought||reply,.6);
@@ -96,6 +96,6 @@ export function clearChat(worldId,simId,channel='inner'){
     else {const erased=new Set(rows.map(r=>r.id));for(const e of state.affect?.states||[])e.components=(e.components||[]).filter(c=>!erased.has(c.cause?.evidence_id));if(last.afterMind&&state.focus_goal_id===last.afterMind.focus_goal_id)state.focus_goal_id=first.previousMind?.focus_goal_id||null;const clock=db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(worldId).seconds;rebuildAffect({state},clock);}
     // Also covers mixed legacy/new conversations whose first snapshot has no
     // PERMA field. Preserve later activity evidence; erase only these sources.
-    removeWellbeingSources({state},new Set(rows.map(r=>r.id)),db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(worldId).seconds);
+    removeWellbeingSources({state},new Set(rows.map(r=>r.id)),db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(worldId).seconds,{conversationChannel:channel});
     db.prepare('UPDATE lw_sims SET state=? WHERE id=?').run(j(state),simId);db.prepare('UPDATE lw_worlds SET version=version+1 WHERE world_id=?').run(worldId);}})();return {ok:true};
 }

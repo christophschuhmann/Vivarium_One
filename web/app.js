@@ -448,10 +448,11 @@ const ICONS = {
   bonds: '<svg viewBox="0 0 24 24"><circle cx="5.5" cy="6" r="2.5"/><circle cx="18.5" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7.5 7.5 10.5 16M16.5 7.5 13.5 16M8 6h8"/></svg>',
   world: '<svg viewBox="0 0 24 24"><path d="m9 20-5.5-2.5v-13L9 7l6-2.5L20.5 7v13L15 17.5 9 20zM9 7v13M15 4.5v13"/></svg>',
   play: '<svg viewBox="0 0 24 24"><path d="M7 5.5v13l11-6.5z"/></svg>',
+  city: '<svg viewBox="0 0 24 24"><path d="M3 21V9l6-5 6 5v12M15 21V3h6v18M6 12h3M6 16h3M17 8h2M17 12h2"/></svg>',
   share: '<svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6"/></svg>',
 };
 // Localised dock labels — falls back to English via t() for any missing key.
-const dockLabel = (k) => t(k, { home: 'Home', cast: 'Cast', bonds: 'Bonds', world: 'World', play: 'Play', share: 'Share' }[k]);
+const dockLabel = (k) => t(k, { home: 'Home', cast: 'Cast', bonds: 'Bonds', world: 'World', play: 'Play', share: 'Share', city:'Stadtleben' }[k]);
 
 function chrome(active, { worldTitle = null, sub = null, showDock = true } = {}) {
   const wq = S.world ? `?w=${S.world}` : '';
@@ -465,7 +466,7 @@ function chrome(active, { worldTitle = null, sub = null, showDock = true } = {})
       <button class="glasschip" id="avatar-chip" title="Account & usage">${esc((S.user?.displayName || '?')[0].toUpperCase())}</button>
     </div>
   </div>
-  ${showDock ? `<nav id="dock">${['home', 'cast', 'bonds', 'world', 'play', 'share'].map(k => `
+  ${showDock ? `<nav id="dock">${['home', 'cast', 'bonds', 'world', 'play', 'share'].flatMap(k=>k==='world'&&S.worldData?.world.simulation_mode==='living'?['world','city']:[k]).map(k => `
     <button class="dock-btn ${active === k ? 'active' : ''}" data-nav="${k}" ${k !== 'home' && !S.world ? 'disabled' : ''}>${ICONS[k]}<span>${dockLabel(k)}</span></button>`).join('')}
   </nav>` : ''}`;
 }
@@ -477,7 +478,7 @@ function bindChrome() {
     if (!S.world) return;
     if (k === 'share') return shareModal();
     if (k === 'play') return nav(S.worldData?.world.status === 'live' ? `#/stage?w=${S.world}` : `#/genesis?w=${S.world}`);
-    nav(`#/${{ cast: 'cast', bonds: 'bonds', world: 'atlas' }[k]}?w=${S.world}`);
+    nav(`#/${{ cast: 'cast', bonds: 'bonds', world: 'atlas', city:'city' }[k]}?w=${S.world}`);
   });
   const av = $('#avatar-chip'); if (av) av.onclick = accountModal;
   const gmc = $('#gm-chip'); if (gmc) gmc.onclick = gmChatOverlay;
@@ -506,7 +507,7 @@ async function route() {
   if (params.get('w')) S.world = params.get('w');
   if (!S.user) await refreshMe();
   if (!S.user && path !== 'auth') return nav('#/auth');
-  const screens = { auth: authScreen, home: homeScreen, forge: forgeScreen, cast: castScreen, bonds: bondsScreen, atlas: atlasScreen, genesis: genesisScreen, stage: stageScreen, populate: populateScreen, wizard: wizardScreen };
+  const screens = { auth: authScreen, home: homeScreen, forge: forgeScreen, cast: castScreen, bonds: bondsScreen, atlas: atlasScreen, city:()=>livingEconomyScreen(), genesis: genesisScreen, stage: stageScreen, populate: populateScreen, wizard: wizardScreen };
   (screens[path] || homeScreen)();
 }
 async function loadWorld(force = false) {
@@ -2265,7 +2266,7 @@ async function stageScreen() {
       <div class="story-meta"><span>${esc(scene.meta)}</span><span>${t('listen_hint', '💡 click any line to hear it spoken')}</span></div>
     </div>
   </div>
-  <nav id="dock">${['home', 'cast', 'bonds', 'world', 'play', 'share'].map(k => `
+  <nav id="dock">${['home', 'cast', 'bonds', 'world', 'play', 'share'].flatMap(k=>k==='world'&&S.worldData?.world.simulation_mode==='living'?['world','city']:[k]).map(k => `
     <button class="dock-btn ${k === 'play' ? 'active' : ''}" data-nav="${k}">${ICONS[k]}<span>${dockLabel(k)}</span></button>`).join('')}</nav>`;
   bindChrome();
   if(living)await livingStageExtras(loc,present);

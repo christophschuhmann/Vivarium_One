@@ -25,7 +25,13 @@
     "test:living-browser": "node scripts/test-living-browser.mjs",
     "test:living-biographies": "node scripts/test-living-biographies.mjs",
     "test:living-romance": "node scripts/test-living-romance.mjs",
-    "test:living-wellbeing": "node scripts/test-living-wellbeing.mjs"
+    "test:living-wellbeing": "node scripts/test-living-wellbeing.mjs",
+    "test:expanded": "node scripts/test-expanded-world.mjs",
+    "test:expanded-semantics": "node scripts/test-expanded-semantics.mjs",
+    "test:expanded-lifecycle": "node scripts/test-expanded-lifecycle.mjs",
+    "review:expanded": "node scripts/review-expanded-world.mjs",
+    "benchmark:expanded": "node scripts/benchmark-living.mjs",
+    "test:expanded-regressions": "node scripts/test-expanded-regressions.mjs"
   },
   "license": "MIT",
   "dependencies": {

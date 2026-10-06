@@ -1,0 +1,10 @@
+{
+  "sixTownTabs": true,
+  "classicPlayMindProfileNavigation": true,
+  "skillsAndAttributes": true,
+  "savedPersonalJobExpectations": true,
+  "declinedProfileLoanDoesNotMutateMoney": true,
+  "mobileOverflow": false,
+  "providerCalls": 0,
+  "errors": []
+}

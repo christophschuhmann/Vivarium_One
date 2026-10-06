@@ -1,3 +1,5 @@
+import {economicContext} from './expanded/economy.js';
+import {socialMindContext} from './expanded/tom.js';
 import {projectWellbeing,activityWellbeing,socialWellbeing,reflectionWellbeing,wellbeingContext} from './wellbeing.js';
 import fs from 'node:fs';
 import {rng} from './random.js';
@@ -79,10 +81,10 @@ export function emotionalRate(p,need){
   return ['comfort','social','fatigue'].includes(need)?1+stress*.15:1;
 }
 function matchesAmbition(p,a,kind){
-  if(a.kind==='career')return kind==='work';if(a.kind==='learning')return ['school_day','kindergarten_day','read'].includes(kind);
+  if(a.kind==='career')return kind==='work'||kind==='leisure_expanded_holiday_work'||kind==='leisure_expanded_training';if(a.kind==='learning')return ['school_day','kindergarten_day','read','leisure_expanded_training','leisure_market_course','leisure_market_library'].includes(kind);
   if(a.kind==='hobby')return (hobbyActions[a.activity]||Object.values(hobbyActions).flat()).includes(kind);
   if(a.kind==='create')return /creative|craft|paint|write|instrument|cook|bake/.test(kind);
-  if(a.kind==='mastery')return ['work','school_day','read','creative_hobby'].includes(kind);
+  if(a.kind==='mastery')return ['work','school_day','read','creative_hobby','leisure_expanded_training','leisure_expanded_obligation','leisure_market_course'].includes(kind);
   if(a.kind==='stability')return ['eat','drink','shower','sleep','relax'].includes(kind);
   return ['community_meet','leisure_volunteer','leisure_make_friends','leisure_board_games'].includes(kind);
 }
@@ -100,10 +102,10 @@ function advanceAmbition(p,a,amount,time,event){
   else if(amount>0)addFeeling(p,'hope_enthusiasm_optimism',.28,time,{kind:'goal_progress',text:'Ein tatsächlicher Schritt zu: '+(a.title_de||a.title),evidence_id:event.id});
 }
 export function completedActivity(p,event,duration,relief,time){
-  const kind=event.facts.action,seconds=Math.max(0,Math.min(8*3600,duration)),beforeProgress=p.state.psychology.ambitions.reduce((n,a)=>n+(a.progress||0),0);
+  const kind=event.facts.professionalWork?'work':event.facts.action,seconds=Math.max(0,Math.min(8*3600,duration)),beforeProgress=p.state.psychology.ambitions.reduce((n,a)=>n+(a.progress||0),0);
   for(const a of p.state.psychology.ambitions)if(matchesAmbition(p,a,kind))advanceAmbition(p,a,seconds,time,event);
   for(const g of dailyGoals(p,time)){
-    const gain=g.kind==='selfcare'&&['eat','drink','shower','toilet','sleep'].includes(kind)?1:g.kind==='career'&&kind==='work'?seconds:g.kind==='learning'&&['school_day','kindergarten_day','read'].includes(kind)?seconds:g.kind==='hobby'&&(hobbyActions[g.interest]||[]).includes(kind)?seconds:g.kind==='explore'&&['relax','eat'].includes(kind)?seconds:0;
+    const gain=g.kind==='selfcare'&&['eat','drink','shower','toilet','sleep'].includes(kind)?1:g.kind==='career'&&kind==='work'?seconds:g.kind==='learning'&&['school_day','kindergarten_day','read','leisure_expanded_training','leisure_market_course','leisure_market_library'].includes(kind)?seconds:g.kind==='hobby'&&(hobbyActions[g.interest]||[]).includes(kind)?seconds:g.kind==='explore'&&['relax','eat'].includes(kind)?seconds:0;
     const was=g.value;g.value=Math.min(g.target,g.value+gain);if(gain){g.last_evidence_id=event.id;if(was<g.target&&g.value>=g.target)addFeeling(p,'pride',.38,time,{kind:'daily_goal_completed',text:g.title,evidence_id:event.id});}
   }
   if(Math.max(0,...Object.values(relief))>.03)addFeeling(p,'relief',Math.min(.6,.25+Math.max(...Object.values(relief))*.3),time,{kind:'need_relief',text:'Ein tatsächliches Bedürfnis ist nach '+kind+' geringer.',relief,evidence_id:event.id});
@@ -143,7 +145,7 @@ export function reflect(p,proposal,event,time){
   const perma=reflectionWellbeing(p,effects,event,time);if(perma)effects.wellbeingDelta=perma;projectWellbeing(p,time);
   return effects;
 }
-export function mindContext(p){return {wellbeing:wellbeingContext(p),romancePolicy:romanticContext(p),emotions:p.state.affect,currentDesire:p.state.current_desire,goals:p.state.psychology.ambitions,dailyGoals:p.state.daily_goals,focusGoalId:p.state.focus_goal_id,needs:p.state.needs,thought:p.state.thought};}
+export function mindContext(p){return {resources:economicContext(p),socialExpectations:socialMindContext(p),aptitudes:p.state.aptitudes,skills:p.state.skills,wellbeing:wellbeingContext(p),romancePolicy:romanticContext(p),emotions:p.state.affect,currentDesire:p.state.current_desire,goals:p.state.psychology.ambitions,dailyGoals:p.state.daily_goals,focusGoalId:p.state.focus_goal_id,needs:p.state.needs,thought:p.state.thought};}
 export const REFLECTION_INSTRUCTIONS='Optional reflection/reflections may express a subjective response, never a new physical event. An entry has emotions:[{id,intensity}], needsDelta:{social,romantic_affection,fun,comfort,fatigue}, focusGoalId and reason. Use emotion IDs contentment, affection, hope_enthusiasm_optimism, pride, interest, concentration, contemplation, relief, longing, doubt, fear, distress, embarrassment, disappointment, sadness, anger or fatigue_exhaustion; intensity 0.05–0.75. All needs are urgency levels: 0 means satisfied and 1 means urgent. A positive needsDelta increases an unmet need; a negative delta provides relief. Social is social warmth; romantic_affection is a separate unmet wish for romantic affection. Romantic affection must stay 0 under 14 and <=0.35 for ages 14–17. A friendly conversation reduces warmth urgency and does not automatically satisfy romantic affection. A supportive conversation usually reduces social/comfort urgency; increasing it requires a grounded reason such as conflict or a renewed longing. Emotional needsDelta is bounded to ±0.08 (fatigue ±0.03). Never change hunger, thirst, bladder or hygiene through words. focusGoalId must be an existing supplied ambition; it directs future action and never grants completed achievement. Own PERMA wellbeing scores are read-only derived context; never return score changes or invent achievements to improve them. Keep needs, conflicting feelings, current desires and existing progress coherent; relief in one dimension need not erase another.';
 export function conversationReflection(output){
   if(output.reflection&&typeof output.reflection==='object')return output.reflection;

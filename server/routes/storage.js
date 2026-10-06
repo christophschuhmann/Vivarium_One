@@ -82,7 +82,7 @@ export default async function storageRoutes(app) {
     const library=directoryBytes(musicDirectory());
     return {assets:{count:owned.length,bytes:assetsBytes,unusedCount:unused.length,unusedBytes:unused.reduce((n,a)=>n+sizes.get(a.id),0)},worlds,
       projects:{count:worlds.length,bytes:worlds.reduce((n,w)=>n+w.projectBytes,0)},
-      music:{...music,...library,canManage:sharedAllowed(req,user),managed:!!process.env.MUSIC_CONTROL_TOKEN},
+      music:{...music,...library,canManage:sharedAllowed(req,user),readOnly:process.env.MUSIC_READ_ONLY==='1',managed:!!process.env.MUSIC_CONTROL_TOKEN&&process.env.MUSIC_READ_ONLY!=='1'},
       assetLibrary:directoryBytes(process.env.VIV_LIVING_LIBRARY || path.join(ROOT,'assets/living-world-library')),
       database:{bytes:fs.statSync(path.join(DATA_DIR,'vivarium.db')).size},
       volume:{totalBytes:volume.blocks*volume.bsize,freeBytes:volume.bavail*volume.bsize},
@@ -145,6 +145,7 @@ export default async function storageRoutes(app) {
   app.post('/api/storage/music/export',exportMusic);app.get('/api/storage/music/export',exportMusic);
   app.post('/api/storage/music/manage',async req=> {
     const user=requireVerified(req);if(!sharedAllowed(req,user))throw httpErr(403,'FORBIDDEN','Only the local installation owner or operator can manage the shared music library.');
+    if(process.env.MUSIC_READ_ONLY==='1')throw httpErr(409,'READ_ONLY_MUSIC','This installation reuses a read-only music collection. Export is available; maintenance belongs to its owning installation.');
     const action=req.body?.action;
     if(!['rebuild-cache','remove-library'].includes(action))throw httpErr(400,'BAD_ACTION','Unknown music action.');
     if(action==='remove-library'&&req.body?.confirm!=='DELETE MUSIC LIBRARY')throw httpErr(400,'CONFIRM_REQUIRED','Confirm deletion of the shared music library.');
