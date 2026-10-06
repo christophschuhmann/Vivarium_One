@@ -19,6 +19,7 @@ import livingRoutes from './routes/living.js';
 import {upgradeAllNeighborhoods} from './living/upgrade.js';
 import {upgradeAllLife} from './living/upgrade-life.js';
 import {upgradeAllRomance} from './living/upgrade-romance.js';
+import {upgradeAllWellbeing} from './living/upgrade-wellbeing.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 12 * 1024 * 1024 });
@@ -83,5 +84,7 @@ const lifeUpgrade=await upgradeAllLife();
 if(lifeUpgrade.worlds)app.log.info(lifeUpgrade,'Living World feelings, goals and public rooms upgraded.');
 const romanceUpgrade=await upgradeAllRomance();
 if(romanceUpgrade.worlds)app.log.info(romanceUpgrade,'Living World social warmth and age-bounded romantic affection initialized.');
+const wellbeingUpgrade=await upgradeAllWellbeing();
+if(wellbeingUpgrade.worlds)app.log.info(wellbeingUpgrade,'Living World individual PERMA wellbeing initialized from current state.');
 await app.listen({ port, host: process.env.VIV_HOST || '0.0.0.0' });
 console.log(`Vivarium listening on :${port}  (TEST_MODE=${process.env.TEST_MODE || '0'}, MOCK_PROVIDERS=${process.env.MOCK_PROVIDERS || '0'})`);

@@ -1,0 +1,16 @@
+{
+  "population": 500,
+  "simId": "w_XN233nJZwZSD_x100_s_271",
+  "scores": {
+    "P": 0.512104,
+    "E": 0.5,
+    "R": 0.49177982109347357,
+    "M": 0.5,
+    "A": 0.5
+  },
+  "profileAndMindPillars": 5,
+  "mobileOverflow": false,
+  "clockAndVersionUnchanged": true,
+  "providerCalls": 0,
+  "errors": []
+}

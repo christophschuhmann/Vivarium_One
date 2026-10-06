@@ -1,3 +1,4 @@
+import {projectWellbeing,removeWellbeingSources} from './wellbeing.js';
 import {normalizeRomance,ROMANCE_INSTRUCTIONS,assertMinorSafeText} from './romance.js';
 import {rebuildAffect,evaluateMind,reflect,mindContext,conversationReflection,REFLECTION_INSTRUCTIONS} from './cognition.js';
 import {personalSocialContext} from './social.js';
@@ -14,7 +15,7 @@ import {preflight,debitCall,EST} from '../credits.js';
 const err=(statusCode,message)=>Object.assign(new Error(message),{statusCode});
 const media=(id,variant)=>id?'/api/living/library/'+encodeURIComponent(id)+'?variant='+variant:null;
 export function character(p,catalog){
-  const profile=pj(p.profile,{}),state=pj(p.state,{});normalizeRomance({...p,profile,state});
+  const profile=pj(p.profile,{}),state=pj(p.state,{});normalizeRomance({...p,profile,state});projectWellbeing({...p,profile,state},state.wellbeing?.updated_at||0);
   return {...p,base:{...profile,age:p.age,pronouns:p.gender==='female'?'sie / ihr':'er / ihm',backstory:p.biography,goals:(state.psychology?.ambitions||[]).map(a=>a.title_de||a.title||a.description||a.kind),personality:state.psychology?.big_five},voice:p.gender==='female'?'Leda':'Puck',state:{...state,activity:activity(state.action?.kind,catalog)||'unterwegs',intentions:[state.current_desire,state.goal?.reason,...(state.psychology?.ambitions||[]).map(a=>a.title_de||a.title||a.description||a.kind)].filter(Boolean),emotions:(state.affect?.states||[]).map(e=>({name:e.label_de||e.label||e.id,intensity:e.intensity})),perceptions:state.perceptions||{},outfit:'everyday',outfits:p.asset_id?[{name:'everyday',cutout_asset_id:media(p.asset_id,'sprite')}]:[]},intro_tick_idx:0};
 }
 export async function stageView(world,query={}){
@@ -71,9 +72,9 @@ export async function converse(user,worldId,simId,{message,lang='de',channel='in
     const reply=output.reply.slice(0,4000),thought=typeof output.thought==='string'?output.thought.slice(0,1500):state.thought;
     db.transaction(()=>{
       if(db.prepare('SELECT version FROM lw_worlds WHERE world_id=?').get(worldId).version!==clock.version)throw err(409,'The world changed. Please retry.');
-      const id=uid('le_'),previousMind={needs:structuredClone(state.needs),affect:structuredClone(state.affect),focus_goal_id:state.focus_goal_id||null,current_desire:state.current_desire||null,thought_source:state.thought_source||null,thought_at:state.thought_at||null};
+      const id=uid('le_'),previousMind={wellbeing:structuredClone(state.wellbeing),needs:structuredClone(state.needs),affect:structuredClone(state.affect),focus_goal_id:state.focus_goal_id||null,current_desire:state.current_desire||null,thought_source:state.thought_source||null,thought_at:state.thought_at||null};
       state.thought=thought;state.thought_source='conversation';state.thought_at=clock.seconds;const person={...town.byId.get(simId),state},effects=reflect(person,conversationReflection(output),{id},clock.seconds);evaluateMind(person,clock.seconds,catalog);
-      const afterMind={needs:structuredClone(state.needs),affect:structuredClone(state.affect),focus_goal_id:state.focus_goal_id||null,current_desire:state.current_desire||null,thought_source:state.thought_source||null,thought_at:state.thought_at||null},facts={previousMind,afterMind,effects,channel,message:message.slice(0,2000),reply,previousThought:town.byId.get(simId).state.thought||null,previousMood:town.byId.get(simId).state.mood||null,newThought:thought,newMood:state.mood};
+      const afterMind={wellbeing:structuredClone(state.wellbeing),needs:structuredClone(state.needs),affect:structuredClone(state.affect),focus_goal_id:state.focus_goal_id||null,current_desire:state.current_desire||null,thought_source:state.thought_source||null,thought_at:state.thought_at||null},facts={previousMind,afterMind,effects,channel,message:message.slice(0,2000),reply,previousThought:town.byId.get(simId).state.thought||null,previousMood:town.byId.get(simId).state.mood||null,newThought:thought,newMood:state.mood};
       db.prepare('INSERT INTO lw_events VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(id,worldId,null,clock.seconds,clock.seconds,p.location_id,'conversation',j([simId]),j(facts),'Gespräch mit '+p.name+': '+reply,'user_conversation');
       db.prepare('INSERT INTO lw_journal VALUES (?,?,?,?,?,?,?)').run(simId,id,clock.seconds,channel==='inner'?'inner_dialogue':'conversation',message.slice(0,2000)+'\n'+reply,thought||reply,.6);
       state.thought=thought;if(channel==='talk')state.dialogue=reply;
@@ -89,8 +90,12 @@ export function clearChat(worldId,simId,channel='inner'){
   if(busy.has(worldId))throw err(409,'Wait for the current step.');
   const rows=db.prepare("SELECT id,facts FROM lw_events WHERE world_id=? AND type='conversation' AND json_extract(participants,'$[0]')=? AND json_extract(facts,'$.channel')=? ORDER BY rowid").all(worldId,simId,channel);
   db.transaction(()=>{for(const row of rows)db.prepare('DELETE FROM lw_events WHERE id=?').run(row.id);if(rows.length){const p=db.prepare('SELECT state FROM lw_sims WHERE id=?').get(simId),state=pj(p.state,{}),first=pj(rows[0].facts,{}),last=pj(rows.at(-1).facts,{});if(state.thought===last.newThought)state.thought=first.previousThought;if(state.mood===last.newMood)state.mood=first.previousMood;if(state.dialogue===last.reply)state.dialogue=null;
-    const currentMind={needs:state.needs,affect:state.affect,focus_goal_id:state.focus_goal_id||null,current_desire:state.current_desire||null,thought_source:state.thought_source||null,thought_at:state.thought_at||null};
+    const currentMind={wellbeing:state.wellbeing,needs:state.needs,affect:state.affect,focus_goal_id:state.focus_goal_id||null,current_desire:state.current_desire||null,thought_source:state.thought_source||null,thought_at:state.thought_at||null};
+    if(!Object.hasOwn(last.afterMind||{},'wellbeing'))delete currentMind.wellbeing;
     if(first.previousMind&&last.afterMind&&j(currentMind)===j(last.afterMind))Object.assign(state,first.previousMind);
-    else {const erased=new Set(rows.map(r=>r.id));for(const e of state.affect?.states||[])e.components=(e.components||[]).filter(c=>!erased.has(c.cause?.evidence_id));if(last.afterMind&&state.focus_goal_id===last.afterMind.focus_goal_id)state.focus_goal_id=first.previousMind?.focus_goal_id||null;rebuildAffect({state},db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(worldId).seconds);}
+    else {const erased=new Set(rows.map(r=>r.id));for(const e of state.affect?.states||[])e.components=(e.components||[]).filter(c=>!erased.has(c.cause?.evidence_id));if(last.afterMind&&state.focus_goal_id===last.afterMind.focus_goal_id)state.focus_goal_id=first.previousMind?.focus_goal_id||null;const clock=db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(worldId).seconds;rebuildAffect({state},clock);}
+    // Also covers mixed legacy/new conversations whose first snapshot has no
+    // PERMA field. Preserve later activity evidence; erase only these sources.
+    removeWellbeingSources({state},new Set(rows.map(r=>r.id)),db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(worldId).seconds);
     db.prepare('UPDATE lw_sims SET state=? WHERE id=?').run(j(state),simId);db.prepare('UPDATE lw_worlds SET version=version+1 WHERE world_id=?').run(worldId);}})();return {ok:true};
 }

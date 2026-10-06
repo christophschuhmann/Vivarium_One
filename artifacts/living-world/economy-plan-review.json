@@ -1,0 +1,32 @@
+{
+  "documentOnly": true,
+  "liveSimulationChanged": false,
+  "socialEntries": 600,
+  "economyCases": 100,
+  "activities": 32,
+  "items": 28,
+  "householdExamples": {
+    "family": {
+      "income": 407200,
+      "costs": 255500,
+      "margin": 151700,
+      "free": 131700,
+      "early": 37000,
+      "tax": 26800,
+      "social": 96000
+    },
+    "owner": {
+      "income": 359200,
+      "costs": 242500,
+      "margin": 116700,
+      "free": 81700,
+      "early": 467000,
+      "tax": 71800,
+      "social": 84000
+    }
+  },
+  "searchAndPaging": true,
+  "jsonExport": true,
+  "mobileOverflow": false,
+  "errors": []
+}

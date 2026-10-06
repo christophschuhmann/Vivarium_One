@@ -27,3 +27,6 @@
 .lw-bond-node .lw-bond-name{font-size:15px;font-weight:500;letter-spacing:0;text-transform:none}.lw-bond-node .lw-bond-central{font-size:11px;letter-spacing:2px}
 
 .lw-bond-canvas{touch-action:pan-y}.lw-bond-canvas.pan-enabled{touch-action:none}
+
+.lw-perma{border-top:1px solid #e6ddef;margin-top:14px;padding-top:12px}.lw-perma>summary{font-weight:700;color:#79519b;cursor:pointer}.lw-perma-row{display:grid;grid-template-columns:minmax(0,1fr) 90px 54px;font-size:11px}.lw-perma-row span{min-width:0;overflow-wrap:anywhere}.lw-perma-row b{text-align:right}.lw-perma-row progress{width:100%;min-width:0;accent-color:#6d9b83}.lw-perma>small,.lw-perma li{font-size:11px;line-height:1.5}.lw-perma ul{padding-left:17px}.lw-perma details{margin-top:10px}@media(max-width:600px){.lw-perma-row{grid-template-columns:minmax(0,1fr) 65px 48px;font-size:10px}}
+.lw-profile .profile-cols>div{min-width:0;overflow-wrap:anywhere}.lw-profile .lw-stat span{min-width:0}.lw-profile .lw-stat progress{min-width:0}.lw-profile .iv-panel{min-width:0}@media(max-width:800px){.lw-profile .profile-cols{grid-template-columns:minmax(0,1fr)}.lw-profile .lw-stat:not(.lw-perma-row) span{flex:1.3}.lw-profile .lw-stat:not(.lw-perma-row) progress{flex:1;width:auto}}

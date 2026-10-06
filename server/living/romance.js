@@ -1,3 +1,4 @@
+import {projectWellbeing} from './wellbeing.js';
 import fs from 'node:fs';
 import {rng} from './random.js';
 export const ROMANCE_POLICY=JSON.parse(fs.readFileSync(new URL('../../config/living_social_policy.json',import.meta.url)));
@@ -30,9 +31,9 @@ export function assertMinorSafeText(people,text){
 }
 
 export function normalizeImportedRomance(db,worldId){
- const people=new Map();
+ const people=new Map(),time=db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(worldId).seconds;
  for(const row of db.prepare('SELECT id,age,profile,state,biography FROM lw_sims WHERE world_id=?').all(worldId)){
-   const p={...row,profile:JSON.parse(row.profile),state:JSON.parse(row.state)};normalizeRomance(p);
+   const p={...row,profile:JSON.parse(row.profile),state:JSON.parse(row.state)};normalizeRomance(p);projectWellbeing(p,time);
    assertMinorSafeText([p],{reply:p.biography,thought:p.state.thought,text:p.state.dialogue});people.set(p.id,p);
    db.prepare('UPDATE lw_sims SET state=? WHERE id=?').run(JSON.stringify(p.state),p.id);
  }

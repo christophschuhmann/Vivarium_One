@@ -1,3 +1,4 @@
+import {projectWellbeing,activityWellbeing,socialWellbeing,reflectionWellbeing,wellbeingContext} from './wellbeing.js';
 import fs from 'node:fs';
 import {rng} from './random.js';
 import {activity} from './presentation.js';
@@ -67,7 +68,7 @@ export function evaluateMind(p,time,catalog){
   if(urgent?.[1]>.7)proceduralThought(p,s.current_desire,time);
   s.affect.actual_narrative=s.affect.states.map(e=>e.label_de+' '+Math.round(e.intensity*100)+'%').join(' · ');
   s.affect.self_narrative=s.current_desire;
-  dailyGoals(p,time);
+  dailyGoals(p,time);projectWellbeing(p,time);
 }
 export function proceduralThought(p,text,time){
   const s=p.state;if(['conversation','storyteller'].includes(s.thought_source)&&time-(s.thought_at||0)<900)return;
@@ -99,7 +100,7 @@ function advanceAmbition(p,a,amount,time,event){
   else if(amount>0)addFeeling(p,'hope_enthusiasm_optimism',.28,time,{kind:'goal_progress',text:'Ein tatsächlicher Schritt zu: '+(a.title_de||a.title),evidence_id:event.id});
 }
 export function completedActivity(p,event,duration,relief,time){
-  const kind=event.facts.action,seconds=Math.max(0,Math.min(8*3600,duration));
+  const kind=event.facts.action,seconds=Math.max(0,Math.min(8*3600,duration)),beforeProgress=p.state.psychology.ambitions.reduce((n,a)=>n+(a.progress||0),0);
   for(const a of p.state.psychology.ambitions)if(matchesAmbition(p,a,kind))advanceAmbition(p,a,seconds,time,event);
   for(const g of dailyGoals(p,time)){
     const gain=g.kind==='selfcare'&&['eat','drink','shower','toilet','sleep'].includes(kind)?1:g.kind==='career'&&kind==='work'?seconds:g.kind==='learning'&&['school_day','kindergarten_day','read'].includes(kind)?seconds:g.kind==='hobby'&&(hobbyActions[g.interest]||[]).includes(kind)?seconds:g.kind==='explore'&&['relax','eat'].includes(kind)?seconds:0;
@@ -107,8 +108,10 @@ export function completedActivity(p,event,duration,relief,time){
   }
   if(Math.max(0,...Object.values(relief))>.03)addFeeling(p,'relief',Math.min(.6,.25+Math.max(...Object.values(relief))*.3),time,{kind:'need_relief',text:'Ein tatsächliches Bedürfnis ist nach '+kind+' geringer.',relief,evidence_id:event.id});
   event.facts.goalProgress=p.state.psychology.ambitions.filter(a=>a.last_evidence_id===event.id).map(a=>({id:a.id,progress:a.progress}));
+  const perma=activityWellbeing(p,event,seconds,p.state.psychology.ambitions.reduce((n,a)=>n+(a.progress||0),0)-beforeProgress,time);if(perma)(event.facts.wellbeingEffects||={})[p.id]=perma;
 }
 export function completedSocial(p,event,time){
+  const perma=socialWellbeing(p,event,time);if(perma)(event.facts.wellbeingEffects||={})[p.id]=perma;
   if(event.facts.outcome!=='accepted')return;
   normalizeRomance(p);
   const romantic=['flirt','ask_date','express_affection','teen_romantic_talk','teen_date','adult_private_intimacy'].includes(event.facts.category);
@@ -137,10 +140,11 @@ export function reflect(p,proposal,event,time){
   for(const [need,value] of Object.entries(proposal.needsDelta||{})){if(!['social','romantic_affection','fun','comfort','fatigue'].includes(need)||typeof value!=='number'||!Number.isFinite(value))continue;
     const bound=need==='fatigue'?.03:.08,delta=Math.max(-bound,Math.min(bound,value)),before=p.state.needs[need];p.state.needs[need]=Math.min(need==='romantic_affection'?romanticCap(p.age):1,clamp(before+delta));effects.needsDelta[need]=p.state.needs[need]-before;}
   if(typeof proposal.focusGoalId==='string'&&p.state.psychology.ambitions.some(a=>a.id===proposal.focusGoalId&&!a.completed)){p.state.focus_goal_id=proposal.focusGoalId;effects.focusGoalId=proposal.focusGoalId;}
+  const perma=reflectionWellbeing(p,effects,event,time);if(perma)effects.wellbeingDelta=perma;projectWellbeing(p,time);
   return effects;
 }
-export function mindContext(p){return {romancePolicy:romanticContext(p),emotions:p.state.affect,currentDesire:p.state.current_desire,goals:p.state.psychology.ambitions,dailyGoals:p.state.daily_goals,focusGoalId:p.state.focus_goal_id,needs:p.state.needs,thought:p.state.thought};}
-export const REFLECTION_INSTRUCTIONS='Optional reflection/reflections may express a subjective response, never a new physical event. An entry has emotions:[{id,intensity}], needsDelta:{social,romantic_affection,fun,comfort,fatigue}, focusGoalId and reason. Use emotion IDs contentment, affection, hope_enthusiasm_optimism, pride, interest, concentration, contemplation, relief, longing, doubt, fear, distress, embarrassment, disappointment, sadness, anger or fatigue_exhaustion; intensity 0.05–0.75. All needs are urgency levels: 0 means satisfied and 1 means urgent. A positive needsDelta increases an unmet need; a negative delta provides relief. Social is social warmth; romantic_affection is a separate unmet wish for romantic affection. Romantic affection must stay 0 under 14 and <=0.35 for ages 14–17. A friendly conversation reduces warmth urgency and does not automatically satisfy romantic affection. A supportive conversation usually reduces social/comfort urgency; increasing it requires a grounded reason such as conflict or a renewed longing. Emotional needsDelta is bounded to ±0.08 (fatigue ±0.03). Never change hunger, thirst, bladder or hygiene through words. focusGoalId must be an existing supplied ambition; it directs future action and never grants completed achievement. Keep needs, conflicting feelings, current desires and existing progress coherent; relief in one dimension need not erase another.';
+export function mindContext(p){return {wellbeing:wellbeingContext(p),romancePolicy:romanticContext(p),emotions:p.state.affect,currentDesire:p.state.current_desire,goals:p.state.psychology.ambitions,dailyGoals:p.state.daily_goals,focusGoalId:p.state.focus_goal_id,needs:p.state.needs,thought:p.state.thought};}
+export const REFLECTION_INSTRUCTIONS='Optional reflection/reflections may express a subjective response, never a new physical event. An entry has emotions:[{id,intensity}], needsDelta:{social,romantic_affection,fun,comfort,fatigue}, focusGoalId and reason. Use emotion IDs contentment, affection, hope_enthusiasm_optimism, pride, interest, concentration, contemplation, relief, longing, doubt, fear, distress, embarrassment, disappointment, sadness, anger or fatigue_exhaustion; intensity 0.05–0.75. All needs are urgency levels: 0 means satisfied and 1 means urgent. A positive needsDelta increases an unmet need; a negative delta provides relief. Social is social warmth; romantic_affection is a separate unmet wish for romantic affection. Romantic affection must stay 0 under 14 and <=0.35 for ages 14–17. A friendly conversation reduces warmth urgency and does not automatically satisfy romantic affection. A supportive conversation usually reduces social/comfort urgency; increasing it requires a grounded reason such as conflict or a renewed longing. Emotional needsDelta is bounded to ±0.08 (fatigue ±0.03). Never change hunger, thirst, bladder or hygiene through words. focusGoalId must be an existing supplied ambition; it directs future action and never grants completed achievement. Own PERMA wellbeing scores are read-only derived context; never return score changes or invent achievements to improve them. Keep needs, conflicting feelings, current desires and existing progress coherent; relief in one dimension need not erase another.';
 export function conversationReflection(output){
   if(output.reflection&&typeof output.reflection==='object')return output.reflection;
   const moods={hopeful:'hope_enthusiasm_optimism',happy:'contentment',calm:'contentment',sad:'sadness',worried:'distress',angry:'anger',friendly:'affection',warm:'affection',thoughtful:'contemplation',curious:'interest',tired:'fatigue_exhaustion',confident:'hope_enthusiasm_optimism'};

@@ -37,7 +37,7 @@ export async function createTown(user,options={}) {
   if(options.story)await authorBiographies(user,town.people.filter(p=>p.anchored));
   db.transaction(()=>{
     db.prepare("INSERT INTO worlds(id,user_id,title,sim_time,status,simulation_mode,created_at,updated_at) VALUES (?,?,?,?,'live','living',?,?)").run(worldId,user.id,String(options.title || 'Lindenstadt').slice(0,80),iso(27000),now(),now());
-    db.prepare('INSERT INTO lw_worlds(world_id,seed,rules) VALUES (?,?,?)').run(worldId,seed,j({...town.catalog.manifest,assetLibrary:libraryDigest(),socialVersion:SOCIAL_VERSION,lifeVersion:LIFE_VERSION,romanceVersion:1,neighborhoods:town.identities}));
+    db.prepare('INSERT INTO lw_worlds(world_id,seed,rules) VALUES (?,?,?)').run(worldId,seed,j({...town.catalog.manifest,assetLibrary:libraryDigest(),socialVersion:SOCIAL_VERSION,lifeVersion:LIFE_VERSION,romanceVersion:1,wellbeingVersion:1,neighborhoods:town.identities}));
     for(const p of town.places)db.prepare('INSERT INTO lw_places(id,world_id,parent_id,name,kind,purpose,asset_id,x,y,capacity,anchored,landmark,affordances) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)').run(p.id,worldId,p.parent_id,p.name,p.kind,p.purpose,p.asset_id,p.x,p.y,p.capacity,p.anchored,p.landmark,j(p.affordances));
     for(const e of town.edges)db.prepare('INSERT INTO lw_edges VALUES (?,?,?,?)').run(worldId,e.from_id,e.to_id,e.seconds);
     for(const p of town.people){

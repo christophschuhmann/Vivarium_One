@@ -2,6 +2,8 @@
 import json
 from pathlib import Path
 from html import escape
+from economy_plan import design_data as economy_design_data, section as economy_section, CSS as ECONOMY_CSS, JS as ECONOMY_JS
+from wellbeing_plan import section as wellbeing_section
 
 ROOT = Path(__file__).resolve().parents[1]
 ROWS = []
@@ -614,8 +616,17 @@ def build():
     data={'schema_version':1,'status':'design_proposal','categories':CATEGORIES,'policy':json.loads((ROOT/'config/living_social_policy.json').read_text()),'entries':ROWS}
     (ROOT/'docs/living-world-social-taxonomy.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
     encoded=json.dumps(ROWS,ensure_ascii=False,separators=(',',':')).replace('<',chr(92)+'u003c')
-    html='<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vivarium · Soziale Interaktionen, Theory of Mind und W100</title><style>'+CSS+'</style></head><body><main>'+OVERVIEW+'</main><script id="data" type="application/json">'+encoded+'</script><script id="category-data" type="application/json">'+json.dumps(CATEGORIES,ensure_ascii=False)+'</script><script>'+JS+'</script></body></html>'
+    economy=economy_design_data()
+    (ROOT/'docs/living-world-economy-design.json').write_text(json.dumps(economy,ensure_ascii=False,indent=2)+'\n')
+    economy_encoded=json.dumps(economy,ensure_ascii=False,separators=(',',':')).replace('<',chr(92)+'u003c')
+    overview=OVERVIEW.replace('<a href="#catalog">Tabellenanhang</a>','<a href="#economy">Wirtschaft & Stadt</a><a href="#catalog">Sozialer Tabellenanhang</a>')
+    overview=overview.replace('<span>6 Kataloge × 100</span>','<span>6 Sozialkataloge × 100</span><span>Wirtschaft + 100 Stadtfälle</span>')
+    overview=overview.replace('und konsistenten Übergängen zum Storyteller.','und konsistenten Übergängen zum Storyteller. Erweitert um Euro-Kreisläufe, Haushaltsbudgets, Wohnen, Arbeit, Besitz, öffentliche Dienste und deren persönliche Folgen.')
+    overview=overview.replace('Der große neue Interaktions- und ToM-Katalog ist ein Implementationsvorschlag.','Der große neue Interaktions-/ToM-Katalog und das Wirtschafts-/Stadtsystem sind Implementationsvorschläge.')
+    overview=overview.replace('<a href="#economy">Wirtschaft & Stadt</a>','<a href="#wellbeing">PERMA-Wohlbefinden</a><a href="#economy">Wirtschaft & Stadt</a>')
+    overview=overview.replace('<section id="catalog">',wellbeing_section()+economy_section(economy)+'<section id="catalog">')
+    html='<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vivarium · PERMA, soziale Interaktionen, Wirtschaft, Theory of Mind und W100</title><style>'+CSS+ECONOMY_CSS+'</style></head><body><main>'+overview+'</main><script id="data" type="application/json">'+encoded+'</script><script id="category-data" type="application/json">'+json.dumps(CATEGORIES,ensure_ascii=False)+'</script><script id="economy-data" type="application/json">'+economy_encoded+'</script><script>'+JS+ECONOMY_JS+'</script></body></html>'
     (ROOT/'docs/living-world-social-tom-plan.html').write_text(html)
-    print('Built standalone social/ToM/W100 proposal:',len(ROWS),'entries; HTML',len(html.encode()),'bytes')
+    print('Built standalone social/ToM/economy/W100 proposal:',len(ROWS),'social entries +',len(economy['cases']),'economy cases; HTML',len(html.encode()),'bytes')
 
 if __name__=='__main__':build()
