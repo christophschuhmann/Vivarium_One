@@ -15,10 +15,12 @@ import * as branches from '../branches.js';
 import { assembleCues, cueVoiceStyle, ttsCacheKey, cueCacheVoice } from '../export_cues.js';
 import { synthesizeLine, findReusableAudio } from '../tts_service.js';
 import { PROFILES } from '../voice_profiles.js';
+import {copyLibraryBundle} from '../living/library.js';
 import { buildWorldManifest, worldAssetFiles, importWorldManifest, assetIdsIn } from '../world_io.js';
 import { wizardChat, estimatePlan, startWizardBuild, getWizardJob } from '../wizard.js';
 import { byokActive } from '../byok.js';
 import { searchMusicCandidates } from '../music_client.js';
+import {busy as livingBusy} from '../living/engine.js';
 
 // Temp scratch for zip pack/unpack; cleaned per request.
 const EXPORT_TMP = path.join(DATA_DIR, 'tmp_export');
@@ -229,6 +231,7 @@ export default async function apiRoutes(app) {
   app.delete('/api/worlds/:id', async (req) => {
     const u = requireUser(req);
     const w = ownWorld(u, req.params.id);
+    if(livingBusy.has(w.id))throw httpErr(409,'WORLD_BUSY','Wait for the Living World tick to finish.');
     const usedElsewhere = new Set();
     for (const other of db.prepare('SELECT id FROM worlds WHERE user_id=? AND id!=?').all(u.id,w.id)) {
       const manifest = buildWorldManifest(other.id);
@@ -255,6 +258,7 @@ export default async function apiRoutes(app) {
   });
   app.post('/api/worlds/:id/duplicate',async req => {
     const user=requireVerified(req),world=ownWorld(user,req.params.id);
+    if(livingBusy.has(world.id))throw httpErr(409,'WORLD_BUSY','Wait for the current tick to finish.');
     const manifest=buildWorldManifest(world.id);
     if(manifest.assets.some(a=>!fs.existsSync(assetPath(a))))throw httpErr(409,'MISSING_ASSET','Restore the missing asset files before duplicating this scenario.');
     manifest.world.title=String(req.body?.title || world.title+' · copy').slice(0,80);
@@ -633,6 +637,7 @@ export default async function apiRoutes(app) {
   app.post('/api/worlds/:id/ticks', async (req, reply) => {
     const u = requireVerified(req);
     const w = ownWorld(u, req.params.id);
+    if(w.simulation_mode==='living')throw httpErr(409,'LIVING_TICK','Advance this town in the Living World view.');
     if (w.status !== 'live') throw httpErr(400, 'NOT_LIVE', 'Press Begin in Genesis first.');
     reply.raw.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
     let finished = false;
@@ -1093,6 +1098,7 @@ export default async function apiRoutes(app) {
         const src = assetPath({ file: a.file });
         if (fs.existsSync(src)) fs.copyFileSync(src, path.join(assetsDir, a.file));
       }
+      if(manifest.livingLibrary)copyLibraryBundle(manifest.livingLibrary,assetsDir);
       const zipPath = path.join(work, 'world.zip');
       await runCmd('zip', ['-r', '-q', '-0', 'world.zip', 'manifest.json', 'assets'], { cwd: work });
       const buf = fs.readFileSync(zipPath);
@@ -1119,8 +1125,8 @@ export default async function apiRoutes(app) {
     try {
       const zipPath = path.join(work, 'in.zip');
       fs.writeFileSync(zipPath, buf);
-      // -o overwrite, -q quiet; unzip refuses paths escaping the target dir, so this is safe.
-      await runCmd('unzip', ['-o', '-q', zipPath, '-d', unpacked]).catch(() => {
+      // Validate the entire archive before writing: ordinary files, bounded size, no links or escaping paths.
+      await runCmd(process.env.VIV_PYTHON_BIN || 'python3', [path.join(path.dirname(ROOT_WEB),'scripts','unpack-world.py'), zipPath, unpacked]).catch(() => {
         throw httpErr(400, 'BAD_ZIP', 'That file could not be read as a Vivarium world zip.');
       });
       const manifestPath = path.join(unpacked, 'manifest.json');

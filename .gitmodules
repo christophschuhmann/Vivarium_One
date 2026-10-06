@@ -1,0 +1,3 @@
+[submodule "vendor/open-sims"]
+	path = vendor/open-sims
+	url = https://github.com/LAION-AI/open-sims.git

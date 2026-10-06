@@ -18,6 +18,7 @@ for(const tool of ['ffmpeg','zip','unzip','python3']) {
   const result=spawnSync('sh',['-c','command -v "$1"','sh',tool],{encoding:'utf8'});
   if(result.status!==0)throw new Error(`Missing ${tool}. On Debian/Ubuntu: sudo apt install ffmpeg zip unzip python3 python3-venv`);
 }
+if(!fs.existsSync(path.join(root,'vendor/open-sims/living_world/rules.py')))run('git',['submodule','update','--init','--depth','1','vendor/open-sims']);
 if(!flags.has('--no-install'))run('npm',['install','--no-audit','--no-fund']);
 const envFile=path.join(root,'.env');
 if(!fs.existsSync(envFile)) {
@@ -49,6 +50,7 @@ console.log(password?`Initial password: ${password}`:'Account already exists. Yo
 console.log('Start: npm start\nOpen: http://localhost:'+ (process.env.PORT || 8890));
 console.log('Settings → AI & models → enter ONE HyprLab or OpenRouter key → Save my settings.');
 console.log('You can then create a scenario with the World Wizard. No admin login or Vivarium credits needed.');
+console.log('Living World: npm run living:setup -- --download (HF_TOKEN for the private asset library), then use the Living World link.');
 db.close();
 if(flags.has('--with-music')) {
   if(!fs.existsSync(python))throw new Error('The music downloader needs the Python environment. Run setup without --no-python.');

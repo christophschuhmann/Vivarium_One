@@ -15,6 +15,7 @@ import './db.js';
 import providerSettingsRoutes from './routes/provider_settings.js';
 import { isolatedRequest } from './byok.js';
 import storageRoutes from './routes/storage.js';
+import livingRoutes from './routes/living.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 12 * 1024 * 1024 });
@@ -29,6 +30,7 @@ await app.register(multipart, { limits: { fileSize: 300 * 1024 * 1024 } });
 // reload can silently run WEEKS-old game code after a deploy. (An already-open tab still
 // runs whatever it loaded — a plain reload now always brings it current.)
 await app.register(fstatic, { root: path.join(ROOT, 'web'), prefix: '/', cacheControl: false, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') });
+await app.register(fstatic, {root:path.join(ROOT,'docs'),prefix:'/docs/',decorateReply:false,cacheControl:false,setHeaders:res=>res.setHeader('Cache-Control','no-cache')});
 // Voice-profile reference clips (assets/voice_profiles/<Voice>/<lang>.mp3) — served for the
 // in-game profile picker's ▶ preview. Public but non-sensitive (curated dataset excerpts);
 // content changes rarely, so an hour of caching is fine.
@@ -58,6 +60,7 @@ app.setErrorHandler((err, req, reply) => {
 
 await app.register(providerSettingsRoutes);
 await app.register(storageRoutes);
+await app.register(livingRoutes);
 await app.register(apiRoutes);
 await app.register(adminRoutes);
 if (process.env.TEST_MODE === '1' && process.env.NODE_ENV !== 'production') await app.register(testRoutes);

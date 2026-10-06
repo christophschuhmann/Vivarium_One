@@ -83,7 +83,7 @@ export default async function storageRoutes(app) {
     return {assets:{count:owned.length,bytes:assetsBytes,unusedCount:unused.length,unusedBytes:unused.reduce((n,a)=>n+sizes.get(a.id),0)},worlds,
       projects:{count:worlds.length,bytes:worlds.reduce((n,w)=>n+w.projectBytes,0)},
       music:{...music,...library,canManage:sharedAllowed(req,user),managed:!!process.env.MUSIC_CONTROL_TOKEN},
-      assetLibrary:directoryBytes(path.join(ROOT,'assets/living-world-library')),
+      assetLibrary:directoryBytes(process.env.VIV_LIVING_LIBRARY || path.join(ROOT,'assets/living-world-library')),
       database:{bytes:fs.statSync(path.join(DATA_DIR,'vivarium.db')).size},
       volume:{totalBytes:volume.blocks*volume.bsize,freeBytes:volume.bavail*volume.bsize},
       note:'Scenario media totals can overlap for older shared branches. Account asset totals count each file once.'};

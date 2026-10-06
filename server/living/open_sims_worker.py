@@ -1,0 +1,83 @@
+"""Pure Open Sims adapter: JSON lines in/out; no DB, network or provider credentials."""
+import json
+import random
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'vendor' / 'open-sims'))
+from living_world import psychology, careers, affect
+from living_world.rules import RuleRegistry
+from living_world.daily_life import JOB_STATIONS
+
+registry = RuleRegistry()
+def handle(request):
+    op = request['op']
+    if op == 'catalog':
+        return {'actions': registry.actions, 'rates': registry.rates,
+                'manifest': registry.manifest(), 'social': psychology.social_category_definitions(), 'jobStations': JOB_STATIONS}
+    if op == 'initialize':
+        people = request['people']
+        for person in people:
+            person['psychology'] = psychology.initialize_psychology(person, random.Random(str(request['seed']) + ':' + person.get('seed_key', person['id'])))
+            person['career'] = careers.initial(person)
+        groups = {}
+        for person in people:
+            groups.setdefault(person['household_id'], []).append(person)
+        for group in groups.values():
+            patches = psychology.initialize_social_graph(group)
+            for person in group:
+                person['relations'] = patches[person['id']]['relations']
+        return people
+    if op == 'social':
+        results = []
+        for pair in request['pairs']:
+            a, b = pair['a'], pair['b']
+            candidates = psychology.social_candidates(a, b, request['now'])
+            category = pair.get('category')
+            rng = random.Random(str(pair['seed']))
+            possible = [c for c in candidates if c['allowed'] and (c['category'] != 'phone_call' or pair.get('remote')) and (not category or c['category'] == category)]
+            # Include variation instead of deterministically picking the same top category.
+            if not possible:
+                results.append({'allowed': False}); continue
+            weights = [max(.01, c['score']) ** 2 for c in possible]
+            chosen = rng.choices(possible, weights=weights)[0]
+            outcome = pair.get('outcome') or ('accepted' if rng.random() < chosen['willingness'] else 'declined')
+            if chosen['requires_consent'] and pair.get('outcome') == 'accepted' and not pair.get('consent_checked') and rng.random() >= chosen['willingness']:
+                outcome = 'declined'
+            patch = psychology.apply_social(a, b, chosen['category'], outcome, request['now'], pair['eventId'])
+            results.append({'allowed': True, 'category': chosen['category'], 'outcome': outcome, 'patch': patch,
+                            'duration': chosen['duration_seconds'], 'consent': chosen['requires_consent']})
+        return results
+    if op == 'replay_social':
+        people = {p['id']: p for p in request['people']}
+        for event in request['events']:
+            a, b = (people[id] for id in event['participants'])
+            patch = psychology.apply_social(a, b, event['category'], event['outcome'], event['time'], event['id'])
+            for id, change in patch.items():
+                people[id].setdefault('relations', {}).update(change['relations'])
+                other = b if id == a['id'] else a
+                people[id].update(psychology.observe(people[id], other['id'], event['category']+' '+event['outcome'], event['time'], event['id']))
+                known = people[id]['psychology']['theory_of_mind']['known_people']
+                while len(known) > 24:
+                    oldest = min(known, key=lambda k: known[k]['observations'][-1]['at'])
+                    del known[oldest]
+                people[id]['affect'] = affect.appraise(people[id], people[id]['needs'], event['time'], {'kind':'social', 'category':event['category'], 'outcome':event['outcome'], 'text':event['category']+' '+event['outcome']}, event['id'])
+        return {id: {'relations':p['relations'], 'psychology':p['psychology'], 'affect':affect.project_affect(p, request['now'])} for id, p in people.items()}
+    if op == 'careers':
+        current, results = {}, []
+        for p in request['people']:
+            actor = {**p, **current.get(p['id'], {})}
+            update = careers.complete_shift(actor, p['duration'], p['now'], p['eventId'], 0)
+            current[p['id']] = update
+            results.append(update)
+        return results
+    if op == 'bias':
+        return [{kind: psychology.action_bias(p, kind, request['now']) for kind in request['kinds']} for p in request['people']]
+    raise ValueError('Unknown adapter operation')
+
+for line in sys.stdin:
+    try:
+        request = json.loads(line)
+        print(json.dumps({'id': request['id'], 'result': handle(request)}, ensure_ascii=False), flush=True)
+    except Exception as error:
+        print(json.dumps({'id': request.get('id'), 'error': str(error)}), flush=True)

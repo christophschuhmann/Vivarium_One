@@ -16,7 +16,10 @@
     "test:music": "node scripts/test-music.mjs",
     "test:storage": "node scripts/test-storage.mjs",
     "test:e2e": "node e2e/io_features.cjs && node e2e/timetravel.cjs && node e2e/scene.cjs",
-    "test:settings": "node scripts/test-settings-browser.mjs"
+    "test:settings": "node scripts/test-settings-browser.mjs",
+    "living:setup": "node scripts/setup-living.mjs",
+    "test:living": "node scripts/test-living.mjs",
+    "benchmark:living": "node scripts/benchmark-living.mjs"
   },
   "license": "MIT",
   "dependencies": {

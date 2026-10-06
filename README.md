@@ -4,7 +4,7 @@ Vivarium is a browser-based life simulation and visual-novel sandbox. Create an 
 
 The default local installation runs on **your own HyprLab or OpenRouter API key**. You only need **one** of those accounts. You do not need an admin login or Vivarium credits. Provider charges still apply to your own provider account.
 
-[Full architecture documentation](docs/DOCUMENTATION.md) · [Design log](plan/implementation-plan.html) · [Living World implementation plan](living-world-implementierungsplan.html)
+[Full architecture documentation](docs/DOCUMENTATION.md) · [Design log](plan/implementation-plan.html) · [Living World implementation plan](living-world-implementierungsplan.html) · [Implemented Living World, measurements and roadmap](docs/living-world.html)
 
 ## Install locally
 
@@ -204,6 +204,83 @@ The complete offline image library is stored separately as a private Hugging Fac
 It contains a verified WebDataset TAR with 167 canonical image samples: 47 existing unique backgrounds, 30 newly generated locations and 90 greenscreen characters. Images are paired with original JSON sidecars and captions. Metadata also contains the offline gallery, references, previews and revision history. Authorized Hugging Face access is required to download it.
 
 The generation, review and packaging scripts are in `scripts/`. Large generated image libraries and audio downloads stay out of Git. This asset library is a prepared resource; it does not replace every game's runtime image-generation path automatically.
+
+## Living World: a town with procedural Sims and anchored stories
+
+The `living-world` branch adds a separate **Living World** view. Classic scenarios continue to use the existing studio. There is no player/NPC split in this view: every resident is a Sim with goals, needs, relationships and a personal journal. An anchor changes how that Sim is narrated, while preserving their identity and history.
+
+### Install this branch
+
+```bash
+git clone --branch living-world --recurse-submodules https://github.com/christophschuhmann/Vivarium_One.git
+cd Vivarium_One
+npm run setup
+npm run living:setup
+npm start
+```
+
+Python 3.11 or newer is recommended for the Open Sims adapter. `setup` initializes the pinned Open Sims submodule automatically when needed. `living:setup` uses the bundled Vivarium backgrounds and adult cutouts if the full asset library has not been installed. Sims without an age-appropriate sprite receive a name/colour placeholder; adults are never substituted as children's portraits. Procedural towns also work without an AI key when the Storyteller checkbox is off.
+
+To install the full existing library (77 backgrounds and 90 character variants), use a Hugging Face token with access to the private dataset, set `HF_TOKEN` in your shell, and run:
+
+```bash
+npm run living:setup -- --download
+```
+
+The downloader restores `data/living-world-library.wds.tar` from `TTS-AGI/vivarium-living-world-assets`, checks the original file hashes, and prepares 90 reusable transparent sprites locally. You can instead point at an already restored library:
+
+```bash
+npm run living:setup -- --library /absolute/path/to/living-world-library
+```
+
+For subsequent server starts, set the same `VIV_LIVING_LIBRARY` path in your local `.env`. The default download directory needs no additional configuration. Character matting runs once, without API calls. The shared library is reused across all households. Scenario ZIPs include the library pictures and prepared sprites actually referenced by that scenario.
+
+### Start small, then grow
+
+1. Sign in with the local player and connect **one** HyprLab or OpenRouter key through Settings, or **Mein API-Key** inside Living World. No admin login or credit purchase is required.
+2. Open **Living World** from the studio, or visit `/living.html`.
+3. Click **Neue Stadt**, begin with **10 Sims**, and choose a reproducible seed. The initial two Sim anchors get written biographies when **Anker-Biografien vom Sprachmodell schreiben lassen** is enabled. Other residents receive procedural backgrounds, household ties and ambitions.
+4. If you are trying it without a key, disable that biography checkbox and the main **Storyteller für Anker & Kontakte** checkbox. Pending authored backgrounds remain visibly labelled; no AI output is fabricated.
+5. Advance **5**, **15**, or **60 minutes**. Time advances only after a successful committed step. With Storyteller enabled, the procedural proposals run first, then actual anchored encounters are narrated together.
+6. Use **Stadt erweitern** in the Sims tab to grow to 20, 50, 100 and finally 500 residents. Existing residents, anchors, states and journals are preserved. The seed-73 town at 500 has 200 households and 1,032 hierarchical places.
+
+You can also create 500 directly. Starting small makes it easier to inspect why individual Sims move and react. A village does not become more visually expensive merely because more residents are simulated.
+
+### Choose anchors and inspect perspectives
+
+- **Sim anchor:** select any person, then **Sim verankern**. Their anchor follows them through rooms, travel and phone calls. Removing it does not erase memories or relationships. A procedural biography is marked for authored completion on the next hybrid step.
+- **Location anchor:** open a room or the **Anker** tab and choose **Diesen Ort verankern**. Building, neighborhood, district and city anchors also include their descendant locations. All actual occupants encountered during the step become eligible for the Storyteller.
+- **Visitors and contacts:** an unanchored Sim joining an anchored room or another anchored Sim's room is included. Explicit phone contacts extend the field across locations. Shared travel segments are also treated as fields. Field membership is based on timed presence and actual contacts, rather than distance or a global all-knowing cast.
+- **Personal journal:** select a Sim to inspect their age, family/neighbor ties, needs, ambitions and biography. Every recorded perception links to an actual event. Interpretation and confidence are shown separately. Older entries are paginated and personal BM25 retrieval gives the Storyteller relevant memories belonging to that Sim only.
+- **Written background:** **Mit Assistenten ausarbeiten** accepts instructions for motives and formative memories. It records a new authored background entry while leaving already witnessed events intact.
+- **Felder:** inspect how many Sims were selected, how many model calls ran, and which invalid proposals were rejected. Removing all anchors makes the town entirely procedural.
+
+A failed, cancelled or stale tick leaves world time, current states and new journals unchanged. Provider calls already made remain billable on your provider account. Selecting a city-wide anchor intentionally involves many Sims; large fields are split into groups of at most 24 owned Sims per model call.
+
+### Navigate without loading the whole town
+
+Click district → neighborhood → house → room. Breadcrumbs and **Eine Ebene zurück** move out; drag the map background to pan. Ctrl + mouse wheel over a card moves in; Ctrl + wheel down or double-clicking the empty map moves out. On touch screens, use the cards and breadcrumbs.
+
+Only the current region has thumbnail cards, with at most 64 on a page. Other districts and important public places use text/icon chips. A room shows at most eight character sprites, with pagination when needed. The old region's image elements are removed before the next one is displayed. Reused sprites are distinguished by name and frame colour. The full asset library is not preloaded into the browser.
+
+In **Assets**, enter a caption, inspect the five BM25 candidates and their metadata, and either select one or let the model choose among those exact IDs. Automatic generation selects age/gender-compatible sprites and caption-matched backgrounds. House previews currently use representative existing entrance/street backgrounds; dedicated facade illustrations can be added to the library without changing the simulation.
+
+Room actions appear in text even when the drawing cannot animate sitting at a desk, reading, using a shower or performing a job. Sprites show presence, rather than furniture poses or continuous walking animations.
+
+### Backups, tests and current scope
+
+Use **Settings → Storage & scenarios** to export, duplicate or delete a Living World town. Its ZIP includes every Living World table, personal journal and anchor audit, plus the referenced illustrations and available cutouts. Import remaps entity IDs and rebuilds the personal memory index. Keys, accounts, billing and the shared music collection are excluded from scenario exports.
+
+```bash
+npm run test:living
+npm run benchmark:living
+```
+
+The engine test uses temporary databases and injected model responses; it does not call a paid provider. The benchmark runs five-minute steps and a full simulated day at 10, 20, 50, 100 and 500 residents, writing `artifacts/living-world/benchmark.json`. A separate manual browser review is available in `scripts/test-living-browser.mjs`; it targets an explicitly prepared preview on port 8891 and changes that preview's towns.
+
+The [HTML implementation report](docs/living-world.html) explains the coordinator, causal checks and measured limits. This is an initial playable implementation capped at 500 residents. The Python adapter uses the actual Open Sims needs, action rules, psychology, social consent checks, affect and career progression. It does not yet reproduce its complete inventory/cooking economy, every institution or university system. Continuous real-time animation, distributed million-resident simulation and Living World rewind/replay controls remain future work. Classic studio music/voices remain available; the new Living World view currently presents text and still sprites.
+
+Open Sims is a separately versioned Git submodule at `c968251faffb99e012af4795902ef643802f14d5`; its README currently specifies that an upstream license has not yet been selected. This repository's MIT license applies to Vivarium code, without relicensing the upstream submodule.
 
 ## Optional operator deployment
 

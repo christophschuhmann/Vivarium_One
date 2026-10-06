@@ -609,6 +609,7 @@ async function homeScreen() {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
         <h1 class="title" style="margin:0">${t('my_worlds', 'My Worlds')}</h1>
         <div style="display:flex;gap:9px">
+          <a class="btn btn-teal" href="/living.html">🌳 Living World</a>
           <button class="btn btn-teal" id="wizardbtn" title="Chat a whole new scenario into being">${t('wizard', '🧙 World Wizard')}</button>
           <button class="btn btn-soft" id="importworld" title="Restore a saved game from a .vivarium.zip">${t('import_save', '⬆ Import save')}</button>
           <button class="btn btn-primary" id="newworld">${t('new_world', '+ New world')}</button>
@@ -644,6 +645,7 @@ async function homeScreen() {
         }
         S.world = c.dataset.id; S.worldData = null;
         const w = worlds.find(x => x.id === c.dataset.id);
+        if(w.simulation_mode==='living'){location.href='/living.html?world='+encodeURIComponent(w.id);return;}
         if (e.target.closest('[data-editintro]')) { introEditor(c.dataset.id); return; }
         if (e.target.closest('[data-intro]')) {
           // enter like a game intro: the opening sequence plays as a film (scenes, music,
