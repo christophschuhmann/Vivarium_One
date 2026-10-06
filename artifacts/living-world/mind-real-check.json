@@ -1,0 +1,1753 @@
+{
+  "provider": "player configured HyprLab",
+  "temporaryDuplicate": true,
+  "originalUnchanged": true,
+  "clockBefore": 30060,
+  "clockAfterConversations": 30060,
+  "clockAfterTick": 30360,
+  "physicalNeedsUnchangedByConversation": true,
+  "innerReply": "Im Moment brauche ich vor allem einen klaren Abschluss für diese Aufgabe, bevor die Müdigkeit die Präzision trübt. Ich spüre viel Wärme für Theo und Noah, aber die Arme werden schwer. Sobald das Werkstück sauber vollendet ist, zieht es mich nach draußen – ein Spaziergang an der frischen Luft würde mir den Kopf freimachen und mir neue Ruhe schenken, bevor ich heimkehre. Daher möchte ich mein Vorhaben, Zeit für mein Interesse am Gehen zu finden, als Nächstes bewusst ansteuern. Es hilft mir, meine Mitte wiederzufinden.",
+  "talkReply": "Ein kleiner, machbarer Schritt ist für mich, dieses eine Werkstück jetzt mit voller Ruhe und sauberen Schnitten abzuschließen, ohne mich zu hetzen. Danach möchte ich mir einen kurzen Moment an der frischen Luft nehmen, einfach ein paar Schritte gehen, um den Kopf frei zu bekommen. Das Gespräch mit dir hilft mir tatsächlich, kurz innezuhalten. Es nimmt mir etwas von der Anspannung, die sich bei der konzentrierten Arbeit aufbaut, und erinnert mich daran, warum ich das alles tue: für ein ruhiges, behütetes Zuhause mit Theo und Noah.",
+  "conversationEffects": [
+    {
+      "emotions": [
+        {
+          "id": "relief",
+          "intensity": 0.28
+        },
+        {
+          "id": "contemplation",
+          "intensity": 0.32
+        },
+        {
+          "id": "affection",
+          "intensity": 0.3
+        }
+      ],
+      "needsDelta": {
+        "social": 0,
+        "fun": -0.030000000000000027,
+        "comfort": -0.05000000000000002,
+        "fatigue": -0.010000000000000009
+      },
+      "focusGoalId": "ambition_hobby"
+    },
+    {
+      "emotions": [
+        {
+          "id": "contemplation",
+          "intensity": 0.35
+        },
+        {
+          "id": "affection",
+          "intensity": 0.32
+        },
+        {
+          "id": "fatigue_exhaustion",
+          "intensity": 0.22
+        }
+      ],
+      "needsDelta": {
+        "social": -0.0055,
+        "fun": 0.020000000000000018,
+        "comfort": -0.03,
+        "fatigue": 0.010000000000000009
+      },
+      "focusGoalId": "ambition_hobby"
+    },
+    null,
+    null
+  ],
+  "tickMetrics": {
+    "population": 10,
+    "events": 9,
+    "journalEntries": 10,
+    "eligible": 2,
+    "fields": 2,
+    "modelCalls": 2,
+    "cpuMs": 13,
+    "totalMs": 19769,
+    "rejections": []
+  },
+  "after": {
+    "emotions": {
+      "schema_version": 2,
+      "taxonomy_id": "emonet_face_40",
+      "states": [
+        {
+          "id": "concentration",
+          "label": "Concentration",
+          "label_de": "Konzentration",
+          "components": [
+            {
+              "key": "event:w_KLuYZzeNvICy_e_32_1:concentration",
+              "source": "event",
+              "intensity": 0.4,
+              "activated_at": 30360,
+              "expires_at": 31260,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Die sorgfältige Handarbeit verlangt volle Aufmerksamkeit und ermüdet leicht, erfüllt Aiko aber auch mit Zufriedenheit über das wachsende Können.",
+                "evidence_id": "w_KLuYZzeNvICy_e_32_1",
+                "at": 30360
+              }
+            },
+            {
+              "key": "current:activity",
+              "source": "event",
+              "intensity": 0.2732,
+              "activated_at": 30360,
+              "expires_at": 30480,
+              "cause": {
+                "kind": "ongoing_activity",
+                "text": "arbeitet an einer Aufgabe",
+                "category": "work",
+                "evidence_id": null,
+                "at": 30360
+              }
+            }
+          ],
+          "intensity": 0.4,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Die sorgfältige Handarbeit verlangt volle Aufmerksamkeit und ermüdet leicht, erfüllt Aiko aber auch mit Zufriedenheit über das wachsende Können.",
+              "evidence_id": "w_KLuYZzeNvICy_e_32_1",
+              "at": 30360
+            },
+            {
+              "kind": "ongoing_activity",
+              "text": "arbeitet an einer Aufgabe",
+              "category": "work",
+              "evidence_id": null,
+              "at": 30360
+            }
+          ],
+          "expires_at": 31260
+        },
+        {
+          "id": "contemplation",
+          "label": "Contemplation",
+          "label_de": "Nachdenken",
+          "components": [
+            {
+              "key": "event:le_PMpRbY5fGWBN:contemplation",
+              "source": "event",
+              "intensity": 0.35,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                "evidence_id": "le_PMpRbY5fGWBN",
+                "at": 30060
+              }
+            },
+            {
+              "key": "event:le_UAWPcOgDPa6Z:contemplation",
+              "source": "event",
+              "intensity": 0.32,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+                "evidence_id": "le_UAWPcOgDPa6Z",
+                "at": 30060
+              }
+            }
+          ],
+          "intensity": 0.35,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+              "evidence_id": "le_PMpRbY5fGWBN",
+              "at": 30060
+            },
+            {
+              "kind": "subjective_reflection",
+              "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+              "evidence_id": "le_UAWPcOgDPa6Z",
+              "at": 30060
+            }
+          ],
+          "expires_at": 30960
+        },
+        {
+          "id": "affection",
+          "label": "Affection",
+          "label_de": "Zuneigung",
+          "components": [
+            {
+              "key": "event:le_PMpRbY5fGWBN:affection",
+              "source": "event",
+              "intensity": 0.32,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                "evidence_id": "le_PMpRbY5fGWBN",
+                "at": 30060
+              }
+            },
+            {
+              "key": "event:le_UAWPcOgDPa6Z:affection",
+              "source": "event",
+              "intensity": 0.3,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+                "evidence_id": "le_UAWPcOgDPa6Z",
+                "at": 30060
+              }
+            }
+          ],
+          "intensity": 0.32,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+              "evidence_id": "le_PMpRbY5fGWBN",
+              "at": 30060
+            },
+            {
+              "kind": "subjective_reflection",
+              "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+              "evidence_id": "le_UAWPcOgDPa6Z",
+              "at": 30060
+            }
+          ],
+          "expires_at": 30960
+        },
+        {
+          "id": "contentment",
+          "label": "Contentment",
+          "label_de": "Zufriedenheit",
+          "components": [
+            {
+              "key": "event:w_KLuYZzeNvICy_e_32_1:contentment",
+              "source": "event",
+              "intensity": 0.3,
+              "activated_at": 30360,
+              "expires_at": 31260,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Die sorgfältige Handarbeit verlangt volle Aufmerksamkeit und ermüdet leicht, erfüllt Aiko aber auch mit Zufriedenheit über das wachsende Können.",
+                "evidence_id": "w_KLuYZzeNvICy_e_32_1",
+                "at": 30360
+              }
+            },
+            {
+              "key": "current:contentment",
+              "source": "event",
+              "intensity": 0.2801116555277071,
+              "activated_at": 30360,
+              "expires_at": 30480,
+              "cause": {
+                "kind": "current_state",
+                "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                "at": 30360
+              }
+            }
+          ],
+          "intensity": 0.3,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Die sorgfältige Handarbeit verlangt volle Aufmerksamkeit und ermüdet leicht, erfüllt Aiko aber auch mit Zufriedenheit über das wachsende Können.",
+              "evidence_id": "w_KLuYZzeNvICy_e_32_1",
+              "at": 30360
+            },
+            {
+              "kind": "current_state",
+              "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+              "at": 30360
+            }
+          ],
+          "expires_at": 31260
+        },
+        {
+          "id": "relief",
+          "label": "Relief",
+          "label_de": "Erleichterung",
+          "components": [
+            {
+              "key": "event:le_UAWPcOgDPa6Z:relief",
+              "source": "event",
+              "intensity": 0.28,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+                "evidence_id": "le_UAWPcOgDPa6Z",
+                "at": 30060
+              }
+            }
+          ],
+          "intensity": 0.28,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+              "evidence_id": "le_UAWPcOgDPa6Z",
+              "at": 30060
+            }
+          ],
+          "expires_at": 30960
+        },
+        {
+          "id": "fatigue_exhaustion",
+          "label": "Fatigue/Exhaustion",
+          "label_de": "Müdigkeit/Erschöpfung",
+          "components": [
+            {
+              "key": "event:le_PMpRbY5fGWBN:fatigue_exhaustion",
+              "source": "event",
+              "intensity": 0.22,
+              "activated_at": 30060,
+              "expires_at": 30960,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                "evidence_id": "le_PMpRbY5fGWBN",
+                "at": 30060
+              }
+            },
+            {
+              "key": "event:w_KLuYZzeNvICy_e_32_1:fatigue_exhaustion",
+              "source": "event",
+              "intensity": 0.25,
+              "activated_at": 30360,
+              "expires_at": 31260,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Die sorgfältige Handarbeit verlangt volle Aufmerksamkeit und ermüdet leicht, erfüllt Aiko aber auch mit Zufriedenheit über das wachsende Können.",
+                "evidence_id": "w_KLuYZzeNvICy_e_32_1",
+                "at": 30360
+              }
+            },
+            {
+              "key": "current:fatigue",
+              "source": "need",
+              "intensity": 0.24569898542653823,
+              "activated_at": 30360,
+              "expires_at": 30480,
+              "cause": {
+                "kind": "modeled_need",
+                "need": "fatigue",
+                "text": "Der gegenwärtige Zustand ist ermüdend.",
+                "at": 30360
+              }
+            }
+          ],
+          "intensity": 0.25,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+              "evidence_id": "le_PMpRbY5fGWBN",
+              "at": 30060
+            },
+            {
+              "kind": "subjective_reflection",
+              "text": "Die sorgfältige Handarbeit verlangt volle Aufmerksamkeit und ermüdet leicht, erfüllt Aiko aber auch mit Zufriedenheit über das wachsende Können.",
+              "evidence_id": "w_KLuYZzeNvICy_e_32_1",
+              "at": 30360
+            },
+            {
+              "kind": "modeled_need",
+              "need": "fatigue",
+              "text": "Der gegenwärtige Zustand ist ermüdend.",
+              "at": 30360
+            }
+          ],
+          "expires_at": 31260
+        }
+      ],
+      "primary": "concentration",
+      "updated_at": 30360,
+      "actual_narrative": "Konzentration 40% · Nachdenken 35% · Zuneigung 32% · Zufriedenheit 30% · Erleichterung 28% · Müdigkeit/Erschöpfung 25%",
+      "self_narrative": "Die begonnene Schreinerarbeit gewissenhaft zu Ende bringen, bevor es nach Hause geht."
+    },
+    "currentDesire": "Die begonnene Schreinerarbeit gewissenhaft zu Ende bringen, bevor es nach Hause geht.",
+    "needs": {
+      "hunger": 0.35894978668602917,
+      "thirst": 0.2995546875285607,
+      "bladder": 0.3956679328000174,
+      "fatigue": 0.4659222964819525,
+      "hygiene": 0.4084349824657052,
+      "social": 0.004583333333333333,
+      "fun": 0.3520102765969917,
+      "comfort": 0.16029190673275492
+    },
+    "goals": [
+      {
+        "id": "ambition_primary",
+        "kind": "mastery",
+        "title": "Build reliable mastery",
+        "progress": 0,
+        "completed": false,
+        "updated_at": 0,
+        "title_de": "Fähigkeiten verlässlich ausbauen",
+        "target_seconds": 144000,
+        "practice_seconds": 0
+      },
+      {
+        "id": "ambition_career",
+        "kind": "career",
+        "title": "Grow as a Carpenter",
+        "progress": 0,
+        "completed": false,
+        "updated_at": 0,
+        "title_de": "Im Beruf dazulernen",
+        "target_seconds": 144000,
+        "practice_seconds": 0
+      },
+      {
+        "id": "ambition_hobby",
+        "kind": "hobby",
+        "activity": "walking",
+        "title": "Practice walking",
+        "progress": 0,
+        "completed": false,
+        "updated_at": 0,
+        "title_de": "Zeit für mein Interesse finden",
+        "target_seconds": 144000,
+        "practice_seconds": 0
+      }
+    ],
+    "dailyGoals": {
+      "day": 0,
+      "items": [
+        {
+          "id": "daily_care",
+          "kind": "selfcare",
+          "title": "Mich heute gut versorgen",
+          "target": 2,
+          "value": 0,
+          "unit": "Handlungen"
+        },
+        {
+          "id": "daily_practice",
+          "kind": "career",
+          "title": "Eine Aufgabe bei der Arbeit voranbringen",
+          "target": 900,
+          "value": 0,
+          "unit": "Sekunden",
+          "interest": "walking"
+        },
+        {
+          "id": "daily_connection",
+          "kind": "connection",
+          "title": "Einen guten Moment mit jemandem teilen",
+          "target": 1,
+          "value": 1,
+          "unit": "Begegnungen",
+          "last_evidence_id": "lw_9W41RrTldx3N"
+        }
+      ]
+    },
+    "thought": "Nur noch diese eine Verbindung sauber einpassen. Wenn das Werkstück sitzt, kann ich mit ruhigem Gewissen durchatmen und den Kopf draußen frei bekommen."
+  },
+  "recentJournal": [
+    {
+      "cursor": 12633,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "w_KLuYZzeNvICy_e_32_1",
+      "observed_at": 30360,
+      "channel": "direct",
+      "perception": "Aiko Okafor bleibt in Feuerwache · Werkstatt und arbeitet an einer Aufgabe.",
+      "interpretation": "Nur noch diese eine Verbindung sauber einpassen. Wenn das Werkstück sitzt, kann ich mit ruhigem Gewissen durchatmen und den Kopf draußen frei bekommen.",
+      "confidence": 0.95,
+      "type": "status",
+      "start": 30360,
+      "end": 30360,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "action": "work",
+        "mentalEffects": {
+          "lw_I2Ig3na9ltOF": {
+            "emotions": [
+              {
+                "id": "concentration",
+                "intensity": 0.4
+              },
+              {
+                "id": "contentment",
+                "intensity": 0.3
+              },
+              {
+                "id": "fatigue_exhaustion",
+                "intensity": 0.25
+              }
+            ],
+            "needsDelta": {
+              "social": 0,
+              "fun": -0.020000000000000018,
+              "comfort": 0.01999999999999999,
+              "fatigue": 0.020000000000000018
+            },
+            "focusGoalId": "ambition_career"
+          }
+        }
+      },
+      "description": "Aiko Okafor bleibt in Feuerwache · Werkstatt und arbeitet an einer Aufgabe.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 12630,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "le_UAWPcOgDPa6Z",
+      "observed_at": 30060,
+      "channel": "conversation",
+      "perception": "Ich höre, was dir gerade wichtig ist. Was wäre ein kleiner machbarer Schritt, und wie verändert dieses Gespräch dein Gefühl dabei?\nEin kleiner, machbarer Schritt ist für mich, dieses eine Werkstück jetzt mit voller Ruhe und sauberen Schnitten abzuschließen, ohne mich zu hetzen. Danach möchte ich mir einen kurzen Moment an der frischen Luft nehmen, einfach ein paar Schritte gehen, um den Kopf frei zu bekommen. Das Gespräch mit dir hilft mir tatsächlich, kurz innezuhalten. Es nimmt mir etwas von der Anspannung, die sich bei der konzentrierten Arbeit aufbaut, und erinnert mich daran, warum ich das alles tue: für ein ruhiges, behütetes Zuhause mit Theo und Noah.",
+      "interpretation": "Der Austausch tut gut und bringt Klarheit. Erst die Aufgabe sauber vollenden, dann draußen frische Luft tanken, um mit freiem Kopf heimzukehren.",
+      "confidence": 0.6,
+      "type": "conversation",
+      "start": 30060,
+      "end": 30060,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "previousMind": {
+          "needs": {
+            "hunger": 0.3497831200193624,
+            "thirst": 0.2853880208618939,
+            "bladder": 0.3856679328000174,
+            "fatigue": 0.45117229648195245,
+            "hygiene": 0.4041016491323718,
+            "social": 0,
+            "fun": 0.39576027659699187,
+            "comfort": 0.18487524006608833
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "contemplation",
+                "label": "Contemplation",
+                "label_de": "Nachdenken",
+                "components": [
+                  {
+                    "key": "event:le_PMpRbY5fGWBN:contemplation",
+                    "source": "event",
+                    "intensity": 0.35,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                      "evidence_id": "le_PMpRbY5fGWBN",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.35,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                    "evidence_id": "le_PMpRbY5fGWBN",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "affection",
+                "label": "Affection",
+                "label_de": "Zuneigung",
+                "components": [
+                  {
+                    "key": "event:w_91U9o3pjdbRG_e_21_4:affection",
+                    "source": "event",
+                    "intensity": 0.3,
+                    "activated_at": 29460,
+                    "expires_at": 30360,
+                    "cause": {
+                      "kind": "social_complete",
+                      "category": "tell_story",
+                      "outcome": "accepted",
+                      "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                      "evidence_id": "lw_9W41RrTldx3N",
+                      "at": 29460
+                    }
+                  },
+                  {
+                    "key": "event:le_PMpRbY5fGWBN:affection",
+                    "source": "event",
+                    "intensity": 0.32,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                      "evidence_id": "le_PMpRbY5fGWBN",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.32,
+                "causes": [
+                  {
+                    "kind": "social_complete",
+                    "category": "tell_story",
+                    "outcome": "accepted",
+                    "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                    "evidence_id": "lw_9W41RrTldx3N",
+                    "at": 29460
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                    "evidence_id": "le_PMpRbY5fGWBN",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.2823241555277071,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2823241555277071,
+                "causes": [
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "concentration",
+                "label": "Concentration",
+                "label_de": "Konzentration",
+                "components": [
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.2732,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "arbeitet an einer Aufgabe",
+                      "category": "work",
+                      "evidence_id": null,
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2732,
+                "causes": [
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "arbeitet an einer Aufgabe",
+                    "category": "work",
+                    "evidence_id": null,
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "fatigue_exhaustion",
+                "label": "Fatigue/Exhaustion",
+                "label_de": "Müdigkeit/Erschöpfung",
+                "components": [
+                  {
+                    "key": "event:le_PMpRbY5fGWBN:fatigue_exhaustion",
+                    "source": "event",
+                    "intensity": 0.22,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                      "evidence_id": "le_PMpRbY5fGWBN",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "current:fatigue",
+                    "source": "need",
+                    "intensity": 0.22652398542653818,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "modeled_need",
+                      "need": "fatigue",
+                      "text": "Der gegenwärtige Zustand ist ermüdend.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.22652398542653818,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                    "evidence_id": "le_PMpRbY5fGWBN",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "modeled_need",
+                    "need": "fatigue",
+                    "text": "Der gegenwärtige Zustand ist ermüdend.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              }
+            ],
+            "primary": "contemplation",
+            "updated_at": 30060,
+            "actual_narrative": "Nachdenken 35% · Zuneigung 32% · Zufriedenheit 28% · Konzentration 27% · Müdigkeit/Erschöpfung 23%",
+            "self_narrative": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht."
+          },
+          "focus_goal_id": "ambition_hobby",
+          "current_desire": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht.",
+          "thought_source": "conversation",
+          "thought_at": 30060
+        },
+        "afterMind": {
+          "needs": {
+            "hunger": 0.3497831200193624,
+            "thirst": 0.2853880208618939,
+            "bladder": 0.3856679328000174,
+            "fatigue": 0.44117229648195244,
+            "hygiene": 0.4041016491323718,
+            "social": 0,
+            "fun": 0.36576027659699184,
+            "comfort": 0.1348752400660883
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "contemplation",
+                "label": "Contemplation",
+                "label_de": "Nachdenken",
+                "components": [
+                  {
+                    "key": "event:le_PMpRbY5fGWBN:contemplation",
+                    "source": "event",
+                    "intensity": 0.35,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                      "evidence_id": "le_PMpRbY5fGWBN",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "event:le_UAWPcOgDPa6Z:contemplation",
+                    "source": "event",
+                    "intensity": 0.32,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+                      "evidence_id": "le_UAWPcOgDPa6Z",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.35,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                    "evidence_id": "le_PMpRbY5fGWBN",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+                    "evidence_id": "le_UAWPcOgDPa6Z",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "affection",
+                "label": "Affection",
+                "label_de": "Zuneigung",
+                "components": [
+                  {
+                    "key": "event:w_91U9o3pjdbRG_e_21_4:affection",
+                    "source": "event",
+                    "intensity": 0.3,
+                    "activated_at": 29460,
+                    "expires_at": 30360,
+                    "cause": {
+                      "kind": "social_complete",
+                      "category": "tell_story",
+                      "outcome": "accepted",
+                      "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                      "evidence_id": "lw_9W41RrTldx3N",
+                      "at": 29460
+                    }
+                  },
+                  {
+                    "key": "event:le_PMpRbY5fGWBN:affection",
+                    "source": "event",
+                    "intensity": 0.32,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                      "evidence_id": "le_PMpRbY5fGWBN",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "event:le_UAWPcOgDPa6Z:affection",
+                    "source": "event",
+                    "intensity": 0.3,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+                      "evidence_id": "le_UAWPcOgDPa6Z",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.32,
+                "causes": [
+                  {
+                    "kind": "social_complete",
+                    "category": "tell_story",
+                    "outcome": "accepted",
+                    "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                    "evidence_id": "lw_9W41RrTldx3N",
+                    "at": 29460
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                    "evidence_id": "le_PMpRbY5fGWBN",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+                    "evidence_id": "le_UAWPcOgDPa6Z",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.2838241555277071,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2838241555277071,
+                "causes": [
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "relief",
+                "label": "Relief",
+                "label_de": "Erleichterung",
+                "components": [
+                  {
+                    "key": "event:le_UAWPcOgDPa6Z:relief",
+                    "source": "event",
+                    "intensity": 0.28,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+                      "evidence_id": "le_UAWPcOgDPa6Z",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.28,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das ruhige Gespräch bietet einen willkommenen Moment des Innehaltens und schenkt Erleichterung vor dem nächsten Arbeitsschritt.",
+                    "evidence_id": "le_UAWPcOgDPa6Z",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "concentration",
+                "label": "Concentration",
+                "label_de": "Konzentration",
+                "components": [
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.2732,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "arbeitet an einer Aufgabe",
+                      "category": "work",
+                      "evidence_id": null,
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2732,
+                "causes": [
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "arbeitet an einer Aufgabe",
+                    "category": "work",
+                    "evidence_id": null,
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "fatigue_exhaustion",
+                "label": "Fatigue/Exhaustion",
+                "label_de": "Müdigkeit/Erschöpfung",
+                "components": [
+                  {
+                    "key": "event:le_PMpRbY5fGWBN:fatigue_exhaustion",
+                    "source": "event",
+                    "intensity": 0.22,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                      "evidence_id": "le_PMpRbY5fGWBN",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "current:fatigue",
+                    "source": "need",
+                    "intensity": 0.21352398542653817,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "modeled_need",
+                      "need": "fatigue",
+                      "text": "Der gegenwärtige Zustand ist ermüdend.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.22,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                    "evidence_id": "le_PMpRbY5fGWBN",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "modeled_need",
+                    "need": "fatigue",
+                    "text": "Der gegenwärtige Zustand ist ermüdend.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              }
+            ],
+            "primary": "contemplation",
+            "updated_at": 30060,
+            "actual_narrative": "Nachdenken 35% · Zuneigung 32% · Zufriedenheit 28% · Erleichterung 28% · Konzentration 27% · Müdigkeit/Erschöpfung 22%",
+            "self_narrative": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht."
+          },
+          "focus_goal_id": "ambition_hobby",
+          "current_desire": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht.",
+          "thought_source": "conversation",
+          "thought_at": 30060
+        },
+        "effects": {
+          "emotions": [
+            {
+              "id": "relief",
+              "intensity": 0.28
+            },
+            {
+              "id": "contemplation",
+              "intensity": 0.32
+            },
+            {
+              "id": "affection",
+              "intensity": 0.3
+            }
+          ],
+          "needsDelta": {
+            "social": 0,
+            "fun": -0.030000000000000027,
+            "comfort": -0.05000000000000002,
+            "fatigue": -0.010000000000000009
+          },
+          "focusGoalId": "ambition_hobby"
+        },
+        "channel": "talk",
+        "message": "Ich höre, was dir gerade wichtig ist. Was wäre ein kleiner machbarer Schritt, und wie verändert dieses Gespräch dein Gefühl dabei?",
+        "reply": "Ein kleiner, machbarer Schritt ist für mich, dieses eine Werkstück jetzt mit voller Ruhe und sauberen Schnitten abzuschließen, ohne mich zu hetzen. Danach möchte ich mir einen kurzen Moment an der frischen Luft nehmen, einfach ein paar Schritte gehen, um den Kopf frei zu bekommen. Das Gespräch mit dir hilft mir tatsächlich, kurz innezuhalten. Es nimmt mir etwas von der Anspannung, die sich bei der konzentrierten Arbeit aufbaut, und erinnert mich daran, warum ich das alles tue: für ein ruhiges, behütetes Zuhause mit Theo und Noah.",
+        "previousThought": "Erst die Arbeit sauber beenden, dann draußen frische Luft atmen. Das Gehen wird mir guttun, um gestärkt zu Theo und Noah zurückzukehren.",
+        "previousMood": "Nachdenken",
+        "newThought": "Der Austausch tut gut und bringt Klarheit. Erst die Aufgabe sauber vollenden, dann draußen frische Luft tanken, um mit freiem Kopf heimzukehren.",
+        "newMood": "Nachdenken"
+      },
+      "description": "Gespräch mit Aiko Okafor: Ein kleiner, machbarer Schritt ist für mich, dieses eine Werkstück jetzt mit voller Ruhe und sauberen Schnitten abzuschließen, ohne mich zu hetzen. Danach möchte ich mir einen kurzen Moment an der frischen Luft nehmen, einfach ein paar Schritte gehen, um den Kopf frei zu bekommen. Das Gespräch mit dir hilft mir tatsächlich, kurz innezuhalten. Es nimmt mir etwas von der Anspannung, die sich bei der konzentrierten Arbeit aufbaut, und erinnert mich daran, warum ich das alles tue: für ein ruhiges, behütetes Zuhause mit Theo und Noah.",
+      "source": "user_conversation"
+    },
+    {
+      "cursor": 12629,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "le_PMpRbY5fGWBN",
+      "observed_at": 30060,
+      "channel": "inner_dialogue",
+      "perception": "Was brauchst du gerade, wie fühlst du dich damit, und welches deiner vorhandenen Vorhaben möchtest du als Nächstes angehen? Ich höre dir in Ruhe zu.\nIm Moment brauche ich vor allem einen klaren Abschluss für diese Aufgabe, bevor die Müdigkeit die Präzision trübt. Ich spüre viel Wärme für Theo und Noah, aber die Arme werden schwer. Sobald das Werkstück sauber vollendet ist, zieht es mich nach draußen – ein Spaziergang an der frischen Luft würde mir den Kopf freimachen und mir neue Ruhe schenken, bevor ich heimkehre. Daher möchte ich mein Vorhaben, Zeit für mein Interesse am Gehen zu finden, als Nächstes bewusst ansteuern. Es hilft mir, meine Mitte wiederzufinden.",
+      "interpretation": "Erst die Arbeit sauber beenden, dann draußen frische Luft atmen. Das Gehen wird mir guttun, um gestärkt zu Theo und Noah zurückzukehren.",
+      "confidence": 0.6,
+      "type": "conversation",
+      "start": 30060,
+      "end": 30060,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "previousMind": {
+          "needs": {
+            "hunger": 0.3497831200193624,
+            "thirst": 0.2853880208618939,
+            "bladder": 0.3856679328000174,
+            "fatigue": 0.44117229648195244,
+            "hygiene": 0.4041016491323718,
+            "social": 0.0055,
+            "fun": 0.37576027659699185,
+            "comfort": 0.21487524006608832
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "affection",
+                "label": "Affection",
+                "label_de": "Zuneigung",
+                "components": [
+                  {
+                    "key": "event:w_91U9o3pjdbRG_e_21_4:affection",
+                    "source": "event",
+                    "intensity": 0.3,
+                    "activated_at": 29460,
+                    "expires_at": 30360,
+                    "cause": {
+                      "kind": "social_complete",
+                      "category": "tell_story",
+                      "outcome": "accepted",
+                      "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                      "evidence_id": "lw_9W41RrTldx3N",
+                      "at": 29460
+                    }
+                  }
+                ],
+                "intensity": 0.3,
+                "causes": [
+                  {
+                    "kind": "social_complete",
+                    "category": "tell_story",
+                    "outcome": "accepted",
+                    "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                    "evidence_id": "lw_9W41RrTldx3N",
+                    "at": 29460
+                  }
+                ],
+                "expires_at": 30360
+              },
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.2838241555277071,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2838241555277071,
+                "causes": [
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "concentration",
+                "label": "Concentration",
+                "label_de": "Konzentration",
+                "components": [
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.2732,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "arbeitet an einer Aufgabe",
+                      "category": "work",
+                      "evidence_id": null,
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2732,
+                "causes": [
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "arbeitet an einer Aufgabe",
+                    "category": "work",
+                    "evidence_id": null,
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "fatigue_exhaustion",
+                "label": "Fatigue/Exhaustion",
+                "label_de": "Müdigkeit/Erschöpfung",
+                "components": [
+                  {
+                    "key": "current:fatigue",
+                    "source": "need",
+                    "intensity": 0.21352398542653817,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "modeled_need",
+                      "need": "fatigue",
+                      "text": "Der gegenwärtige Zustand ist ermüdend.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.21352398542653817,
+                "causes": [
+                  {
+                    "kind": "modeled_need",
+                    "need": "fatigue",
+                    "text": "Der gegenwärtige Zustand ist ermüdend.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              }
+            ],
+            "primary": "affection",
+            "updated_at": 30060,
+            "actual_narrative": "Zuneigung 30% · Zufriedenheit 28% · Konzentration 27% · Müdigkeit/Erschöpfung 21%",
+            "self_narrative": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht."
+          },
+          "focus_goal_id": null,
+          "current_desire": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht.",
+          "thought_source": null,
+          "thought_at": null
+        },
+        "afterMind": {
+          "needs": {
+            "hunger": 0.3497831200193624,
+            "thirst": 0.2853880208618939,
+            "bladder": 0.3856679328000174,
+            "fatigue": 0.45117229648195245,
+            "hygiene": 0.4041016491323718,
+            "social": 0,
+            "fun": 0.39576027659699187,
+            "comfort": 0.18487524006608833
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "contemplation",
+                "label": "Contemplation",
+                "label_de": "Nachdenken",
+                "components": [
+                  {
+                    "key": "event:le_PMpRbY5fGWBN:contemplation",
+                    "source": "event",
+                    "intensity": 0.35,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                      "evidence_id": "le_PMpRbY5fGWBN",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.35,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                    "evidence_id": "le_PMpRbY5fGWBN",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "affection",
+                "label": "Affection",
+                "label_de": "Zuneigung",
+                "components": [
+                  {
+                    "key": "event:w_91U9o3pjdbRG_e_21_4:affection",
+                    "source": "event",
+                    "intensity": 0.3,
+                    "activated_at": 29460,
+                    "expires_at": 30360,
+                    "cause": {
+                      "kind": "social_complete",
+                      "category": "tell_story",
+                      "outcome": "accepted",
+                      "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                      "evidence_id": "lw_9W41RrTldx3N",
+                      "at": 29460
+                    }
+                  },
+                  {
+                    "key": "event:le_PMpRbY5fGWBN:affection",
+                    "source": "event",
+                    "intensity": 0.32,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                      "evidence_id": "le_PMpRbY5fGWBN",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.32,
+                "causes": [
+                  {
+                    "kind": "social_complete",
+                    "category": "tell_story",
+                    "outcome": "accepted",
+                    "text": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+                    "evidence_id": "lw_9W41RrTldx3N",
+                    "at": 29460
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                    "evidence_id": "le_PMpRbY5fGWBN",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              },
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.2823241555277071,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2823241555277071,
+                "causes": [
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "concentration",
+                "label": "Concentration",
+                "label_de": "Konzentration",
+                "components": [
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.2732,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "arbeitet an einer Aufgabe",
+                      "category": "work",
+                      "evidence_id": null,
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.2732,
+                "causes": [
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "arbeitet an einer Aufgabe",
+                    "category": "work",
+                    "evidence_id": null,
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30180
+              },
+              {
+                "id": "fatigue_exhaustion",
+                "label": "Fatigue/Exhaustion",
+                "label_de": "Müdigkeit/Erschöpfung",
+                "components": [
+                  {
+                    "key": "event:le_PMpRbY5fGWBN:fatigue_exhaustion",
+                    "source": "event",
+                    "intensity": 0.22,
+                    "activated_at": 30060,
+                    "expires_at": 30960,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                      "evidence_id": "le_PMpRbY5fGWBN",
+                      "at": 30060
+                    }
+                  },
+                  {
+                    "key": "current:fatigue",
+                    "source": "need",
+                    "intensity": 0.22652398542653818,
+                    "activated_at": 30060,
+                    "expires_at": 30180,
+                    "cause": {
+                      "kind": "modeled_need",
+                      "need": "fatigue",
+                      "text": "Der gegenwärtige Zustand ist ermüdend.",
+                      "at": 30060
+                    }
+                  }
+                ],
+                "intensity": 0.22652398542653818,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das bewusste Nachdenken über die Erschöpfung und die Sehnsucht nach einem Spaziergang bestärkt den Wunsch, nach der Arbeit draußen frische Luft zu schöpfen.",
+                    "evidence_id": "le_PMpRbY5fGWBN",
+                    "at": 30060
+                  },
+                  {
+                    "kind": "modeled_need",
+                    "need": "fatigue",
+                    "text": "Der gegenwärtige Zustand ist ermüdend.",
+                    "at": 30060
+                  }
+                ],
+                "expires_at": 30960
+              }
+            ],
+            "primary": "contemplation",
+            "updated_at": 30060,
+            "actual_narrative": "Nachdenken 35% · Zuneigung 32% · Zufriedenheit 28% · Konzentration 27% · Müdigkeit/Erschöpfung 23%",
+            "self_narrative": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht."
+          },
+          "focus_goal_id": "ambition_hobby",
+          "current_desire": "Die begonnene Arbeit gewissenhaft abschließen, bevor es nach Hause geht.",
+          "thought_source": "conversation",
+          "thought_at": 30060
+        },
+        "effects": {
+          "emotions": [
+            {
+              "id": "contemplation",
+              "intensity": 0.35
+            },
+            {
+              "id": "affection",
+              "intensity": 0.32
+            },
+            {
+              "id": "fatigue_exhaustion",
+              "intensity": 0.22
+            }
+          ],
+          "needsDelta": {
+            "social": -0.0055,
+            "fun": 0.020000000000000018,
+            "comfort": -0.03,
+            "fatigue": 0.010000000000000009
+          },
+          "focusGoalId": "ambition_hobby"
+        },
+        "channel": "inner",
+        "message": "Was brauchst du gerade, wie fühlst du dich damit, und welches deiner vorhandenen Vorhaben möchtest du als Nächstes angehen? Ich höre dir in Ruhe zu.",
+        "reply": "Im Moment brauche ich vor allem einen klaren Abschluss für diese Aufgabe, bevor die Müdigkeit die Präzision trübt. Ich spüre viel Wärme für Theo und Noah, aber die Arme werden schwer. Sobald das Werkstück sauber vollendet ist, zieht es mich nach draußen – ein Spaziergang an der frischen Luft würde mir den Kopf freimachen und mir neue Ruhe schenken, bevor ich heimkehre. Daher möchte ich mein Vorhaben, Zeit für mein Interesse am Gehen zu finden, als Nächstes bewusst ansteuern. Es hilft mir, meine Mitte wiederzufinden.",
+        "previousThought": "Vielleicht kann ich Theo heute Abend mit einer kleinen Schnitzerei überraschen. Eine aufmerksame Geste würde uns allen guttun.",
+        "previousMood": "Zuneigung",
+        "newThought": "Erst die Arbeit sauber beenden, dann draußen frische Luft atmen. Das Gehen wird mir guttun, um gestärkt zu Theo und Noah zurückzukehren.",
+        "newMood": "Nachdenken"
+      },
+      "description": "Gespräch mit Aiko Okafor: Im Moment brauche ich vor allem einen klaren Abschluss für diese Aufgabe, bevor die Müdigkeit die Präzision trübt. Ich spüre viel Wärme für Theo und Noah, aber die Arme werden schwer. Sobald das Werkstück sauber vollendet ist, zieht es mich nach draußen – ein Spaziergang an der frischen Luft würde mir den Kopf freimachen und mir neue Ruhe schenken, bevor ich heimkehre. Daher möchte ich mein Vorhaben, Zeit für mein Interesse am Gehen zu finden, als Nächstes bewusst ansteuern. Es hilft mir, meine Mitte wiederzufinden.",
+      "source": "user_conversation"
+    },
+    {
+      "cursor": 12619,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_r9Z9eb_HKhIz",
+      "observed_at": 30060,
+      "channel": "initialization",
+      "perception": "Gefühle werden aus meinem gegenwärtigen Zustand bewertet; messbarer Zielfortschritt wurde aus meinen erhaltenen Ereignissen übernommen. Neue Gebäudeabschnitte ergänzen meine Umgebung.",
+      "interpretation": "Mein Zustand wird genauer dargestellt; meine früheren Erlebnisse bleiben unverändert.",
+      "confidence": 1,
+      "type": "initialization_life_model",
+      "start": 30060,
+      "end": 30060,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "coverage": "state_model_upgrade",
+        "progressPolicy": "retained_events_only",
+        "preservesExistingEvents": true
+      },
+      "description": "Gefühle werden aus meinem gegenwärtigen Zustand bewertet; messbarer Zielfortschritt wurde aus meinen erhaltenen Ereignissen übernommen. Neue Gebäudeabschnitte ergänzen meine Umgebung.",
+      "source": "state_model_upgrade"
+    },
+    {
+      "cursor": 12609,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw__FAdS7zMJLTo",
+      "observed_at": 30060,
+      "channel": "initialization",
+      "perception": "Die ausgearbeitete Biografie und bereits erlebte Ereignisse bleiben maßgeblich. Die persönlichen Wünsche ergeben sich aus der ausgearbeiteten Biografie und den eigenen Gedanken. Persönliche Grenzen und vertraute Beziehungen werden aus der eigenen Perspektive betrachtet. Noah Okafor: Diese Beziehung ist als Ausgangskontakt angelegt; konkrete gemeinsame Erlebnisse ergeben sich ausschließlich aus Biografie und persönlichen Protokollen. Paul Santos: Diese Beziehung ist als Ausgangskontakt angelegt; konkrete gemeinsame Erlebnisse ergeben sich ausschließlich aus Biografie und persönlichen Protokollen. Jana Chen: Diese Beziehung ist als Ausgangskontakt angelegt; konkrete gemeinsame Erlebnisse ergeben sich ausschließlich aus Biografie und persönlichen Protokollen.",
+      "interpretation": "Ergänzter Ausgangshintergrund; kein neu beobachtetes Ereignis. Meine bisherigen Erlebnisse bleiben bestehen.",
+      "confidence": 1,
+      "type": "initialization_social_background",
+      "start": 30060,
+      "end": 30060,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "coverage": "supplemental_procedural_background",
+        "doesNotRewriteWitnessedEvents": true
+      },
+      "description": "Die ausgearbeitete Biografie und bereits erlebte Ereignisse bleiben maßgeblich. Die persönlichen Wünsche ergeben sich aus der ausgearbeiteten Biografie und den eigenen Gedanken. Persönliche Grenzen und vertraute Beziehungen werden aus der eigenen Perspektive betrachtet. Noah Okafor: Diese Beziehung ist als Ausgangskontakt angelegt; konkrete gemeinsame Erlebnisse ergeben sich ausschließlich aus Biografie und persönlichen Protokollen. Paul Santos: Diese Beziehung ist als Ausgangskontakt angelegt; konkrete gemeinsame Erlebnisse ergeben sich ausschließlich aus Biografie und persönlichen Protokollen. Jana Chen: Diese Beziehung ist als Ausgangskontakt angelegt; konkrete gemeinsame Erlebnisse ergeben sich ausschließlich aus Biografie und persönlichen Protokollen.",
+      "source": "procedural_initialization"
+    },
+    {
+      "cursor": 12597,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_UYd-jO5d0MJv",
+      "observed_at": 30000,
+      "channel": "direct",
+      "perception": "Regieimpuls: Aiko denkt über eine kleine, hilfreiche Geste für einen Menschen in ihrer Nähe nach.",
+      "interpretation": "Vielleicht kann ich Theo heute Abend mit einer kleinen Schnitzerei überraschen. Eine aufmerksame Geste würde uns allen guttun.",
+      "confidence": 0.85,
+      "type": "intervention",
+      "start": 30000,
+      "end": 30000,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "kind": "idea",
+        "text": "Aiko denkt über eine kleine, hilfreiche Geste für einen Menschen in ihrer Nähe nach.",
+        "status": "direction"
+      },
+      "description": "Regieimpuls: Aiko denkt über eine kleine, hilfreiche Geste für einen Menschen in ihrer Nähe nach.",
+      "source": "user_intervention"
+    },
+    {
+      "cursor": 12596,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_b2U8dkQ7_c-m",
+      "observed_at": 30000,
+      "channel": "conversation",
+      "perception": "Was möchtest du heute schaffen, und wem könntest du dabei helfen?\nHallo. Für heute möchte ich vor allem meine Arbeit hier mit der nötigen Sorgfalt und Geduld zu Ende bringen. Jeder Handgriff am Holz zählt. Am meisten helfe ich damit wohl meiner kleinen Familie – Theo und unserem kleinen Noah. Indem ich verlässlich arbeite, baue ich an einem stabilen Fundament für uns. Aber ehrlich gesagt sehne ich mich heute auch einfach nach ihrer Nähe und einem ruhigen Gespräch am Abend.",
+      "interpretation": "Es tut gut, kurz innezuhalten und mit jemandem zu sprechen. Die Stille in der Werkstatt war fast schon zu schwer, ich vermisse Theo und Noah sehr.",
+      "confidence": 0.6,
+      "type": "conversation",
+      "start": 30000,
+      "end": 30000,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "channel": "talk",
+        "message": "Was möchtest du heute schaffen, und wem könntest du dabei helfen?",
+        "reply": "Hallo. Für heute möchte ich vor allem meine Arbeit hier mit der nötigen Sorgfalt und Geduld zu Ende bringen. Jeder Handgriff am Holz zählt. Am meisten helfe ich damit wohl meiner kleinen Familie – Theo und unserem kleinen Noah. Indem ich verlässlich arbeite, baue ich an einem stabilen Fundament für uns. Aber ehrlich gesagt sehne ich mich heute auch einfach nach ihrer Nähe und einem ruhigen Gespräch am Abend.",
+        "previousThought": "Die Arbeit geht gut voran, aber ich fühle mich etwas einsam. Es wird Zeit, bald nach Hause zu Theo und Noah zurückzukehren und frische Kraft zu tanken.",
+        "previousMood": "nachdenklich",
+        "newThought": "Es tut gut, kurz innezuhalten und mit jemandem zu sprechen. Die Stille in der Werkstatt war fast schon zu schwer, ich vermisse Theo und Noah sehr.",
+        "newMood": "nachdenklich"
+      },
+      "description": "Gespräch mit Aiko Okafor: Hallo. Für heute möchte ich vor allem meine Arbeit hier mit der nötigen Sorgfalt und Geduld zu Ende bringen. Jeder Handgriff am Holz zählt. Am meisten helfe ich damit wohl meiner kleinen Familie – Theo und unserem kleinen Noah. Indem ich verlässlich arbeite, baue ich an einem stabilen Fundament für uns. Aber ehrlich gesagt sehne ich mich heute auch einfach nach ihrer Nähe und einem ruhigen Gespräch am Abend.",
+      "source": "user_conversation"
+    },
+    {
+      "cursor": 12595,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_RsC4bnEDo38l",
+      "observed_at": 30000,
+      "channel": "inner_dialogue",
+      "perception": "Nimm dir einen ruhigen Moment. Was beschäftigt dich heute wirklich?\nIch denke an Theo und den kleinen Noah. Jeder Schnitt im Holz, jedes geschliffene Stück erinnert mich daran, wofür ich das alles mache: um ein sicheres, stabiles Zuhause für uns zu bauen. Die Arbeit hier gibt mir Halt, aber ich vermisse sie auch ein wenig. Mein Herz sehnt sich nach ihrer Nähe, nach einem einfachen Gespräch am Abend. Es ist dieser Ausgleich zwischen dem Handwerk und der Familie, der mir zeigt, worauf es wirklich ankommt.",
+      "interpretation": "Die Arbeit geht gut voran, aber ich fühle mich etwas einsam. Es wird Zeit, bald nach Hause zu Theo und Noah zurückzukehren und frische Kraft zu tanken.",
+      "confidence": 0.6,
+      "type": "conversation",
+      "start": 30000,
+      "end": 30000,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "channel": "inner",
+        "message": "Nimm dir einen ruhigen Moment. Was beschäftigt dich heute wirklich?",
+        "reply": "Ich denke an Theo und den kleinen Noah. Jeder Schnitt im Holz, jedes geschliffene Stück erinnert mich daran, wofür ich das alles mache: um ein sicheres, stabiles Zuhause für uns zu bauen. Die Arbeit hier gibt mir Halt, aber ich vermisse sie auch ein wenig. Mein Herz sehnt sich nach ihrer Nähe, nach einem einfachen Gespräch am Abend. Es ist dieser Ausgleich zwischen dem Handwerk und der Familie, der mir zeigt, worauf es wirklich ankommt.",
+        "previousThought": "Das Holz verlangt Geduld, aber genau diese ruhigen Handgriffe bringen den Kopf zur Ruhe.",
+        "previousMood": "calm",
+        "newThought": "Die Arbeit geht gut voran, aber ich fühle mich etwas einsam. Es wird Zeit, bald nach Hause zu Theo und Noah zurückzukehren und frische Kraft zu tanken.",
+        "newMood": "nachdenklich"
+      },
+      "description": "Gespräch mit Aiko Okafor: Ich denke an Theo und den kleinen Noah. Jeder Schnitt im Holz, jedes geschliffene Stück erinnert mich daran, wofür ich das alles mache: um ein sicheres, stabiles Zuhause für uns zu bauen. Die Arbeit hier gibt mir Halt, aber ich vermisse sie auch ein wenig. Mein Herz sehnt sich nach ihrer Nähe, nach einem einfachen Gespräch am Abend. Es ist dieser Ausgleich zwischen dem Handwerk und der Familie, der mir zeigt, worauf es wirklich ankommt.",
+      "source": "user_conversation"
+    },
+    {
+      "cursor": 12586,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw__FU0kNoIXviN",
+      "observed_at": 30000,
+      "channel": "direct",
+      "perception": "Aiko Okafor bleibt in Feuerwache · Hauptraum und arbeitet an einer Aufgabe.",
+      "interpretation": "Das Holz verlangt Geduld, aber genau diese ruhigen Handgriffe bringen den Kopf zur Ruhe.",
+      "confidence": 0.9,
+      "type": "status",
+      "start": 30000,
+      "end": 30000,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "action": "work"
+      },
+      "description": "Aiko Okafor bleibt in Feuerwache · Hauptraum und arbeitet an einer Aufgabe.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 12574,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_65j7WA8K96Pq",
+      "observed_at": 29700,
+      "channel": "direct",
+      "perception": "Aiko Okafor: arbeitet an einer Aufgabe · carpenter_station.",
+      "interpretation": "Noah mit einer kleinen Geschichte auf den Schultag einzustimmen, tut uns beiden gut.",
+      "confidence": 0.65,
+      "type": "action_started",
+      "start": 29700,
+      "end": 29700,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "action": "work",
+        "object": "carpenter_station"
+      },
+      "description": "Aiko Okafor: arbeitet an einer Aufgabe · carpenter_station.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 12573,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_y4OOAFEhJNF9",
+      "observed_at": 29700,
+      "channel": "direct",
+      "perception": "Aiko Okafor kommt in Feuerwache · Hauptraum an.",
+      "interpretation": "Ich bin hier angekommen und kann mich neu orientieren.",
+      "confidence": 0.65,
+      "type": "arrival",
+      "start": 29700,
+      "end": 29700,
+      "location_id": "lw_SRErlEUrZoX6",
+      "facts": {
+        "from": "lw_TOcXpPA5LiJI",
+        "guardianId": null,
+        "transport": null
+      },
+      "description": "Aiko Okafor kommt in Feuerwache · Hauptraum an.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 12571,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_C-3lwuyeUnMl",
+      "observed_at": 29640,
+      "channel": "direct",
+      "perception": "Aiko Okafor kommt in Feuerwache an.",
+      "interpretation": "Ich bin hier angekommen und kann mich neu orientieren.",
+      "confidence": 0.65,
+      "type": "arrival",
+      "start": 29640,
+      "end": 29640,
+      "location_id": "lw_yiiETsY1dvj9",
+      "facts": {
+        "from": "lw_TOcXpPA5LiJI",
+        "guardianId": null,
+        "transport": null
+      },
+      "description": "Aiko Okafor kommt in Feuerwache an.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 12569,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_RTywadRYePg3",
+      "observed_at": 29520,
+      "channel": "direct",
+      "perception": "Aiko Okafor kommt in Nachbarschaft 1 an.",
+      "interpretation": "Ich bin hier angekommen und kann mich neu orientieren.",
+      "confidence": 0.65,
+      "type": "arrival",
+      "start": 29520,
+      "end": 29520,
+      "location_id": "lw_9caAQFK8AlXE",
+      "facts": {
+        "from": "lw_TOcXpPA5LiJI",
+        "guardianId": null,
+        "transport": null
+      },
+      "description": "Aiko Okafor kommt in Nachbarschaft 1 an.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 12567,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_9W41RrTldx3N",
+      "observed_at": 29460,
+      "channel": "direct",
+      "perception": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+      "interpretation": "Noah mit einer kleinen Geschichte auf den Schultag einzustimmen, tut uns beiden gut.",
+      "confidence": 0.95,
+      "type": "social",
+      "start": 29460,
+      "end": 29460,
+      "location_id": "lw_YTAoipaVmTtD",
+      "facts": {
+        "category": "tell_story",
+        "outcome": "accepted",
+        "remote": false,
+        "consent": false
+      },
+      "description": "Aiko Okafor spricht mit Noah Okafor: Tell a story. Beide lassen sich auf den Kontakt ein.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 12563,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_WGplUmiZUTd3",
+      "observed_at": 29460,
+      "channel": "direct",
+      "perception": "Aiko Okafor kommt in Haus 1 · Okafor an.",
+      "interpretation": "Ich bin hier angekommen und kann mich neu orientieren.",
+      "confidence": 0.65,
+      "type": "arrival",
+      "start": 29460,
+      "end": 29460,
+      "location_id": "lw_YTAoipaVmTtD",
+      "facts": {
+        "from": "lw_TOcXpPA5LiJI",
+        "guardianId": null,
+        "transport": null
+      },
+      "description": "Aiko Okafor kommt in Haus 1 · Okafor an.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 12551,
+      "sim_id": "lw_I2Ig3na9ltOF",
+      "event_id": "lw_Q3K-PB3jQ1id",
+      "observed_at": 29400,
+      "channel": "direct",
+      "perception": "Aiko Okafor geht von Wohnzimmer · Haus 1 nach Feuerwache · Hauptraum.",
+      "interpretation": "Ich mache mich auf den Weg zu meinem nächsten Vorhaben.",
+      "confidence": 0.65,
+      "type": "departure",
+      "start": 29400,
+      "end": 29400,
+      "location_id": "lw_TOcXpPA5LiJI",
+      "facts": {
+        "destination": "lw_SRErlEUrZoX6",
+        "path": [
+          "lw_YTAoipaVmTtD",
+          "lw_9caAQFK8AlXE",
+          "lw_yiiETsY1dvj9",
+          "lw_SRErlEUrZoX6"
+        ]
+      },
+      "description": "Aiko Okafor geht von Wohnzimmer · Haus 1 nach Feuerwache · Hauptraum.",
+      "source": "procedural"
+    }
+  ]
+}

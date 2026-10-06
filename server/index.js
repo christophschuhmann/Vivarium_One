@@ -17,6 +17,7 @@ import { isolatedRequest } from './byok.js';
 import storageRoutes from './routes/storage.js';
 import livingRoutes from './routes/living.js';
 import {upgradeAllNeighborhoods} from './living/upgrade.js';
+import {upgradeAllLife} from './living/upgrade-life.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 12 * 1024 * 1024 });
@@ -77,5 +78,7 @@ app.setNotFoundHandler((req, reply) => {
 const port = Number(process.env.PORT || 8890);
 const socialUpgrade=await upgradeAllNeighborhoods();
 if(socialUpgrade.worlds)app.log.info(socialUpgrade,'Living World neighborhoods upgraded; saved history preserved.');
+const lifeUpgrade=await upgradeAllLife();
+if(lifeUpgrade.worlds)app.log.info(lifeUpgrade,'Living World feelings, goals and public rooms upgraded.');
 await app.listen({ port, host: process.env.VIV_HOST || '0.0.0.0' });
 console.log(`Vivarium listening on :${port}  (TEST_MODE=${process.env.TEST_MODE || '0'}, MOCK_PROVIDERS=${process.env.MOCK_PROVIDERS || '0'})`);

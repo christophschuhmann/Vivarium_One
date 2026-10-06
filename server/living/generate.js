@@ -4,6 +4,8 @@ import {nameNeighborhoods} from './neighborhoods.js';
 import {weaveSocial,socialBackground,interestLabel} from './social.js';
 import {searchAssets} from './library.js';
 import {openSims,openSimsCatalog} from './open_sims.js';
+import {prepareMind,evaluateMind} from './cognition.js';
+import {expandFacilities,assignFacilities} from './facilities.js';
 const names={female:['Fiona','Lea','Mira','Hana','Amira','Nora','Jana','Emma','Priya','Lina','Maya','Sofia','Aiko','Ella','Clara'],male:['Jonas','Noah','Ben','Elias','Kenji','Samir','Lukas','Ravi','Theo','Alex','Leon','Luis','Omar','Paul','Felix']};
 const surnames=['Weber','Chen','Keller','Patel','Diaz','Okafor','Sato','Becker','Ali','Santos','Fischer','Tanaka','Singh','Morgan','Schmidt'];
 const jobs=['Teacher','Illustrator','Programmer','Gardener','Physician','Baker','Civic planner','Carpenter','Bookseller','Researcher'];
@@ -74,6 +76,7 @@ export async function generateTown(worldId,{population=10,seed=73,title='Lindens
     households.push({id:home,members:members.map(p=>p.id),rooms});index++;
   }
   const identities=nameNeighborhoods(places,seed,{offset:neighborhoodOffset,reserved:reservedNames});
+  expandFacilities(places,edges);assignFacilities(people,places,{seed});
   const initialized=await openSims('initialize',{people,seed});
   weaveSocial(initialized,places,identities,{seed});
   const byId=new Map(initialized.map(p=>[p.id,p]));
@@ -84,6 +87,7 @@ export async function generateTown(worldId,{population=10,seed=73,title='Lindens
     person.biography_mode=person.anchored?'written_pending':'procedural';
     person.location_id=person.home.kitchen;
     person.state={needs:person.needs,psychology:person.psychology,career:person.career,location_id:person.location_id,action:null,route:null,goal:null,mood:'zuversichtlich',thought:'Ein neuer Tag beginnt.',last_social:-99999};
+    prepareMind(person,27000,{seed,newLife:true});evaluateMind(person,27000,catalog);
   }
   return {places,edges,people:initialized,households,city,seed,catalog,identities};
 }

@@ -3970,6 +3970,7 @@ async function mindModal(charId) {
   </div></div>`;
   document.body.appendChild(m);
   bindInnerVoice(m, c, { onStateChange: (stNew) => {
+    if(stNew.cognition_version&&typeof livingRefreshMind==='function')livingRefreshMind(m,c);
     // reflect insights immediately in the mind panels (mood chip + thought box)
     const md = $('#mm-mood', m); if (md) md.textContent = stNew.mood || '';
     const tb = $('.mind-box.thoughts p', m);
@@ -3977,7 +3978,7 @@ async function mindModal(charId) {
   } });
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   $('.x', m).onclick = () => m.remove();
-  $('#mm-hear', m).onclick = (e) => speak(st.thought || `...`, c, e.target, st.mood || 'calm', 'thought');
+  $('#mm-hear', m).onclick = (e) => speak(c.state.thought || `...`, c, e.target, c.state.mood || 'calm', 'thought');
   $('#mm-move', m).onclick = () => {
     locationPickerModal(locations, characters, c.state.location_id, async (l) => {
       try { await api(`/api/characters/${c.id}`, { method: 'PATCH', body: { location_id: l.id } }); toast(`${c.name} moved to ${l.name} 📍`); S.worldData = null; m.remove(); if (typeof stageScreen === 'function' && location.hash.includes('stage')) stageScreen(); } catch (e) { fail(e); }

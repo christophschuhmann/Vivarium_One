@@ -20,6 +20,7 @@
     "living:setup": "node scripts/setup-living.mjs",
     "test:living": "node scripts/test-living.mjs",
     "test:living-social": "node scripts/test-living-social.mjs",
+    "test:living-mind": "node scripts/test-living-mind.mjs",
     "benchmark:living": "node scripts/benchmark-living.mjs",
     "test:living-browser": "node scripts/test-living-browser.mjs"
   },

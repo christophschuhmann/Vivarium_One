@@ -1,0 +1,10 @@
+{
+  "worlds": 2,
+  "sims": 510,
+  "addedRooms": 92,
+  "clockPreserved": true,
+  "physicalStatePreserved": true,
+  "oldEventsAndJournalsPreserved": true,
+  "allHaveCurrentFeelingsAndDailyGoals": true,
+  "backup": "before-life-model-1791296779659.db"
+}

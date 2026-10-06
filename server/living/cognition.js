@@ -1,0 +1,128 @@
+import fs from 'node:fs';
+import {rng} from './random.js';
+import {activity} from './presentation.js';
+export const LIFE_VERSION=1;
+const taxonomy=JSON.parse(fs.readFileSync(new URL('../../vendor/open-sims/living_world/data/emotion_taxonomy.json',import.meta.url)));
+const labels=new Map(taxonomy.emotions.map(e=>[e.id,e]));
+const forbidden=new Set(['sexual_lust','intoxication_altered_states_of_consciousness','pleasure_ecstasy','malevolence_malice']);
+const clamp=n=>Math.max(0,Math.min(1,n));
+const hobbyActions={reading:['read','leisure_read_for_fun'],cooking:['leisure_cook_for_fun','leisure_bake_treats'],walking:['stroll','leisure_go_for_walk','leisure_hike'],craft:['creative_hobby','leisure_craft_project','leisure_paint'],gardening:['garden','leisure_garden'],socializing:['community_meet','leisure_make_friends','leisure_board_games'],music:['leisure_play_instrument','leisure_see_live_music']};
+const titles={create:'Etwas Eigenes gestalten',mastery:'Fähigkeiten verlässlich ausbauen',community:'Verbindungen in der Nachbarschaft pflegen',care:'Für vertraute Menschen da sein',stability:'Einen verlässlichen Alltag finden',career:'Im Beruf dazulernen',learning:'Lernen und Freundschaften aufbauen',hobby:'Zeit für mein Interesse finden'};
+export function prepareMind(p,time,{seed=73,newLife=false}={}){
+  const s=p.state,psych=s.psychology;psych.ambitions||=[];
+  for(const a of psych.ambitions){
+    a.title_de ||= p.age<3?'Sicherheit finden und spielerisch entdecken':titles[a.kind]||a.title;
+    a.progress=clamp(Number(a.progress)||0);a.target_seconds ||= 40*3600;
+    if(newLife&&p.age>=6&&a.progress===0){a.progress=Number((.05+rng(seed+':goal:'+p.seed_key+':'+a.id)()*.25).toFixed(3));a.initial_progress=a.progress;a.progress_source='initialized_background';}
+    a.practice_seconds ||= 0;
+  }
+  if(!psych.ambitions.length)psych.ambitions.push({id:'ambition_primary',kind:p.age<18?'learning':'stability',title_de:titles[p.age<18?'learning':'stability'],progress:0,target_seconds:40*3600,practice_seconds:0});
+  dailyGoals(p,time);s.cognition_version=LIFE_VERSION;
+}
+export function dailyGoals(p,time){
+  const day=Math.floor(time/86400),s=p.state;if(s.daily_goals?.day===day)return s.daily_goals.items;
+  const interest=p.profile.interests?.[0]||'reading';
+  s.daily_goals={day,items:[
+    {id:'daily_care',kind:'selfcare',title:p.age<3?'Versorgt sein und Ruhe finden':'Mich heute gut versorgen',target:2,value:0,unit:'Handlungen'},
+    {id:'daily_practice',kind:p.age<3?'explore':p.age<18?'learning':p.profile.job==='Retired'?'hobby':'career',title:p.age<3?'In Geborgenheit etwas entdecken':p.age<18?'Heute etwas lernen':p.profile.job==='Retired'?'Meinem Interesse nachgehen':'Eine Aufgabe bei der Arbeit voranbringen',target:15*60,value:0,unit:'Sekunden',interest},
+    {id:'daily_connection',kind:'connection',title:p.age<3?'Nähe zu meinen Bezugspersonen erleben':'Einen guten Moment mit jemandem teilen',target:1,value:0,unit:'Begegnungen'}
+  ]};return s.daily_goals.items;
+}
+export function rebuildAffect(p,time){
+  const states=(p.state.affect?.states||[]).map(e=>({...e,components:(e.components||[]).filter(c=>c.expires_at>time&&c.intensity>0)})).filter(e=>e.components.length);
+  for(const e of states){e.intensity=Math.max(...e.components.map(c=>c.intensity));e.causes=e.components.map(c=>c.cause);e.expires_at=Math.max(...e.components.map(c=>c.expires_at));}
+  states.sort((a,b)=>b.intensity-a.intensity);
+  p.state.affect={schema_version:2,taxonomy_id:taxonomy.taxonomy_id,states,primary:states[0]?.id||null,updated_at:time};
+  p.state.mood=states[0]?.label_de||'ruhig';
+}
+export function addFeeling(p,id,intensity,time,cause,{ttl=900,key}={}){
+  if(!labels.has(id)||forbidden.has(id)||p.age<18&&id==='infatuation'||!Number.isFinite(intensity)||intensity<=0)return false;
+  const a=p.state.affect ||= {states:[]};a.states||=[];
+  let e=a.states.find(e=>e.id===id);if(!e){const label=labels.get(id);e={id,label:label.label,label_de:label.label_de,components:[]};a.states.push(e);}
+  const component={key:key||'event:'+cause.evidence_id+':'+id,source:cause.kind==='modeled_need'?'need':'event',intensity:clamp(intensity),activated_at:time,expires_at:time+ttl,cause:{...cause,at:time}};
+  e.components=(e.components||[]).filter(c=>c.key!==component.key&&c.expires_at>time).concat(component).slice(-6);rebuildAffect(p,time);return true;
+}
+export function evaluateMind(p,time,catalog){
+  const s=p.state,n=s.needs;
+  // Need/ongoing-activity components reflect NOW; completed encounters retain their own expiry.
+  for(const e of s.affect?.states||[])e.components=(e.components||[]).filter(c=>c.source!=='need'&&!c.key?.startsWith('current:'));
+  rebuildAffect(p,time);
+  const bodily=[['bladder',.55],['hunger',.55],['thirst',.55],['hygiene',.65],['comfort',.65]];
+  for(const [key,threshold] of bodily)if(n[key]>=threshold)addFeeling(p,'distress',.2+(n[key]-threshold)*1.3,time,{kind:'modeled_need',need:key,text:'Aktuell dringendes Bedürfnis: '+key,evidence_id:null},{key:'current:need:'+key,ttl:120});
+  if(n.fatigue>.4)addFeeling(p,'fatigue_exhaustion',.16+(n.fatigue-.4)*1.3,time,{kind:'modeled_need',need:'fatigue',text:'Der gegenwärtige Zustand ist ermüdend.'},{key:'current:fatigue',ttl:120});
+  if(n.social>.55)addFeeling(p,'longing',.18+(n.social-.55)*1.2,time,{kind:'modeled_need',need:'social',text:'Wünscht sich sozialen Kontakt.'},{key:'current:social',ttl:120});
+  if(n.fun>.65)addFeeling(p,'impatience_and_irritability',.16+(n.fun-.65)*.8,time,{kind:'modeled_need',need:'fun',text:'Braucht Abwechslung.'},{key:'current:fun',ttl:120});
+  const kind=s.action?.kind,doing=activity(kind,catalog);
+  if(kind&&!['wait','toilet','shower','sleep'].includes(kind))addFeeling(p,['work','school_day','kindergarten_day'].includes(kind)?'concentration':'interest',.22+Math.min(.18,(s.psychology.big_five.openness||.5)*.2),time,{kind:'ongoing_activity',text:doing,category:kind,evidence_id:s.action?.event_id||null},{key:'current:activity',ttl:120});
+  if(Math.max(...Object.values(n))<.55)addFeeling(p,'contentment',.2+(1-Math.max(...Object.values(n)))*.15,time,{kind:'current_state',text:'Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.'},{key:'current:contentment',ttl:120});
+  if(!s.affect.states.length)addFeeling(p,'contemplation',.2,time,{kind:'current_state',text:s.route?'Orientiert sich auf dem Weg zum nächsten Vorhaben.':'Überlegt den nächsten Schritt.'},{key:'current:contemplation',ttl:120});
+  const urgent=Object.entries(n).sort((a,b)=>b[1]-a[1])[0],phrases={bladder:'Ich sollte bald zur Toilette gehen.',hunger:'Ich bin hungrig und möchte etwas essen.',thirst:'Ich brauche etwas zu trinken.',fatigue:'Ich bin müde und brauche Ruhe.',social:'Ich wünsche mir einen vertrauten Kontakt.',fun:'Ich brauche etwas Abwechslung.',hygiene:'Ich möchte mich frisch machen.',comfort:'Ich brauche eine angenehmere Pause.'};
+  s.current_desire=urgent?.[1]>.55?phrases[urgent[0]]:s.goal?.reason||p.profile.social?.wish||'Ich möchte meinem nächsten Vorhaben nachgehen.';
+  if(urgent?.[1]>.7)proceduralThought(p,s.current_desire,time);
+  s.affect.actual_narrative=s.affect.states.map(e=>e.label_de+' '+Math.round(e.intensity*100)+'%').join(' · ');
+  s.affect.self_narrative=s.current_desire;
+  dailyGoals(p,time);
+}
+export function proceduralThought(p,text,time){
+  const s=p.state;if(['conversation','storyteller'].includes(s.thought_source)&&time-(s.thought_at||0)<900)return;
+  s.thought=text;s.thought_source='procedural';s.thought_at=time;
+}
+export function emotionalRate(p,need){
+  const states=p.state.affect?.states||[],stress=Math.max(0,...states.filter(e=>['distress','fear','anger','disappointment'].includes(e.id)).map(e=>e.intensity));
+  return ['comfort','social','fatigue'].includes(need)?1+stress*.15:1;
+}
+function matchesAmbition(p,a,kind){
+  if(a.kind==='career')return kind==='work';if(a.kind==='learning')return ['school_day','kindergarten_day','read'].includes(kind);
+  if(a.kind==='hobby')return (hobbyActions[a.activity]||Object.values(hobbyActions).flat()).includes(kind);
+  if(a.kind==='create')return /creative|craft|paint|write|instrument|cook|bake/.test(kind);
+  if(a.kind==='mastery')return ['work','school_day','read','creative_hobby'].includes(kind);
+  if(a.kind==='stability')return ['eat','drink','shower','sleep','relax'].includes(kind);
+  return ['community_meet','leisure_volunteer','leisure_make_friends','leisure_board_games'].includes(kind);
+}
+export function motivationBias(p,kind){
+  const goals=p.state.psychology.ambitions,focus=p.state.focus_goal_id;
+  let bias=goals.some(a=>!a.completed&&matchesAmbition(p,a,kind))?.1:0;
+  if(goals.some(a=>a.id===focus&&matchesAmbition(p,a,kind)))bias+=.08;
+  const stress=Math.max(0,...(p.state.affect?.states||[]).filter(e=>['distress','fatigue_exhaustion','anger'].includes(e.id)).map(e=>e.intensity));
+  if(['relax','sleep','stroll','leisure_meditate'].includes(kind))bias+=stress*.12;
+  return bias;
+}
+function advanceAmbition(p,a,amount,time,event){
+  if(a.completed)return;const before=a.progress||0;a.practice_seconds=(a.practice_seconds||0)+amount;a.progress=clamp(before+amount/(a.target_seconds||144000));a.updated_at=time;a.last_evidence_id=event.id;
+  if(a.progress>=1){a.completed=true;addFeeling(p,'pride',.65,time,{kind:'goal_completed',text:a.title_de||a.title,evidence_id:event.id});}
+  else if(amount>0)addFeeling(p,'hope_enthusiasm_optimism',.28,time,{kind:'goal_progress',text:'Ein tatsächlicher Schritt zu: '+(a.title_de||a.title),evidence_id:event.id});
+}
+export function completedActivity(p,event,duration,relief,time){
+  const kind=event.facts.action,seconds=Math.max(0,Math.min(8*3600,duration));
+  for(const a of p.state.psychology.ambitions)if(matchesAmbition(p,a,kind))advanceAmbition(p,a,seconds,time,event);
+  for(const g of dailyGoals(p,time)){
+    const gain=g.kind==='selfcare'&&['eat','drink','shower','toilet','sleep'].includes(kind)?1:g.kind==='career'&&kind==='work'?seconds:g.kind==='learning'&&['school_day','kindergarten_day','read'].includes(kind)?seconds:g.kind==='hobby'&&(hobbyActions[g.interest]||[]).includes(kind)?seconds:g.kind==='explore'&&['relax','eat'].includes(kind)?seconds:0;
+    const was=g.value;g.value=Math.min(g.target,g.value+gain);if(gain){g.last_evidence_id=event.id;if(was<g.target&&g.value>=g.target)addFeeling(p,'pride',.38,time,{kind:'daily_goal_completed',text:g.title,evidence_id:event.id});}
+  }
+  if(Math.max(0,...Object.values(relief))>.03)addFeeling(p,'relief',Math.min(.6,.25+Math.max(...Object.values(relief))*.3),time,{kind:'need_relief',text:'Ein tatsächliches Bedürfnis ist nach '+kind+' geringer.',relief,evidence_id:event.id});
+  event.facts.goalProgress=p.state.psychology.ambitions.filter(a=>a.last_evidence_id===event.id).map(a=>({id:a.id,progress:a.progress}));
+}
+export function completedSocial(p,event,time){
+  if(event.facts.outcome!=='accepted')return;
+  const hostile=['argue','provoke','undermine','gossip'].includes(event.facts.category);
+  for(const a of p.state.psychology.ambitions)if(!hostile&&(a.kind==='community'||a.kind==='care'&&['check_in','offer_help','comfort','ask_help','ask_advice'].includes(event.facts.category)))advanceAmbition(p,a,300,time,event);
+  const g=dailyGoals(p,time).find(g=>g.kind==='connection');if(!hostile){g.value=Math.min(g.target,g.value+1);g.last_evidence_id=event.id;}
+  addFeeling(p,hostile?'anger':['reconcile','apologize','set_boundary'].includes(event.facts.category)?'relief':'affection',.3,time,{kind:'social_complete',category:event.facts.category,outcome:'accepted',text:event.description,evidence_id:event.id});
+}
+export function reflect(p,proposal,event,time){
+  const effects={emotions:[],needsDelta:{}};
+  if(!proposal||typeof proposal!=='object')return effects;
+  for(const e of Array.isArray(proposal.emotions)?proposal.emotions.slice(0,3):[]){if(typeof e?.id!=='string'||typeof e.intensity!=='number'||!Number.isFinite(e.intensity))continue;
+    const intensity=Math.max(.05,Math.min(.75,e.intensity));if(addFeeling(p,e.id,intensity,time,{kind:'subjective_reflection',text:String(proposal.reason||p.state.thought||'Eigene Reaktion auf das Ereignis.').slice(0,240),evidence_id:event.id},{ttl:900}))effects.emotions.push({id:e.id,intensity});}
+  for(const [need,value] of Object.entries(proposal.needsDelta||{})){if(!['social','fun','comfort','fatigue'].includes(need)||typeof value!=='number'||!Number.isFinite(value))continue;
+    const bound=need==='fatigue'?.03:.08,delta=Math.max(-bound,Math.min(bound,value)),before=p.state.needs[need];p.state.needs[need]=clamp(before+delta);effects.needsDelta[need]=p.state.needs[need]-before;}
+  if(typeof proposal.focusGoalId==='string'&&p.state.psychology.ambitions.some(a=>a.id===proposal.focusGoalId&&!a.completed)){p.state.focus_goal_id=proposal.focusGoalId;effects.focusGoalId=proposal.focusGoalId;}
+  return effects;
+}
+export function mindContext(p){return {emotions:p.state.affect,currentDesire:p.state.current_desire,goals:p.state.psychology.ambitions,dailyGoals:p.state.daily_goals,focusGoalId:p.state.focus_goal_id,needs:p.state.needs,thought:p.state.thought};}
+export const REFLECTION_INSTRUCTIONS='Optional reflection/reflections may express a subjective response, never a new physical event. An entry has emotions:[{id,intensity}], needsDelta:{social,fun,comfort,fatigue}, focusGoalId and reason. Use emotion IDs contentment, affection, hope_enthusiasm_optimism, pride, interest, concentration, contemplation, relief, longing, doubt, fear, distress, embarrassment, disappointment, sadness, anger or fatigue_exhaustion; intensity 0.05–0.75. All needs are urgency levels: 0 means satisfied and 1 means urgent. A positive needsDelta increases an unmet need; a negative delta provides relief. A supportive conversation usually reduces social/comfort urgency; increasing it requires a grounded reason such as conflict or a renewed longing. Emotional needsDelta is bounded to ±0.08 (fatigue ±0.03). Never change hunger, thirst, bladder or hygiene through words. focusGoalId must be an existing supplied ambition; it directs future action and never grants completed achievement. Keep needs, conflicting feelings, current desires and existing progress coherent; relief in one dimension need not erase another.';
+export function conversationReflection(output){
+  if(output.reflection&&typeof output.reflection==='object')return output.reflection;
+  const moods={hopeful:'hope_enthusiasm_optimism',happy:'contentment',calm:'contentment',sad:'sadness',worried:'distress',angry:'anger',friendly:'affection',warm:'affection',thoughtful:'contemplation',curious:'interest',tired:'fatigue_exhaustion',confident:'hope_enthusiasm_optimism'};
+  const id=labels.has(output.mood)?output.mood:moods[output.mood];return id?{emotions:[{id,intensity:.35}],reason:String(output.thought||output.reply||'').slice(0,240)}:{};
+}

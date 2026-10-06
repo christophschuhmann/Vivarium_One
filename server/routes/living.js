@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import {circleMap,searchMap,mapAnchors} from '../living/map.js';
+import {evaluateMind} from '../living/cognition.js';
 import {activity} from '../living/presentation.js';
 import {openSimsCatalog} from '../living/open_sims.js';
 import {db} from '../living/schema.js';
@@ -30,6 +31,7 @@ export default async function livingRoutes(app) {
     app.delete('/api/living/worlds/:worldId/sims/:id/'+channel,async req=>{const {world}=mutable(req);if(!db.prepare('SELECT 1 FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id))throw httpErr(404,'NOT_FOUND','Sim not found.');return clearChat(world.id,req.params.id,channel);});
   }
   app.patch('/api/living/worlds/:worldId/sims/:id',async req=>{
+    const catalog=await openSimsCatalog();
     const {world}=mutable(req),p=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id);if(!p)throw httpErr(404,'NOT_FOUND','Sim not found.');const state=pj(p.state,{}),b=req.body||{};
     if(b.location_id&&!db.prepare("SELECT 1 FROM lw_places WHERE world_id=? AND id=? AND kind='room'").get(world.id,b.location_id))throw httpErr(400,'BAD_PLACE','Choose a room.');
     if(b.needs)for(const [key,value] of Object.entries(b.needs)){if(!(key in state.needs)||typeof value!=='number'||value<0||value>1)throw httpErr(400,'BAD_NEED','Needs must be between 0 and 1.');state.needs[key]=value;}

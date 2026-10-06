@@ -1,0 +1,19 @@
+// Explicit paid-provider review. Work on a temporary duplicate and remove it afterwards.
+import fs from 'node:fs';import assert from 'node:assert/strict';
+const base=process.env.LIVING_REVIEW_URL||'http://127.0.0.1:8891',original=process.env.LIVING_REVIEW_WORLD||'w_91U9o3pjdbRG';
+const login=await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'demo@vivarium.local',password:'alice-and-bob'})});assert.ok(login.ok);const cookie=login.headers.get('set-cookie').split(';')[0];
+async function api(path,method='GET',body){const r=await fetch(base+path,{method,headers:{cookie,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw new Error(data.error?.message||r.statusText);return data;}
+const originalBefore=await api('/api/living/worlds/'+original);let world;
+try{
+ world=(await api('/api/worlds/'+original+'/duplicate','POST',{title:'Temporäre Prüfung · Gefühle und Ziele'})).worldId;
+ const before=await api('/api/living/worlds/'+world),view=await api('/api/living/worlds/'+world+'/view'),c=view.characters.find(c=>c.anchored)||view.characters[0];
+ const inner=await api(`/api/living/worlds/${world}/sims/${c.id}/inner`,'POST',{message:'Was brauchst du gerade, wie fühlst du dich damit, und welches deiner vorhandenen Vorhaben möchtest du als Nächstes angehen? Ich höre dir in Ruhe zu.',lang:'de'});
+ const talk=await api(`/api/living/worlds/${world}/sims/${c.id}/talk`,'POST',{message:'Ich höre, was dir gerade wichtig ist. Was wäre ein kleiner machbarer Schritt, und wie verändert dieses Gespräch dein Gefühl dabei?',lang:'de'});
+ const paused=await api('/api/living/worlds/'+world);assert.equal(paused.simulation.seconds,before.simulation.seconds);
+ for(const key of ['hunger','thirst','bladder','hygiene'])assert.equal(talk.state.needs[key],c.state.needs[key]);
+ const tick=await api(`/api/living/worlds/${world}/ticks`,'POST',{minutes:5,story:true,expectedVersion:paused.simulation.version});
+ const profile=await api(`/api/living/worlds/${world}/sims/${c.id}`),after=await api('/api/living/worlds/'+world),originalAfter=await api('/api/living/worlds/'+original);
+ assert.equal(after.simulation.seconds,before.simulation.seconds+300);assert.equal(originalBefore.simulation.seconds,originalAfter.simulation.seconds);assert.equal(originalBefore.simulation.version,originalAfter.simulation.version);assert.ok(profile.sim.state.affect.states.length);assert.ok(profile.sim.state.daily_goals.items.length===3);
+ const report={provider:'player configured HyprLab',temporaryDuplicate:true,originalUnchanged:true,clockBefore:before.simulation.seconds,clockAfterConversations:paused.simulation.seconds,clockAfterTick:after.simulation.seconds,physicalNeedsUnchangedByConversation:true,innerReply:inner.reply,talkReply:talk.reply,conversationEffects:profile.journal.filter(e=>e.type==='conversation').map(e=>e.facts.effects),tickMetrics:tick.metrics,after:{emotions:profile.sim.state.affect,currentDesire:profile.sim.state.current_desire,needs:profile.sim.state.needs,goals:profile.sim.state.psychology.ambitions,dailyGoals:profile.sim.state.daily_goals,thought:profile.sim.state.thought},recentJournal:profile.journal.slice(0,16)};
+ fs.writeFileSync('artifacts/living-world/mind-real-check.json',JSON.stringify(report,null,2)+'\n');console.log('PASS real provider: two paused conversations, physical needs preserved, five-minute hybrid step, original preview unchanged:',JSON.stringify({modelCalls:tick.metrics.modelCalls,conversationEffects:report.conversationEffects,reflections:profile.journal.filter(e=>e.facts.mentalEffects).length,rejections:tick.metrics.rejections}));
+}finally{if(world)await api('/api/worlds/'+world,'DELETE');}

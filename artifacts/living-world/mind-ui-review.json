@@ -1,0 +1,18 @@
+{
+  "population": 10,
+  "currentFeelings": true,
+  "dailyGoals": 3,
+  "schoolRooms": [
+    "Schule · Klassenraum A",
+    "Schule · Schulflur",
+    "Schule · Klassenraum B",
+    "Schule · Schulmensa",
+    "Schule · Lehrerzimmer",
+    "Schule · Schulhof",
+    "Schule · Toiletten"
+  ],
+  "clockUnchanged": true,
+  "imageLimit": 50,
+  "mobileOverflow": false,
+  "errors": []
+}
