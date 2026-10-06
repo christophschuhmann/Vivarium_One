@@ -43,6 +43,7 @@ try {
  const snapshot=async()=> (await context.request.get(base+'/api/living/worlds/'+world)).json();
  await page.goto(base+'/living.html?world='+world);await page.locator('#stage-root').waitFor();await page.locator('.lw-minimap .lnode').first().waitFor();assert.ok(page.url().includes('#/stage'));
  assert.ok(await page.locator('.stage-char').count()>0);assert.ok(await page.locator('img,svg image').count()<=100);
+ await page.locator('#pl').click();await page.locator('#lw-picker-map .lnode').first().waitFor();assert.ok(await page.locator('img,svg image').count()<=100);await page.locator('.modal-bg .x').click();
  await page.locator('.stage-char').first().click();await page.locator('.mind-cols').waitFor();assert.equal(await page.locator('#lw-stats').count(),1);
  const before=await snapshot();await page.locator('#iv-in').fill('Wie geht es dir heute?');await page.locator('#iv-send').click();await page.locator('#iv-log').getByText('Danke für die Frage.',{exact:false}).waitFor();assert.equal((await snapshot()).simulation.seconds,before.simulation.seconds);
  await page.locator('#lw-talk').click();await page.locator('#lw-talk-input').fill('Erzähl mir etwas über deine Wünsche.');await page.locator('#lw-talk-send').click();await page.locator('#lw-talk-log').getByText('Danke für die Frage.',{exact:false}).waitFor();assert.equal((await snapshot()).simulation.seconds,before.simulation.seconds);
