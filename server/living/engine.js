@@ -2,15 +2,16 @@ import {db} from './schema.js';
 import {uid,j,pj,now} from '../db.js';
 import {generateTown,rng} from './generate.js';
 import {openSims,openSimsCatalog} from './open_sims.js';
-import {llmChat} from '../providers.js';
+import {llmChat,parseJsonLoose} from '../providers.js';
 import {withPrincipal} from '../byok.js';
 import {preflight,debitCall,EST} from '../credits.js';
 import {recall} from './memory.js';
 import {activity,thought as actionThought} from './presentation.js';
 import {libraryDigest} from './library.js';
+import {growRomanticNeed,ROMANCE_INSTRUCTIONS,assertMinorSafeText} from './romance.js';
 import {SOCIAL_VERSION} from './neighborhoods.js';
 import {socialDestination,personalSocialContext,conversationDescription,socialInterpretation} from './social.js';
-import {LIFE_VERSION,prepareMind,evaluateMind,emotionalRate,motivationBias,completedActivity,completedSocial,reflect,mindContext,REFLECTION_INSTRUCTIONS,proceduralThought,conversationReflection} from './cognition.js';
+import {LIFE_VERSION,prepareMind,evaluateMind,emotionalRate,motivationBias,completedActivity,completedSocial,romanticWitness,reflect,mindContext,REFLECTION_INSTRUCTIONS,proceduralThought,conversationReflection} from './cognition.js';
 import {dutyDestination,serviceDestination} from './facilities.js';
 const clamp=n=>Math.max(0,Math.min(1,n));
 export const busy=new Set();
@@ -36,7 +37,7 @@ export async function createTown(user,options={}) {
   if(options.story)await authorBiographies(user,town.people.filter(p=>p.anchored));
   db.transaction(()=>{
     db.prepare("INSERT INTO worlds(id,user_id,title,sim_time,status,simulation_mode,created_at,updated_at) VALUES (?,?,?,?,'live','living',?,?)").run(worldId,user.id,String(options.title || 'Lindenstadt').slice(0,80),iso(27000),now(),now());
-    db.prepare('INSERT INTO lw_worlds(world_id,seed,rules) VALUES (?,?,?)').run(worldId,seed,j({...town.catalog.manifest,assetLibrary:libraryDigest(),socialVersion:SOCIAL_VERSION,lifeVersion:LIFE_VERSION,neighborhoods:town.identities}));
+    db.prepare('INSERT INTO lw_worlds(world_id,seed,rules) VALUES (?,?,?)').run(worldId,seed,j({...town.catalog.manifest,assetLibrary:libraryDigest(),socialVersion:SOCIAL_VERSION,lifeVersion:LIFE_VERSION,romanceVersion:1,neighborhoods:town.identities}));
     for(const p of town.places)db.prepare('INSERT INTO lw_places(id,world_id,parent_id,name,kind,purpose,asset_id,x,y,capacity,anchored,landmark,affordances) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)').run(p.id,worldId,p.parent_id,p.name,p.kind,p.purpose,p.asset_id,p.x,p.y,p.capacity,p.anchored,p.landmark,j(p.affordances));
     for(const e of town.edges)db.prepare('INSERT INTO lw_edges VALUES (?,?,?,?)').run(worldId,e.from_id,e.to_id,e.seconds);
     for(const p of town.people){
@@ -51,13 +52,23 @@ export async function createTown(user,options={}) {
   return {worldId,population,households:town.households.length,locations:town.places.length};
 }
 function parseModel(text) {const clean=String(text).replace(/^\s*```(?:json)?\s*/,'').replace(/\s*```\s*$/,'');try{return JSON.parse(clean);}catch{throw Object.assign(new Error('Das Modell hat kein vollständiges gültiges JSON geliefert. Der Schritt wurde nicht gespeichert. Bitte erneut versuchen oder das Modell wechseln.'),{statusCode:502});}}
-export async function authorBiographies(user,people,instruction='') {
+export async function authorBiographies(user,people,instruction='',{signal}={}) {
   if(!people.length)return;
   preflight(user.id,EST.chat());
-  const result=await withPrincipal(user,()=>llmChat([{role:'system',content:'Write plausible emotionally intelligent fictional biographies in German. Return JSON {biographies:[{id,text}]}. Preserve supplied ages, jobs, family IDs, social background and home facts. Never invent incest, sexual content about minors, or real past world events. These are authored initial backgrounds, not witnessed events. 120–180 words per person. Output only strict valid JSON with escaped line breaks.'},{role:'user',content:j({instruction,people:people.map(p=>({id:p.id,name:p.name,age:p.age,job:p.profile.job,family:p.family || p.profile.family,social:p.profile.social,neighborhood:p.profile.neighborhood,goals:(p.psychology || p.state?.psychology)?.ambitions,existing:p.biography}))})}],{maxTokens:Math.min(14000,people.length*1400+5000),reasoningEffort:'low',temperature:.6}));
-  debitCall(user.id,result,'living_biography');
-  const output=parseModel(result.content);
-  for(const person of people){const bio=output.biographies?.find(b=>b.id===person.id);if(typeof bio?.text!=='string'||bio.text.length<100)throw new Error('The model did not provide all requested biographies.');person.biography=bio.text.slice(0,5000);person.biography_mode='written';}
+  const written=new Map();let calls=0;
+  // A missing ID or malformed answer is a response error, not a model capability.
+  // Retry only missing entries once; do not apply a half-complete batch.
+  for(let attempt=0;attempt<2&&written.size<people.length;attempt++){
+    const missing=people.filter(p=>!written.has(p.id));
+    const result=await withPrincipal(user,()=>llmChat([{role:'system',content:'Write plausible emotionally intelligent fictional biographies in German. Return JSON {biographies:[{id,text}]}, exactly one entry for EVERY supplied person, copying each id verbatim. Preserve supplied ages, jobs, family IDs, social background and home facts. Never invent incest, sexual content about minors, or real past world events. These are authored initial backgrounds, not witnessed events. 120–180 words per person. Output only strict valid JSON with escaped line breaks. '+ROMANCE_INSTRUCTIONS},{role:'user',content:j({instruction,people:missing.map(p=>({id:p.id,name:p.name,age:p.age,job:p.profile.job,family:p.family || p.profile.family,social:p.profile.social,neighborhood:p.profile.neighborhood,goals:(p.psychology || p.state?.psychology)?.ambitions,existing:p.biography}))})}],{maxTokens:Math.min(14000,missing.length*1400+5000),reasoningEffort:'low',temperature:.6,signal}));
+    calls++;debitCall(user.id,result,'living_biography');
+    let output;try{output=parseJsonLoose(result.content);}catch{continue;}
+    if(!Array.isArray(output?.biographies))continue;
+    for(const person of missing){const matches=output.biographies.filter(b=>b?.id===person.id);if(matches.length===1&&typeof matches[0].text==='string'&&matches[0].text.trim().length>=100){assertMinorSafeText([person],matches[0].text);written.set(person.id,matches[0].text.trim().slice(0,5000));}}
+  }
+  if(written.size!==people.length)throw Object.assign(new Error('Die Biografie-Antwort war unvollständig oder kein gültiges JSON. Der vorhandene Hintergrund wurde beibehalten. Im Profil kannst du die Biografie erneut ausarbeiten.'),{code:'BIOGRAPHY_RESPONSE_INVALID',statusCode:502});
+  for(const person of people){person.biography=written.get(person.id);person.biography_mode='written';}
+  return {calls};
 }
 export function findRoute(town,from,to) {
   if(from===to)return [];
@@ -152,7 +163,7 @@ export async function advanceTown(user,worldId,{minutes=5,story=true,expectedVer
       for(let i=0;i<town.people.length;i++) {
         const p=town.people[i],state=p.state,place=town.places.get(state.location_id),draw=rng(`${town.world.seed}:${p.profile.seed_key}:${time}`);
         for(const [need,rate] of Object.entries(catalog.rates)){const asleep=state.action?.kind==='sleep',change=asleep?(need==='fatigue'?-.12:need==='comfort'?-.04:rate*.2):rate*emotionalRate(p,need);state.needs[need]=clamp((state.needs[need]||0)+change/60);}
-        evaluateMind(p,time,catalog);
+        growRomanticNeed(p);evaluateMind(p,time,catalog);
         if(state.route){
           if(state.route.atNode){occupancy.set(state.location_id,(occupancy.get(state.location_id)||1)-1);state.location_id=null;state.route.atNode=false;}
           state.route.remaining-=60;
@@ -214,7 +225,7 @@ export async function advanceTown(user,worldId,{minutes=5,story=true,expectedVer
           const candidates=new Map(available.slice(Math.max(0,i-6),i+7).filter(b=>b.id!==a.id&&!used.has(b.id)).map(b=>[b.id,b]));
           for(const id of Object.keys(a.relations).slice(0,16)){const b=town.byId.get(id);if(b&&b.state.location_id===location&&b.age>=3&&!used.has(id)&&time-b.state.last_social>=1200&&!['sleep','toilet','shower'].includes(b.state.action?.kind))candidates.set(id,b);}
           const b=[...candidates.values()].sort((b,c)=>score(c)-score(b))[0];if(!b)continue;
-          const id=worldId+'_e_'+(before+1)+'_'+(events.length+pairs.length);pairs.push({a:actor(a),b:actor(b),seed:town.world.seed+':'+a.profile.seed_key+':'+b.profile.seed_key+':'+time,eventId:id,location,aId:a.id,bId:b.id});used.add(a.id);used.add(b.id);
+          const id=worldId+'_e_'+(before+1)+'_'+(events.length+pairs.length);pairs.push({a:actor(a),b:actor(b),seed:town.world.seed+':'+a.profile.seed_key+':'+b.profile.seed_key+':'+time,eventId:id,location,venue:{purpose:town.places.get(location).purpose,occupant_ids:ids},aId:a.id,bId:b.id});used.add(a.id);used.add(b.id);
         }
       }
       // Remote contacts are explicit and involve an already-known person.
@@ -224,7 +235,7 @@ export async function advanceTown(user,worldId,{minutes=5,story=true,expectedVer
       }
       if(pairs.length){const results=await openSims('social',{pairs,now:time});
         for(let i=0;i<pairs.length;i++){const pair=pairs[i],result=results[i];if(!result.allowed)continue;const a=town.byId.get(pair.aId),b=town.byId.get(pair.bId);
-          const e=event('social',a,time,{category:result.category,outcome:result.outcome,remote:!!pair.remote,consent:result.consent},[b.id],pair.location);e.description=conversationDescription(a,b,result.category,result.outcome,!!pair.remote);
+          const e=event('social',a,time,{category:result.category,outcome:result.outcome,remote:!!pair.remote,consent:result.consent,...(result.category==='adult_private_intimacy'?{private:true}:{})},[b.id],pair.location);e.description=conversationDescription(a,b,result.category,result.outcome,!!pair.remote);
           if(result.outcome==='accepted'&&result.category==='express_affection'&&a.age>=18&&b.age>=18&&a.profile.family.partner_id===b.id&&town.places.get(pair.location)?.purpose.includes('bedroom')&&current.get(pair.location)?.length===2){e.facts.private=true;e.description=`${a.name} und ${b.name} genießen einen privaten, liebevollen Moment miteinander. Einzelheiten bleiben privat.`;}
           e.socialPair=pair;e.socialResult=result;
           // Later encounters in this step see earlier relationship changes.
@@ -240,20 +251,31 @@ export async function advanceTown(user,worldId,{minutes=5,story=true,expectedVer
     const cpuMs=performance.now()-started,fields=allocateFields(town,events,presence),selected=new Set(fields.flatMap(f=>f.members));
     if(interventionSim)interventionSim.anchored=wasAnchored;
     onProgress({phase:'procedural',eligible:selected.size,fields:fields.length,events:events.length});
-    const sceneLines=[],stories=[],rejections=[],modelJournal=new Map(),authored=[],reflections=new Map(),toneReflections=new Map();let calls=0;
+    const sceneLines=[],stories=[],rejections=[],warnings=[],modelJournal=new Map(),authored=[],reflections=new Map(),toneReflections=new Map();let calls=0,biographyCalls=0;
     if(story&&selected.size){
       preflight(user.id,EST.tick()*fields.reduce((n,f)=>n+Math.ceil(f.members.length/24),0));
       const pendingBiography=town.people.filter(p=>selected.has(p.id)&&p.biography_mode==='written_pending');
-      if(!modelCall)for(let i=0;i<pendingBiography.length;i+=6){await authorBiographies(user,pendingBiography.slice(i,i+6));authored.push(...pendingBiography.slice(i,i+6));}
+      if(!modelCall)for(let i=0;i<pendingBiography.length;i+=6){
+        const batch=pendingBiography.slice(i,i+6);onProgress({phase:'biography',eligible:batch.length});
+        try{const result=await authorBiographies(user,batch,'',{signal});biographyCalls+=result.calls;authored.push(...batch);}
+        catch(error){
+          if(signal?.aborted||error.code==='ABORTED')throw error;
+          // Optional background enrichment must not block an otherwise valid scene.
+          // Keep the real initial background and expose the deferred task in the UI.
+          for(const p of batch)p.biography_mode='written_deferred';
+          warnings.push({code:'BIOGRAPHY_DEFERRED',simIds:batch.map(p=>p.id),message:'Die Biografie von '+batch.map(p=>p.name).join(', ')+' konnte nicht ausgearbeitet werden. Der Storyteller verwendet den vorhandenen Hintergrund. Erneut versuchen: Profil → Biografie ausarbeiten.'});
+          onProgress({phase:'biography_deferred',message:warnings.at(-1).message});
+        }
+      }
       const call=modelCall || (messages=>withPrincipal(user,()=>llmChat(messages,{maxTokens:10000,reasoningEffort:'low',temperature:.7,signal})));
       for(const field of fields)for(let offset=0;offset<field.members.length;offset+=24){
         if(signal?.aborted)throw new Error('Tick cancelled before commit.');onProgress({phase:'storyteller',field:field.id,processed:calls*24,eligible:selected.size});
         const ids=field.members.slice(offset,offset+24),owned=new Set(ids),allRelevant=events.filter(e=>[...e.participants,...e.witnesses || []].some(id=>owned.has(id))),contextEvents=new Map();for(const id of ids){const personal=allRelevant.filter(e=>e.participants.includes(id)||e.witnesses?.includes(id));for(const e of personal.slice(-12).concat(personal.filter(e=>e.type==='social')))contextEvents.set(e.id,e);}const relevant=[...contextEvents.values()].sort((a,b)=>a.end-b.end),cohort=ids.map(id=>{
           const p=town.byId.get(id);return {id,name:p.name,age:p.age,biography:p.biography.slice(0,1800),profile:{job:p.profile.job,family:p.profile.family,interests:p.profile.interests,home:p.profile.home,workplace_id:p.profile.workplace_id},...personalSocialContext(p,town),...mindContext(p),action:p.state.action,location:p.state.location_id,route:p.state.route,ownThought:p.state.thought,
             memory:recall(id,(town.places.get(p.state.location_id)?.purpose || '')+' '+p.profile.interests.join(' '))};});
-        const result=await call([{role:'system',content:`You are the Living World Storyteller. German family-friendly life simulation. There is no player/NPC distinction. All selected Sims receive equal causal care. Return strict valid JSON only, with escaped line breaks. Story at most 300 words, each thought at most 50 words. Return JSON {story:string,thoughts:[{simId,eventId,text,confidence}],reflections:[{simId,eventId,emotions:[{id,intensity}],needsDelta,focusGoalId,reason}],revisions:[{eventId,category}],intentions:[{simId,kind,destinationId,reason}],narration:[{speaker,locationId,eventId,text,mode,emotion}]}. Narration contains short scene lines: speaker is an owned Sim ID or narrator, locationId and eventId reference a supplied actual event at that place, mode is speech or thought. Use dialogue where a supported encounter occurs; avoid inventing new physical actions. The procedural events are provisional but physically constrained. Social revisions may choose a different supported category at the SAME place/time with the SAME participants; consent is checked by the coordinator. Intentions influence FUTURE actions only; respect school and work commitments rather than sending pupils home for leisure during class: kind is one of ${kinds(catalog).join(',')}, destinationId is a supplied place ID. Do not teleport, change ages/family/resources, invent witnessed events or give one Sim another's private knowledge. Thoughts must reference events that this Sim participated in or witnessed. Separate uncertain beliefs from fact. Respect declined contact; adult romance only for consenting unrelated adults. Use the supplied neighborhood character, each Sim's own wishes and known relationship background to ground emotional stakes. Relationship backgrounds are initialized or supplemental backstories, never newly witnessed events. Do not treat a Sim's private motive as knowledge held by their conversation partner. Show emotional intelligence, grounded small surprises, mutual help, hobbies and goals. Avoid generic repetitive scenes. Every owned Sim should have a contextual thought. Other batches share the same field but you may only write owned Sims. Missing details remain unmodeled, not retroactively invented. ${REFLECTION_INSTRUCTIONS}`},{role:'user',content:j({start:town.world.seconds,end,intervention:intervention?{kind:intervention.kind,text:intervention.text.slice(0,2000),targetId:interventionSim?.id}:null,startTime:iso(town.world.seconds),endTime:iso(end),owned:ids,field:{id:field.id,totalMembers:field.members.length,reasons:Object.fromEntries(ids.map(id=>[id,field.reasons[id]]))},sims:cohort,eventCoverage:{committedAfterValidation:allRelevant.length,provided:relevant.length,policy:'recent personal events plus all actual contacts; omitted details remain in each personal journal'},events:relevant.map(({journal,socialPair,socialResult,...e})=>e),places:[...new Set(cohort.flatMap(p=>[p.location,p.profile.home?.living,p.profile.home?.kitchen,p.profile.home?.bath,p.profile.home?.bed,p.profile.workplace_id]).filter(Boolean))].map(id=>({id,name:town.places.get(id)?.name,actions:availableActions(town.places.get(id),catalog,town.byId.get(ids[0]))})),socialCategories:Object.keys(catalog.social)})}]);
+        const result=await call([{role:'system',content:`You are the Living World Storyteller. German family-friendly life simulation. There is no player/NPC distinction. All selected Sims receive equal causal care. Return strict valid JSON only, with escaped line breaks. Story at most 300 words, each thought at most 50 words. Return JSON {story:string,thoughts:[{simId,eventId,text,confidence}],reflections:[{simId,eventId,emotions:[{id,intensity}],needsDelta,focusGoalId,reason}],revisions:[{eventId,category}],intentions:[{simId,kind,destinationId,reason}],narration:[{speaker,locationId,eventId,text,mode,emotion}]}. Narration contains short scene lines: speaker is an owned Sim ID or narrator, locationId and eventId reference a supplied actual event at that place, mode is speech or thought. Use dialogue where a supported encounter occurs; avoid inventing new physical actions. The procedural events are provisional but physically constrained. Social revisions may choose a different supported category at the SAME place/time with the SAME participants; consent is checked by the coordinator. Intentions influence FUTURE actions only; respect school and work commitments rather than sending pupils home for leisure during class: kind is one of ${kinds(catalog).join(',')}, destinationId is a supplied place ID. Do not teleport, change ages/family/resources, invent witnessed events or give one Sim another's private knowledge. Thoughts must reference events that this Sim participated in or witnessed. Separate uncertain beliefs from fact. Respect declined contact. ${ROMANCE_INSTRUCTIONS} Use the supplied neighborhood character, each Sim's own wishes and known relationship background to ground emotional stakes. Relationship backgrounds are initialized or supplemental backstories, never newly witnessed events. Do not treat a Sim's private motive as knowledge held by their conversation partner. Show emotional intelligence, grounded small surprises, mutual help, hobbies and goals. Avoid generic repetitive scenes. Every owned Sim should have a contextual thought. Other batches share the same field but you may only write owned Sims. Missing details remain unmodeled, not retroactively invented. ${REFLECTION_INSTRUCTIONS}`},{role:'user',content:j({start:town.world.seconds,end,intervention:intervention?{kind:intervention.kind,text:intervention.text.slice(0,2000),targetId:interventionSim?.id}:null,startTime:iso(town.world.seconds),endTime:iso(end),owned:ids,field:{id:field.id,totalMembers:field.members.length,reasons:Object.fromEntries(ids.map(id=>[id,field.reasons[id]]))},sims:cohort,eventCoverage:{committedAfterValidation:allRelevant.length,provided:relevant.length,policy:'recent personal events plus all actual contacts; omitted details remain in each personal journal'},events:relevant.map(({journal,socialPair,socialResult,...e})=>e),places:[...new Set(cohort.flatMap(p=>[p.location,p.profile.home?.living,p.profile.home?.kitchen,p.profile.home?.bath,p.profile.home?.bed,p.profile.workplace_id]).filter(Boolean))].map(id=>({id,name:town.places.get(id)?.name,actions:availableActions(town.places.get(id),catalog,town.byId.get(ids[0]))})),socialCategories:Object.keys(catalog.social)})}]);
         calls++;if(!modelCall)debitCall(user.id,result,'living_storyteller',{worldId});
-        const output=parseModel(result.content);if(typeof output.story==='string')stories.push(output.story.slice(0,12000));
+        const output=parseModel(result.content);assertMinorSafeText(ids.map(id=>town.byId.get(id)),output);if(typeof output.story==='string')stories.push(output.story.slice(0,12000));
         for(const line of Array.isArray(output.narration)?output.narration.slice(0,48):[]){
           const e=relevant.find(e=>e.id===line.eventId),speaker=town.byId.get(line.speaker);
           if(!e||e.location_id!==line.locationId||!town.places.has(line.locationId)||typeof line.text!=='string'||!line.text.trim()||!['speech','thought'].includes(line.mode)||(line.speaker!=='narrator'&&(!owned.has(line.speaker)||!e.participants.includes(line.speaker)))){rejections.push('Invalid scene line');continue;}
@@ -281,12 +303,13 @@ export async function advanceTown(user,worldId,{minutes=5,story=true,expectedVer
     for(const e of socialEvents)for(const id of e.participants)completedSocial(town.byId.get(id),e,e.end);
     for(const [id,value] of toneReflections)if(!reflections.has(id))reflections.set(id,value);
     for(const [id,{proposal,event:e}] of reflections){const effects=reflect(town.byId.get(id),proposal,e,end);(e.facts.mentalEffects||={})[id]=effects;}
+    const romanticInterpretations=new Map();for(const e of socialEvents)for(const id of e.witnesses||[]){const p=town.byId.get(id),text=romanticWitness(p,e,town.byId,end);if(text){romanticInterpretations.set(id+':'+e.id,text);proceduralThought(p,text,end);}}
     for(const p of town.people)evaluateMind(p,end,catalog);
     for(const e of events){
       for(const id of e.participants){const p=town.byId.get(id),thought=modelJournal.get(id+':'+e.id);e.journal.push({simId:id,channel:e.facts.remote?'telephone':'direct',perception:e.description,interpretation:thought?.text || interpretation(p,e),confidence:thought?.confidence ?? .65});}
-      if(!e.facts.private)for(const id of e.witnesses || []){const thought=modelJournal.get(id+':'+e.id);e.journal.push({simId:id,channel:'nearby_observation',perception:e.description,interpretation:thought?.text || 'Ich habe diesen Austausch in meiner Nähe mitbekommen. Die privaten Absichten kenne ich nicht.',confidence:thought?.confidence ?? .5});}
+      if(!e.facts.private)for(const id of e.witnesses || []){const thought=modelJournal.get(id+':'+e.id);e.journal.push({simId:id,channel:'nearby_observation',perception:e.description,interpretation:thought?.text || romanticInterpretations.get(id+':'+e.id) || 'Ich habe diesen Austausch in meiner Nähe mitbekommen. Die privaten Absichten kenne ich nicht.',confidence:thought?.confidence ?? .5});}
     }
-    const beatId=uid('lb_'),metrics={population:town.people.length,events:events.length,journalEntries:events.reduce((n,e)=>n+e.journal.length,0),eligible:selected.size,fields:fields.length,modelCalls:calls,cpuMs:Math.round(cpuMs),totalMs:Math.round(performance.now()-started),rejections};
+    const beatId=uid('lb_'),metrics={population:town.people.length,events:events.length,journalEntries:events.reduce((n,e)=>n+e.journal.length,0),eligible:selected.size,fields:fields.length,modelCalls:calls,biographyCalls,cpuMs:Math.round(cpuMs),totalMs:Math.round(performance.now()-started),rejections,warnings};
     db.transaction(()=>{
       if(signal?.aborted)throw new Error('Tick cancelled before commit.');
       if(db.prepare('SELECT version FROM lw_worlds WHERE world_id=?').get(worldId).version!==before)throw Object.assign(new Error('Stale proposal rejected.'),{statusCode:409});

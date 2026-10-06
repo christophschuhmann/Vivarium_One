@@ -1,5 +1,7 @@
+import {normalizeRomance,romanticCap} from '../living/romance.js';
 import fs from 'node:fs';
 import {positionIndex,simPosition,relationsView} from '../living/navigation.js';
+import {relationshipLabels,relationshipLookup} from '../living/relationship-labels.js';
 import {circleMap,searchMap,mapAnchors} from '../living/map.js';
 import {evaluateMind} from '../living/cognition.js';
 import {activity} from '../living/presentation.js';
@@ -18,7 +20,7 @@ import {stageView,graphView,character,converse,chatHistory,clearChat} from '../l
 const limit=(value,max=50)=>Math.max(1,Math.min(max,Number(value)||20));
 function own(req,verified=false){const user=verified?requireVerified(req):requireUser(req);const world=db.prepare('SELECT * FROM worlds WHERE id=? AND user_id=? AND simulation_mode=\'living\'').get(req.params.worldId,user.id);if(!world)throw httpErr(404,'NOT_FOUND','Living world not found.');return {user,world};}
 function mutable(req){const result=own(req,true);if(busy.has(result.world.id))throw httpErr(409,'WORLD_BUSY','Wait for the current tick to finish.');return result;}
-const simView=p=>{const person={...p,profile:pj(p.profile,{}),state:pj(p.state,{})};if(person.profile.social)person.profile.social=socialPerspective(person);return person;};
+const simView=p=>{const person={...p,profile:pj(p.profile,{}),state:pj(p.state,{})};normalizeRomance(person);if(person.profile.social)person.profile.social=socialPerspective(person);return person;};
 export default async function livingRoutes(app) {
   app.get('/api/living/worlds/:worldId/history',async req=>{const {world}=own(req);return {beats:db.prepare('SELECT version,start,end,story,metrics FROM lw_beats WHERE world_id=? ORDER BY version DESC LIMIT 40').all(world.id).map(b=>({...b,story:pj(b.story,[]),metrics:pj(b.metrics,{})}))};});
   app.get('/api/living/worlds/:worldId/view',async req=>stageView(own(req).world,req.query));
@@ -33,9 +35,9 @@ export default async function livingRoutes(app) {
   }
   app.patch('/api/living/worlds/:worldId/sims/:id',async req=>{
     const catalog=await openSimsCatalog();
-    const {world}=mutable(req),p=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id);if(!p)throw httpErr(404,'NOT_FOUND','Sim not found.');const state=pj(p.state,{}),b=req.body||{};
+    const {world}=mutable(req),p=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id);if(!p)throw httpErr(404,'NOT_FOUND','Sim not found.');const state=pj(p.state,{}),b=req.body||{};normalizeRomance({...p,profile:pj(p.profile,{}),state});
     if(b.location_id&&!db.prepare("SELECT 1 FROM lw_places WHERE world_id=? AND id=? AND kind='room'").get(world.id,b.location_id))throw httpErr(400,'BAD_PLACE','Choose a room.');
-    if(b.needs)for(const [key,value] of Object.entries(b.needs)){if(!(key in state.needs)||typeof value!=='number'||value<0||value>1)throw httpErr(400,'BAD_NEED','Needs must be between 0 and 1.');state.needs[key]=value;}
+    if(b.needs)for(const [key,value] of Object.entries(b.needs)){if(!(key in state.needs)||typeof value!=='number'||value<0||value>1)throw httpErr(400,'BAD_NEED','Needs must be between 0 and 1.');if(key==='romantic_affection'&&value>romanticCap(p.age))throw httpErr(400,'AGE_BOUNDARY','Romantische Zuneigung: unter 14 immer 0; 14–17 höchstens 0,35.');state.needs[key]=value;}
     if(b.location_id){state.location_id=b.location_id;state.route=null;state.action=null;}
     db.transaction(()=>{const clock=db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(world.id),id=uid('le_');db.prepare('UPDATE lw_sims SET state=?,location_id=?,name=? WHERE id=?').run(j(state),state.location_id,String(b.name||p.name).slice(0,100),p.id);db.prepare('INSERT INTO lw_events VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(id,world.id,null,clock.seconds,clock.seconds,state.location_id,'user_edit',j([p.id]),j({changes:{location_id:b.location_id,needs:b.needs,name:b.name}}),'Eine ausdrückliche Intervention verändert meinen aktuellen Zustand.','user_intervention');db.prepare('INSERT INTO lw_journal VALUES (?,?,?,?,?,?,?)').run(p.id,id,clock.seconds,'intervention','Mein Zustand wurde durch eine Intervention verändert.','Diese Veränderung ist Teil meines tatsächlichen Protokolls.',1);db.prepare('UPDATE lw_worlds SET version=version+1 WHERE world_id=?').run(world.id);})();return {ok:true};
   });
@@ -82,6 +84,7 @@ export default async function livingRoutes(app) {
   app.get('/api/living/worlds/:worldId/sims/:id',async req=>{
     const {world}=own(req),p=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id);if(!p)throw httpErr(404,'NOT_FOUND','Sim not found.');
     const relations=db.prepare('SELECT r.to_id,r.payload,s.name FROM lw_relations r JOIN lw_sims s ON s.id=r.to_id WHERE r.world_id=? AND r.from_id=? ORDER BY json_extract(r.payload,\'$.closeness\') DESC LIMIT 30').all(world.id,p.id).map(r=>({...r,payload:pj(r.payload,{})}));
+    const get=relationshipLookup(db,world.id);get(p.id);for(const r of relations)get(r.to_id);for(const r of relations)r.payload.labels=relationshipLabels(get(p.id),get(r.to_id),r.payload,get);
     const n=limit(req.query?.limit,50),before=Number(req.query?.before)||Number.MAX_SAFE_INTEGER;
     const journal=db.prepare('SELECT j.rowid cursor,j.*,e.type,e.start,e.end,e.location_id,e.facts,e.description,e.source FROM lw_journal j JOIN lw_events e ON e.id=j.event_id WHERE j.sim_id=? AND j.rowid<? ORDER BY j.rowid DESC LIMIT ?').all(p.id,before,n).map(e=>({...e,facts:pj(e.facts,{})}));
     return {sim:simView(p),relations,journal,nextCursor:journal.length===n?journal.at(-1).cursor:null};
@@ -99,7 +102,7 @@ export default async function livingRoutes(app) {
     const send=(event,data)=>{if(!finished)reply.raw.write('event: '+event+'\ndata: '+j(data)+'\n\n');};
     reply.raw.on('close',()=>{if(!finished)controller.abort();});
     const heartbeat=setInterval(()=>send('status',{phase:'thinking'}),9000);
-    try{const result=await advanceTown(user,world.id,{minutes:req.body?.minutes ?? 5,story:req.body?.story ?? true,expectedVersion:req.body?.expectedVersion,intervention:req.body?.intervention,signal:controller.signal,onProgress:data=>send('status',data)});send('done',result);}catch(error){send('error',{message:error.message});}finally{finished=true;clearInterval(heartbeat);reply.raw.end();}
+    try{const result=await advanceTown(user,world.id,{minutes:req.body?.minutes ?? 5,story:req.body?.story ?? true,expectedVersion:req.body?.expectedVersion,intervention:req.body?.intervention,signal:controller.signal,onProgress:data=>send('status',data)});send('done',result);}catch(error){req.log.warn({worldId:world.id,code:error.code||'LIVING_TICK_FAILED',reason:error.message},'Living World tick failed before commit');send('error',{message:error.message});}finally{finished=true;clearInterval(heartbeat);reply.raw.end();}
   });
   app.post('/api/living/worlds/:worldId/sims/:id/biography',async req=>{
     const {user,world}=mutable(req),p=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id);if(!p)throw httpErr(404,'NOT_FOUND','Sim not found.');busy.add(world.id);

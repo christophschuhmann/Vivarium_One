@@ -313,7 +313,9 @@ Each Explorer card now shows the **actual current location path** (town/neighbor
 
 ### Explore each Sim's relationships
 
-**Bande → Beziehungsnetz** works for every Sim, including unanchored residents. **Sim wählen** searches the entire population. The center has a larger round portrait; connected Sims appear as round portraits with names. Click a connected Sim to make them the new center and see their own connections. Browser Back or **← Zurück** returns to the previous focus; the center is stored in the URL so it can be bookmarked.
+**Mind** keeps its action toolbar immediately below the heading, above feelings and goals. **Aus ihrer Sicht**, paused conversation, profile, Stats and **Beziehungsnetz** are available without scrolling through long goals. The relationship button focuses that Sim directly and leaves the clock unchanged.
+
+**Bande → Beziehungsnetz** works for every Sim, including unanchored residents. **Sim wählen** searches the entire population. Every connecting line carries the target’s relationship to the center, such as mother, son, grandfather, cousin, husband, colleague, classmate, friend or romantic interest. The profile uses the same labels. Family roles come from explicit parent/partner records; a tense acquaintance is labeled conflict rather than automatically becoming an enemy. Click a line label for all relationship contexts and quality values. The center has a larger round portrait; connected Sims appear as round portraits with names. Click a connected Sim to make them the new center and see their own connections. Browser Back or **← Zurück** returns to the previous focus; the center is stored in the URL so it can be bookmarked.
 
 The right sidebar provides a searchable list of **verankerte Sims**, showing their current locations. Anchored nodes and their connections use gold accents. **Kontakte mit Anker** filters the current center's contacts while retaining the center itself. Click a relationship line to inspect its trust, closeness, tension and shared background. **Profil**, **Spielen** and **Welt** are available for the current center.
 
@@ -429,3 +431,23 @@ data/               Ignored runtime DB, generated media, music downloads and cac
 ## License
 
 Application code: MIT. Model outputs are subject to provider terms. The downloaded music dataset declares CC BY 4.0; its original README is retained with the library and the game supplies dataset attribution.
+
+### Biography response recovery
+
+New anchors may have a pending authored biography. Missing IDs or malformed JSON receive one focused retry; incomplete batches never partially overwrite backgrounds. If this optional enrichment still fails, an otherwise valid Storyteller step and intervention can proceed with the retained background. A warning appears after the step, in its history and as an open biography in the profile. Deferred biographies are not automatically charged again each tick; use **Profil → Biografie ausarbeiten** to retry explicitly. Cancellation and failures in the actual Storyteller still roll the whole step back. `npm run test:living-biographies` covers this distinction, including the reported provider error with working inner chat.
+
+### Social warmth, romantic affection and age boundaries
+
+**Soziale Wärme** (`needs.social`) is a 0–1 unmet need for friendship, belonging, family care and ordinary social contact. It is separate from **Romantische Zuneigung** (`needs.romantic_affection`). Friendly smalltalk does not automatically satisfy romantic affection.
+
+The romantic need is **always 0 below age 14**, **0–0.35 at ages 14–17**, and **0–1 at ages 18+**. Teens may only have harmless romantic conversations and public dates with another 14–17-year-old **at most one year apart**. These use separate `teen_romantic_talk` and `teen_date` categories. **Sexual acts, erotic thoughts, sexualized narration and adult/minor romance are forbidden for everyone under 18**, regardless of a need value, model suggestion, Stats edit or successful skill check. Known relatives are excluded from romance.
+
+For adults, values above **0.65** can produce adult desire and weight permitted approaches; above **0.75** they can motivate a private consensual moment. Intensity never grants consent. Private adult intimacy requires two unrelated 18+ partners, their own willingness and a private bedroom with no other occupants. Its presentation stays non-explicit. Eifersucht is an uncertain subjective interpretation, not proof of another person's intentions or a right to control them.
+
+The policy is centralized in `config/living_social_policy.json`, enforced in the JS state/Stats/reflection paths and the Python interaction adapter, and explicitly included in model instructions. Clearly sexualized model responses in minor contexts are rejected before persistence; this additional prose filter is not a semantic guarantee for arbitrary unrestricted model language. The structural allowed-category and age checks remain authoritative. Startup adds the new need to existing worlds after a database backup, preserving social warmth, factual journals, biographies, locations and simulation time. The world version increments to invalidate stale requests. `npm run test:living-romance` covers 500 age/category combinations plus caps, known relatives, private-room occupancy and migration.
+
+### Detailed social / Theory-of-Mind / W100 proposal
+
+Read [the standalone German HTML proposal](docs/living-world-social-tom-plan.html): overview, bounded probabilistic expectations, third-party awareness, duties, sessions, thought templates, existing W100 formula, Storyteller handoff, memory and scaling, rollout and acceptance tests. The appendix contains **600 fully documented examples in six catalogs of 100**, with trigger conditions, descriptions, outcomes, effects, both perspectives, witnesses, checks and linked constructive counterparts. It includes search, pagination, an expectation demo, a W100 calculator and JSON export. [The taxonomy JSON](docs/living-world-social-taxonomy.json) is also available separately. Rebuild both using `python3 scripts/build-social-tom-plan.py`.
+
+The large taxonomy and expanded ToM/W100 execution flow are **a proposal, not installed simulation rules**. The two need dimensions and their age boundaries above are implemented independently.

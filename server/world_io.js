@@ -24,6 +24,7 @@
 // Everything runs inside a single DB transaction; asset files are copied after it commits.
 // ─────────────────────────────────────────────────────────────────────────────
 import './living/schema.js';
+import {normalizeImportedRomance} from './living/romance.js';
 import {libraryBundle,restoreLibraryBundle} from './living/library.js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -217,6 +218,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
       VALUES (@id,@user_id,@title,@art_style,@sim_time,@tick_index,@genre,@mood,@pacing,@directives,@status,@cover_asset_id,@active_branch_id,@genesis_state,@created_at,@updated_at,@current_music,@curiosity)`).run(worldRow);
     if(manifest.living){db.prepare("UPDATE worlds SET simulation_mode='living' WHERE id=?").run(newWorldId);for(const table of LIVING_TABLES){const schema=db.prepare('PRAGMA table_info('+table+')').all(),columns=schema.map(c=>c.name).filter(k=>!(table==='lw_anchor_audit'&&k==='id'));const insert=db.prepare('INSERT INTO '+table+' ('+columns.join(',')+') VALUES ('+columns.map(()=>'?').join(',')+')');for(const row of manifest.living[table] || [])insert.run(...columns.map(column=>{let value=column==='world_id'?newWorldId:row[column];if(['parent_id','household_id','from_id','to_id','location_id','beat_id','sim_id','event_id','entity_id','speaker'].includes(column)&&value!=null&&value!=='narrator'&&!idMap.has(value))throw new Error('Foreign reference in Living World snapshot');if(value===undefined)throw new Error('Incomplete '+table+' snapshot');if(typeof value==='string'){const parsed=pj(value,Symbol.for('invalid-json'));if(parsed!==null&&typeof parsed==='object')value=j(remapDeep(parsed,idMap));else value=remapDeep(value,idMap);}return value;}));}}
     const ins = (sql, rows) => { const st = db.prepare(sql); for (const r of rows) st.run(r); };
+    if(manifest.living)normalizeImportedRomance(db,newWorldId);
     ins(`INSERT INTO characters(id,world_id,name,base_profile,materialised,reference_asset_id,voice,created_at,voice_ref_asset_id,voice_ref_prompt,intro_tick_idx)
          VALUES (@id,@world_id,@name,@base_profile,@materialised,@reference_asset_id,@voice,@created_at,@voice_ref_asset_id,@voice_ref_prompt,@intro_tick_idx)`, chars);
     ins(`INSERT INTO locations(id,world_id,name,type,place_group,description,background_asset_id,x,y,music)

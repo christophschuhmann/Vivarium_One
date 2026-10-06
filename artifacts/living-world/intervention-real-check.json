@@ -1,0 +1,1362 @@
+{
+  "provider": "player configured HyprLab",
+  "temporaryDuplicate": true,
+  "originalUnchanged": true,
+  "clockBefore": 27300,
+  "clockAfterConversations": 27300,
+  "clockAfterTick": 27600,
+  "physicalNeedsUnchangedByConversation": true,
+  "innerReply": "Gerade tut mir diese kurze Pause richtig gut. Ich merke, wie heilsam ein Moment ohne Hektik ist, um einfach durchzuatmen. Ein verlässlicher Rhythmus ist mir unheimlich wichtig – genau wie Zeit für mich, wenn der Tag voll wird. Als Nächstes möchte ich mich darauf konzentrieren, eine stabile und angenehme Alltagsroutine aufzubauen. Das gibt mir den nötigen Halt, sowohl für die Gartenarbeit als auch für das Kochen am Abend.",
+  "talkReply": "Es tut gut, das einfach mal auszusprechen. Dieses Gespräch bringt mir noch mehr Ruhe und das Gefühl, verstanden zu werden. Ein kleiner Schritt wäre wohl, den heutigen Abend ganz bewusst zu planen: Vielleicht ein einfaches, warmes Gericht kochen, ohne Eile, und danach etwas Zeit mit Mira und Omar verbringen, bevor es zu spät wird. Ein klarer, verlässlicher Ablauf für den Abend nimmt den Druck aus dem Tag und hilft mir, richtig anzukommen.",
+  "conversationEffects": [
+    {
+      "emotions": [
+        {
+          "id": "contentment",
+          "intensity": 0.4
+        },
+        {
+          "id": "relief",
+          "intensity": 0.25
+        },
+        {
+          "id": "contemplation",
+          "intensity": 0.2
+        }
+      ],
+      "needsDelta": {
+        "social": -0.05000000000000002,
+        "comfort": -0.03999999999999998,
+        "fun": 0,
+        "fatigue": -0.010000000000000009,
+        "romantic_affection": 0
+      },
+      "focusGoalId": "ambition_primary"
+    },
+    {
+      "emotions": [
+        {
+          "id": "contentment",
+          "intensity": 0.35
+        },
+        {
+          "id": "contemplation",
+          "intensity": 0.28
+        }
+      ],
+      "needsDelta": {
+        "comfort": -0.03999999999999998,
+        "social": -0.01999999999999999,
+        "fun": 0,
+        "romantic_affection": 0,
+        "fatigue": -0.010000000000000009
+      },
+      "focusGoalId": "ambition_primary"
+    }
+  ],
+  "tickMetrics": {
+    "population": 500,
+    "events": 416,
+    "journalEntries": 586,
+    "eligible": 5,
+    "fields": 2,
+    "modelCalls": 2,
+    "biographyCalls": 1,
+    "cpuMs": 441,
+    "totalMs": 33966,
+    "rejections": [],
+    "warnings": []
+  },
+  "after": {
+    "emotions": {
+      "schema_version": 2,
+      "taxonomy_id": "emonet_face_40",
+      "states": [
+        {
+          "id": "contentment",
+          "label": "Contentment",
+          "label_de": "Zufriedenheit",
+          "components": [
+            {
+              "key": "event:le_7pFRqNut65rQ:contentment",
+              "source": "event",
+              "intensity": 0.35,
+              "activated_at": 27300,
+              "expires_at": 28200,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                "evidence_id": "le_7pFRqNut65rQ",
+                "at": 27300
+              }
+            },
+            {
+              "key": "event:le_OFEp_aW9HnHt:contentment",
+              "source": "event",
+              "intensity": 0.4,
+              "activated_at": 27300,
+              "expires_at": 28200,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+                "evidence_id": "le_OFEp_aW9HnHt",
+                "at": 27300
+              }
+            },
+            {
+              "key": "event:w_R_672RVBoUM6_e_17_0:contentment",
+              "source": "event",
+              "intensity": 0.3,
+              "activated_at": 27600,
+              "expires_at": 28500,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Der Gedanke, den Alltag durch eine verlässliche Geste für die Familie zu bereichern, tut Jonas gut.",
+                "evidence_id": "w_R_672RVBoUM6_e_17_0",
+                "at": 27600
+              }
+            },
+            {
+              "key": "current:contentment",
+              "source": "event",
+              "intensity": 0.29403518107067794,
+              "activated_at": 27600,
+              "expires_at": 27720,
+              "cause": {
+                "kind": "current_state",
+                "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                "at": 27600
+              }
+            }
+          ],
+          "intensity": 0.4,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+              "evidence_id": "le_7pFRqNut65rQ",
+              "at": 27300
+            },
+            {
+              "kind": "subjective_reflection",
+              "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+              "evidence_id": "le_OFEp_aW9HnHt",
+              "at": 27300
+            },
+            {
+              "kind": "subjective_reflection",
+              "text": "Der Gedanke, den Alltag durch eine verlässliche Geste für die Familie zu bereichern, tut Jonas gut.",
+              "evidence_id": "w_R_672RVBoUM6_e_17_0",
+              "at": 27600
+            },
+            {
+              "kind": "current_state",
+              "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+              "at": 27600
+            }
+          ],
+          "expires_at": 28500
+        },
+        {
+          "id": "hope_enthusiasm_optimism",
+          "label": "Hope/Enthusiasm/Optimism",
+          "label_de": "Hoffnung/Begeisterung/Optimismus",
+          "components": [
+            {
+              "key": "event:w_R_672RVBoUM6_e_17_0:hope_enthusiasm_optimism",
+              "source": "event",
+              "intensity": 0.35,
+              "activated_at": 27600,
+              "expires_at": 28500,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Der Gedanke, den Alltag durch eine verlässliche Geste für die Familie zu bereichern, tut Jonas gut.",
+                "evidence_id": "w_R_672RVBoUM6_e_17_0",
+                "at": 27600
+              }
+            }
+          ],
+          "intensity": 0.35,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Der Gedanke, den Alltag durch eine verlässliche Geste für die Familie zu bereichern, tut Jonas gut.",
+              "evidence_id": "w_R_672RVBoUM6_e_17_0",
+              "at": 27600
+            }
+          ],
+          "expires_at": 28500
+        },
+        {
+          "id": "interest",
+          "label": "Interest",
+          "label_de": "Interesse",
+          "components": [
+            {
+              "key": "current:activity",
+              "source": "event",
+              "intensity": 0.31420000000000003,
+              "activated_at": 27600,
+              "expires_at": 27720,
+              "cause": {
+                "kind": "ongoing_activity",
+                "text": "macht eine ruhige Pause",
+                "category": "relax",
+                "evidence_id": null,
+                "at": 27600
+              }
+            }
+          ],
+          "intensity": 0.31420000000000003,
+          "causes": [
+            {
+              "kind": "ongoing_activity",
+              "text": "macht eine ruhige Pause",
+              "category": "relax",
+              "evidence_id": null,
+              "at": 27600
+            }
+          ],
+          "expires_at": 27720
+        },
+        {
+          "id": "contemplation",
+          "label": "Contemplation",
+          "label_de": "Nachdenken",
+          "components": [
+            {
+              "key": "event:le_7pFRqNut65rQ:contemplation",
+              "source": "event",
+              "intensity": 0.28,
+              "activated_at": 27300,
+              "expires_at": 28200,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                "evidence_id": "le_7pFRqNut65rQ",
+                "at": 27300
+              }
+            },
+            {
+              "key": "event:le_OFEp_aW9HnHt:contemplation",
+              "source": "event",
+              "intensity": 0.2,
+              "activated_at": 27300,
+              "expires_at": 28200,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+                "evidence_id": "le_OFEp_aW9HnHt",
+                "at": 27300
+              }
+            }
+          ],
+          "intensity": 0.28,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+              "evidence_id": "le_7pFRqNut65rQ",
+              "at": 27300
+            },
+            {
+              "kind": "subjective_reflection",
+              "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+              "evidence_id": "le_OFEp_aW9HnHt",
+              "at": 27300
+            }
+          ],
+          "expires_at": 28200
+        },
+        {
+          "id": "relief",
+          "label": "Relief",
+          "label_de": "Erleichterung",
+          "components": [
+            {
+              "key": "event:le_OFEp_aW9HnHt:relief",
+              "source": "event",
+              "intensity": 0.25,
+              "activated_at": 27300,
+              "expires_at": 28200,
+              "cause": {
+                "kind": "subjective_reflection",
+                "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+                "evidence_id": "le_OFEp_aW9HnHt",
+                "at": 27300
+              }
+            }
+          ],
+          "intensity": 0.25,
+          "causes": [
+            {
+              "kind": "subjective_reflection",
+              "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+              "evidence_id": "le_OFEp_aW9HnHt",
+              "at": 27300
+            }
+          ],
+          "expires_at": 28200
+        }
+      ],
+      "primary": "contentment",
+      "updated_at": 27600,
+      "actual_narrative": "Zufriedenheit 40% · Hoffnung/Begeisterung/Optimismus 35% · Interesse 31% · Nachdenken 28% · Erleichterung 25%",
+      "self_narrative": "Möchte später ein nahrhaftes Essen zubereiten, um die Familie zu umsorgen."
+    },
+    "currentDesire": "Möchte später ein nahrhaftes Essen zubereiten, um die Familie zu umsorgen.",
+    "needs": {
+      "hunger": 0.20643008176547778,
+      "thirst": 0.35952490732384246,
+      "bladder": 0.3730987928621471,
+      "fatigue": 0.32269473799783743,
+      "hygiene": 0.29764735465838277,
+      "social": 0.13910494621532668,
+      "fun": 0.3601677187252787,
+      "comfort": 0.30837520171732946,
+      "romantic_affection": 0.1424084650576115
+    },
+    "goals": [
+      {
+        "id": "ambition_primary",
+        "kind": "stability",
+        "title": "Create a comfortable routine",
+        "progress": 0,
+        "completed": false,
+        "updated_at": 0,
+        "title_de": "Einen verlässlichen Alltag finden",
+        "target_seconds": 144000,
+        "practice_seconds": 0
+      },
+      {
+        "id": "ambition_career",
+        "kind": "career",
+        "title": "Grow as a Gardener",
+        "progress": 0,
+        "completed": false,
+        "updated_at": 0,
+        "title_de": "Im Beruf dazulernen",
+        "target_seconds": 144000,
+        "practice_seconds": 0
+      },
+      {
+        "id": "ambition_hobby",
+        "kind": "hobby",
+        "activity": "cooking",
+        "title": "Practice cooking",
+        "progress": 0,
+        "completed": false,
+        "updated_at": 0,
+        "title_de": "Zeit für mein Interesse finden",
+        "target_seconds": 144000,
+        "practice_seconds": 0
+      }
+    ],
+    "dailyGoals": {
+      "day": 0,
+      "items": [
+        {
+          "id": "daily_care",
+          "kind": "selfcare",
+          "title": "Mich heute gut versorgen",
+          "target": 2,
+          "value": 0,
+          "unit": "Handlungen"
+        },
+        {
+          "id": "daily_practice",
+          "kind": "career",
+          "title": "Eine Aufgabe bei der Arbeit voranbringen",
+          "target": 900,
+          "value": 0,
+          "unit": "Sekunden",
+          "interest": "cooking"
+        },
+        {
+          "id": "daily_connection",
+          "kind": "connection",
+          "title": "Einen guten Moment mit jemandem teilen",
+          "target": 1,
+          "value": 0,
+          "unit": "Begegnungen"
+        }
+      ]
+    },
+    "thought": "Vielleicht kann ich heute Abend etwas Frisches für uns kochen, um Mira und Omar zu unterstützen."
+  },
+  "biographyMode": "written",
+  "biographyWarnings": [],
+  "interventionRecorded": true,
+  "recentJournal": [
+    {
+      "cursor": 16705,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "le_oeLauZW5KQ38",
+      "observed_at": 27600,
+      "channel": "initialization",
+      "perception": "Jonas Okafor ist 30 Jahre alt und als engagierter Gardener tätig. Er ist in der Gegend aufgewachsen und schätzt die vertraute Atmosphäre am Birkenpfad sehr, möchte seinem Alltag jedoch gleichzeitig neue Impulse verleihen. Gemeinsam mit seiner Ehefrau Mira und Omar führt er ein harmonisches Familienleben, in dem gegenseitiges Vertrauen an erster Stelle steht. Jonas sehnt sich nach Stabilität und einem verlässlichen Rhythmus, der ihm nach arbeitsreichen Tagen Halt bietet. Nach geselligem Trubel oder intensiven Begegnungen zieht er sich gerne zurück, um neue Kraft zu schöpfen. In seinem Beruf strebt er danach, seine handwerklichen und botanischen Fähigkeiten kontinuierlich zu verfeinern. Am Abend findet er beim Kochen Ruhe; das Experimentieren mit frischen Zutaten dient ihm als willkommene Routine, um den Tag gelassen ausklingen zu lassen. Bei den gemeinsamen Spaziergängen im Waldsaum pflegt er die Nachbarschaftskontakte mit unaufgeregter, wohlwollender Freundlichkeit.",
+      "interpretation": "Mein Ausgangshintergrund wurde ausgearbeitet. Bereits erlebte Ereignisse bleiben erhalten.",
+      "confidence": 1,
+      "type": "initialization_authored_background",
+      "start": 27600,
+      "end": 27600,
+      "location_id": "lw_vPSZz9KW7IVR",
+      "facts": {
+        "coverage": "authored_background",
+        "doesNotRewriteWitnessedEvents": true
+      },
+      "description": "Jonas Okafor ist 30 Jahre alt und als engagierter Gardener tätig. Er ist in der Gegend aufgewachsen und schätzt die vertraute Atmosphäre am Birkenpfad sehr, möchte seinem Alltag jedoch gleichzeitig neue Impulse verleihen. Gemeinsam mit seiner Ehefrau Mira und Omar führt er ein harmonisches Familienleben, in dem gegenseitiges Vertrauen an erster Stelle steht. Jonas sehnt sich nach Stabilität und einem verlässlichen Rhythmus, der ihm nach arbeitsreichen Tagen Halt bietet. Nach geselligem Trubel oder intensiven Begegnungen zieht er sich gerne zurück, um neue Kraft zu schöpfen. In seinem Beruf strebt er danach, seine handwerklichen und botanischen Fähigkeiten kontinuierlich zu verfeinern. Am Abend findet er beim Kochen Ruhe; das Experimentieren mit frischen Zutaten dient ihm als willkommene Routine, um den Tag gelassen ausklingen zu lassen. Bei den gemeinsamen Spaziergängen im Waldsaum pflegt er die Nachbarschaftskontakte mit unaufgeregter, wohlwollender Freundlichkeit.",
+      "source": "authored_initialization"
+    },
+    {
+      "cursor": 16192,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "w_R_672RVBoUM6_e_17_26",
+      "observed_at": 27420,
+      "channel": "nearby_observation",
+      "perception": "Mira Okafor und Omar Okafor erzählen eine Geschichte. Der Kontaktwunsch wird abgelehnt; die Grenze wird respektiert.",
+      "interpretation": "Ich habe diesen Austausch in meiner Nähe mitbekommen. Die privaten Absichten kenne ich nicht.",
+      "confidence": 0.5,
+      "type": "social",
+      "start": 27420,
+      "end": 27420,
+      "location_id": "lw_vPSZz9KW7IVR",
+      "facts": {
+        "category": "tell_story",
+        "outcome": "declined",
+        "remote": false,
+        "consent": false,
+        "mentalEffects": {
+          "lw_Cp4L-E9xLG5A": {
+            "emotions": [
+              {
+                "id": "contentment",
+                "intensity": 0.35
+              },
+              {
+                "id": "contemplation",
+                "intensity": 0.25
+              }
+            ],
+            "needsDelta": {
+              "social": 0.01999999999999999,
+              "romantic_affection": 0,
+              "fun": 0,
+              "comfort": -0.03,
+              "fatigue": 0
+            },
+            "focusGoalId": "ambition_primary"
+          },
+          "lw_012rHBWMC1an": {
+            "emotions": [
+              {
+                "id": "relief",
+                "intensity": 0.3
+              },
+              {
+                "id": "contentment",
+                "intensity": 0.28
+              }
+            ],
+            "needsDelta": {
+              "social": 0.010000000000000009,
+              "romantic_affection": 0,
+              "fun": 0,
+              "comfort": -0.03999999999999998,
+              "fatigue": -0.010000000000000009
+            },
+            "focusGoalId": "ambition_primary"
+          }
+        }
+      },
+      "description": "Mira Okafor und Omar Okafor erzählen eine Geschichte. Der Kontaktwunsch wird abgelehnt; die Grenze wird respektiert.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 16118,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "w_R_672RVBoUM6_e_17_0",
+      "observed_at": 27300,
+      "channel": "direct",
+      "perception": "Regieimpuls: Überlege, wie du heute einer vertrauten Person freundlich helfen kannst.",
+      "interpretation": "Vielleicht kann ich heute Abend etwas Frisches für uns kochen, um Mira und Omar zu unterstützen.",
+      "confidence": 0.9,
+      "type": "intervention",
+      "start": 27300,
+      "end": 27300,
+      "location_id": "lw_vPSZz9KW7IVR",
+      "facts": {
+        "kind": "idea",
+        "text": "Überlege, wie du heute einer vertrauten Person freundlich helfen kannst.",
+        "status": "direction",
+        "mentalEffects": {
+          "lw_stHIRVSrX8xx": {
+            "emotions": [
+              {
+                "id": "hope_enthusiasm_optimism",
+                "intensity": 0.35
+              },
+              {
+                "id": "contentment",
+                "intensity": 0.3
+              }
+            ],
+            "needsDelta": {
+              "social": -0.01999999999999999,
+              "romantic_affection": 0,
+              "fun": 0,
+              "comfort": -0.020000000000000018,
+              "fatigue": 0
+            },
+            "focusGoalId": "ambition_primary"
+          }
+        }
+      },
+      "description": "Regieimpuls: Überlege, wie du heute einer vertrauten Person freundlich helfen kannst.",
+      "source": "user_intervention"
+    },
+    {
+      "cursor": 16117,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "le_OFEp_aW9HnHt",
+      "observed_at": 27300,
+      "channel": "conversation",
+      "perception": "Ich höre, was dir gerade wichtig ist. Was wäre ein kleiner machbarer Schritt, und wie verändert dieses Gespräch dein Gefühl dabei?\nEs tut gut, das einfach mal auszusprechen. Dieses Gespräch bringt mir noch mehr Ruhe und das Gefühl, verstanden zu werden. Ein kleiner Schritt wäre wohl, den heutigen Abend ganz bewusst zu planen: Vielleicht ein einfaches, warmes Gericht kochen, ohne Eile, und danach etwas Zeit mit Mira und Omar verbringen, bevor es zu spät wird. Ein klarer, verlässlicher Ablauf für den Abend nimmt den Druck aus dem Tag und hilft mir, richtig anzukommen.",
+      "interpretation": "Der Austausch hilft mir, meine Gedanken zu ordnen. Eine feste Routine beim Kochen und ruhige Momente daheim sind genau das Richtige.",
+      "confidence": 0.6,
+      "type": "conversation",
+      "start": 27300,
+      "end": 27300,
+      "location_id": "lw_vPSZz9KW7IVR",
+      "facts": {
+        "previousMind": {
+          "needs": {
+            "hunger": 0.19726341509881115,
+            "thirst": 0.3453582406571757,
+            "bladder": 0.3630987928621471,
+            "fatigue": 0.3279447379978374,
+            "hygiene": 0.29331402132504936,
+            "social": 0.2045216128819933,
+            "fun": 0.35391771872527883,
+            "comfort": 0.36295853505066283,
+            "romantic_affection": 0.14015846505761148
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "event:le_7pFRqNut65rQ:contentment",
+                    "source": "event",
+                    "intensity": 0.35,
+                    "activated_at": 27300,
+                    "expires_at": 28200,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                      "evidence_id": "le_7pFRqNut65rQ",
+                      "at": 27300
+                    }
+                  },
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.29553518107067794,
+                    "activated_at": 27300,
+                    "expires_at": 27420,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.35,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                    "evidence_id": "le_7pFRqNut65rQ",
+                    "at": 27300
+                  },
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 28200
+              },
+              {
+                "id": "interest",
+                "label": "Interest",
+                "label_de": "Interesse",
+                "components": [
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.31420000000000003,
+                    "activated_at": 27300,
+                    "expires_at": 27420,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "macht eine ruhige Pause",
+                      "category": "relax",
+                      "evidence_id": null,
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.31420000000000003,
+                "causes": [
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "macht eine ruhige Pause",
+                    "category": "relax",
+                    "evidence_id": null,
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 27420
+              },
+              {
+                "id": "contemplation",
+                "label": "Contemplation",
+                "label_de": "Nachdenken",
+                "components": [
+                  {
+                    "key": "event:le_7pFRqNut65rQ:contemplation",
+                    "source": "event",
+                    "intensity": 0.28,
+                    "activated_at": 27300,
+                    "expires_at": 28200,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                      "evidence_id": "le_7pFRqNut65rQ",
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.28,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                    "evidence_id": "le_7pFRqNut65rQ",
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 28200
+              }
+            ],
+            "primary": "contentment",
+            "updated_at": 27300,
+            "actual_narrative": "Zufriedenheit 35% · Interesse 31% · Nachdenken 28%",
+            "self_narrative": "Wünscht sich verlässliche Beziehungen und einen ruhigeren Alltag."
+          },
+          "focus_goal_id": "ambition_primary",
+          "current_desire": "Wünscht sich verlässliche Beziehungen und einen ruhigeren Alltag.",
+          "thought_source": "conversation",
+          "thought_at": 27300
+        },
+        "afterMind": {
+          "needs": {
+            "hunger": 0.19726341509881115,
+            "thirst": 0.3453582406571757,
+            "bladder": 0.3630987928621471,
+            "fatigue": 0.3179447379978374,
+            "hygiene": 0.29331402132504936,
+            "social": 0.1545216128819933,
+            "fun": 0.35391771872527883,
+            "comfort": 0.32295853505066285,
+            "romantic_affection": 0.14015846505761148
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "event:le_7pFRqNut65rQ:contentment",
+                    "source": "event",
+                    "intensity": 0.35,
+                    "activated_at": 27300,
+                    "expires_at": 28200,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                      "evidence_id": "le_7pFRqNut65rQ",
+                      "at": 27300
+                    }
+                  },
+                  {
+                    "key": "event:le_OFEp_aW9HnHt:contentment",
+                    "source": "event",
+                    "intensity": 0.4,
+                    "activated_at": 27300,
+                    "expires_at": 28200,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+                      "evidence_id": "le_OFEp_aW9HnHt",
+                      "at": 27300
+                    }
+                  },
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.29553518107067794,
+                    "activated_at": 27300,
+                    "expires_at": 27420,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.4,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                    "evidence_id": "le_7pFRqNut65rQ",
+                    "at": 27300
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+                    "evidence_id": "le_OFEp_aW9HnHt",
+                    "at": 27300
+                  },
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 28200
+              },
+              {
+                "id": "interest",
+                "label": "Interest",
+                "label_de": "Interesse",
+                "components": [
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.31420000000000003,
+                    "activated_at": 27300,
+                    "expires_at": 27420,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "macht eine ruhige Pause",
+                      "category": "relax",
+                      "evidence_id": null,
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.31420000000000003,
+                "causes": [
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "macht eine ruhige Pause",
+                    "category": "relax",
+                    "evidence_id": null,
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 27420
+              },
+              {
+                "id": "contemplation",
+                "label": "Contemplation",
+                "label_de": "Nachdenken",
+                "components": [
+                  {
+                    "key": "event:le_7pFRqNut65rQ:contemplation",
+                    "source": "event",
+                    "intensity": 0.28,
+                    "activated_at": 27300,
+                    "expires_at": 28200,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                      "evidence_id": "le_7pFRqNut65rQ",
+                      "at": 27300
+                    }
+                  },
+                  {
+                    "key": "event:le_OFEp_aW9HnHt:contemplation",
+                    "source": "event",
+                    "intensity": 0.2,
+                    "activated_at": 27300,
+                    "expires_at": 28200,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+                      "evidence_id": "le_OFEp_aW9HnHt",
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.28,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                    "evidence_id": "le_7pFRqNut65rQ",
+                    "at": 27300
+                  },
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+                    "evidence_id": "le_OFEp_aW9HnHt",
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 28200
+              },
+              {
+                "id": "relief",
+                "label": "Relief",
+                "label_de": "Erleichterung",
+                "components": [
+                  {
+                    "key": "event:le_OFEp_aW9HnHt:relief",
+                    "source": "event",
+                    "intensity": 0.25,
+                    "activated_at": 27300,
+                    "expires_at": 28200,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+                      "evidence_id": "le_OFEp_aW9HnHt",
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.25,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das ruhige, unterstützende Gespräch stärkt das Gefühl von Halt und bestätigt den Wunsch nach einer verlässlichen Alltagsroutine.",
+                    "evidence_id": "le_OFEp_aW9HnHt",
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 28200
+              }
+            ],
+            "primary": "contentment",
+            "updated_at": 27300,
+            "actual_narrative": "Zufriedenheit 40% · Interesse 31% · Nachdenken 28% · Erleichterung 25%",
+            "self_narrative": "Wünscht sich verlässliche Beziehungen und einen ruhigeren Alltag."
+          },
+          "focus_goal_id": "ambition_primary",
+          "current_desire": "Wünscht sich verlässliche Beziehungen und einen ruhigeren Alltag.",
+          "thought_source": "conversation",
+          "thought_at": 27300
+        },
+        "effects": {
+          "emotions": [
+            {
+              "id": "contentment",
+              "intensity": 0.4
+            },
+            {
+              "id": "relief",
+              "intensity": 0.25
+            },
+            {
+              "id": "contemplation",
+              "intensity": 0.2
+            }
+          ],
+          "needsDelta": {
+            "social": -0.05000000000000002,
+            "comfort": -0.03999999999999998,
+            "fun": 0,
+            "fatigue": -0.010000000000000009,
+            "romantic_affection": 0
+          },
+          "focusGoalId": "ambition_primary"
+        },
+        "channel": "talk",
+        "message": "Ich höre, was dir gerade wichtig ist. Was wäre ein kleiner machbarer Schritt, und wie verändert dieses Gespräch dein Gefühl dabei?",
+        "reply": "Es tut gut, das einfach mal auszusprechen. Dieses Gespräch bringt mir noch mehr Ruhe und das Gefühl, verstanden zu werden. Ein kleiner Schritt wäre wohl, den heutigen Abend ganz bewusst zu planen: Vielleicht ein einfaches, warmes Gericht kochen, ohne Eile, und danach etwas Zeit mit Mira und Omar verbringen, bevor es zu spät wird. Ein klarer, verlässlicher Ablauf für den Abend nimmt den Druck aus dem Tag und hilft mir, richtig anzukommen.",
+        "previousThought": "Diese kleine Auszeit hilft mir, meine Gedanken zu ordnen und Kraft für den Alltag zu sammeln.",
+        "previousMood": "Zufriedenheit",
+        "newThought": "Der Austausch hilft mir, meine Gedanken zu ordnen. Eine feste Routine beim Kochen und ruhige Momente daheim sind genau das Richtige.",
+        "newMood": "Zufriedenheit"
+      },
+      "description": "Gespräch mit Jonas Okafor: Es tut gut, das einfach mal auszusprechen. Dieses Gespräch bringt mir noch mehr Ruhe und das Gefühl, verstanden zu werden. Ein kleiner Schritt wäre wohl, den heutigen Abend ganz bewusst zu planen: Vielleicht ein einfaches, warmes Gericht kochen, ohne Eile, und danach etwas Zeit mit Mira und Omar verbringen, bevor es zu spät wird. Ein klarer, verlässlicher Ablauf für den Abend nimmt den Druck aus dem Tag und hilft mir, richtig anzukommen.",
+      "source": "user_conversation"
+    },
+    {
+      "cursor": 16116,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "le_7pFRqNut65rQ",
+      "observed_at": 27300,
+      "channel": "inner_dialogue",
+      "perception": "Was brauchst du gerade, wie fühlst du dich damit, und welches deiner vorhandenen Vorhaben möchtest du als Nächstes angehen? Ich höre dir in Ruhe zu.\nGerade tut mir diese kurze Pause richtig gut. Ich merke, wie heilsam ein Moment ohne Hektik ist, um einfach durchzuatmen. Ein verlässlicher Rhythmus ist mir unheimlich wichtig – genau wie Zeit für mich, wenn der Tag voll wird. Als Nächstes möchte ich mich darauf konzentrieren, eine stabile und angenehme Alltagsroutine aufzubauen. Das gibt mir den nötigen Halt, sowohl für die Gartenarbeit als auch für das Kochen am Abend.",
+      "interpretation": "Diese kleine Auszeit hilft mir, meine Gedanken zu ordnen und Kraft für den Alltag zu sammeln.",
+      "confidence": 0.6,
+      "type": "conversation",
+      "start": 27300,
+      "end": 27300,
+      "location_id": "lw_vPSZz9KW7IVR",
+      "facts": {
+        "previousMind": {
+          "needs": {
+            "hunger": 0.19726341509881115,
+            "thirst": 0.3453582406571757,
+            "bladder": 0.3630987928621471,
+            "fatigue": 0.3379447379978374,
+            "hygiene": 0.29331402132504936,
+            "social": 0.2245216128819933,
+            "fun": 0.35391771872527883,
+            "comfort": 0.4029585350506628,
+            "romantic_affection": 0.14015846505761148
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "interest",
+                "label": "Interest",
+                "label_de": "Interesse",
+                "components": [
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.31420000000000003,
+                    "activated_at": 27300,
+                    "expires_at": 27420,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "macht eine ruhige Pause",
+                      "category": "relax",
+                      "evidence_id": null,
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.31420000000000003,
+                "causes": [
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "macht eine ruhige Pause",
+                    "category": "relax",
+                    "evidence_id": null,
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 27420
+              },
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.2895562197424006,
+                    "activated_at": 27300,
+                    "expires_at": 27420,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.2895562197424006,
+                "causes": [
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 27420
+              }
+            ],
+            "primary": "interest",
+            "updated_at": 27300,
+            "actual_narrative": "Interesse 31% · Zufriedenheit 29%",
+            "self_narrative": "Wünscht sich verlässliche Beziehungen und einen ruhigeren Alltag."
+          },
+          "focus_goal_id": null,
+          "current_desire": "Wünscht sich verlässliche Beziehungen und einen ruhigeren Alltag.",
+          "thought_source": null,
+          "thought_at": null
+        },
+        "afterMind": {
+          "needs": {
+            "hunger": 0.19726341509881115,
+            "thirst": 0.3453582406571757,
+            "bladder": 0.3630987928621471,
+            "fatigue": 0.3279447379978374,
+            "hygiene": 0.29331402132504936,
+            "social": 0.2045216128819933,
+            "fun": 0.35391771872527883,
+            "comfort": 0.36295853505066283,
+            "romantic_affection": 0.14015846505761148
+          },
+          "affect": {
+            "schema_version": 2,
+            "taxonomy_id": "emonet_face_40",
+            "states": [
+              {
+                "id": "contentment",
+                "label": "Contentment",
+                "label_de": "Zufriedenheit",
+                "components": [
+                  {
+                    "key": "event:le_7pFRqNut65rQ:contentment",
+                    "source": "event",
+                    "intensity": 0.35,
+                    "activated_at": 27300,
+                    "expires_at": 28200,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                      "evidence_id": "le_7pFRqNut65rQ",
+                      "at": 27300
+                    }
+                  },
+                  {
+                    "key": "current:contentment",
+                    "source": "event",
+                    "intensity": 0.29553518107067794,
+                    "activated_at": 27300,
+                    "expires_at": 27420,
+                    "cause": {
+                      "kind": "current_state",
+                      "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.35,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                    "evidence_id": "le_7pFRqNut65rQ",
+                    "at": 27300
+                  },
+                  {
+                    "kind": "current_state",
+                    "text": "Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.",
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 28200
+              },
+              {
+                "id": "interest",
+                "label": "Interest",
+                "label_de": "Interesse",
+                "components": [
+                  {
+                    "key": "current:activity",
+                    "source": "event",
+                    "intensity": 0.31420000000000003,
+                    "activated_at": 27300,
+                    "expires_at": 27420,
+                    "cause": {
+                      "kind": "ongoing_activity",
+                      "text": "macht eine ruhige Pause",
+                      "category": "relax",
+                      "evidence_id": null,
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.31420000000000003,
+                "causes": [
+                  {
+                    "kind": "ongoing_activity",
+                    "text": "macht eine ruhige Pause",
+                    "category": "relax",
+                    "evidence_id": null,
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 27420
+              },
+              {
+                "id": "contemplation",
+                "label": "Contemplation",
+                "label_de": "Nachdenken",
+                "components": [
+                  {
+                    "key": "event:le_7pFRqNut65rQ:contemplation",
+                    "source": "event",
+                    "intensity": 0.28,
+                    "activated_at": 27300,
+                    "expires_at": 28200,
+                    "cause": {
+                      "kind": "subjective_reflection",
+                      "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                      "evidence_id": "le_7pFRqNut65rQ",
+                      "at": 27300
+                    }
+                  }
+                ],
+                "intensity": 0.28,
+                "causes": [
+                  {
+                    "kind": "subjective_reflection",
+                    "text": "Das Innehalten stärkt den Wunsch nach einem ruhigen, verlässlichen Ablauf im Alltag.",
+                    "evidence_id": "le_7pFRqNut65rQ",
+                    "at": 27300
+                  }
+                ],
+                "expires_at": 28200
+              }
+            ],
+            "primary": "contentment",
+            "updated_at": 27300,
+            "actual_narrative": "Zufriedenheit 35% · Interesse 31% · Nachdenken 28%",
+            "self_narrative": "Wünscht sich verlässliche Beziehungen und einen ruhigeren Alltag."
+          },
+          "focus_goal_id": "ambition_primary",
+          "current_desire": "Wünscht sich verlässliche Beziehungen und einen ruhigeren Alltag.",
+          "thought_source": "conversation",
+          "thought_at": 27300
+        },
+        "effects": {
+          "emotions": [
+            {
+              "id": "contentment",
+              "intensity": 0.35
+            },
+            {
+              "id": "contemplation",
+              "intensity": 0.28
+            }
+          ],
+          "needsDelta": {
+            "comfort": -0.03999999999999998,
+            "social": -0.01999999999999999,
+            "fun": 0,
+            "romantic_affection": 0,
+            "fatigue": -0.010000000000000009
+          },
+          "focusGoalId": "ambition_primary"
+        },
+        "channel": "inner",
+        "message": "Was brauchst du gerade, wie fühlst du dich damit, und welches deiner vorhandenen Vorhaben möchtest du als Nächstes angehen? Ich höre dir in Ruhe zu.",
+        "reply": "Gerade tut mir diese kurze Pause richtig gut. Ich merke, wie heilsam ein Moment ohne Hektik ist, um einfach durchzuatmen. Ein verlässlicher Rhythmus ist mir unheimlich wichtig – genau wie Zeit für mich, wenn der Tag voll wird. Als Nächstes möchte ich mich darauf konzentrieren, eine stabile und angenehme Alltagsroutine aufzubauen. Das gibt mir den nötigen Halt, sowohl für die Gartenarbeit als auch für das Kochen am Abend.",
+        "previousThought": "Ein Moment Ruhe wäre schön.",
+        "previousMood": "Interesse",
+        "newThought": "Diese kleine Auszeit hilft mir, meine Gedanken zu ordnen und Kraft für den Alltag zu sammeln.",
+        "newMood": "Zufriedenheit"
+      },
+      "description": "Gespräch mit Jonas Okafor: Gerade tut mir diese kurze Pause richtig gut. Ich merke, wie heilsam ein Moment ohne Hektik ist, um einfach durchzuatmen. Ein verlässlicher Rhythmus ist mir unheimlich wichtig – genau wie Zeit für mich, wenn der Tag voll wird. Als Nächstes möchte ich mich darauf konzentrieren, eine stabile und angenehme Alltagsroutine aufzubauen. Das gibt mir den nötigen Halt, sowohl für die Gartenarbeit als auch für das Kochen am Abend.",
+      "source": "user_conversation"
+    },
+    {
+      "cursor": 15614,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "lw_hs6GracdNQ4v",
+      "observed_at": 27300,
+      "channel": "initialization",
+      "perception": "Gefühle werden aus meinem gegenwärtigen Zustand bewertet; messbarer Zielfortschritt wurde aus meinen erhaltenen Ereignissen übernommen. Neue Gebäudeabschnitte ergänzen meine Umgebung.",
+      "interpretation": "Mein Zustand wird genauer dargestellt; meine früheren Erlebnisse bleiben unverändert.",
+      "confidence": 1,
+      "type": "initialization_life_model",
+      "start": 27300,
+      "end": 27300,
+      "location_id": "lw_vPSZz9KW7IVR",
+      "facts": {
+        "coverage": "state_model_upgrade",
+        "progressPolicy": "retained_events_only",
+        "preservesExistingEvents": true
+      },
+      "description": "Gefühle werden aus meinem gegenwärtigen Zustand bewertet; messbarer Zielfortschritt wurde aus meinen erhaltenen Ereignissen übernommen. Neue Gebäudeabschnitte ergänzen meine Umgebung.",
+      "source": "state_model_upgrade"
+    },
+    {
+      "cursor": 15112,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "lw_AVekOoELIeIZ",
+      "observed_at": 27300,
+      "channel": "initialization",
+      "perception": "Ist hier aufgewachsen und möchte dem vertrauten Alltag neue Möglichkeiten geben. Wünscht sich verlässliche Beziehungen und einen ruhigeren Alltag. Braucht nach Trubel etwas Zeit für sich. Fiona Sato: Aus wiederholten Begegnungen und dem gemeinsamen Interesse an Kochen ist Vertrautheit gewachsen. Omar Okafor: Gemeinsame Mahlzeiten, Hilfe im Alltag und das schrittweise Selbstständigwerden prägen die Familie. Maya Tanaka: Aus wiederholten Begegnungen und dem gemeinsamen Interesse an Kochen ist Vertrautheit gewachsen.",
+      "interpretation": "Ergänzter Ausgangshintergrund; kein neu beobachtetes Ereignis. Meine bisherigen Erlebnisse bleiben bestehen.",
+      "confidence": 1,
+      "type": "initialization_social_background",
+      "start": 27300,
+      "end": 27300,
+      "location_id": "lw_vPSZz9KW7IVR",
+      "facts": {
+        "coverage": "supplemental_procedural_background",
+        "doesNotRewriteWitnessedEvents": true
+      },
+      "description": "Ist hier aufgewachsen und möchte dem vertrauten Alltag neue Möglichkeiten geben. Wünscht sich verlässliche Beziehungen und einen ruhigeren Alltag. Braucht nach Trubel etwas Zeit für sich. Fiona Sato: Aus wiederholten Begegnungen und dem gemeinsamen Interesse an Kochen ist Vertrautheit gewachsen. Omar Okafor: Gemeinsame Mahlzeiten, Hilfe im Alltag und das schrittweise Selbstständigwerden prägen die Familie. Maya Tanaka: Aus wiederholten Begegnungen und dem gemeinsamen Interesse an Kochen ist Vertrautheit gewachsen.",
+      "source": "procedural_initialization"
+    },
+    {
+      "cursor": 13940,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "lw_-Bx3o79FzzW7",
+      "observed_at": 27180,
+      "channel": "direct",
+      "perception": "Jonas Okafor: macht eine ruhige Pause · auf dem Sofa.",
+      "interpretation": "Ein Moment Ruhe wäre schön.",
+      "confidence": 0.65,
+      "type": "action_started",
+      "start": 27180,
+      "end": 27180,
+      "location_id": "lw_vPSZz9KW7IVR",
+      "facts": {
+        "action": "relax",
+        "object": "sofa"
+      },
+      "description": "Jonas Okafor: macht eine ruhige Pause · auf dem Sofa.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 13939,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "lw__iQmXz2HI9e2",
+      "observed_at": 27180,
+      "channel": "direct",
+      "perception": "Jonas Okafor kommt in Wohnzimmer · Haus 1 an.",
+      "interpretation": "Ich bin hier angekommen und kann mich neu orientieren.",
+      "confidence": 0.65,
+      "type": "arrival",
+      "start": 27180,
+      "end": 27180,
+      "location_id": "lw_vPSZz9KW7IVR",
+      "facts": {
+        "from": "lw_q9UXZYckw0Sl",
+        "guardianId": null,
+        "transport": null
+      },
+      "description": "Jonas Okafor kommt in Wohnzimmer · Haus 1 an.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 13368,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "lw_o5lEidR5ipt4",
+      "observed_at": 27120,
+      "channel": "direct",
+      "perception": "Jonas Okafor kommt in Haus 1 · Okafor an.",
+      "interpretation": "Ich bin hier angekommen und kann mich neu orientieren.",
+      "confidence": 0.65,
+      "type": "arrival",
+      "start": 27120,
+      "end": 27120,
+      "location_id": "lw_BSuMOH1MTBtT",
+      "facts": {
+        "from": "lw_q9UXZYckw0Sl",
+        "guardianId": null,
+        "transport": null
+      },
+      "description": "Jonas Okafor kommt in Haus 1 · Okafor an.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 12868,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "lw_kkMiHW9q3lMJ",
+      "observed_at": 27060,
+      "channel": "direct",
+      "perception": "Jonas Okafor geht von Küche · Haus 1 nach Wohnzimmer · Haus 1.",
+      "interpretation": "Ein Moment Ruhe wäre schön.",
+      "confidence": 0.65,
+      "type": "departure",
+      "start": 27060,
+      "end": 27060,
+      "location_id": "lw_q9UXZYckw0Sl",
+      "facts": {
+        "destination": "lw_vPSZz9KW7IVR",
+        "path": [
+          "lw_BSuMOH1MTBtT",
+          "lw_vPSZz9KW7IVR"
+        ]
+      },
+      "description": "Jonas Okafor geht von Küche · Haus 1 nach Wohnzimmer · Haus 1.",
+      "source": "procedural"
+    },
+    {
+      "cursor": 12352,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "lw_m6QJUCLDLIts",
+      "observed_at": 27000,
+      "channel": "initialization",
+      "perception": "Create a comfortable routine; Grow as a Gardener; Practice cooking",
+      "interpretation": "Das möchte ich verfolgen.",
+      "confidence": 1,
+      "type": "initialization_goal",
+      "start": 27000,
+      "end": 27000,
+      "location_id": "lw_q9UXZYckw0Sl",
+      "facts": {
+        "coverage": "initialized_background",
+        "biographyMode": "written_pending"
+      },
+      "description": "Create a comfortable routine; Grow as a Gardener; Practice cooking",
+      "source": "procedural_initialization"
+    },
+    {
+      "cursor": 12351,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "lw_yjr2ZeFZ690y",
+      "observed_at": 27000,
+      "channel": "initialization",
+      "perception": "Hat das eigene Zuhause und vertraute Kontakte.",
+      "interpretation": "So erinnere ich mich an meinen bisherigen Lebensweg.",
+      "confidence": 1,
+      "type": "initialization_family",
+      "start": 27000,
+      "end": 27000,
+      "location_id": "lw_q9UXZYckw0Sl",
+      "facts": {
+        "coverage": "initialized_background",
+        "biographyMode": "written_pending"
+      },
+      "description": "Hat das eigene Zuhause und vertraute Kontakte.",
+      "source": "procedural_initialization"
+    },
+    {
+      "cursor": 12350,
+      "sim_id": "lw_stHIRVSrX8xx",
+      "event_id": "lw_8_o4bPT4hZdL",
+      "observed_at": 27000,
+      "channel": "initialization",
+      "perception": "Jonas Okafor ist 30 Jahre alt und arbeitet als Gardener. Lebt mit Mira Okafor, Omar Okafor im gemeinsamen Haushalt. Hat nach mehreren prägenden Lebensphasen hier ein Zuhause gefunden. Interessiert sich für cooking und craft. Ziel: Create a comfortable routine; Grow as a Gardener; Practice cooking.",
+      "interpretation": "So erinnere ich mich an meinen bisherigen Lebensweg.",
+      "confidence": 1,
+      "type": "initialization_identity",
+      "start": 27000,
+      "end": 27000,
+      "location_id": "lw_q9UXZYckw0Sl",
+      "facts": {
+        "coverage": "initialized_background",
+        "biographyMode": "written_pending"
+      },
+      "description": "Jonas Okafor ist 30 Jahre alt und arbeitet als Gardener. Lebt mit Mira Okafor, Omar Okafor im gemeinsamen Haushalt. Hat nach mehreren prägenden Lebensphasen hier ein Zuhause gefunden. Interessiert sich für cooking und craft. Ziel: Create a comfortable routine; Grow as a Gardener; Practice cooking.",
+      "source": "procedural_initialization"
+    }
+  ]
+}

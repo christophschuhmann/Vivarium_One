@@ -22,7 +22,9 @@
     "test:living-social": "node scripts/test-living-social.mjs",
     "test:living-mind": "node scripts/test-living-mind.mjs",
     "benchmark:living": "node scripts/benchmark-living.mjs",
-    "test:living-browser": "node scripts/test-living-browser.mjs"
+    "test:living-browser": "node scripts/test-living-browser.mjs",
+    "test:living-biographies": "node scripts/test-living-biographies.mjs",
+    "test:living-romance": "node scripts/test-living-romance.mjs"
   },
   "license": "MIT",
   "dependencies": {

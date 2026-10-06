@@ -8,13 +8,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'vendor' / 'open-si
 from living_world import psychology, careers, affect
 from living_world.rules import RuleRegistry
 from living_world.daily_life import JOB_STATIONS
+import romance_policy
 
 registry = RuleRegistry()
 def handle(request):
     op = request['op']
     if op == 'catalog':
         return {'actions': registry.actions, 'rates': registry.rates,
-                'manifest': registry.manifest(), 'social': psychology.social_category_definitions(), 'jobStations': JOB_STATIONS}
+                'manifest': registry.manifest(), 'social': {**psychology.social_category_definitions(), **romance_policy.DEFINITIONS}, 'jobStations': JOB_STATIONS}
     if op == 'initialize':
         people = request['people']
         for person in people:
@@ -33,6 +34,7 @@ def handle(request):
         for pair in request['pairs']:
             a, b = pair['a'], pair['b']
             candidates = psychology.social_candidates(a, b, request['now'])
+            candidates += romance_policy.candidates(a, b, pair.get('venue', {}))
             category = pair.get('category')
             rng = random.Random(str(pair['seed']))
             possible = [c for c in candidates if c['allowed'] and (c['category'] != 'phone_call' or pair.get('remote')) and (not category or c['category'] == category)]
@@ -51,6 +53,8 @@ def handle(request):
                        'curiosity': {'ask_advice', 'share_interest', 'play_together'}}.get(motive, set())
             def weight(candidate):
                 score = candidate['score'] + (.18 if candidate['category'] in favored else 0)
+                if candidate.get('tone') == 'romance' or candidate['category'] in {'flirt','ask_date','express_affection'}:
+                    score += min(.3, float(a.get('needs', {}).get('romantic_affection', 0)) * .3)
                 if tension > .035 and candidate['category'] in {'apologize', 'reconcile', 'set_boundary'}:
                     score += min(.35, tension * 1.5)
                 return max(.01, score) ** 2
@@ -59,7 +63,7 @@ def handle(request):
             outcome = pair.get('outcome') or ('accepted' if rng.random() < chosen['willingness'] else 'declined')
             if chosen['requires_consent'] and pair.get('outcome') == 'accepted' and not pair.get('consent_checked') and rng.random() >= chosen['willingness']:
                 outcome = 'declined'
-            patch = psychology.apply_social(a, b, chosen['category'], outcome, request['now'], pair['eventId'])
+            patch = (romance_policy.apply if chosen['category'] in romance_policy.DEFINITIONS else psychology.apply_social)(a, b, chosen['category'], outcome, request['now'], pair['eventId'])
             results.append({'allowed': True, 'category': chosen['category'], 'outcome': outcome, 'patch': patch,
                             'duration': chosen['duration_seconds'], 'consent': chosen['requires_consent']})
         return results
@@ -67,7 +71,7 @@ def handle(request):
         people = {p['id']: p for p in request['people']}
         for event in request['events']:
             a, b = (people[id] for id in event['participants'])
-            patch = psychology.apply_social(a, b, event['category'], event['outcome'], event['time'], event['id'])
+            patch = (romance_policy.apply if event['category'] in romance_policy.DEFINITIONS else psychology.apply_social)(a, b, event['category'], event['outcome'], event['time'], event['id'])
             for id, change in patch.items():
                 people[id].setdefault('relations', {}).update(change['relations'])
                 other = b if id == a['id'] else a

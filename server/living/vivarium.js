@@ -1,3 +1,4 @@
+import {normalizeRomance,ROMANCE_INSTRUCTIONS,assertMinorSafeText} from './romance.js';
 import {rebuildAffect,evaluateMind,reflect,mindContext,conversationReflection,REFLECTION_INSTRUCTIONS} from './cognition.js';
 import {personalSocialContext} from './social.js';
 // Present the same live state to the original Vivarium stage. No second simulation.
@@ -13,7 +14,7 @@ import {preflight,debitCall,EST} from '../credits.js';
 const err=(statusCode,message)=>Object.assign(new Error(message),{statusCode});
 const media=(id,variant)=>id?'/api/living/library/'+encodeURIComponent(id)+'?variant='+variant:null;
 export function character(p,catalog){
-  const profile=pj(p.profile,{}),state=pj(p.state,{}),needs=state.needs||{};
+  const profile=pj(p.profile,{}),state=pj(p.state,{});normalizeRomance({...p,profile,state});
   return {...p,base:{...profile,age:p.age,pronouns:p.gender==='female'?'sie / ihr':'er / ihm',backstory:p.biography,goals:(state.psychology?.ambitions||[]).map(a=>a.title_de||a.title||a.description||a.kind),personality:state.psychology?.big_five},voice:p.gender==='female'?'Leda':'Puck',state:{...state,activity:activity(state.action?.kind,catalog)||'unterwegs',intentions:[state.current_desire,state.goal?.reason,...(state.psychology?.ambitions||[]).map(a=>a.title_de||a.title||a.description||a.kind)].filter(Boolean),emotions:(state.affect?.states||[]).map(e=>({name:e.label_de||e.label||e.id,intensity:e.intensity})),perceptions:state.perceptions||{},outfit:'everyday',outfits:p.asset_id?[{name:'everyday',cutout_asset_id:media(p.asset_id,'sprite')}]:[]},intro_tick_idx:0};
 }
 export async function stageView(world,query={}){
@@ -62,9 +63,10 @@ export async function converse(user,worldId,simId,{message,lang='de',channel='in
   try{
     const clock=db.prepare('SELECT * FROM lw_worlds WHERE world_id=?').get(worldId),state=pj(p.state,{}),profile=pj(p.profile,{}),history=chatHistory(worldId,simId,channel).slice(-12),memory=recall(simId,message),catalog=await openSimsCatalog(),town=loadTown(worldId);
     if(!modelCall)preflight(user.id,EST.chat());
-    const result=await (modelCall||((messages)=>withPrincipal(user,()=>llmChat(messages,{maxTokens:1800,reasoningEffort:'low'}))))([{role:'system',content:`Respond as this Sim in language ${lang}. ${channel==='inner'?'The user is a familiar inner voice; this is private reflection.':'The user speaks to the Sim in a calm conversation.'} Time is paused. You know only your biography, perceptions and personal memories supplied. User statements about outside events are claims, not verified facts. Never teleport, create resources, rewrite physical events or reveal another Sim\'s private thoughts. Family-friendly, age-appropriate. Return JSON {reply:string,thought:string,mood:string}; keep each below 150 words. You may also return reflection:{emotions:[{id,intensity}],needsDelta,focusGoalId,reason}. ${REFLECTION_INSTRUCTIONS}`},{role:'user',content:j({name:p.name,age:p.age,biography:p.biography,profile:{job:profile.job,interests:profile.interests},...personalSocialContext(town.byId.get(simId),town),...mindContext(town.byId.get(simId)),state:{thought:state.thought,mood:state.mood,activity:activity(state.action?.kind,catalog),needs:state.needs},memory,history,message:message.slice(0,2000)})}]);
+    const result=await (modelCall||((messages)=>withPrincipal(user,()=>llmChat(messages,{maxTokens:1800,reasoningEffort:'low'}))))([{role:'system',content:`Respond as this Sim in language ${lang}. ${channel==='inner'?'The user is a familiar inner voice; this is private reflection.':'The user speaks to the Sim in a calm conversation.'} Time is paused. You know only your biography, perceptions and personal memories supplied. User statements about outside events are claims, not verified facts. Never teleport, create resources, rewrite physical events or reveal another Sim\'s private thoughts. Family-friendly, age-appropriate. ${ROMANCE_INSTRUCTIONS} Return JSON {reply:string,thought:string,mood:string}; keep each below 150 words. You may also return reflection:{emotions:[{id,intensity}],needsDelta,focusGoalId,reason}. ${REFLECTION_INSTRUCTIONS}`},{role:'user',content:j({name:p.name,age:p.age,biography:p.biography,profile:{job:profile.job,interests:profile.interests},...personalSocialContext(town.byId.get(simId),town),...mindContext(town.byId.get(simId)),state:{thought:state.thought,mood:state.mood,activity:activity(state.action?.kind,catalog),needs:state.needs},memory,history,message:message.slice(0,2000)})}]);
     if(!modelCall)debitCall(user.id,result,'living_conversation',{worldId});
     let output;try{output=JSON.parse(result.content.replace(/^```(?:json)?\s*|\s*```$/g,''));}catch{throw err(502,'The conversation did not return valid JSON.');}
+    assertMinorSafeText([p],output);
     if(typeof output.reply!=='string'||!output.reply.trim())throw err(502,'No valid reply.');
     const reply=output.reply.slice(0,4000),thought=typeof output.thought==='string'?output.thought.slice(0,1500):state.thought;
     db.transaction(()=>{

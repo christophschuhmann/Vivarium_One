@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "romantic_need": {"teen_min_age": 14, "adult_min_age": 18, "teen_cap": 0.35, "teen_max_age_gap": 1, "adult_desire_threshold": 0.65, "adult_intimacy_threshold": 0.75},
+  "teen_categories": ["teen_romantic_talk", "teen_date"],
+  "adult_private_category": "adult_private_intimacy"
+}
