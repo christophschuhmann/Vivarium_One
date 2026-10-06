@@ -1,0 +1,218 @@
+[
+ {
+  "label": "Iapetus_t0.6",
+  "voice": "Iapetus",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.6,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Iapetus_t0.6_r0.mp3",
+  "seconds": 19.8,
+  "gen_s": 10.1,
+  "score": 3,
+  "vocal_bursts_detected": true,
+  "reasoning": "The narrator vocalizes an audible chuckle on the word 'laughed', which is a performance flourish that violates the plain narration standard.",
+  "judge_s": 6.6
+ },
+ {
+  "label": "Iapetus_t0.6",
+  "voice": "Iapetus",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.6,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Iapetus_t0.6_r1.mp3",
+  "seconds": 19.96,
+  "gen_s": 17.6,
+  "score": 10,
+  "vocal_bursts_detected": false,
+  "reasoning": "The narrator delivers the text in a perfectly calm, steady, and professional manner with zero dramatic acting or vocal bursts.",
+  "judge_s": 5.8
+ },
+ {
+  "label": "Iapetus_t0.6",
+  "voice": "Iapetus",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.6,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Iapetus_t0.6_r2.mp3",
+  "seconds": 20.36,
+  "gen_s": 18.0,
+  "score": 9,
+  "vocal_bursts_detected": false,
+  "reasoning": "The narrator delivers the text in a calm, steady, and professional manner with natural inflection and no vocal bursts.",
+  "judge_s": 6.9
+ },
+ {
+  "label": "Iapetus_t0.6",
+  "voice": "Iapetus",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.6,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Iapetus_t0.6_r3.mp3",
+  "seconds": 20.2,
+  "gen_s": 12.8,
+  "score": 3,
+  "vocal_bursts_detected": true,
+  "reasoning": "The narrator vocalizes an audible chuckle on the word 'laughed', which counts as a vocal burst and a performance flourish.",
+  "judge_s": 5.3
+ },
+ {
+  "label": "Zubenelgenubi_t0.6",
+  "voice": "Zubenelgenubi",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.6,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Zubenelgenubi_t0.6_r0.mp3",
+  "seconds": 19.68,
+  "gen_s": 13.6,
+  "score": 10,
+  "vocal_bursts_detected": false,
+  "reasoning": "The narrator delivers the text in a perfectly calm, steady, and professional manner with no dramatic acting flourishes or vocal bursts.",
+  "judge_s": 6.1
+ },
+ {
+  "label": "Zubenelgenubi_t0.6",
+  "voice": "Zubenelgenubi",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.6,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Zubenelgenubi_t0.6_r1.mp3",
+  "seconds": 19.52,
+  "gen_s": 22.0,
+  "score": 2,
+  "vocal_bursts_detected": true,
+  "reasoning": "The narrator performs an audible chuckle/gasp on the word 'laughed' instead of plainly reading the text. This vocal burst violates the requirement for a steady, plain audiobook narration.",
+  "judge_s": 6.2
+ },
+ {
+  "label": "Zubenelgenubi_t0.6",
+  "voice": "Zubenelgenubi",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.6,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Zubenelgenubi_t0.6_r2.mp3",
+  "seconds": 19.04,
+  "gen_s": 18.4,
+  "score": 10,
+  "vocal_bursts_detected": false,
+  "reasoning": "The narrator delivers the text in a perfectly calm, steady, and professional manner with zero dramatic acting or vocal bursts.",
+  "judge_s": 6.4
+ },
+ {
+  "label": "Zubenelgenubi_t0.6",
+  "voice": "Zubenelgenubi",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.6,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Zubenelgenubi_t0.6_r3.mp3",
+  "seconds": 19.68,
+  "gen_s": 21.1,
+  "score": 2,
+  "vocal_bursts_detected": true,
+  "reasoning": "The narrator performs an audible chuckle/gasp sound when reading the word 'laughed'. This vocal burst violates the requirement for a plain, non-performed audiobook narration.",
+  "judge_s": 6.2
+ },
+ {
+  "label": "Iapetus_t0.3",
+  "voice": "Iapetus",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Iapetus_t0.3",
+  "voice": "Iapetus",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.3,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Iapetus_t0.3_r1.mp3",
+  "seconds": 70.6,
+  "gen_s": 37.0,
+  "score": 10,
+  "vocal_bursts_detected": false,
+  "reasoning": "The narrator delivers the line in a perfectly calm, steady, and professional tone with no dramatic flourishes or vocal bursts.",
+  "judge_s": 7.9
+ },
+ {
+  "label": "Iapetus_t0.3",
+  "voice": "Iapetus",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Iapetus_t0.3",
+  "voice": "Iapetus",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.3,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Iapetus_t0.3_r3.mp3",
+  "seconds": 60.12,
+  "gen_s": 26.3,
+  "score": 10,
+  "vocal_bursts_detected": false,
+  "reasoning": "The narrator delivers the line in a perfectly calm, steady, and neutral tone with no dramatic inflection or vocal bursts.",
+  "judge_s": 5.5
+ },
+ {
+  "label": "Zubenelgenubi_t0.3",
+  "voice": "Zubenelgenubi",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Zubenelgenubi_t0.3",
+  "voice": "Zubenelgenubi",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Zubenelgenubi_t0.3",
+  "voice": "Zubenelgenubi",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Zubenelgenubi_t0.3",
+  "voice": "Zubenelgenubi",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.3,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Zubenelgenubi_t0.3_r3.mp3",
+  "seconds": 20.0,
+  "gen_s": 14.1,
+  "score": 2,
+  "vocal_bursts_detected": true,
+  "reasoning": "The narrator performs an audible chuckle/gasp sound on the word 'laughed' and uses a dramatized, acting-like delivery rather than a plain, steady reading.",
+  "judge_s": 12.3
+ },
+ {
+  "label": "Iapetus_t0.1",
+  "voice": "Iapetus",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Iapetus_t0.1",
+  "voice": "Iapetus",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Iapetus_t0.1",
+  "voice": "Iapetus",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Iapetus_t0.1",
+  "voice": "Iapetus",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Zubenelgenubi_t0.1",
+  "voice": "Zubenelgenubi",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Zubenelgenubi_t0.1",
+  "voice": "Zubenelgenubi",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Zubenelgenubi_t0.1",
+  "voice": "Zubenelgenubi",
+  "error": "HTTPSConnectionPool(host='api.hyprlab.io', port=443): Read timed out. (read timeout=120)"
+ },
+ {
+  "label": "Zubenelgenubi_t0.1",
+  "voice": "Zubenelgenubi",
+  "style": "Speak in a plain, measured, matter-of-fact narrator tone \u2014 calm and pleasant but emotionally reserved, the way a documentary narrator or news reader speaks. No dramatization, no character acting, no exaggerated emotional inflection, no vocal bursts of any kind (no gasping, laughing, sighing aloud). Even, steady pacing throughout.",
+  "temperature": 0.1,
+  "audio_path": "/storage/spirit-zfs/vivarium/data/tts_experiment/p4_Zubenelgenubi_t0.1_r3.mp3",
+  "seconds": 19.28,
+  "gen_s": 17.8,
+  "score": 10,
+  "vocal_bursts_detected": false,
+  "reasoning": "The narrator delivers the text in a perfectly calm, steady, and professional manner with no acting, dramatic inflections, or vocal bursts.",
+  "judge_s": 5.6
+ }
+]

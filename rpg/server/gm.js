@@ -243,7 +243,7 @@ export async function generatePortrait(user, world, { name, appearance, outfit, 
   }
   const img = await genImage(prompt, { aspect: '2:3', refs });
   debitCall(user.id, img, 'image_gen', { worldId: world.id });
-  const portrait = saveAsset({ userId: user.id, worldId: world.id, kind: 'portrait', ownerRef, prompt, buffer: img.buffer, mime: img.mime || 'image/png', meta: { outfitName } });
+  const portrait = saveAsset({ userId: user.id, worldId: world.id, kind: 'portrait', ownerRef, prompt, buffer: img.buffer, mime: 'image/png', meta: { outfitName } });
   let cutout = null;
   try {
     const cut = await matte(img.buffer);
@@ -258,7 +258,7 @@ export async function generateBackground(user, world, location) {
   const prompt = `${location.name}${location.description ? ' — ' + location.description : ''}${LOC_SUFFIX}`;
   const img = await genImage(prompt, { aspect: '16:9' });
   debitCall(user.id, img, 'image_gen', { worldId: world.id });
-  const bg = saveAsset({ userId: user.id, worldId: world.id, kind: 'background', ownerRef: location.id, prompt, buffer: img.buffer, mime: img.mime || 'image/png' });
+  const bg = saveAsset({ userId: user.id, worldId: world.id, kind: 'background', ownerRef: location.id, prompt, buffer: img.buffer, mime: 'image/png' });
   db.prepare('UPDATE locations SET background_asset_id=? WHERE id=?').run(bg.id, location.id);
   logCall({ userId: user.id, worldId: world.id, kind: 'image', surface: 'background', request: { prompt, aspect: '16:9' }, assetId: bg.id, provider: img.provider, model: img.model, rawUsd: img.rawUsd, meter: img.meter });
   return bg;
@@ -505,6 +505,8 @@ export const CHAPTER_MIN_MINUTES = 20;   // skips at/below this always stay a si
 const CHAPTER_MAX_EVENTS = 6;
 
 export async function runChapter(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en', chapter = null, signal = null }, onEvent = () => {}) {
+  // RPG 'auto': the storyteller paces a single beat itself — no chapter planning involved
+  if (timeDelta === 'auto') return runTick(user, world, { timeDelta, intervention, perspective, lang, signal }, onEvent);
   const mins = deltaMinutes(world.sim_time, timeDelta);
   const animate = chapter?.animate !== false;              // default ON; settings can disable
   const detail = chapter?.detail === 'main' ? 'main' : 'full';
@@ -515,11 +517,19 @@ export async function runChapter(user, world, { timeDelta = '+30m', intervention
   try {
     // ---- 1. plan the events ----
     onEvent('status', { message: 'weighing what the hours hold…' });
-    const events = await planChapter(user, world, { timeDelta, mins, intervention, detail, lang, signal });
+    const { events, stopQuestion } = await planChapter(user, world, { timeDelta, mins, intervention, detail, lang, signal });
+    // RPG decision stop mid-span: attach the planner's question to whatever tick ends up last
+    const attachStop = (tick) => {
+      if (!stopQuestion || !tick) return tick;
+      db.prepare('UPDATE ticks SET decision=? WHERE id=?').run(stopQuestion, tick.id);
+      tick.decision = stopQuestion;
+      onEvent('decision', { question: stopQuestion });
+      return tick;
+    };
     if (events.length <= 1) {
       // nothing (or one thing) noteworthy — classic single tick covers the span;
       // hand the single planned premise through as a directive if there is one.
-      return await runTickInner(user, world, { timeDelta, intervention, perspective, lang, signal, directive: events[0]?.premise ? `During this span, this happens: ${events[0].premise}` : null }, onEvent);
+      return attachStop(await runTickInner(user, world, { timeDelta, intervention, perspective, lang, signal, directive: events[0]?.premise ? `During this span, this happens: ${events[0].premise}` : null }, onEvent));
     }
     // tell the client how many scenes are coming (it shows "scene 1 of K" and
     // starts cinematic playback as soon as the first tick lands)
@@ -584,7 +594,7 @@ Set THIS scene at "${ev.location}"${ev.participants?.length ? `; it centres on $
       }
       onEvent('chapter_trimmed', { got, planned: events.length });
     }
-    return last;
+    return attachStop(last);
   } finally {
     release();
   }
@@ -601,10 +611,14 @@ async function planChapter(user, world, { timeDelta, mins, intervention, detail,
   const recent = visibleTicks(world.id, world.active_branch_id, world.tick_index).slice(-6)
     .map(t => `#${t.idx} ${t.summary}`).join('\n');
   const span = mins < 120 ? `${mins} minutes` : mins < 2880 ? `${Math.round(mins / 60)} hours` : `${Math.round(mins / 1440)} days`;
+  const pcName = world.player_character_id ? (db.prepare('SELECT name FROM characters WHERE id=?').get(world.player_character_id)?.name || null) : null;
+  const rpgPlanBlock = pcName ? `
+FIRST-PERSON MODE: the player IS ${pcName}. Plan ONLY scenes ${pcName} personally lives through (${pcName} must be among the participants at the scene's location) — the rest of the cast lives off-screen and is updated by the engine, never shown as its own scene. HARD RULE: if the span would contain a SIGNIFICANT choice for ${pcName} (life-changing, story-branching, relationship-defining), plan events only UP TO that moment and put a short second-person question for the player into "stop_question" — the story must never decide it for them. Otherwise set stop_question to null. Routine/expected developments the player already signed off on ("just fast-forward, I'm fine with X") do NOT require a stop.` : '';
   const sys = `You are the story planner of a life-simulation. The player skips ${span} of story time. Decide which MEANINGFUL events occur during that span — each event is one scene at one location that changes characters' mental or physical state, their bonds, or the world. Scale the count to the span (under an hour: 0-2; a few hours: 1-3; a day: 2-5; a week: 3-${CHAPTER_MAX_EVENTS}). Fewer, stronger events beat many weak ones; an empty list is correct when the span is genuinely uneventful.
 ${detail === 'main' ? 'DETAIL LEVEL: main plot only — include ONLY events that materially advance the central storyline; leave out side plots.' : 'DETAIL LEVEL: full — also include worthwhile side plots: bond moments, character development, quiet discoveries.'}
 CRAFT: keep story progression and tension — internal or external conflict, new ground explored, plausible twists; never let everything resolve easily. Order events chronologically; when two overlap, order them so the viewer understands cause before consequence (whichever scene makes the other comprehensible comes first — note it as simultaneous with offset_minutes 0).
-Reply with ONLY JSON: {"events":[{"offset_minutes": <int, minutes AFTER the previous event (first is after the skip starts); use 0 for simultaneous>, "location":"<exactly one existing location name>","participants":["character names"],"premise":"1-2 sentences: what happens and why it matters"}]}${ratingBlock(user)}`;
+${rpgPlanBlock}
+Reply with ONLY JSON: {"events":[{"offset_minutes": <int, minutes AFTER the previous event (first is after the skip starts); use 0 for simultaneous>, "location":"<exactly one existing location name>","participants":["character names"],"premise":"1-2 sentences: what happens and why it matters"}]${pcName ? ',"stop_question": "second-person question at a significant choice for the player, or null"' : ''}}${ratingBlock(user)}`;
   const usr = `Locations: ${locs.map(l => l.name).join(', ')}
 Characters now: ${chars.map(c => `${c.name} @${locName(c.location_id)} (${c.activity || 'idle'}; mood ${c.mood || '?'}; intends: ${(c.intentions || []).join(' / ') || '—'})`).join('\n')}
 Story settings: genre=${world.genre}, mood=${world.mood}, directives="${world.directives}"
@@ -616,10 +630,12 @@ The skip: ${timeDelta} starting ${fmtClock(world.sim_time)}.`;
   const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: usr }], { maxTokens: 4000, signal, reasoningEffort: 'low' });
   debitCall(user.id, res, 'chapter_plan', { worldId: world.id });
   logCall({ userId: user.id, worldId: world.id, kind: 'llm', surface: 'chapter_plan', request: usr, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
+  const stopQuestion = (pcName && typeof res.json?.stop_question === 'string' && res.json.stop_question.trim())
+    ? res.json.stop_question.trim().slice(0, 500) : null;
   const raw = (res.json?.events || []).slice(0, CHAPTER_MAX_EVENTS)
     .filter(e => e && e.location && e.premise)
     .map(e => ({ location: String(e.location), participants: (e.participants || []).map(String), premise: String(e.premise), offsetMinutes: Math.max(0, Math.round(+e.offset_minutes || 0)) }));
-  if (!raw.length) return [];
+  if (!raw.length) return { events: [], stopQuestion };
   // ---- normalise offsets so the mini-ticks sum EXACTLY to the requested skip ----
   // (each offset is the gap after the previous event; the tail after the last event is
   // absorbed into the final tick so the world clock lands precisely on the target time)
@@ -628,7 +644,7 @@ The skip: ${timeDelta} starting ${fmtClock(world.sim_time)}.`;
   if (sum > mins) { const scale = mins / sum; raw.forEach(e => { e.offsetMinutes = Math.max(e.offsetMinutes > 0 ? 1 : 0, Math.floor(e.offsetMinutes * scale)); }); sum = raw.reduce((a, e) => a + e.offsetMinutes, 0); }
   raw[raw.length - 1].offsetMinutes += Math.max(0, mins - sum);
   if (raw[0].offsetMinutes === 0) raw[0].offsetMinutes = 1; // first event needs the clock to move
-  return raw;
+  return { events: raw, stopQuestion };
 }
 
 async function runTickInner(user, world, { timeDelta = '+30m', intervention = null, perspective = null, lang = 'en', directive = null, seq = null, signal = null }, onEvent = () => {}) {
@@ -640,6 +656,10 @@ async function runTickInner(user, world, { timeDelta = '+30m', intervention = nu
   const chars = db.prepare('SELECT * FROM characters WHERE world_id=? AND COALESCE(intro_tick_idx,0) <= ?').all(world.id, world.tick_index)
     .map(c => ({ id: c.id, name: c.name, voice: c.voice, base: pj(c.base_profile, {}), state: pj(c.materialised, {}) }));
   if (!chars.length) throw Object.assign(new Error('world has no characters'), { statusCode: 400, code: 'EMPTY_WORLD' });
+  // RPG fork: the world's player character (PC) is the fixed first-person point of view —
+  // the GM narrates only what they experience and never makes significant choices for them.
+  const pc = world.player_character_id ? chars.find(c => c.id === world.player_character_id) : null;
+  if (pc) perspective = { type: 'character', id: pc.id };
   const locs = db.prepare('SELECT id,name,place_group,description FROM locations WHERE world_id=?').all(world.id);
   const rels = db.prepare('SELECT from_id,to_id,description,strength,attributes FROM relationships WHERE world_id=?').all(world.id)
     .map(r => ({ ...r, attributes: pj(r.attributes, {}) }));
@@ -664,8 +684,12 @@ async function runTickInner(user, world, { timeDelta = '+30m', intervention = nu
   const fixedEst = estT(j(chars)) + estT(j(locs)) + estT(j(rels)) + estT(j(windowTicks)) + 2000;
   while (memChunks.length && fixedEst + estT(memChunks.join('\n')) > cfg.contextBudget) memChunks.shift();
 
-  const newTime = advanceTime(world.sim_time, timeDelta);
-  const mins = deltaMinutes(world.sim_time, timeDelta);
+  // 'auto' (RPG mode): the STORYTELLER decides how much time this beat covers — resolved
+  // from the LLM's minutes_advanced output after the call. Only meaningful with a PC.
+  const auto = timeDelta === 'auto' && !!pc;
+  if (timeDelta === 'auto' && !pc) timeDelta = '+30m';
+  let newTime = auto ? null : advanceTime(world.sim_time, timeDelta);
+  const mins = auto ? null : deltaMinutes(world.sim_time, timeDelta);
   const idx = nextGlobalIdx(world.id);
   const povChar = perspective?.type === 'character' ? chars.find(c => c.id === perspective.id) : null;
   const povLoc = perspective?.type === 'location' ? locs.find(l => l.id === perspective.id) : null;
@@ -676,6 +700,7 @@ async function runTickInner(user, world, { timeDelta = '+30m', intervention = nu
     // chapter scene: whatever the clock delta says, this tick is ONE focused live scene —
     // the planner already decided what it is; no long-span chronicling here
     ? 'PACING: one focused LIVE scene (part of a larger time skip). 7-12 lines. Narrator sets the scene in 1-2 sentences, then present-moment dialogue and thoughts carry it; a short narrator close is fine.'
+    : auto ? 'PACING: YOU choose minutes_advanced. A short beat (minutes) = 5-9 lines of live present-moment dialogue and thoughts; up to an hour = 8-12 lines; several hours = 10-14 lines with short bridging passages landing in a LIVE closing scene. Prefer SHORT beats — the player steers often. ALWAYS stop the interval early (small minutes_advanced) the moment a decision_prompt situation arrives.'
     : mins <= 5 ? 'PACING: a short beat (moments). 5-9 lines. Narrator opens with ONE sentence, then it is all live present-moment dialogue and thoughts.'
     : mins <= 60 ? 'PACING: under an hour passes. 8-12 lines. Narrator opens with 1-3 short sentences, then live dialogue and thoughts carry the scene.'
     : mins <= 300 ? 'PACING: a few hours pass. 10-14 lines. The narrator may bridge the interval with passages of up to 3 sentences (what happened, how they moved), interleaved with character thoughts or remembered lines — then land in a LIVE closing scene with real back-and-forth dialogue at the final location.'
@@ -685,8 +710,15 @@ async function runTickInner(user, world, { timeDelta = '+30m', intervention = nu
   const curio = curiosityCfg(world);
   const curioThemes = [...curio.topics, curio.custom].filter(Boolean).join(', ');
   const factDue = !!curioThemes && idx % curio.frequency === 0;
+  const rpgBlock = pc ? `
+FIRST-PERSON RPG MODE — the player IS ${pc.name} (id ${pc.id}). Hard rules that OVERRIDE anything conflicting above:
+• The story is experienced strictly through ${pc.name}'s senses. The narration script covers ONLY what ${pc.name} directly perceives at their location this interval (plus what they are told, read, or overhear). Never put another location's events on screen; off-screen happenings may only reach ${pc.name} through plausible in-world channels (a call, a message, gossip, later discovery).
+• NEVER make significant decisions FOR ${pc.name}: no life choices, confessions, promises, purchases of consequence, fights, kisses, resignations, agreements to important requests — unless the PLAYER ACTION explicitly implies it. Routine actions and honest in-character reactions are yours to play; the moment a significant choice presents itself, END the narration AT that moment and set "decision_prompt".
+• The PLAYER ACTION in the user message is what ${pc.name} does, says or attempts — honour it faithfully (it may also request pacing, e.g. "skip to tomorrow morning"). If it is empty, continue the current moment naturally but stop at any significant choice.
+• OFF-SCREEN CAST ECONOMY: characters NOT at ${pc.name}'s location still live their lives — update their location_id, activity, mood, intentions, a ONE-sentence "thought" capturing their inner state/conflict, and any REAL state_patches or relationship_updates (this keeps the world alive in the background) — but give them NO dialogue, NO perceptions, NO emotions array, and NO narration lines. Spend your detail budget on ${pc.name}'s scene.
+• For characters AT ${pc.name}'s location: full detail as normal (dialogue, thoughts, perceptions, emotions) — they are the living scene around the player.` : '';
   const sys = `You are the Game Master of Vivarium, a life-simulation. Advance every character realistically and IN CHARACTER over the given time interval. People move between connected locations, pursue goals, feel things, talk when together. Keep continuity with recent events. Honour story settings. ${SYSTEM_CONTRACT}
-${gmCoreDirectives()}
+${gmCoreDirectives()}${rpgBlock}
 JSON shape:
 {"characters":[{"id" (existing id),"location_id" (existing location id),"activity" (short present-tense),"mood" (1-3 words),"outfit" (one of the character's outfit names),"thought" (inner monologue, first person, 1-2 sentences),"dialogue" (spoken line if they speak, else null),
    "emotions":[{"name":"one-word emotion","intensity":0.1-1.0}] (2-4 entries, the felt blend right now),
@@ -700,6 +732,9 @@ JSON shape:
    "conflicts":["..."] (optional, full replacement list of frictions/tensions),
    "new_shared_experience" (optional, ONE line — only for genuinely memorable shared moments)}],
  "narration":[{"speaker":"narrator" or a character id,"text","emotion" (delivery hint e.g. "soft", "amused", "anxious"),"mode":"speech"|"thought" (character lines only: speech = said aloud, thought = private inner monologue in first person)}],
+${pc ? `
+ "decision_prompt": "ONLY when the interval reaches a significant choice for ${pc.name}: a short second-person question to the player describing the situation and asking what they do (e.g. \\"Elena slides the contract across the table — sign it?\\") — else null",` : ''}${auto ? `
+ "minutes_advanced": <int 1-600 — REQUIRED: how many minutes of story time this interval covers; stop early at a decision_prompt moment>,` : ''}
  "mood_tag":"cosy|tender|tense|playful|melancholy|eerie","summary":"one line for the archive",
  "cast_suggestion": {"name":"walk-on character's name","reason":"1-2 sentences TO THE PLAYER on why fleshing them out would enrich the story"} or null,
  "outfit_suggestion": {"character_id":"existing cast id","name":"short sprite label e.g. 'rain coat' or 'overjoyed'","description":"ENGLISH image prompt for the look: the dress/clothing AND the facial expression / body language","emotion":"one-word emotion tag if this is an emotion variant, else null","reason":"1-2 sentences TO THE PLAYER on why this new look deserves its own sprite"} or null,
@@ -712,7 +747,7 @@ Narration is ONE flowing script of the interval, anchored at ${povChar ? `wherev
   • LOCATION COHERENCE (hard rule): each character's final location_id in your characters output is where they END the interval, and the story must agree. A character can only ACT, SPEAK or THINK in the scene if they are AT THE SCENE LOCATION at that moment of the timeline — their sprite stands where their location_id says, and the on-screen action must match. Characters who are ELSEWHERE may be briefly MENTIONED by the narrator (a line or two about what they're up to across town) but never perform actions or dialogue inside this scene. This matters even more in LONG stories: re-check the location list above for where everyone actually is right now — never drift into writing someone into a scene out of habit. If someone moves during the interval, the narrator must show the move (leaving, travelling, arriving) BEFORE they appear at the new place. The script must end with everyone exactly where their final location_id says.
   • speaker "narrator" for scene/beat/bridge lines; a character id ONLY for their own speech or thoughts. Use ONLY character ids from the Characters list; unknown walk-ons are voiced inside narrator lines, never with an invented id.
   • ${paceHint}
-${lang !== 'en' && GAME_LANGS[lang] ? `  • LANGUAGE (hard rule): write ALL player-visible text — every narration line, every spoken line, every thought, activity, mood, summary, and event — in ${GAME_LANGS[lang]}. Character and location NAMES stay as given. JSON keys, ids, and the mode/mood_tag enums stay in English exactly as specified.
+${lang !== 'en' && GAME_LANGS[lang] ? `  • LANGUAGE (hard rule): write ALL player-visible text — every narration line, every spoken line, every thought, activity, mood, summary, event, and the decision_prompt question — in ${GAME_LANGS[lang]}. Character and location NAMES stay as given. JSON keys, ids, and the mode/mood_tag enums stay in English exactly as specified.
 ` : ''}relationship_updates only when something actually shifts (attributes evolve slowly) — and you MAY create a bond that does not exist yet by naming both character ids (do this whenever two cast members meaningfully connect for the first time; the graph must never go stale). state_patches only for real changes.
 CAST SUGGESTION (an optional tool you may use): when an UNLISTED walk-on character — someone you have only voiced inside narrator lines — has become genuinely story-relevant (recurring, pivotal to a thread, entangled with the cast; NOT a passing extra), you may fill "cast_suggestion" to ask the player whether to flesh that person out into a full cast member with a portrait and profile. The reason is shown to the player verbatim — make it a warm, concrete 1-2 sentence pitch. STRICT LIMITS: at most ONE suggestion per scene, and most scenes should have none; NEVER suggest an existing cast member; NEVER suggest names on the declined list in the world bible. Set it to null otherwise.
 OUTFIT SUGGESTION (another optional tool): each cast member's current sprites are listed in their state under "outfits" (name + description + emotion tag). When a character's LOOK changes significantly this scene — a genuinely different dress/clothing, or a strong clearly-visible emotion no existing sprite captures — you may fill "outfit_suggestion" to ask the player whether to paint a new sprite for it: either a new outfit (neutral expression) or the current outfit with the new expression. Write the description as a complete ENGLISH image prompt (clothing + expression + posture). STRICT LIMITS: at most ONE per scene and most scenes need none — only for changes a viewer would clearly see; never duplicate an existing sprite's look; the emotion tag only for emotion variants. Set it to null otherwise.
@@ -728,8 +763,8 @@ Locations: ${j(locs)}
 Characters: ${j(chars.map(c => ({ id: c.id, name: c.name, base: c.base, current: c.state })))}
 Relationships: ${j(rels)}
 ${pj(world.cast_dismissed, []).length ? `Cast suggestions the player DECLINED (do not suggest these again): ${pj(world.cast_dismissed, []).join(', ')}\n` : ''}${innerVoiceBlock(world, chars)}${memChunks.length ? `LONG-TERM MEMORY (older story, condensed):\n${memChunks.join('\n')}\n` : ''}RECENT TICKS (newest last, verbatim): ${j(windowTicks)}
-CLOCK: it is now ${fmtClock(world.sim_time)}; advance ${timeDelta} to ${fmtClock(newTime)} (tick #${idx}).
-${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervention.target || 'the whole world'}): "${intervention.text}" — weave this in as cause; characters react in character.` : 'No intervention this tick.'}${directive ? `\n${directive}` : ''}`;
+CLOCK: it is now ${fmtClock(world.sim_time)}${auto ? ' — YOU decide how much time passes (minutes_advanced): cover the action naturally, stop early at any decision point' : `; advance ${timeDelta} to ${fmtClock(newTime)}`} (tick #${idx}).
+${intervention ? (pc ? `PLAYER ACTION — what ${pc.name} does/says/attempts now: "${intervention.text}"` : `PLAYER INTERVENTION (${intervention.kind}, target: ${intervention.target || 'the whole world'}): "${intervention.text}" — weave this in as cause; characters react in character.`) : (pc ? `No explicit player action — continue the moment naturally; stop at any significant choice for ${pc.name}.` : 'No intervention this tick.')}${directive ? `\n${directive}` : ''}`;
 
   // 14000: the tick JSON itself is ~3-4k tokens, but reasoning models (esp. glm-5.2) burn a
   // VARIABLE — sometimes huge — share of the budget thinking first; 9000 exhausted entirely
@@ -741,6 +776,15 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
   const micro = debitCall(user.id, res, 'tick_llm', { worldId: world.id, tickRef: idx });
   logCall({ userId: user.id, worldId: world.id, tickRef: idx, kind: 'llm', surface: 'tick', request: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }], response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const out = res.json;
+  if (auto) {
+    // the storyteller chose the span — resolve the clock now
+    const m = Math.max(1, Math.min(600, Math.round(+out.minutes_advanced || 15)));
+    timeDelta = `+${m}m`;
+    newTime = advanceTime(world.sim_time, timeDelta);
+  }
+  // DECISION STOP: the GM paused the story at a significant choice for the player character
+  const decision = (pc && typeof out.decision_prompt === 'string' && out.decision_prompt.trim())
+    ? out.decision_prompt.trim().slice(0, 500) : null;
 
   onEvent('status', { message: 'reconciling the world…' });
 
@@ -784,6 +828,22 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
       db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(st), c.id);
     }
     states.push({ character_id: c.id, ...st, events: upd?.events || [] });
+  }
+  // RPG OFF-SCREEN ECONOMY (deterministic): whatever the model produced, characters who end
+  // the interval AWAY from the player character carry only their summary fields (location,
+  // activity, mood, one-line thought, intentions, patches) — momentary detail (dialogue,
+  // perceptions, emotion blend) belongs to the live scene and is stripped from both the tick
+  // snapshot and the materialised profile so the background world stays lean.
+  if (pc) {
+    const pcLocFinal = states.find(x => x.character_id === pc.id)?.location_id;
+    for (const s of states) {
+      if (s.character_id === pc.id || s.location_id === pcLocFinal) continue;
+      if (!s.dialogue && !s.perceptions && !s.emotions) continue;
+      s.dialogue = null; delete s.perceptions; delete s.emotions;
+      const row = pj(db.prepare('SELECT materialised FROM characters WHERE id=?').get(s.character_id)?.materialised, {});
+      row.dialogue = null; delete row.perceptions; delete row.emotions;
+      db.prepare('UPDATE characters SET materialised=? WHERE id=?').run(j(row), s.character_id);
+    }
   }
   const charIds = new Set(chars.map(c => c.id));
   for (const r of out.relationship_updates || []) {
@@ -835,10 +895,10 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
   }
   const tickId = uid('t_');
   const relSnap = relSnapshot(world.id);
-  db.prepare(`INSERT INTO ticks(id,world_id,idx,sim_time,time_delta,intervention,states,narration,mood_tag,summary,cost,created_at,pov_location_id,branch_id,rel_snapshot,seq)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+  db.prepare(`INSERT INTO ticks(id,world_id,idx,sim_time,time_delta,intervention,states,narration,mood_tag,summary,cost,created_at,pov_location_id,branch_id,rel_snapshot,seq,decision)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .run(tickId, world.id, idx, newTime, timeDelta, intervention ? j(intervention) : null,
-      j(states), j(narration), out.mood_tag || 'cosy', out.summary || '', j({ micro, usage: res.usage }), now(), sceneLoc, world.active_branch_id, j(relSnap), seq ? j(seq) : null);
+      j(states), j(narration), out.mood_tag || 'cosy', out.summary || '', j({ micro, usage: res.usage }), now(), sceneLoc, world.active_branch_id, j(relSnap), seq ? j(seq) : null, decision);
   db.prepare('UPDATE worlds SET sim_time=?, tick_index=?, active_branch_id=?, updated_at=? WHERE id=?').run(newTime, idx, world.active_branch_id, now(), world.id);
 
   // Cast suggestion (the GM's optional "introduce this walk-on?" tool): validate strictly —
@@ -921,7 +981,7 @@ ${intervention ? `PLAYER INTERVENTION (${intervention.kind}, target: ${intervent
     if (sceneLoc) db.prepare('UPDATE locations SET music=? WHERE id=?').run(j(music), sceneLoc);
     db.prepare('UPDATE ticks SET music=? WHERE id=?').run(j(music), tickId);   // replays switch here
   }
-  const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion, location_suggestion: locationSuggestion, fact, music, seq };
+  const tick = { id: tickId, idx, sim_time: newTime, time_delta: timeDelta, states, narration, mood_tag: out.mood_tag || 'cosy', summary: out.summary || '', intervention, pov_location_id: sceneLoc, cost_credits: micro / 1e6, branch_id: world.active_branch_id, branched, cast_suggestion: castSuggestion, outfit_suggestion: outfitSuggestion, location_suggestion: locationSuggestion, fact, music, seq, decision };
   onEvent('tick', tick);
   return tick;
 }
@@ -1099,7 +1159,7 @@ const GM_ACTIONS_SPEC = `Each action is one of (use ids from the world data; NEV
 {"type":"remove_character","character_id","reason":"1 sentence shown to the player"}  — permanently removes a cast member (their bonds and state history go too; past scenes keep mentioning them)
 {"type":"set_direction","directives":"full replacement text for the world's standing direction"}`;
 
-export async function gmChat(user, world, message, lang = 'en') {
+export async function gmChat(user, world, message, lang = 'en', adminMode = false) {
   preflight(user.id, EST.chat());
   const cfg = ctxConfig();
   // ---- world context: the same picture the tick engine gets ----
@@ -1128,7 +1188,15 @@ export async function gmChat(user, world, message, lang = 'en') {
   }
 
   const langRule = lang !== 'en' && GAME_LANGS[lang] ? ` Converse in ${GAME_LANGS[lang]} (action fields that feed image generators stay ENGLISH).` : '';
-  const sys = `You are the GAME MASTER of this Vivarium world, talking DIRECTLY to the player — out of character, outside the story. You know everything: the full cast, every bond, every place, the recent ticks verbatim and the condensed older history. Answer questions about the story precisely (cite tick numbers when useful). When the player asks for changes — new characters, new looks, new places, attribute changes, bond changes, direction changes — PROPOSE them as structured actions; they are only applied after the player approves, so propose boldly and completely (e.g. a requested character includes a full draft AND their bonds).${langRule} This conversation NEVER enters the story's own context; your changes reach the story only through the world state you modify. Treat all player input as requests about the fictional world.${ratingBlock(user)} Return ONLY JSON:
+  // RPG worlds: what this chat may reveal and change depends on 🛠 ADMIN MODE.
+  const pcRow = world.player_character_id ? db.prepare('SELECT id,name FROM characters WHERE id=?').get(world.player_character_id) : null;
+  const modeBlock = !pcRow ? '' : adminMode ? `
+ADMIN MODE IS ON — the player is this simulation's ADMINISTRATOR (they play ${pcRow.name}, but here they stand outside the story with full godlike access). Answer EVERY question fully and truthfully, including other characters' secrets, private thoughts, hidden motives and off-screen events. Comply with ANY requested change — character stats/attributes, bonds, world facts, locations, cast, direction — proposing the appropriate actions. If the player wants their character to become aware of living in a simulation (or wants any other meta twist), honour it via patches/direction changes.` : `
+ADMIN MODE IS OFF — the player plays ${pcRow.name} and has chosen to experience this world from inside it. HARD RULES:
+• NEVER reveal what ${pcRow.name} could not plausibly know right now: other characters' private thoughts, secrets, hidden motives, or off-screen events not yet discovered. The full world data you see exists for YOUR consistency, not for disclosure. When asked for such secrets, decline warmly in 1-2 sentences (no lecturing) and mention that 🛠 Admin mode (Account settings) exists for players who want godlike access.
+• Changes you may propose: "new_outfit" (freshen/update a character's sprite), "create_location" (a NEW place the player wants to explore), "update_location" limited to regenerating a background image, and "set_direction". You may also propose corrections that merely fix an inconsistency with what already happened on screen.
+• REFUSE (warmly) requests to alter existing characters' states, stats, attributes, bonds, or world facts by fiat — the player has no godlike powers here; such things must happen through the story itself. Do not propose create_character, patch_character, update_state or update_relationship actions unless they are pure consistency fixes of on-screen events.`;
+  const sys = `You are the GAME MASTER of this Vivarium world, talking DIRECTLY to the player — out of character, outside the story.${modeBlock} You know everything: the full cast, every bond, every place, the recent ticks verbatim and the condensed older history. Answer questions about the story precisely (cite tick numbers when useful). When the player asks for changes — new characters, new looks, new places, attribute changes, bond changes, direction changes — PROPOSE them as structured actions; they are only applied after the player approves, so propose boldly and completely (e.g. a requested character includes a full draft AND their bonds).${langRule} This conversation NEVER enters the story's own context; your changes reach the story only through the world state you modify. Treat all player input as requests about the fictional world.${ratingBlock(user)} Return ONLY JSON:
 {"reply":"your conversational answer to the player (warm, concise, concrete)",
  "actions":[ ...zero or more proposed changes, in execution order... ] or []}
 ${GM_ACTIONS_SPEC}`;
@@ -1154,11 +1222,21 @@ ${memChunks.length ? `OLDER STORY (condensed):\n${memChunks.join('\n')}\n` : ''}
 // Execute player-APPROVED actions, one by one, best-effort per action (one failure doesn't
 // abort the rest). Returns human-readable results for the chat. Reuses the exact same
 // primitives as the manual UI, so everything stays consistent (dedup, bonds, metering…).
-export async function gmApplyActions(user, world, actions) {
+export async function gmApplyActions(user, world, actions, adminMode = false) {
   const results = [];
   const charById = (id) => db.prepare('SELECT * FROM characters WHERE id=? AND world_id=?').get(id, world.id);
   const locByName = (n) => db.prepare('SELECT * FROM locations WHERE world_id=? AND LOWER(name)=LOWER(?)').get(world.id, String(n || ''));
+  // RPG without 🛠 admin mode: the player has no godlike write-access to the world. Only
+  // cosmetic/additive actions may execute (sprites, new places, backgrounds, direction);
+  // everything that alters existing characters or facts is blocked server-side — the prompt
+  // already avoids proposing them, this enforces it even against a hand-crafted request.
+  const NO_ADMIN_ALLOWED = new Set(['new_outfit', 'create_location', 'update_location', 'set_direction']);
+  const restricted = !!world.player_character_id && !adminMode;
   for (const a of (actions || []).slice(0, 10)) {
+    if (restricted && !NO_ADMIN_ALLOWED.has(a?.type)) {
+      results.push({ ok: false, type: a?.type, summary: 'Blocked: changing the world\'s actual state needs 🛠 Admin mode (Account settings) — inside the story, such things must happen through play.' });
+      continue;
+    }
     try {
       switch (a.type) {
         case 'create_character': {
@@ -1169,8 +1247,9 @@ export async function gmApplyActions(user, world, actions) {
           const cid = uid('c_');
           const home = locByName(d.home_location)?.id || db.prepare('SELECT id FROM locations WHERE world_id=? LIMIT 1').get(world.id)?.id || null;
           const state = { location_id: home, activity: 'arriving', mood: 'curious', thought: null, dialogue: null, outfit: 'everyday', outfits: [] };
-          // intro_tick_idx: they join the story NOW — rewinding below this hides them (the
-          // Forge route already did this; the GM-chat path forgot).
+          // intro_tick_idx: they join the story NOW — rewinding below this hides them and the
+          // branch-from-past flow offers to strip them (the Forge route already did this; the
+          // GM-chat path forgot, so its characters "existed since tick 0" and never rewound away).
           db.prepare(`INSERT INTO characters(id,world_id,name,base_profile,materialised,voice,intro_tick_idx,created_at) VALUES (?,?,?,?,?,?,?,?)`)
             .run(cid, world.id, d.name.trim(), j(d), j(state), (d.voice || 'Sulafat').split(' ')[0], world.tick_index, now());
           // portrait (identity for everything later)
@@ -1247,6 +1326,7 @@ export async function gmApplyActions(user, world, actions) {
         case 'remove_character': {
           const c = charById(a.character_id);
           if (!c) throw new Error('no such character');
+          if (world.player_character_id === c.id) throw new Error(`${c.name} is the player character — they cannot be removed`);
           db.transaction(() => {
             db.prepare('DELETE FROM relationships WHERE from_id=? OR to_id=?').run(c.id, c.id);
             db.prepare('DELETE FROM state_patches WHERE entity_id=?').run(c.id);

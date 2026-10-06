@@ -17,7 +17,6 @@ import { synthesizeLine, findReusableAudio } from '../tts_service.js';
 import { PROFILES } from '../voice_profiles.js';
 import { buildWorldManifest, worldAssetFiles, importWorldManifest } from '../world_io.js';
 import { wizardChat, estimatePlan, startWizardBuild, getWizardJob } from '../wizard.js';
-import { byokActive } from '../byok.js';
 
 // Temp scratch for zip pack/unpack; cleaned per request.
 const EXPORT_TMP = path.join(DATA_DIR, 'tmp_export');
@@ -124,8 +123,7 @@ export default async function apiRoutes(app) {
     const u = requireUser(req);
     // ttsProvider tells the client which voice UI to show: Gemini voice names vs
     // LAIONBox reference-voice management (generate/upload/confirm a cloned voice).
-    // byok tells it whether AI runs on the player's own OpenRouter key (no credits).
-    return { user: publicUser(u), spentToday: toCredits(spentToday(u.id)), ttsProvider: getTtsProvider(), byok: byokActive(u) };
+    return { user: publicUser(u), spentToday: toCredits(spentToday(u.id)), ttsProvider: getTtsProvider() };
   });
   app.get('/api/me/ledger', async (req) => {
     const u = requireUser(req);
@@ -133,9 +131,6 @@ export default async function apiRoutes(app) {
     return { ledger: rows.map(r => ({ at: r.created_at, credits: toCredits(r.delta), reason: r.reason, model: r.model, meter: pj(r.meter, {}) })) };
   });
 
-  // ---------- BYOK: player's own OpenRouter key (standalone, no admin/credits) ----------
-  // The key is stored encrypted (server/byok.js); only a masked preview ever leaves the
-  // server. Everything else — model choices per role, TTS voice — lives in users.or_prefs.
   // Generate (or regenerate) a world's cover/preview image for the home cards. Prompt is
   // player-editable in the 🎬 Direction modal; default is derived from the world identity.
   app.post('/api/worlds/:id/cover', async (req) => {
@@ -147,7 +142,7 @@ export default async function apiRoutes(app) {
     const { genImage } = await import('../providers.js');
     const res = await genImage(prompt, { aspect: '16:9' });
     debitCall(u.id, res, 'cover', { worldId: w.id });
-    const a = saveAsset({ userId: u.id, worldId: w.id, kind: 'cover', prompt, buffer: res.buffer, mime: res.mime || 'image/png' });
+    const a = saveAsset({ userId: u.id, worldId: w.id, kind: 'cover', prompt, buffer: res.buffer, mime: 'image/png' });
     db.prepare('UPDATE worlds SET cover_asset_id=?, updated_at=? WHERE id=?').run(a.id, now(), w.id);
     return { coverId: a.id };
   });
@@ -220,6 +215,15 @@ export default async function apiRoutes(app) {
     const u = requireUser(req);
     const w = ownWorld(u, req.params.id);
     const b = req.body || {};
+    // RPG fork: which cast member the player embodies (first-person POV lock). Must be a
+    // real character of THIS world; null clears it (classic god-view world).
+    if (b.playerCharacterId !== undefined) {
+      const cid = b.playerCharacterId;
+      if (cid !== null && !db.prepare('SELECT 1 FROM characters WHERE id=? AND world_id=?').get(cid, w.id)) {
+        throw httpErr(400, 'BAD_PC', 'That character is not part of this world.');
+      }
+      db.prepare('UPDATE worlds SET player_character_id=?, updated_at=? WHERE id=?').run(cid, now(), w.id);
+    }
     db.prepare(`UPDATE worlds SET title=COALESCE(?,title), genre=COALESCE(?,genre), mood=COALESCE(?,mood),
                 pacing=COALESCE(?,pacing), directives=COALESCE(?,directives), updated_at=? WHERE id=?`)
       .run(b.title, b.genre, b.mood, b.pacing, b.directives, now(), w.id);
@@ -531,13 +535,13 @@ export default async function apiRoutes(app) {
   app.post('/api/worlds/:id/gm-chat', async (req) => {
     const u = requireVerified(req);
     const w = ownWorld(u, req.params.id);
-    return gm.gmChat(u, w, String(req.body?.message || '').slice(0, 4000), req.body?.lang || 'en');
+    return gm.gmChat(u, w, String(req.body?.message || '').slice(0, 4000), req.body?.lang || 'en', !!req.body?.adminMode);
   });
   // Execute the player-APPROVED actions (may generate images — can take a minute).
   app.post('/api/worlds/:id/gm-apply', async (req) => {
     const u = requireVerified(req);
     const w = ownWorld(u, req.params.id);
-    const results = await gm.gmApplyActions(u, w, req.body?.actions || []);
+    const results = await gm.gmApplyActions(u, w, req.body?.actions || [], !!req.body?.adminMode);
     return { results };
   });
   // The overlay's persisted conversation (newest last; the model itself only sees ~20k tokens).
@@ -630,7 +634,7 @@ export default async function apiRoutes(app) {
       setImmediate(() => gm.runMemoryMaintenance(u, w).catch(() => {}));   // background summarisation
     } catch (e) {
       if (e.code !== 'ABORTED') {   // ABORTED = the client already left; nothing to report to
-        console.error(`[tick] world=${w.id} delta=${req.body?.timeDelta} failed:`, e.code || '', e.message, e.cause?.message || '');
+        console.error(`[tick] world=${w.id} delta=${req.body?.timeDelta} failed:`, e.code || '', e.message);
         send('error', { code: e.code || 'TICK_FAILED', message: e.message });
       }
     } finally { finished = true; clearInterval(hb); try { reply.raw.end(); } catch {} }
@@ -785,9 +789,9 @@ export default async function apiRoutes(app) {
       : 'audio/webm';
     const ext = { 'audio/mp4': 'mp4', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/ogg': 'ogg', 'audio/webm': 'webm' }[mime];
     const inputAsset = saveAsset({ userId: u.id, kind: 'asr_input', prompt: null, buffer: buf, mime });
-    const res = await asr(buf, mime, `clip.${ext}`, { lang: req.body?.lang || 'en' });
+    const res = await asr(buf, mime, `clip.${ext}`);
     debitCall(u.id, res, 'asr');
-    logCall({ userId: u.id, kind: 'asr', surface: 'stage_mic', request: { inputAssetId: inputAsset.id, mime }, response: { text: res.text, seconds: res.seconds }, assetId: inputAsset.id, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.meter, meta: res.byok ? { byok: true } : undefined });
+    logCall({ userId: u.id, kind: 'asr', surface: 'stage_mic', request: { inputAssetId: inputAsset.id, mime }, response: { text: res.text, seconds: res.seconds }, assetId: inputAsset.id, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.meter });
     return { text: res.text, seconds: res.seconds };
   });
   // Text → speech. All engine dispatch, LAIONBox reference-clip resolution, caching and
@@ -948,8 +952,7 @@ export default async function apiRoutes(app) {
       totalLines: lines.length, cachedLines: cached, missingLines: missing,
       estCredits: Math.ceil(toCredits(estMicro)),
       balance: Math.floor(toCredits(balance(u.id))),
-      canAfford: byokActive(u) || balance(u.id) >= estMicro,
-      byok: byokActive(u),
+      canAfford: balance(u.id) >= estMicro,
     };
   });
 

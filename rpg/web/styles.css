@@ -559,72 +559,75 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .bp-opt.bp-primary:hover{box-shadow:0 8px 22px rgba(132,101,255,.4)}
 .bp-opt:disabled{opacity:.6;cursor:default}
 
-/* AI settings share the game's rounded cards and violet accent, with room to read. */
-.provider-studio { --studio-accent:#6d4aff; color:var(--ink,#302b4b); min-width:0; }
-.studio-intro { margin-bottom:20px; }
-.studio-eyebrow { font-size:10px; letter-spacing:.13em; font-weight:700; color:var(--studio-accent); }
-.studio-intro h2 { font-size:22px; margin:6px 0; font-weight:600; }
-.studio-intro p,.studio-banner { font-size:12px; line-height:1.65; }
-.studio-intro p { color:var(--soft); margin:0; max-width:650px; }
-.provider-studio h3 { font-size:14px; margin:23px 0 10px; }
-.studio-banner { background:#f3f0ff; border:1px solid #e1dafa; border-radius:12px; padding:12px 15px; margin:14px 0; }
-.studio-mode,.studio-keys,.studio-models { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
-.studio-mode label { display:flex; align-items:center; gap:10px; border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer; }
-.studio-mode label:has(input:checked) { background:#f4f0ff;border-color:#9c86ec; }
-.studio-mode small,.studio-card-head small { display:block; font-size:10.5px; color:var(--soft);margin-top:3px;line-height:1.5; }
-.studio-key,.studio-model { border:1px solid var(--line); border-radius:14px;background:#fff; padding:16px; min-width:0; }
-.studio-card-head { display:flex; justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:12px;font-size:13px;flex-wrap:wrap; }
-.studio-badge,.studio-role { font-size:9px;background:#f2f0f8;padding:4px 7px;border-radius:6px;white-space:nowrap;color:var(--soft); }
-.studio-badge.connected { background:#eaf7f0;color:#19724d; }
-.studio-role { letter-spacing:.08em; }
-.studio-field { display:flex;flex-direction:column;gap:5px; margin:11px 0;font-size:10.5px;font-weight:500;color:var(--soft); }
-.studio-field input,.studio-field select { width:100%;min-width:0;font:12px inherit;font-family:inherit;font-size:12px;color:var(--ink,#302b4b);padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fcfbff; }
-.studio-field input:focus,.studio-field select:focus { outline:2px solid #c6b8fb;outline-offset:1px; }
-.studio-key>small,.studio-model-meta { font-size:10px;line-height:1.6;color:var(--soft);display:block; }
-.studio-actions { display:flex;gap:7px;flex-wrap:wrap;margin:12px 0; }
-.studio-feedback { font-size:11px;line-height:1.55;color:#23784f;min-height:17px;margin-top:5px; }
-.studio-feedback.error,.studio-model-meta.error { color:#b33450; }
-.studio-section-heading { display:flex;justify-content:space-between;gap:10px;align-items:center; }
-.studio-policy { display:flex;gap:9px;align-items:center;font-size:12px;margin-top:20px; }
-.studio-footer { display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--line);margin-top:20px;padding-top:16px; }
-.settings-dialog { width:min(1040px,96vw)!important;max-width:1040px!important; }
-.settings-dialog .modal-head { padding:22px 26px; }
-.settings-layout { display:grid;grid-template-columns:155px minmax(0,1fr);min-height:460px; }
-.settings-nav { background:#faf8ff;border-right:1px solid var(--line);padding:22px 12px;display:flex;flex-direction:column;gap:6px; }
-.settings-nav button { border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:9px;color:var(--soft);font:12px inherit;cursor:pointer; }
-.settings-nav button[aria-selected=true] { background:#eee8ff;color:#6341ce;font-weight:600; }
-.settings-content { padding:24px!important; min-width:0;max-height:70vh;overflow:auto; }
-.settings-content [data-settings-page][hidden] { display:none!important; }
-.settings-content>[data-settings-page] { margin:0!important; }
-.settings-content>.panel[data-settings-page] { border:0;box-shadow:none;background:transparent;padding:0!important; }
-.settings-content .settings-logout { display:block;margin-top:22px;font-size:12px;color:var(--soft); }
-.admin-advanced { margin-top:22px; }
-.admin-advanced>summary { cursor:pointer;font-size:13px;font-weight:600;padding:14px 4px; }
-.admin-route-scroll { overflow-x:auto; }
-@media(max-width:700px) {
- .studio-keys,.studio-models,.studio-mode { grid-template-columns:1fr; }
- .settings-layout { display:block; }
- .settings-nav { flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:9px; }
- .settings-nav button { flex-shrink:0;padding:9px 11px; }
- .settings-content { padding:17px!important;max-height:68vh; }
- .settings-dialog .modal-head { padding:17px; }
- .studio-footer { align-items:stretch;flex-direction:column; }
- .studio-section-heading h3 { margin-top:18px; }
- .tabs { overflow-x:auto;flex-wrap:nowrap; }
+/* ── RPG fork: first-person mode ──
+   The stage locks to the player character: classic god-view controls (POV pickers, time
+   chips, Advance/Intervene) vanish; the action bar under the storybook takes over. */
+body.rpg #pc, body.rpg #pl, body.rpg [data-delta],
+body.rpg #customdelta, body.rpg #advance, body.rpg #intervene { display:none }
+body.rpg .here-rail .rail-face.places { display:none }
+.action-bar{display:flex;align-items:center;gap:8px;background:rgba(24,21,54,.78);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:9px 11px;box-shadow:0 14px 34px rgba(10,8,30,.4)}
+.action-bar .field input{width:100%;background:rgba(255,255,255,.94);border:1.5px solid rgba(255,255,255,.3);
+  border-radius:11px;padding:9px 12px;font-size:13.5px;font-family:inherit}
+.action-bar .tchip{flex:none}
+.action-field{position:relative;display:flex;align-items:center;gap:6px}
+.decision-card{display:flex;gap:10px;align-items:flex-start;background:linear-gradient(135deg,rgba(240,169,46,.28),rgba(109,74,255,.24));
+  border:1.5px solid rgba(240,169,46,.55);border-radius:16px;padding:11px 14px;margin-bottom:8px;color:#fff7e8;
+  font-size:14px;line-height:1.5;box-shadow:0 12px 30px rgba(10,8,30,.42);animation:decIn .4s ease}
+.decision-card .dc-ico{font-size:19px;line-height:1.2}
+@keyframes decIn{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+@media(max-width:760px){.action-bar{padding:7px 8px;gap:6px}.action-bar .field input{font-size:13px;padding:8px 10px}}
+/* wizard: clickable player-fantasy seeds under the greeting */
+.wz-seeds{display:flex;flex-wrap:wrap;gap:7px;padding:4px 2px 8px}
+.wz-seed{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:12.5px;
+  font-family:inherit;cursor:pointer;transition:all .15s ease;color:#3c3763}
+.wz-seed:hover{border-color:var(--violet);background:var(--tint);transform:translateY(-1px)}
+/* RPG action bar: quick fast-forward presets */
+.skip-chips{display:flex;gap:4px;flex:none;align-items:center}
+.skip-chips .tchip{padding:5px 8px;font-size:11px;color:#d9d2f5;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2)}
+.skip-chips .tchip:hover{background:rgba(255,255,255,.18);color:#fff}
+@media(max-width:760px){.skip-chips .tchip{padding:4px 6px;font-size:10px}}
+/* mobile: the action input deserves the full width — chips & Continue drop to a second row */
+@media(max-width:760px){
+  .action-bar{flex-wrap:wrap}
+  .action-bar .action-field{flex:1 1 100%;min-width:100%}
+  .action-bar .skip-chips{flex:1;justify-content:flex-start}
+  #act-go{flex:none;margin-left:auto}
 }
 
-.settings-dialog .x { background:transparent;border:0;color:inherit;font-family:inherit;font-size:20px;cursor:pointer; }
-.admin-tabs { overflow-x:auto; }
-.admin-tabs button { white-space:nowrap; }
-
-/* mobile hardening (shared with the RPG fork): the thinking veil must cover the screen —
-   at z-index:8 it hid behind the storybook on phones and looked like a dead button. */
+/* ── mobile hardening (Samsung & friends) ─────────────────────────────────────
+   The action bar must always float ABOVE the dock and never slip under the
+   browser chrome or the gesture bar; the storybook stays touch-scrollable and
+   collapsible; landscape gets a compact layout. */
+/* stacking: storybook+action bar must beat the dock (tap safety), and the thinking veil
+   must beat EVERYTHING — at its old z-index:8 it hid BEHIND the storybook on phones, so
+   "thinking" was invisible and looked exactly like a dead button. */
+.stage-bottom{z-index:61}
+.action-bar{position:relative;z-index:62}
 .thinking-veil{z-index:70}
 #veil:not(:empty){position:fixed;inset:0;z-index:70}
-.stage-bottom{z-index:61}
 .storybox{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-.panel-toggle{min-width:52px;min-height:36px}
+.storylines{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.panel-toggle{min-width:52px;min-height:36px}   /* comfortable thumb target for collapse/expand */
 @media(max-width:760px){
   .stage-bottom{bottom:calc(76px + env(safe-area-inset-bottom, 0px))}
   #dock{padding-bottom:env(safe-area-inset-bottom, 0px)}
+  .action-bar{padding-bottom:calc(9px + env(safe-area-inset-bottom, 0px) / 2)}
+  #act-go{min-height:40px;min-width:104px}      /* big, unmissable tap target */
+  .decision-card{font-size:13px;padding:9px 11px;max-height:30vh;overflow-y:auto}
+}
+/* phone LANDSCAPE: little height — compact everything, keep the scene visible */
+@media(max-height:520px) and (orientation:landscape){
+  .stage-bottom{bottom:8px;gap:4px;left:70px;right:70px}
+  #dock{transform:scale(.82);transform-origin:bottom center}
+  .storybox{max-height:26vh}
+  .storylines{max-height:18vh;font-size:12px}
+  .here-rail .rail-face{width:34px;height:34px}
+  .here-rail{gap:4px}
+  #topbar .glasschip{padding:4px 8px;font-size:11px}
+  .action-bar{padding:6px 8px;gap:5px}
+  .action-bar .field input{padding:6px 9px;font-size:12.5px}
+  .decision-card{max-height:24vh;overflow-y:auto;font-size:12.5px;padding:8px 10px}
+  .skip-chips .tchip{padding:3px 6px;font-size:10px}
+  .thinking-veil{gap:8px}
 }

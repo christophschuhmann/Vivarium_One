@@ -1,0 +1,24 @@
+{
+  "name": "vivarium",
+  "version": "1.0.0",
+  "description": "A warm, browser-based life-simulation sandbox: AI-driven characters live in illustrated worlds you create, narrate their days aloud, and can be nudged, rewound, exported and shared.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node --env-file=.env server/index.js",
+    "start:plain": "node server/index.js",
+    "seed": "node --env-file=.env scripts/seed_demo.js",
+    "reset-demo": "node --env-file=.env scripts/reset_demo.js",
+    "test:e2e": "node e2e/io_features.cjs && node e2e/timetravel.cjs && node e2e/scene.cjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/multipart": "^10.0.0",
+    "@fastify/static": "^9.1.3",
+    "better-sqlite3": "^12.11.1",
+    "fastify": "^5.9.0",
+    "playwright": "^1.61.1",
+    "undici": "^7.28.0"
+  }
+}

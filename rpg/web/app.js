@@ -28,6 +28,7 @@ const I18N = {
     resume: 'Weiter', continue_building: 'Weiterbauen', create_world: 'Welt erschaffen', wizard: '🧙 Welten-Assistent',
     sign_in: 'Anmelden', create_account: 'Konto erstellen', step_inside: 'Eintreten', advance: '▶ Weiter',
     intervene: '⚡ Eingreifen', character: 'Figur', location: 'Ort', custom: 'eigene', listen_hint: '💡 Zeile anklicken zum Anhören',
+    continue: 'Weiter', act_ph: 'Was tust du? (handeln, sprechen — oder Zeit überspringen)', act_ph_dec: 'Was tust du?',
     first_page: 'Lass die Zeit voranschreiten, um die erste Seite aufzuschlagen…', voice: 'Stimme', settings_voice: '🔊 Stimme & Erzählung',
     sign_out: 'Abmelden', credits: 'Guthaben', spent_today: 'heute verbraucht',
   },
@@ -39,6 +40,7 @@ const I18N = {
     intervene: '⚡ Intervenir', character: 'Personnage', location: 'Lieu', custom: 'perso', listen_hint: '💡 cliquez une ligne pour l\'écouter',
     first_page: 'Faites avancer le temps pour tourner la première page…', voice: 'Voix', settings_voice: '🔊 Voix & narration',
     sign_out: 'Déconnexion', credits: 'crédits', spent_today: 'dépensé aujourd\'hui',
+    continue: 'Continuer', act_ph: 'Que fais-tu ? (agir, parler — ou sauter du temps)', act_ph_dec: 'Que fais-tu ?',
   },
   es: {
     home: 'Inicio', cast: 'Personajes', bonds: 'Vínculos', world: 'Mundo', play: 'Jugar', share: 'Compartir',
@@ -48,6 +50,7 @@ const I18N = {
     intervene: '⚡ Intervenir', character: 'Personaje', location: 'Lugar', custom: 'propio', listen_hint: '💡 pulsa una línea para escucharla',
     first_page: 'Avanza el tiempo para pasar la primera página…', voice: 'Voz', settings_voice: '🔊 Voz y narración',
     sign_out: 'Cerrar sesión', credits: 'créditos', spent_today: 'gastado hoy',
+    continue: 'Continuar', act_ph: '¿Qué haces? (actúa, habla — o salta el tiempo)', act_ph_dec: '¿Qué haces?',
   },
 };
 const getLang = () => { const l = localStorage.getItem('viv_lang'); return LANGS.includes(l) ? l : 'en'; };
@@ -119,7 +122,7 @@ const fail = (e) => toast(e.message || 'Something went wrong', 'err');
 async function refreshMe() {
   // Also captures which TTS engine the admin has activated ('gemini' | 'laionbox') —
   // the voice UI adapts to it (prebuilt-voice pickers vs reference-clip management).
-  try { const me = await api('/api/me'); S.user = me.user; S.ttsProvider = me.ttsProvider || 'gemini'; S.byok = !!me.byok; const c = $('#credits-num'); if (c) { c.textContent = S.byok ? 'Own API' : me.user.credits; c.closest('#credits-chip')?.setAttribute('title', S.byok ? 'Your provider account · no Vivarium credits' : 'Your credits'); } } catch { S.user = null; }
+  try { const me = await api('/api/me'); S.user = me.user; S.ttsProvider = me.ttsProvider || 'gemini'; const c = $('#credits-num'); if (c) c.textContent = me.user.credits; } catch { S.user = null; }
   return S.user;
 }
 const assetUrl = (id) => id ? `/api/assets/${id}` : '';
@@ -157,6 +160,18 @@ const ttsPrefs = () => {
 // development); 'main' = only plot-critical events (a skip may then have no scenes at all).
 const skipPrefs = () => ({ animate: true, detail: 'full', ...JSON.parse(localStorage.getItem('viv_skip') || '{}') });
 const saveSkipPrefs = (p) => localStorage.setItem('viv_skip', JSON.stringify({ ...skipPrefs(), ...p }));
+// ── RPG fork: first-person mode ──────────────────────────────────────────────
+// A world with player_character_id is a first-person RPG: the stage locks to that
+// character, time is storyteller-paced ('auto'), and the player acts via the action bar.
+const rpgPC = () => S.worldData?.world?.player_character_id || null;
+// adminMode: 🛠 the player steps OUTSIDE their character into the simulation's admin seat —
+// read ANY mind (even off-scene), talk to any inner voice, ask the GM about secrets, and
+// change anything about the world. Off (default) = you are only your character: other minds
+// are closed, their thought-lines are hidden from storybook & voiceover, the GM keeps
+// secrets and refuses godlike changes (sprites & new places to explore remain fine).
+const rpgPrefs = () => { const st = JSON.parse(localStorage.getItem('viv_rpg') || '{}'); return { adminMode: !!(st.adminMode ?? st.innerSight), ...st }; };
+const saveRpgPrefs = (p) => localStorage.setItem('viv_rpg', JSON.stringify({ ...rpgPrefs(), ...p }));
+const adminOn = () => !rpgPC() || rpgPrefs().adminMode;   // classic worlds behave like admin-on
 const saveTtsPrefs = (p) => localStorage.setItem('viv_tts', JSON.stringify({ ...ttsPrefs(), ...p }));
 const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const cutoutFor = (ch) => { const o = (ch.state.outfits || []).find(o => o.name === (ch.state.outfit || 'everyday')) || (ch.state.outfits || [])[0]; return o?.cutout_asset_id; };
@@ -174,31 +189,6 @@ function micError(e) {
   else if (e?.name === 'NotFoundError' || e?.name === 'OverconstrainedError')
     toast('🎤 No microphone found (or the chosen one is unplugged). Pick another in Settings → Microphone.', 'err');
   else toast('🎤 Microphone unavailable — you can type instead.', 'err');
-}
-
-// Convert a MediaRecorder blob (webm/opus; mp4 on Safari) to 16 kHz mono WAV.
-// BYOK transcription (OpenRouter audio-input models) accepts only WAV/MP3, and the
-// server Whisper path is happy with WAV too — so every 🎙 recording uploads as WAV.
-async function blobToWav(blob) {
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return null;
-  const ctx = new AC();
-  try {
-    const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
-    const rate = 16000;
-    const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * rate)), rate);
-    const src = off.createBufferSource(); src.buffer = decoded; src.connect(off.destination); src.start();
-    const rendered = await off.startRendering();
-    const pcm = rendered.getChannelData(0);
-    const dv = new DataView(new ArrayBuffer(44 + pcm.length * 2));
-    const str = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
-    str(0, 'RIFF'); dv.setUint32(4, 36 + pcm.length * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
-    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
-    dv.setUint32(24, rate, true); dv.setUint32(28, rate * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
-    str(36, 'data'); dv.setUint32(40, pcm.length * 2, true);
-    for (let i = 0; i < pcm.length; i++) { const s = Math.max(-1, Math.min(1, pcm[i])); dv.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true); }
-    return new Blob([dv.buffer], { type: 'audio/wav' });
-  } catch { return null; } finally { try { ctx.close(); } catch {} }
 }
 
 function attachMic(field, input) {
@@ -261,10 +251,7 @@ function attachMic(field, input) {
         const clearBusyToast = toast('🎧 Transcribing…', '', 0);
         try {
           const blob = new Blob(chunks, { type: localRec?.mimeType || 'audio/webm' });
-          // Prefer WAV (BYOK transcription only accepts WAV/MP3); fall back to the raw clip.
-          const wav = await blobToWav(blob);
-          const fd = new FormData();
-          if (wav) fd.append('file', wav, 'clip.wav'); else fd.append('file', blob, 'clip.webm');
+          const fd = new FormData(); fd.append('file', blob, 'clip.webm');
           const { text } = await api('/api/asr', { method: 'POST', body: fd });
           const clean = (text || '').trim();
           if (!clean) { toast('🤔 Didn\'t catch that — speak a little closer and try again.', 'err'); }
@@ -380,14 +367,6 @@ async function renderMicSettings(box) {
   navigator.mediaDevices.ondevicechange = () => { if (document.contains(box)) renderMicSettings(box); else navigator.mediaDevices.ondevicechange = null; };
 }
 
-/* ── 🔑 AI provider (BYOK) ────────────────────────────────────────────────────────
-   Run the whole game on the player's own OpenRouter key: paste → validate → encrypt.
-   Every LLM/image/TTS/ASR call then goes to OpenRouter on their account (no credits).
-   Model pickers are fed live from OpenRouter; free models are pinned on top. */
-async function renderByokSettings(box) {
-  if (box) await window.VivariumProviders.mount(box, { api, esc, toast, onSave: refreshMe });
-}
-
 let MIC_TEST_RUNNING = false;   // one tester at a time — a second click during a run is ignored
 async function testMic(box, deviceId) {
   if (MIC_TEST_RUNNING) return;
@@ -459,7 +438,7 @@ function chrome(active, { worldTitle = null, sub = null, showDock = true } = {})
     <div style="display:flex;gap:9px">
       ${S.world ? '<button class="glasschip" id="tl-chip" title="Timeline — scroll through every scene, replay or branch">🕰</button><button class="glasschip" id="gm-chip" title="Talk to the Game Master — ask anything, change anything">💬 GM</button>' : ''}
       <button class="glasschip" id="lang-chip" title="Language / Sprache / Langue / Idioma">🌐 ${getLang().toUpperCase()}</button>
-      <div class="glasschip" id="credits-chip" title="Your credits"><div class="coin"></div><span id="credits-num">${S.byok ? 'Own API' : S.user?.credits ?? '–'}</span></div>
+      <div class="glasschip" id="credits-chip" title="Your credits"><div class="coin"></div><span id="credits-num">${S.user?.credits ?? '–'}</span></div>
       <button class="glasschip" id="avatar-chip" title="Account & usage">${esc((S.user?.displayName || '?')[0].toUpperCase())}</button>
     </div>
   </div>
@@ -495,6 +474,7 @@ function bindChrome() {
 const nav = (h) => { location.hash = h; };
 window.addEventListener('hashchange', route);
 async function route() {
+  document.body.classList.remove('rpg');   // re-set by stageScreen when the world has a PC
   if (typeof stopNarration === 'function') stopNarration();
   const [path, q] = location.hash.slice(2).split('?');
   const params = new URLSearchParams(q || '');
@@ -631,12 +611,13 @@ async function homeScreen() {
       c.onclick = async (e) => {
         if (e.target.closest('[data-del]')) { if (confirm('Delete this world forever?')) { await api(`/api/worlds/${c.dataset.id}`, { method: 'DELETE' }); homeScreen(); } return; }
         if (e.target.closest('[data-clone]')) {
-          // full independent copy (story, cast, places; asset files shared on disk)
+          // full independent copy (story, cast, places; asset files shared on disk) — play a
+          // variant without touching the original
           const src = worlds.find(x => x.id === c.dataset.id);
           const title = prompt('Name the copy:', `${src?.title || 'World'} · copy`); if (!title) return;
           const btn = e.target.closest('[data-clone]'); btn.disabled = true; btn.textContent = '…';
           try {
-            await api(`/api/worlds/${c.dataset.id}/fork-clean`, { method: 'POST', body: { tickIdx: src?.tick_index, title } });
+            const r = await api(`/api/worlds/${c.dataset.id}/fork-clean`, { method: 'POST', body: { tickIdx: src?.tick_index, title } });
             toast(`⧉ "${title}" created — an independent copy`, 'gold');
             homeScreen();
           } catch (err) { btn.disabled = false; btn.textContent = '⧉'; fail(err); }
@@ -1261,9 +1242,21 @@ async function wizardScreen() {
   <div class="screen"><div class="container">
     <div class="forge-layout" style="grid-template-columns:minmax(320px,1fr) minmax(300px,420px)">
       <div class="chatpanel">
-        <div style="padding:13px 16px;border-bottom:1px solid var(--line)"><b style="font-size:14px">Describe the world you want</b><div style="font-size:11px;color:var(--soft)">genre, characters, places — I'll draft the whole scenario and refine it with you</div></div>
+        <div style="padding:13px 16px;border-bottom:1px solid var(--line)"><b style="font-size:14px">Who do you want to be?</b><div style="font-size:11px;color:var(--soft)">your character, their world, the people in their life — I'll draft everything and refine it with you</div></div>
         <div class="chatlog" id="wz-log">
-          <div class="msg assistant">Where are we going? A medieval keep, a space freighter, a sleepy seaside town? Tell me the world you want and roughly who lives in it — I'll draft everything. 🧙</div>
+          <div class="msg assistant">This is YOUR story — so first: who do you want to be? A billionaire in today's world, a vampire in a modern city, a wizard in a medieval academy, a starship captain on the frontier…? Pick a spark below, or just tell me in your own words (age, epoch, dreams, fears — as much or as little as you like). 🧙</div>
+          <div class="wz-seeds">
+            ${[['💰','Billionaire','a billionaire in the contemporary world'],
+               ['🧛','Vampire','a vampire in a modern-fantasy setting'],
+               ['🧙','Wizard','a wizard in a medieval fantasy world'],
+               ['🚀','Starship captain','a starship captain in a sci-fi setting'],
+               ['🕵️','Detective','a detective in a noir metropolis'],
+               ['⚔️','Knight','a knight in a medieval kingdom'],
+               ['🎸','Rockstar','a musician chasing a breakthrough'],
+               ['🏝','Castaway','a castaway on a mysterious island'],
+               ['🃏','Reality-bender','someone in the contemporary world who discovered — maybe over a Magic: The Gathering deck — that reality behaves like a dream, and learned to bend it']]
+              .map(x => `<button class="wz-seed" data-seed="${esc(x[2])}">${x[0]} ${x[1]}</button>`).join('')}
+          </div>
         </div>
         <div class="chat-inputrow"><div class="field" id="wz-field"><input id="wz-in" placeholder="e.g. a medieval scenario with a knight, a mage, and the knight's jealous brother…"><button class="btn btn-primary small" id="wz-send">Send</button></div></div>
       </div>
@@ -1280,6 +1273,13 @@ async function wizardScreen() {
   if (W.plan) renderPlan();
   if (W.jobId) pollBuild(); // resume watching an in-flight build after navigation
   attachMic($('#wz-field'), $('#wz-in'));
+  // Seed chips fill the input for REVIEW — the player edits or just presses Send; nothing
+  // is submitted for them, and the phrasing invites the wizard to ASK before drafting.
+  $$('.wz-seed').forEach(bn => bn.onclick = () => {
+    const inp = $('#wz-in');
+    inp.value = `I'd like to play ${bn.dataset.seed} — but ask me a few questions first to figure out exactly what kind.`;
+    inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+  });
 
   // Right panel: readable plan summary + itemised cost + the approval button.
   function renderPlan() {
@@ -1289,16 +1289,32 @@ async function wizardScreen() {
       <b style="font-size:15px">${esc(p.title || 'Untitled world')}</b>
       <div style="font-size:11px;color:var(--soft);margin:2px 0 8px">${esc(p.genre || '')} · ${esc(p.mood || '')}</div>
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:8px 0 4px">CAST (${(p.characters || []).length})</h5>
-      ${(p.characters || []).map(c => `<div style="font-size:12px;margin-bottom:3px"><b>${esc(c.name)}</b> <span style="color:var(--soft)">· ${esc(c.age ?? '')} · ${esc((c.personality || '').slice(0, 60))}</span></div>`).join('')}
+      ${(p.characters || []).map(c => {
+        const isPC = c.name === p.player_character;
+        // this character's bonds, PLAYER bonds first — the plan panel must show how everyone connects
+        const bonds = (p.relationships || []).filter(r => r.from === c.name || r.to === c.name)
+          .sort((x, y) => ((y.from === p.player_character || y.to === p.player_character) ? 1 : 0) - ((x.from === p.player_character || x.to === p.player_character) ? 1 : 0));
+        const bondLines = bonds.slice(0, 4).map(r => {
+          const other = r.from === c.name ? r.to : r.from;
+          const txt = r.from === c.name ? r.description : (r.reverse_description || r.description);
+          return `<div style="font-size:11px;color:#4b4573;margin-top:2px">↔ <b>${esc(other)}${other === p.player_character ? ' 🎮' : ''}</b> — ${esc(txt || '')}</div>`;
+        }).join('');
+        return `<div style="font-size:12px;margin-bottom:9px;padding:8px 9px;border:1.5px solid ${isPC ? 'var(--violet)' : 'var(--line)'};border-radius:11px;${isPC ? 'background:var(--tint)' : ''}">
+          <b>${esc(c.name)}</b> ${isPC ? '<span class="tag v" style="font-size:9px">🎮 YOU — player character</span>' : '<span class="tag" style="font-size:9px;background:#efecfb;color:#6a63a0">NPC</span>'} <span style="color:var(--soft)">· ${esc(c.age ?? '')}</span>
+          <div style="font-size:11.5px;color:#3c3763;margin-top:3px">${esc(c.personality || '')}</div>
+          ${c.backstory ? `<div style="font-size:11px;color:#5a5487;margin-top:3px;line-height:1.45">${esc(c.backstory)}</div>` : ''}
+          ${bondLines}
+        </div>`;
+      }).join('')}
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:10px 0 4px">PLACES (${(p.locations || []).length})</h5>
       <div style="font-size:11.5px;color:#3c3763">${(p.locations || []).map(l => esc(l.name)).join(' · ')}</div>
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:10px 0 4px">BONDS (${(p.relationships || []).length})</h5>
       <div style="font-size:11.5px;color:#3c3763">${(p.relationships || []).slice(0, 6).map(r => `${esc(r.from)} → ${esc(r.to)}`).join(' · ')}${(p.relationships || []).length > 6 ? ' …' : ''}</div>
       ${e ? `
       <div class="attr" style="margin-top:12px;background:#fdf3e0;border-color:#f4d79a"><h5 style="color:#a86f0d">ESTIMATED COST</h5>
-        <p style="font-size:11.5px">${e.images} images (${e.portraits} portraits + ${e.outfitVariants} outfits + ${e.backgrounds} backgrounds)${e.voiceRefs ? ` · ${e.voiceRefs} cloned voices` : ''} ${S.byok ? '<b>your provider account</b>' : `≈ <b>${e.estCredits} credits</b>`}<br>
-        <span style="color:var(--soft)">${S.byok ? 'Your selected providers bill you directly. No Vivarium credits are used.' : `an upper estimate — you are billed per actual generation; you have ${S.user?.credits ?? '?'} credits`}</span></p></div>
-      <button class="btn btn-coral" id="wz-go" style="width:100%;margin-top:10px">🚀 Build this world · ${S.byok ? 'my providers' : `≈${e.estCredits} credits`}</button>` : ''}`;
+        <p style="font-size:11.5px">${e.images} images (${e.portraits} portraits + ${e.outfitVariants} outfits + ${e.backgrounds} backgrounds)${e.voiceRefs ? ` · ${e.voiceRefs} cloned voices` : ''} ≈ <b>${e.estCredits} credits</b><br>
+        <span style="color:var(--soft)">an upper estimate — you're billed per actual generation; you have ${S.user?.credits ?? '?'} credits</span></p></div>
+      <button class="btn btn-coral" id="wz-go" style="width:100%;margin-top:10px">🚀 Build this world · ≈${e.estCredits} credits</button>` : ''}`;
     const go = $('#wz-go');
     if (go) go.onclick = startBuild;
   }
@@ -2181,7 +2197,10 @@ async function stageScreen() {
     api(`/api/worlds/${S.world}/branches`),
   ]);
   const lastTick = ticks[ticks.length - 1] || null;
-  if (!stageState.pov || (stageState.pov.type === 'character' && !characters.find(c => c.id === stageState.pov.id)))
+  // RPG: the stage IS the player character's experience — the point of view is locked to them.
+  const pcLocked = world.player_character_id && characters.find(c => c.id === world.player_character_id) ? world.player_character_id : null;
+  if (pcLocked) stageState.pov = { type: 'character', id: pcLocked };
+  else if (!stageState.pov || (stageState.pov.type === 'character' && !characters.find(c => c.id === stageState.pov.id)))
     stageState.pov = { type: 'character', id: characters[0]?.id };
 
   stageState.delta = stageState.delta || '+1m';
@@ -2192,8 +2211,10 @@ async function stageScreen() {
   const present = characters.filter(c => c.state.location_id === loc?.id && (c.intro_tick_idx || 0) <= world.tick_index);
   const scene = buildScene(lastTick, loc, present, povChar);
 
+  const dec = (pcLocked && lastTick?.decision && lastTick.idx === world.tick_index) ? lastTick.decision : null;
+  document.body.classList.toggle('rpg', !!pcLocked);   // CSS scope: stage-root closes before the control strip
   app.innerHTML = `
-  <div id="stage-root">
+  <div id="stage-root" class="${pcLocked ? 'rpg' : ''}">
     <div class="stage-bg" style="background-image:url(${assetUrl(loc?.background_asset_id)})"></div>
     <div class="stage-vignette"></div>
     <div class="stage-cast" id="stage-cast">
@@ -2224,7 +2245,7 @@ async function stageScreen() {
     <button class="glasschip" id="tl-chip" title="Timeline — scroll through every scene, replay or branch">🕰</button>
     <button class="glasschip" id="gm-chip" title="Talk to the Game Master — ask anything, change anything">💬 GM</button>
     <button class="glasschip" id="lang-chip" title="Language / Sprache / Langue / Idioma">🌐 ${getLang().toUpperCase()}</button>
-    <div class="glasschip" id="credits-chip"><div class="coin"></div><span id="credits-num">${S.byok ? 'Own API' : S.user?.credits ?? '–'}</span></div>
+    <div class="glasschip" id="credits-chip"><div class="coin"></div><span id="credits-num">${S.user?.credits ?? '–'}</span></div>
     <button class="glasschip" id="avatar-chip">${esc((S.user?.displayName || '?')[0].toUpperCase())}</button></div></div>
   <button id="fact-bubble" title="Did you know? — curiosity cards" style="display:none">💡</button>
   <div class="here-rail"><span class="hlabel">HERE</span>
@@ -2252,6 +2273,17 @@ async function stageScreen() {
       </div>
       <div class="story-meta"><span>${esc(scene.meta)}</span><span>${t('listen_hint', '💡 click any line to hear it spoken')}</span></div>
     </div>
+    ${pcLocked ? `
+    <!-- RPG action bar: the player speaks/acts as their character; the storyteller paces time -->
+    ${dec ? `<div class="decision-card" id="decision-card"><span class="dc-ico">🎭</span><span>${esc(dec)}</span></div>` : ''}
+    <div class="action-bar" id="action-bar">
+      <div class="field action-field" id="act-field" style="flex:1;margin:0"><input id="act-in" placeholder="${dec ? t('act_ph_dec', 'What do you do?') : t('act_ph', 'What do you do? (act, speak — or ask to skip ahead)')}"></div>
+      <div class="skip-chips" title="Fast-forward time — longer skips play as scenes">
+        ${['+30s', '+5m', '+1h', '+1d'].map(d => `<button class="tchip" data-skip="${d}">${d.slice(1)}</button>`).join('')}
+        <button class="tchip" id="act-skip" title="Custom time skip (any amount)">⏱</button>
+      </div>
+      <button class="btn btn-primary small" id="act-go">▶ ${t('continue', 'Continue')}</button>
+    </div>` : ''}
   </div>
   <nav id="dock">${['home', 'cast', 'bonds', 'world', 'play', 'share'].map(k => `
     <button class="dock-btn ${k === 'play' ? 'active' : ''}" data-nav="${k}">${ICONS[k]}<span>${dockLabel(k)}</span></button>`).join('')}</nav>`;
@@ -2296,7 +2328,7 @@ async function stageScreen() {
     const cb = $('#customdelta'); cb.classList.add('sel'); cb.innerHTML = `⏱ ${d.slice(1)}`;
   });
 
-  $$('[data-pov]').forEach(f => f.onclick = () => { stopNarration(); stageState.pov = { type: 'character', id: f.dataset.pov }; stageScreen(); });
+  $$('[data-pov]').forEach(f => f.onclick = () => { if (pcLocked) { mindModal(f.dataset.pov); return; } stopNarration(); stageState.pov = { type: 'character', id: f.dataset.pov }; stageScreen(); });
   const openLocPicker = () => locationPickerModal(locations, characters, loc?.id, (l) => { stopNarration(); stageState.pov = { type: 'location', id: l.id }; stageScreen(); });
   $('[data-places]').onclick = openLocPicker;
   $('#pl').onclick = openLocPicker;
@@ -2313,6 +2345,25 @@ async function stageScreen() {
 
   $('#advance').onclick = () => advanceTick(null);
   $('#intervene').onclick = () => interventionModal(characters, (payload) => advanceTick(payload));
+  if (pcLocked) {
+    const actField = $('#act-field'), actIn = $('#act-in');
+    if (actField && actIn) {
+      attachMic(actField, actIn);
+      const go = () => {
+        const text = actIn.value.trim();
+        stopNarration();
+        advanceTick(text ? { kind: 'player_action', target: pcLocked, text } : null, { delta: 'auto' });
+      };
+      $('#act-go').onclick = go;
+      actIn.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); } };
+      // quick fast-forward presets — one click, no popup; any typed action rides along.
+      // Longer spans go through the chapter planner and play as scene films, decision
+      // stops included, exactly like the ⏱ custom popup.
+      const skipTo = (d) => { stopNarration(); advanceTick(actIn.value.trim() ? { kind: 'player_action', target: pcLocked, text: actIn.value.trim() } : null, { delta: d }); };
+      $$('.skip-chips [data-skip]').forEach(ch => ch.onclick = () => skipTo(ch.dataset.skip));
+      $('#act-skip').onclick = () => customDeltaModal(skipTo);
+    }
+  }
   $('#undobtn').onclick = async () => {
     if (!branchInfo.canUndo) return;
     stopNarration();
@@ -2408,7 +2459,7 @@ async function stageScreen() {
         // lang = the 🌐 preference: the Game Master writes this tick's story in that language.
         // chapter = the player's time-skip settings (animate on/off + detail level) — for
         // large skips the server may answer with SEVERAL scene-ticks instead of one.
-        body: JSON.stringify({ timeDelta: stageState.delta, intervention, perspective: stageState.pov, lang: getLang(), chapter: skipPrefs() }),
+        body: JSON.stringify({ timeDelta: opts.delta || (rpgPC() ? 'auto' : stageState.delta), intervention, perspective: stageState.pov, lang: getLang(), chapter: skipPrefs() }),
       });
       const reader = res.body.getReader(); const dec = new TextDecoder();
       let buf = '', errored = null;
@@ -2498,8 +2549,14 @@ function buildScene(lastTick, loc, present, povChar) {
 // ticks are already generated in-language and have no i18n, so this is a no-op for them.
 function localizeNarr(narration) {
   const lang = getLang();
-  if (lang === 'en') return narration || [];
-  return (narration || []).map(n => (n.i18n && n.i18n[lang]) ? { ...n, text: n.i18n[lang] } : n);
+  let lines = narration || [];
+  // RPG without 🔮 inner sight: other characters' PRIVATE THOUGHTS are not the player's to
+  // read (or hear) — only their own character's inner monologue shows. Filtering here covers
+  // every consumer at once: storybook, voiceover, films and replays.
+  const pc = rpgPC();
+  if (pc && !adminOn()) lines = lines.filter(n => !(n.mode === 'thought' && n.speaker !== pc));
+  if (lang === 'en') return lines;
+  return lines.map(n => (n.i18n && n.i18n[lang]) ? { ...n, text: n.i18n[lang] } : n);
 }
 function renderNarration(lines, characters) {
   // Only real characters get a name/voice; anything else (narrator or a GM-invented walk-on) reads as narration.
@@ -3275,7 +3332,7 @@ async function gmChatOverlay() {
       const slow = actions.some(a => ['create_character', 'new_outfit', 'create_location'].includes(a.type) || a.regenerate_background);
       btn.textContent = slow ? '⏳ Applying… image generation takes ~30s each' : '⏳ Applying…';
       try {
-        const { results } = await api(`/api/worlds/${S.world}/gm-apply`, { method: 'POST', body: { actions } });
+        const { results } = await api(`/api/worlds/${S.world}/gm-apply`, { method: 'POST', body: { actions, adminMode: adminOn() } });
         const res = card.querySelector('.gmc-res');
         res.style.display = 'block';
         res.innerHTML = results.map(r => `<div style="font-size:11.5px;color:${r.ok ? '#0d7e83' : '#d92e66'}">${r.ok ? '✓' : '✗'} ${esc(r.summary)}</div>` +
@@ -3307,7 +3364,7 @@ async function gmChatOverlay() {
     addMsg('user', text);
     const status = addMsg('status', '🎭 the Game Master is thinking…');
     try {
-      const out = await api(`/api/worlds/${S.world}/gm-chat`, { method: 'POST', body: { message: text, lang: getLang() } });
+      const out = await api(`/api/worlds/${S.world}/gm-chat`, { method: 'POST', body: { message: text, lang: getLang(), adminMode: adminOn() } });
       status.remove();
       addAssistant(out.reply, out.actions);
       refreshMe();
@@ -3334,7 +3391,7 @@ function showLocationSuggestion(sug) {
     <p style="font-size:12.5px;color:#3c3763;margin-bottom:6px">${esc(sug.description)}</p>
     <p style="font-size:11.5px;color:var(--soft);margin-bottom:8px">connects to: ${sug.connect_names.map(esc).join(' · ')}</p>
     ${sug.reason ? `<p class="serif" style="font-size:13px;font-style:italic;color:#4b4573;border-left:3px solid var(--violet);padding-left:10px;margin-bottom:14px">${esc(sug.reason)}</p>` : ''}
-    <button class="btn btn-primary" id="ls-yes" style="width:100%;margin-bottom:8px">🗺 Build ${esc(sug.name)} (~30s, ${S.byok ? 'your provider account' : 'costs credits'})</button>
+    <button class="btn btn-primary" id="ls-yes" style="width:100%;margin-bottom:8px">🗺 Build ${esc(sug.name)} (~30s, costs credits)</button>
     <button class="btn btn-ghost" id="ls-no" style="width:100%">Not now</button>
   </div></div>`;
   document.body.appendChild(m);
@@ -3386,7 +3443,7 @@ function showOutfitSuggestion(sug) {
   <div class="modal-body">
     <p style="font-size:13px;margin-bottom:6px"><b>${esc(sug.name)}</b>${sug.emotion ? ` <span class="tag c">${esc(sug.emotion)}</span>` : ''} — ${esc(sug.description)}</p>
     ${sug.reason ? `<p class="serif" style="font-size:13px;font-style:italic;color:#4b4573;border-left:3px solid var(--coral);padding-left:10px;margin-bottom:14px">${esc(sug.reason)}</p>` : ''}
-    <button class="btn btn-coral" id="os-yes" style="width:100%;margin-bottom:8px">🎨 Paint this sprite (~30s, ${S.byok ? 'your provider account' : 'costs credits'})</button>
+    <button class="btn btn-coral" id="os-yes" style="width:100%;margin-bottom:8px">🎨 Paint this sprite (~30s, costs credits)</button>
     <button class="btn btn-ghost" id="os-no" style="width:100%">Not now</button>
   </div></div>`;
   document.body.appendChild(m);
@@ -3908,6 +3965,12 @@ function characterPickerModal(characters, locations, currentId, onPick) {
 async function mindModal(charId) {
   const { characters, locations } = await loadWorld();
   const c = characters.find(x => x.id === charId); if (!c) return;
+  // RPG without 🛠 admin mode: other minds are closed — the player discovers people by
+  // talking to them, not by reading their state. (Their OWN character's head is always open.)
+  if (rpgPC() && !adminOn() && c.id !== rpgPC()) {
+    toast(`🔒 You can't read ${c.name}'s mind — that's for the simulation's admin. Enable 🛠 Admin mode in Account settings, or just talk to them.`);
+    return;
+  }
   const st = c.state, per = st.perceptions || {};
   const m = document.createElement('div');
   m.className = 'modal-bg';
@@ -4072,7 +4135,7 @@ async function shareModal() {
     </div>
     <div class="panel" style="margin-top:12px" id="storypanel">
       <b style="font-size:13.5px">🎬 Export as a playable story</b>
-      <p style="font-size:11.5px;color:var(--soft)">A small <code>.zip</code> with your whole story: every scene, sprite, background and voiced line (64&nbsp;kbps mono). It plays <b>offline in any browser</b> — the zip includes <code>player.html</code>; open it, pick the zip, watch with full narration, fullscreen, seek. Lines without audio yet can be voiced now (${S.byok ? 'your provider account' : 'costs credits'}) or left silent — you'll choose next.</p>
+      <p style="font-size:11.5px;color:var(--soft)">A small <code>.zip</code> with your whole story: every scene, sprite, background and voiced line (64&nbsp;kbps mono). It plays <b>offline in any browser</b> — the zip includes <code>player.html</code>; open it, pick the zip, watch with full narration, fullscreen, seek. Lines without audio yet can be voiced now (costs credits) or left silent — you'll choose next.</p>
       <button class="btn btn-coral small" id="storygo" style="width:100%">🎬 Export story (tick 1–${data.world.tick_index})</button>
       <div id="storystatus" style="margin-top:10px;display:none">
         <div style="font-size:11.5px;color:var(--soft);margin-bottom:5px" id="storystage">preparing…</div>
@@ -4156,11 +4219,11 @@ function exportAudioChoice(pre) {
     m.innerHTML = `<div class="modal" style="width:440px"><div class="modal-head coral"><div><b>🔊 ${pre.missingLines} line${pre.missingLines === 1 ? '' : 's'} need audio</b><small>${pre.cachedLines} of ${pre.totalLines} lines are already voiced</small></div><span class="x">✕</span></div>
     <div class="modal-body">
       <p style="font-size:12.5px;color:#3c3763;margin-bottom:14px">Some narration hasn't been voiced yet. You can generate the missing audio now (so the story has sound everywhere), or leave those moments silent.</p>
-      <button class="btn btn-primary" id="ac-gen" style="width:100%;margin-bottom:8px" ${affordable ? '' : 'disabled'}>🎤 Generate the missing audio &nbsp;·&nbsp; ${pre.byok ? 'your provider account' : `up to ${pre.estCredits} credits`}</button>
+      <button class="btn btn-primary" id="ac-gen" style="width:100%;margin-bottom:8px" ${affordable ? '' : 'disabled'}>🎤 Generate the missing audio &nbsp;·&nbsp; up to ${pre.estCredits} credits</button>
       ${affordable ? '' : `<p style="font-size:11px;color:#d92e66;margin:-2px 0 8px">Not enough credits (you have ${pre.balance}). Ask your admin for a top-up, or render silent.</p>`}
       <button class="btn btn-soft" id="ac-silent" style="width:100%;margin-bottom:8px">🔇 Export now, leave those lines silent &nbsp;·&nbsp; free</button>
       <button class="btn btn-ghost" id="ac-cancel" style="width:100%">Cancel</button>
-      <p style="font-size:10.5px;color:var(--soft);margin-top:10px">${pre.byok ? 'Your provider bills your own account. No Vivarium credits are used.' : `You have ${pre.balance} credits.`} The estimate is a ceiling — you're billed only for what's actually generated, and already-voiced lines are always free.</p>
+      <p style="font-size:10.5px;color:var(--soft);margin-top:10px">You have ${pre.balance} credits. The estimate is a ceiling — you're billed only for what's actually generated, and already-voiced lines are always free.</p>
     </div></div>`;
     document.body.appendChild(m);
     const done = (v) => { m.remove(); resolve(v); };
@@ -4175,8 +4238,8 @@ async function accountModal() {
   const [{ user, spentToday }, { ledger }] = await Promise.all([api('/api/me'), api('/api/me/ledger')]);
   const m = document.createElement('div');
   m.className = 'modal-bg';
-  m.innerHTML = `<div class="modal settings-dialog" role="dialog" aria-modal="true" aria-label="Settings"><div class="modal-head violet"><div><b>Settings</b> · ${esc(user.displayName)}<small>${esc(user.email)}</small></div><span class="x">✕</span></div>
-  <div class="settings-layout"><nav class="settings-nav" role="tablist" aria-label="Settings sections">${[['account','Account'],['ai','AI & models'],['voice','Voice & music'],['mic','Microphone'],['time','Time skips']].map(([id,label])=>`<button role="tab" id="settings-tab-${id}" aria-controls="settings-page-${id}" data-settings-tab="${id}" aria-selected="${id==='account'}">${label}</button>`).join('')}</nav><div class="modal-body settings-content"><section data-settings-page="account" id="settings-page-account" role="tabpanel" aria-labelledby="settings-tab-account">
+  m.innerHTML = `<div class="modal"><div class="modal-head violet"><div><b>${esc(user.displayName)}</b><small>${esc(user.email)}</small></div><span class="x">✕</span></div>
+  <div class="modal-body">
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <div class="panel" style="flex:1;text-align:center"><div style="font-size:24px;font-weight:700;color:#a86f0d">🪙 ${user.credits}</div><small style="color:var(--soft)">credits</small></div>
       <div class="panel" style="flex:1;text-align:center"><div style="font-size:24px;font-weight:700">${(+spentToday).toFixed(1)}</div><small style="color:var(--soft)">spent today</small></div>
@@ -4187,7 +4250,7 @@ async function accountModal() {
         <span>${esc(l.reason)}${l.model ? ` <span style="color:var(--soft)">· ${esc(l.model)}</span>` : ''}</span>
         <b style="color:${l.credits < 0 ? '#d92e66' : '#0d9463'}">${l.credits > 0 ? '+' : ''}${(+l.credits).toFixed(2)}</b></div>`).join('') || '<small>No usage yet.</small>'}
     </div>
-    </section><div class="panel" data-settings-page="voice" hidden style="margin-top:14px;padding:14px 16px">
+    <div class="panel" style="margin-top:14px;padding:14px 16px">
       <b style="font-size:13px">🔊 Voice & narration</b>
       <div style="display:flex;flex-direction:column;gap:11px;margin-top:9px;font-size:12.5px">
         <label style="display:flex;align-items:center;gap:8px">Narrator voice
@@ -4197,6 +4260,7 @@ async function accountModal() {
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-prepare" ${ttsPrefs().prepare ? 'checked' : ''}> Prepare the first spoken line in the background (instant playback)</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-auto" ${ttsPrefs().autoplay ? 'checked' : ''}> Read each new moment aloud automatically</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-inner" ${ttsPrefs().innerVoice !== false ? 'checked' : ''}> 🕯 Read inner-voice replies aloud (the character's voice)</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-innersight" ${rpgPrefs().adminMode ? 'checked' : ''}> 🛠 Admin mode — step outside your character: see every mind, ask the Game Master anything (secrets included) and change the world at will. Off = you are only your character; the GM keeps secrets and only grants sprite refreshes &amp; new places to explore.</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-music" ${ttsPrefs().musicOn !== false ? 'checked' : ''}> 🎵 Background music (scene-matched, chosen by the storyteller)</label>
         <div style="display:grid;grid-template-columns:130px 1fr 44px;gap:8px 10px;align-items:center;margin:6px 0 0 26px;max-width:420px">
           <span style="font-size:11.5px;color:var(--soft)">🔊 voice volume</span>
@@ -4222,16 +4286,13 @@ async function accountModal() {
           <input id="tp-custom" placeholder="e.g. slightly slower; a hint of a smile" value="${esc(ttsPrefs().custom)}" style="border:1px solid var(--line);border-radius:9px;padding:6px 10px"></label>
       </div>
     </div>
-    <div class="panel" data-settings-page="ai" hidden style="margin-top:14px;padding:14px 16px">
-      <div id="byok-settings" style="margin-top:9px;font-size:12.5px">Loading…</div>
-    </div>
-    <div class="panel" data-settings-page="mic" hidden style="margin-top:14px;padding:14px 16px">
+    <div class="panel" style="margin-top:14px;padding:14px 16px">
       <b style="font-size:13px">🎤 Microphone <span style="font-weight:400;color:var(--soft);font-size:11px">— for speaking instead of typing (the 🎙 buttons)</span></b>
       <div id="mic-settings" style="margin-top:9px;font-size:12.5px">Loading…</div>
     </div>
     <!-- Time-skip behaviour: whether big jumps play as a scene-by-scene film, and how much
          of the plan makes the cut (main plot only vs also side plots). See skipPrefs(). -->
-    <div class="panel" data-settings-page="time" hidden style="margin-top:14px;padding:14px 16px">
+    <div class="panel" style="margin-top:14px;padding:14px 16px">
       <b style="font-size:13px">⏭ Time skips</b>
       <div style="display:flex;flex-direction:column;gap:11px;margin-top:9px;font-size:12.5px">
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="sk-animate" ${skipPrefs().animate ? 'checked' : ''}> Animate big time skips as a scene-by-scene film (off = jump straight to the outcome)</label>
@@ -4244,25 +4305,16 @@ async function accountModal() {
       </div>
     </div>
     <button class="btn btn-ghost small" id="logout" style="margin-top:14px">Sign out</button>
-  </div></div></div>`;
+  </div></div>`;
   document.body.appendChild(m);
-  const previousFocus = document.activeElement;
-  const settingsTabs = [...m.querySelectorAll('[data-settings-tab]')];
-  const showSettingsPage = id => {
-    settingsTabs.forEach(t => { t.setAttribute('aria-selected', String(t.dataset.settingsTab === id)); t.tabIndex = t.dataset.settingsTab === id ? 0 : -1; });
-    m.querySelectorAll('[data-settings-page]').forEach(p => { p.hidden = p.dataset.settingsPage !== id; p.id = 'settings-page-'+p.dataset.settingsPage; p.setAttribute('role','tabpanel');p.setAttribute('aria-labelledby','settings-tab-'+p.dataset.settingsPage); });
-  };
-  settingsTabs.forEach((t,index) => { t.onclick = () => showSettingsPage(t.dataset.settingsTab); t.onkeydown = e => { if (!['ArrowDown','ArrowUp','ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const next=settingsTabs[(index+(['ArrowDown','ArrowRight'].includes(e.key)?1:settingsTabs.length-1))%settingsTabs.length];showSettingsPage(next.dataset.settingsTab);next.focus(); }; });
-  showSettingsPage('account'); settingsTabs[0].focus();
-  const closeSettings = () => { m.remove(); previousFocus?.focus(); };
-  m.addEventListener('keydown', e => { if(e.key==='Escape') closeSettings(); if(e.key==='Tab') { const nodes=[...m.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]')].filter(el=>el.getClientRects().length&&!el.disabled);const first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();} } });
-
-  m.onclick = (e) => { if (e.target === m) closeSettings(); };
-  $('.x', m).outerHTML = '<button class="x" type="button" aria-label="Close settings">✕</button>';
-  $('.x', m).onclick = closeSettings;
+  // closing after an admin-mode flip re-renders the stage so hidden/revealed thought-lines
+  // and mind access take effect immediately (prefs are read at render time)
+  const closeAccount = () => { m.remove(); if (m._rpgDirty && location.hash.includes('stage')) { stopNarration(); stageScreen(); } };
+  m.onclick = (e) => { if (e.target === m) closeAccount(); };
+  $('.x', m).onclick = closeAccount;
   renderMicSettings($('#mic-settings', m));
-  renderByokSettings($('#byok-settings', m));
   const savePrefs = () => {
+    if ($('#tp-innersight', m)) saveRpgPrefs({ adminMode: $('#tp-innersight', m).checked });
     saveTtsPrefs({ narrator: $('#tp-narr', m).value, prepare: $('#tp-prepare', m).checked, autoplay: $('#tp-auto', m).checked, innerVoice: $('#tp-inner', m).checked, musicOn: $('#tp-music', m).checked, musicVol: (+$('#tp-musicvol', m).value) / 100, voiceVol: (+$('#tp-voicevol', m).value) / 100, voiceRate: (+$('#tp-voicerate', m).value) / 100, narratorStyle: $('#tp-narr-style', m).value, characterStyle: $('#tp-char-style', m).value, custom: $('#tp-custom', m).value });
     // apply live: volume ramps immediately; toggling off fades the score out, on resumes it
     if (!$('#tp-music', m).checked) stopMusic(); else setMusicVolume((+$('#tp-musicvol', m).value) / 100);
@@ -4270,7 +4322,15 @@ async function accountModal() {
   $('#tp-musicvol', m).oninput = () => { $('#tp-musicvol-n', m).textContent = $('#tp-musicvol', m).value + '%'; setMusicVolume((+$('#tp-musicvol', m).value) / 100); };
   $('#tp-voicevol', m).oninput = () => { $('#tp-voicevol-n', m).textContent = $('#tp-voicevol', m).value + '%'; };
   $('#tp-voicerate', m).oninput = () => { $('#tp-voicerate-n', m).textContent = $('#tp-voicerate', m).value + '%'; };
-  ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-inner', '#tp-music', '#tp-musicvol', '#tp-voicevol', '#tp-voicerate', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); if (el) { el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); } });
+  ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-inner', '#tp-innersight', '#tp-music', '#tp-musicvol', '#tp-voicevol', '#tp-voicerate', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); if (el) { el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); } });
+  // Admin mode feedback + live apply: confirm the switch immediately, and re-render the
+  // stage on modal close so thought-lines/mind access reflect the new mode without a reload.
+  const sight = $('#tp-innersight', m);
+  if (sight) sight.addEventListener('change', () => {
+    savePrefs();
+    toast(sight.checked ? '🛠 Admin mode ON — every mind is open to you' : '🎭 Admin mode off — you are your character again');
+    m._rpgDirty = true;
+  });
   $('#tp-narr-reset', m).onclick = () => { $('#tp-narr-style', m).value = DEFAULT_NARRATOR_STYLE; savePrefs(); };
   $('#tp-char-reset', m).onclick = () => { $('#tp-char-style', m).value = DEFAULT_CHARACTER_STYLE; savePrefs(); };
   const saveSkip = () => saveSkipPrefs({ animate: $('#sk-animate', m).checked, detail: $('#sk-detail', m).value });

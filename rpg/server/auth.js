@@ -3,7 +3,6 @@ import { scryptSync, timingSafeEqual, randomBytes, randomInt } from 'node:crypto
 import { db, uid, now } from './db.js';
 import { record, toMicro } from './credits.js';
 import { getSetting } from './db.js';
-import { enterPrincipal } from './byok.js';
 
 export const mailbox = []; // dev/test outbox (no SMTP configured): {to, subject, code, at}
 
@@ -100,14 +99,9 @@ export function httpErr(status, code, message) {
 }
 
 // Fastify helpers
-// requireUser also enters the request's BYOK principal (server/byok.js): from here on,
-// every provider call made anywhere inside this request — however deep — resolves to the
-// player's own OpenRouter key + model picks when they have BYOK enabled. Background jobs
-// started within the request (wizard builds, exports) inherit it through AsyncLocalStorage.
 export function requireUser(req) {
   const u = getSession(req.cookies?.vsession, 'player');
   if (!u) throw httpErr(401, 'UNAUTHENTICATED', 'Please sign in.');
-  enterPrincipal(u);
   return u;
 }
 export function requireVerified(req) {

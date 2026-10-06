@@ -1,0 +1,278 @@
+<!doctype html>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     VIVARIUM STORY PLAYER — a fully self-contained, offline story player.
+
+     Open this file in ANY modern browser (no server, no install, no network),
+     pick a *.vivarium-story.zip exported from Vivarium's Share menu, and watch
+     the whole story play back: location backgrounds, character sprites with
+     their outfits, speech/thought bubbles, transition cards between scenes,
+     and the full narrated voiceover.
+
+     HOW IT WORKS (for future maintainers):
+       • ZIP reading is implemented right here in ~80 lines of vanilla JS:
+         we parse the End-Of-Central-Directory record → central directory →
+         local file headers, then inflate DEFLATE entries with the browser's
+         native DecompressionStream('deflate-raw') (Chrome 80+/FF 113+/Safari
+         16.4+). STORE (method 0) entries are used as-is. No libraries.
+       • The zip contains story.json — the cue script (same schema the game's
+         export_cues.js produces): 'transition' cues (title cards) and 'line'
+         cues (one narrated/spoken sentence each, with optional audio file,
+         the location background, and the characters present with cut-outs).
+       • Playback is AUDIO-DRIVEN: a line cue lasts exactly as long as its MP3
+         (or a reading-time estimate if it was exported silent); transitions
+         run on fixed timers with a crossfade. Media files become blob: URLs.
+       • A copy of this file is included in every bundle, so a bundle is
+         completely self-sufficient: unzip → open player.html → pick the zip
+         (or host the zip + player anywhere).
+     ═══════════════════════════════════════════════════════════════════════ -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vivarium — Story Player</title>
+<style>
+  /* Visual language mirrors the game's export/transition cards (violet/teal glass). */
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#131024;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden}
+  #pickveil{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    background:radial-gradient(80% 90% at 50% 20%,#241d4d 0%,#131024 70%);color:#efeaff;z-index:100;text-align:center;padding:20px}
+  #pickveil h1{font-size:30px;font-weight:600;letter-spacing:.02em}
+  #pickveil p{color:#a79fd6;font-size:14px;max-width:460px;line-height:1.6}
+  #pickbtn{background:linear-gradient(135deg,#6d4aff,#14b8bf);border:none;color:#fff;font-size:16px;font-weight:600;
+    padding:14px 34px;border-radius:999px;cursor:pointer;box-shadow:0 12px 40px rgba(109,74,255,.4)}
+  #pickbtn:hover{filter:brightness(1.1)}
+  #pickstatus{font-size:12.5px;color:#8f86c9;min-height:18px}
+  /* stage */
+  #stage{position:fixed;inset:0;display:none}
+  .bg{position:absolute;inset:-2%;background-size:cover;background-position:center;filter:blur(9px) brightness(.92);
+    transition:opacity .6s ease;opacity:0}
+  .bg.on{opacity:1}
+  #cast{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center}
+  .char{position:absolute;bottom:0;height:74%;transform:translateX(-50%);transition:opacity .5s}
+  .char img{height:100%;filter:drop-shadow(0 18px 30px rgba(0,0,0,.45))}
+  .bubble{position:absolute;top:-8px;left:50%;transform:translate(-50%,-100%);max-width:320px;background:#fff;color:#221f45;
+    font-size:14.5px;line-height:1.45;padding:12px 16px;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;transition:opacity .3s}
+  .bubble.show{opacity:1}
+  .bubble.think{background:#efeaff;font-style:italic}
+  .bubble::after{content:'';position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+    border:10px solid transparent;border-top-color:#fff;border-bottom:none}
+  .bubble.think::after{border-top-color:#efeaff}
+  /* transition card — the "bubbly screen" between scenes */
+  #tcard{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:30;
+    background:rgba(24,21,54,.55);backdrop-filter:blur(7px);opacity:0;transition:opacity .55s;pointer-events:none}
+  #tcard.show{opacity:1}
+  #tcard .inner{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;
+    background:linear-gradient(145deg,rgba(109,74,255,.32),rgba(20,184,191,.22));border:1.5px solid rgba(255,255,255,.25);
+    border-radius:32px;padding:38px 64px;box-shadow:0 24px 70px rgba(10,8,30,.5)}
+  #tcard b{font-family:Georgia,serif;font-style:italic;font-weight:600;font-size:34px;color:#fff}
+  #tcard span{font-size:15px;color:#cdc4f0}
+  /* story bar */
+  #storybar{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);width:min(860px,92vw);z-index:20;
+    background:rgba(26,22,56,.88);border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:16px 22px;
+    box-shadow:0 18px 50px rgba(0,0,0,.45);transition:opacity .4s}
+  #spk{font-size:11px;letter-spacing:.14em;color:#ffc46b;font-weight:700;margin-bottom:5px}
+  #line{font-family:Georgia,serif;font-size:17.5px;line-height:1.55;color:#f2eeff}
+  #line.thought{font-style:italic;color:#cbc2f0}
+  /* controls */
+  #controls{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:25}
+  .cbtn{background:rgba(34,31,69,.7);border:1px solid rgba(255,255,255,.18);color:#efeaff;border-radius:999px;
+    padding:8px 16px;font-size:13px;cursor:pointer}
+  .cbtn:hover{background:rgba(60,54,110,.8)}
+  #prog{width:min(420px,50vw);height:5px;background:rgba(255,255,255,.15);border-radius:99px;cursor:pointer}
+  #progfill{height:100%;width:0%;background:linear-gradient(90deg,#6d4aff,#14b8bf);border-radius:99px}
+  #title{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:25;background:rgba(34,31,69,.7);
+    border:1px solid rgba(255,255,255,.15);color:#efeaff;border-radius:999px;padding:7px 18px;font-size:13px}
+  #title b{font-weight:600} #title span{opacity:.7;margin-left:8px;font-size:12px}
+</style>
+</head>
+<body>
+
+<div id="pickveil">
+  <h1>🎬 Vivarium Story Player</h1>
+  <p>Open a <b>.vivarium-story.zip</b> exported from Vivarium (Share → Export as a story) and watch it play back with scenes, sprites and full narration — right here, offline.</p>
+  <button id="pickbtn">📂 Open story zip</button>
+  <input type="file" id="pickfile" accept=".zip,application/zip" hidden>
+  <div id="pickstatus"></div>
+</div>
+
+<div id="stage">
+  <div class="bg" id="bgA"></div><div class="bg" id="bgB"></div>
+  <div id="cast"></div>
+  <div id="tcard"><div class="inner"><b id="tline1"></b><span id="tline2"></span></div></div>
+  <div id="title"><b id="ttitle"></b><span id="tmeta"></span></div>
+  <div id="storybar"><div id="spk"></div><div id="line"></div></div>
+  <div id="controls">
+    <button class="cbtn" id="playpause">⏸</button>
+    <button class="cbtn" id="restart">⏮</button>
+    <div id="prog"><div id="progfill"></div></div>
+    <button class="cbtn" id="fs">⛶</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+
+/* ── minimal ZIP reader ─────────────────────────────────────────────────────
+   Standard ZIP layout: [local entries…][central directory][EOCD]. We locate the
+   EOCD signature (PK\x05\x06) scanning back from the end, walk the central
+   directory (PK\x01\x02) for names/offsets, then read each local header
+   (PK\x03\x04) to find the data and inflate if needed.                        */
+async function readZip(file) {
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const dv = new DataView(buf.buffer);
+  // EOCD: scan the last 64KB+22 bytes for the signature
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65558); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('Not a zip file (no end-of-central-directory).');
+  const count = dv.getUint16(eocd + 10, true);
+  let off = dv.getUint32(eocd + 16, true);           // central directory offset
+  const files = new Map();                           // name → Uint8Array
+  const td = new TextDecoder();
+  for (let n = 0; n < count; n++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) throw new Error('Corrupt central directory.');
+    const method = dv.getUint16(off + 10, true);
+    const csize = dv.getUint32(off + 20, true);
+    const nameLen = dv.getUint16(off + 28, true);
+    const extraLen = dv.getUint16(off + 30, true);
+    const cmtLen = dv.getUint16(off + 32, true);
+    const lho = dv.getUint32(off + 42, true);        // local header offset
+    const name = td.decode(buf.subarray(off + 46, off + 46 + nameLen));
+    // local header: sizes of its own name/extra fields may differ from the CD's
+    const lNameLen = dv.getUint16(lho + 26, true);
+    const lExtraLen = dv.getUint16(lho + 28, true);
+    const dataStart = lho + 30 + lNameLen + lExtraLen;
+    const raw = buf.subarray(dataStart, dataStart + csize);
+    if (!name.endsWith('/')) {
+      if (method === 0) files.set(name, raw);                       // STORE
+      else if (method === 8) files.set(name, await inflate(raw));   // DEFLATE
+      else throw new Error('Unsupported zip compression method ' + method);
+    }
+    off += 46 + nameLen + extraLen + cmtLen;
+  }
+  return files;
+}
+async function inflate(raw) {
+  const ds = new DecompressionStream('deflate-raw');
+  const stream = new Blob([raw]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/* ── playback engine ────────────────────────────────────────────────────────
+   Cue-driven, audio-timed. State lives in P; play(i) advances through cues:
+   transitions run on fixed timers with a background crossfade; line cues show
+   the scene (bg, sprites, bubble on the speaker, story bar) and last exactly
+   as long as their audio (or a reading estimate when silent).                */
+const P = { story: null, urls: new Map(), i: 0, playing: false, audio: null, timer: null, bgFlip: false, curBg: null };
+const READ_MS = (text) => Math.min(9000, Math.max(2200, 55 * String(text || '').length)); // silent-line duration
+
+function mediaUrl(path) { return P.urls.get(path) || ''; }
+
+function setBackground(url) {
+  if (url === P.curBg) return;             // same place → no crossfade
+  P.curBg = url;
+  const showEl = P.bgFlip ? $('bgA') : $('bgB');
+  const hideEl = P.bgFlip ? $('bgB') : $('bgA');
+  P.bgFlip = !P.bgFlip;
+  showEl.style.backgroundImage = url ? `url(${url})` : 'none';
+  showEl.classList.add('on'); hideEl.classList.remove('on');
+}
+
+function showTransition(cue, ms) {
+  setBackground(mediaUrl(cue.bgUrl));
+  $('cast').innerHTML = ''; $('storybar').style.opacity = '0';
+  $('tline1').textContent = cue.label || ''; $('tline2').textContent = cue.sub || '';
+  $('tcard').classList.add('show');
+  clearTimeout(P.timer);
+  P.timer = setTimeout(() => { $('tcard').classList.remove('show'); setTimeout(next, 400); }, ms - 400);
+}
+
+function showLine(cue) {
+  setBackground(mediaUrl(cue.bgUrl));
+  $('tcard').classList.remove('show'); $('storybar').style.opacity = '1';
+  // cast: everyone present at the scene; the speaker gets the bubble
+  const present = cue.present || [];
+  $('cast').innerHTML = present.map((c, i) => {
+    const n = present.length, x = n === 1 ? 50 : 24 + (52 / Math.max(n - 1, 1)) * i;
+    const speaking = c.id === cue.speaker;
+    const cls = cue.mode === 'thought' ? 'bubble think' : 'bubble';
+    return `<div class="char" style="left:${x}%">` +
+      (speaking ? `<div class="${cls} show">${escT(cue.text)}</div>` : '') +
+      `<img src="${mediaUrl(c.cutout)}" alt="${escT(c.name)}"></div>`;
+  }).join('');
+  $('spk').textContent = cue.name ? cue.name.toUpperCase() + (cue.mode === 'thought' ? ' 💭' : '') : '✦ NARRATOR';
+  $('line').textContent = cue.text || '';
+  $('line').className = cue.mode === 'thought' ? 'thought' : '';
+  // duration: the audio clip, or a reading-time estimate for silent lines
+  if (cue.audio && P.urls.has(cue.audio)) {
+    const a = new Audio(mediaUrl(cue.audio));
+    P.audio = a;
+    a.onended = () => { P.audio = null; next(); };
+    a.onerror = () => { P.audio = null; P.timer = setTimeout(next, READ_MS(cue.text)); };
+    a.play().catch(() => { P.timer = setTimeout(next, READ_MS(cue.text)); });
+  } else {
+    P.timer = setTimeout(next, READ_MS(cue.text));
+  }
+}
+
+function play(i) {
+  if (!P.playing) return;
+  const cues = P.story.cues;
+  if (i >= cues.length) { P.playing = false; $('playpause').textContent = '▶'; return; }
+  P.i = i;
+  $('progfill').style.width = (100 * i / cues.length) + '%';
+  $('tmeta').textContent = `${i + 1} / ${cues.length}`;
+  const cue = cues[i];
+  if (cue.type === 'transition') showTransition(cue, cue.kind === 'location' ? 3200 : 1900);
+  else showLine(cue);
+}
+function next() { if (P.playing) play(P.i + 1); }
+function stopCurrent() { clearTimeout(P.timer); if (P.audio) { P.audio.pause(); P.audio = null; } }
+const escT = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ── controls ── */
+$('playpause').onclick = () => {
+  if (P.playing) { P.playing = false; stopCurrent(); $('playpause').textContent = '▶'; }
+  else { P.playing = true; $('playpause').textContent = '⏸'; play(P.i); }
+};
+$('restart').onclick = () => { stopCurrent(); P.playing = true; $('playpause').textContent = '⏸'; play(0); };
+$('fs').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+$('prog').onclick = (e) => {          // click-to-seek by cue index
+  const frac = (e.clientX - $('prog').getBoundingClientRect().left) / $('prog').offsetWidth;
+  stopCurrent(); P.playing = true; $('playpause').textContent = '⏸';
+  play(Math.max(0, Math.min(P.story.cues.length - 1, Math.floor(frac * P.story.cues.length))));
+};
+
+/* ── file open → parse → play ── */
+$('pickbtn').onclick = () => $('pickfile').click();
+$('pickfile').onchange = async () => {
+  const f = $('pickfile').files && $('pickfile').files[0];
+  if (!f) return;
+  const status = $('pickstatus');
+  try {
+    status.textContent = 'unpacking…';
+    const files = await readZip(f);
+    const storyRaw = files.get('story.json');
+    if (!storyRaw) throw new Error('No story.json inside — is this a Vivarium story zip?');
+    P.story = JSON.parse(new TextDecoder().decode(storyRaw));
+    if (P.story.format !== 'vivarium-story') throw new Error('Not a Vivarium story bundle.');
+    // every media file becomes a blob: URL the renderer can use directly
+    for (const [name, data] of files) {
+      if (!name.startsWith('media/')) continue;
+      const mime = name.endsWith('.mp3') ? 'audio/mpeg' : name.endsWith('.webp') ? 'image/webp' : name.endsWith('.jpg') ? 'image/jpeg' : 'image/png';
+      P.urls.set(name, URL.createObjectURL(new Blob([data], { type: mime })));
+    }
+    $('ttitle').textContent = P.story.title || 'Vivarium story';
+    $('pickveil').style.display = 'none';
+    $('stage').style.display = 'block';
+    P.playing = true;
+    play(0);
+  } catch (e) {
+    status.textContent = '😔 ' + e.message;
+  }
+};
+</script>
+</body>
+</html>

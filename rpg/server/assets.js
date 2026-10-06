@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { db, uid, now, j, ASSET_DIR } from './db.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const EXT = { 'image/png': 'png', 'image/webp': 'webp', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'image/jpeg': 'jpg', 'video/mp4': 'mp4', 'audio/mp4': 'm4a', 'audio/webm': 'webm' };
+const EXT = { 'image/png': 'png', 'image/webp': 'webp', 'audio/mpeg': 'mp3', 'image/jpeg': 'jpg', 'video/mp4': 'mp4', 'audio/mp4': 'm4a', 'audio/webm': 'webm' };
 
 export function saveAsset({ userId, worldId = null, kind, ownerRef = null, prompt = null, buffer, mime, meta = {} }) {
   const hash = createHash('sha256').update(kind).update(prompt || '').update(buffer.subarray(0, 256)).digest('hex').slice(0, 24);
