@@ -77,7 +77,7 @@ const fail = (e) => toast(e.message || 'Something went wrong', 'err');
 async function refreshMe() {
   // Also captures which TTS engine the admin has activated ('gemini' | 'laionbox') —
   // the voice UI adapts to it (prebuilt-voice pickers vs reference-clip management).
-  try { const me = await api('/api/me'); S.user = me.user; S.ttsProvider = me.ttsProvider || 'gemini'; const c = $('#credits-num'); if (c) c.textContent = me.user.credits; } catch { S.user = null; }
+  try { const me = await api('/api/me'); S.user = me.user; S.ttsProvider = me.ttsProvider || 'gemini'; S.byok = !!me.byok; const c = $('#credits-num'); if (c) { c.textContent = S.byok ? 'Own API' : me.user.credits; c.closest('#credits-chip')?.setAttribute('title', S.byok ? 'Your provider account · no Vivarium credits' : 'Your credits'); } } catch { S.user = null; }
   return S.user;
 }
 const assetUrl = (id) => id ? `/api/assets/${id}` : '';
@@ -134,6 +134,31 @@ function micError(e) {
   else toast('🎤 Microphone unavailable — you can type instead.', 'err');
 }
 
+// Convert a MediaRecorder blob (webm/opus; mp4 on Safari) to 16 kHz mono WAV.
+// BYOK transcription (OpenRouter audio-input models) accepts only WAV/MP3, and the
+// server Whisper path is happy with WAV too — so every 🎙 recording uploads as WAV.
+async function blobToWav(blob) {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  const ctx = new AC();
+  try {
+    const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
+    const rate = 16000;
+    const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * rate)), rate);
+    const src = off.createBufferSource(); src.buffer = decoded; src.connect(off.destination); src.start();
+    const rendered = await off.startRendering();
+    const pcm = rendered.getChannelData(0);
+    const dv = new DataView(new ArrayBuffer(44 + pcm.length * 2));
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, 'RIFF'); dv.setUint32(4, 36 + pcm.length * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, rate, true); dv.setUint32(28, rate * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+    str(36, 'data'); dv.setUint32(40, pcm.length * 2, true);
+    for (let i = 0; i < pcm.length; i++) { const s = Math.max(-1, Math.min(1, pcm[i])); dv.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true); }
+    return new Blob([dv.buffer], { type: 'audio/wav' });
+  } catch { return null; } finally { try { ctx.close(); } catch {} }
+}
+
 function attachMic(field, input) {
   const btn = document.createElement('button');
   btn.className = 'micbtn'; btn.type = 'button'; btn.title = 'Speak instead of typing';
@@ -156,7 +181,10 @@ function attachMic(field, input) {
         btn.classList.add('busy');
         try {
           const blob = new Blob(chunks, { type: localRec.mimeType || 'audio/webm' });
-          const fd = new FormData(); fd.append('file', blob, 'clip.webm');
+          // Prefer WAV (BYOK transcription only accepts WAV/MP3); fall back to the raw clip.
+          const wav = await blobToWav(blob);
+          const fd = new FormData();
+          if (wav) fd.append('file', wav, 'clip.wav'); else fd.append('file', blob, 'clip.webm');
           const { text } = await api('/api/asr', { method: 'POST', body: fd });
           input.value = (input.value ? input.value + ' ' : '') + text;
           input.dispatchEvent(new Event('input')); input.focus();
@@ -215,6 +243,14 @@ async function renderMicSettings(box) {
   $('#mic-test', box).onclick = () => testMic(box, $('#mic-sel', box).value);
 }
 
+/* ── 🔑 AI provider (BYOK) ────────────────────────────────────────────────────────
+   Run the whole game on the player's own OpenRouter key: paste → validate → encrypt.
+   Every LLM/image/TTS/ASR call then goes to OpenRouter on their account (no credits).
+   Model pickers are fed live from OpenRouter; free models are pinned on top. */
+async function renderByokSettings(box) {
+  if (box) await window.VivariumProviders.mount(box, { api, esc, toast, onSave: refreshMe });
+}
+
 async function testMic(box, deviceId) {
   const meter = $('#mic-meter', box), bar = $('#mic-bar', box), status = $('#mic-teststatus', box);
   meter.style.display = 'block'; status.textContent = 'Listening…';
@@ -256,7 +292,7 @@ function chrome(active, { worldTitle = null, sub = null, showDock = true } = {})
     <div style="display:flex;gap:9px">
       ${S.world ? '<button class="glasschip" id="tl-chip" title="Timeline — scroll through every scene, replay or branch">🕰</button><button class="glasschip" id="gm-chip" title="Talk to the Game Master — ask anything, change anything">💬 GM</button>' : ''}
       <button class="glasschip" id="lang-chip" title="Language / Sprache / Langue / Idioma">🌐 ${getLang().toUpperCase()}</button>
-      <div class="glasschip" id="credits-chip" title="Your credits"><div class="coin"></div><span id="credits-num">${S.user?.credits ?? '–'}</span></div>
+      <div class="glasschip" id="credits-chip" title="Your credits"><div class="coin"></div><span id="credits-num">${S.byok ? 'Own API' : S.user?.credits ?? '–'}</span></div>
       <button class="glasschip" id="avatar-chip" title="Account & usage">${esc((S.user?.displayName || '?')[0].toUpperCase())}</button>
     </div>
   </div>
@@ -1080,9 +1116,9 @@ async function wizardScreen() {
       <div style="font-size:11.5px;color:#3c3763">${(p.relationships || []).slice(0, 6).map(r => `${esc(r.from)} → ${esc(r.to)}`).join(' · ')}${(p.relationships || []).length > 6 ? ' …' : ''}</div>
       ${e ? `
       <div class="attr" style="margin-top:12px;background:#fdf3e0;border-color:#f4d79a"><h5 style="color:#a86f0d">ESTIMATED COST</h5>
-        <p style="font-size:11.5px">${e.images} images (${e.portraits} portraits + ${e.outfitVariants} outfits + ${e.backgrounds} backgrounds)${e.voiceRefs ? ` · ${e.voiceRefs} cloned voices` : ''} ≈ <b>${e.estCredits} credits</b><br>
-        <span style="color:var(--soft)">an upper estimate — you're billed per actual generation; you have ${S.user?.credits ?? '?'} credits</span></p></div>
-      <button class="btn btn-coral" id="wz-go" style="width:100%;margin-top:10px">🚀 Build this world · ≈${e.estCredits} credits</button>` : ''}`;
+        <p style="font-size:11.5px">${e.images} images (${e.portraits} portraits + ${e.outfitVariants} outfits + ${e.backgrounds} backgrounds)${e.voiceRefs ? ` · ${e.voiceRefs} cloned voices` : ''} ${S.byok ? '<b>your provider account</b>' : `≈ <b>${e.estCredits} credits</b>`}<br>
+        <span style="color:var(--soft)">${S.byok ? 'Your selected providers bill you directly. No Vivarium credits are used.' : `an upper estimate — you are billed per actual generation; you have ${S.user?.credits ?? '?'} credits`}</span></p></div>
+      <button class="btn btn-coral" id="wz-go" style="width:100%;margin-top:10px">🚀 Build this world · ${S.byok ? 'my providers' : `≈${e.estCredits} credits`}</button>` : ''}`;
     const go = $('#wz-go');
     if (go) go.onclick = startBuild;
   }
@@ -2008,7 +2044,7 @@ async function stageScreen() {
     <button class="glasschip" id="tl-chip" title="Timeline — scroll through every scene, replay or branch">🕰</button>
     <button class="glasschip" id="gm-chip" title="Talk to the Game Master — ask anything, change anything">💬 GM</button>
     <button class="glasschip" id="lang-chip" title="Language / Sprache / Langue / Idioma">🌐 ${getLang().toUpperCase()}</button>
-    <div class="glasschip" id="credits-chip"><div class="coin"></div><span id="credits-num">${S.user?.credits ?? '–'}</span></div>
+    <div class="glasschip" id="credits-chip"><div class="coin"></div><span id="credits-num">${S.byok ? 'Own API' : S.user?.credits ?? '–'}</span></div>
     <button class="glasschip" id="avatar-chip">${esc((S.user?.displayName || '?')[0].toUpperCase())}</button></div></div>
   <button id="fact-bubble" title="Did you know? — curiosity cards" style="display:none">💡</button>
   <div class="here-rail"><span class="hlabel">HERE</span>
@@ -3045,7 +3081,7 @@ function showLocationSuggestion(sug) {
     <p style="font-size:12.5px;color:#3c3763;margin-bottom:6px">${esc(sug.description)}</p>
     <p style="font-size:11.5px;color:var(--soft);margin-bottom:8px">connects to: ${sug.connect_names.map(esc).join(' · ')}</p>
     ${sug.reason ? `<p class="serif" style="font-size:13px;font-style:italic;color:#4b4573;border-left:3px solid var(--violet);padding-left:10px;margin-bottom:14px">${esc(sug.reason)}</p>` : ''}
-    <button class="btn btn-primary" id="ls-yes" style="width:100%;margin-bottom:8px">🗺 Build ${esc(sug.name)} (~30s, costs credits)</button>
+    <button class="btn btn-primary" id="ls-yes" style="width:100%;margin-bottom:8px">🗺 Build ${esc(sug.name)} (~30s, ${S.byok ? 'your provider account' : 'costs credits'})</button>
     <button class="btn btn-ghost" id="ls-no" style="width:100%">Not now</button>
   </div></div>`;
   document.body.appendChild(m);
@@ -3097,7 +3133,7 @@ function showOutfitSuggestion(sug) {
   <div class="modal-body">
     <p style="font-size:13px;margin-bottom:6px"><b>${esc(sug.name)}</b>${sug.emotion ? ` <span class="tag c">${esc(sug.emotion)}</span>` : ''} — ${esc(sug.description)}</p>
     ${sug.reason ? `<p class="serif" style="font-size:13px;font-style:italic;color:#4b4573;border-left:3px solid var(--coral);padding-left:10px;margin-bottom:14px">${esc(sug.reason)}</p>` : ''}
-    <button class="btn btn-coral" id="os-yes" style="width:100%;margin-bottom:8px">🎨 Paint this sprite (~30s, costs credits)</button>
+    <button class="btn btn-coral" id="os-yes" style="width:100%;margin-bottom:8px">🎨 Paint this sprite (~30s, ${S.byok ? 'your provider account' : 'costs credits'})</button>
     <button class="btn btn-ghost" id="os-no" style="width:100%">Not now</button>
   </div></div>`;
   document.body.appendChild(m);
@@ -3761,7 +3797,7 @@ async function shareModal() {
     </div>
     <div class="panel" style="margin-top:12px" id="storypanel">
       <b style="font-size:13.5px">🎬 Export as a playable story</b>
-      <p style="font-size:11.5px;color:var(--soft)">A small <code>.zip</code> with your whole story: every scene, sprite, background and voiced line (64&nbsp;kbps mono). It plays <b>offline in any browser</b> — the zip includes <code>player.html</code>; open it, pick the zip, watch with full narration, fullscreen, seek. Lines without audio yet can be voiced now (costs credits) or left silent — you'll choose next.</p>
+      <p style="font-size:11.5px;color:var(--soft)">A small <code>.zip</code> with your whole story: every scene, sprite, background and voiced line (64&nbsp;kbps mono). It plays <b>offline in any browser</b> — the zip includes <code>player.html</code>; open it, pick the zip, watch with full narration, fullscreen, seek. Lines without audio yet can be voiced now (${S.byok ? 'your provider account' : 'costs credits'}) or left silent — you'll choose next.</p>
       <button class="btn btn-coral small" id="storygo" style="width:100%">🎬 Export story (tick 1–${data.world.tick_index})</button>
       <div id="storystatus" style="margin-top:10px;display:none">
         <div style="font-size:11.5px;color:var(--soft);margin-bottom:5px" id="storystage">preparing…</div>
@@ -3845,11 +3881,11 @@ function exportAudioChoice(pre) {
     m.innerHTML = `<div class="modal" style="width:440px"><div class="modal-head coral"><div><b>🔊 ${pre.missingLines} line${pre.missingLines === 1 ? '' : 's'} need audio</b><small>${pre.cachedLines} of ${pre.totalLines} lines are already voiced</small></div><span class="x">✕</span></div>
     <div class="modal-body">
       <p style="font-size:12.5px;color:#3c3763;margin-bottom:14px">Some narration hasn't been voiced yet. You can generate the missing audio now (so the story has sound everywhere), or leave those moments silent.</p>
-      <button class="btn btn-primary" id="ac-gen" style="width:100%;margin-bottom:8px" ${affordable ? '' : 'disabled'}>🎤 Generate the missing audio &nbsp;·&nbsp; up to ${pre.estCredits} credits</button>
+      <button class="btn btn-primary" id="ac-gen" style="width:100%;margin-bottom:8px" ${affordable ? '' : 'disabled'}>🎤 Generate the missing audio &nbsp;·&nbsp; ${pre.byok ? 'your provider account' : `up to ${pre.estCredits} credits`}</button>
       ${affordable ? '' : `<p style="font-size:11px;color:#d92e66;margin:-2px 0 8px">Not enough credits (you have ${pre.balance}). Ask your admin for a top-up, or render silent.</p>`}
       <button class="btn btn-soft" id="ac-silent" style="width:100%;margin-bottom:8px">🔇 Export now, leave those lines silent &nbsp;·&nbsp; free</button>
       <button class="btn btn-ghost" id="ac-cancel" style="width:100%">Cancel</button>
-      <p style="font-size:10.5px;color:var(--soft);margin-top:10px">You have ${pre.balance} credits. The estimate is a ceiling — you're billed only for what's actually generated, and already-voiced lines are always free.</p>
+      <p style="font-size:10.5px;color:var(--soft);margin-top:10px">${pre.byok ? 'Your provider bills your own account. No Vivarium credits are used.' : `You have ${pre.balance} credits.`} The estimate is a ceiling — you're billed only for what's actually generated, and already-voiced lines are always free.</p>
     </div></div>`;
     document.body.appendChild(m);
     const done = (v) => { m.remove(); resolve(v); };
@@ -3864,8 +3900,8 @@ async function accountModal() {
   const [{ user, spentToday }, { ledger }] = await Promise.all([api('/api/me'), api('/api/me/ledger')]);
   const m = document.createElement('div');
   m.className = 'modal-bg';
-  m.innerHTML = `<div class="modal"><div class="modal-head violet"><div><b>${esc(user.displayName)}</b><small>${esc(user.email)}</small></div><span class="x">✕</span></div>
-  <div class="modal-body">
+  m.innerHTML = `<div class="modal settings-dialog" role="dialog" aria-modal="true" aria-label="Settings"><div class="modal-head violet"><div><b>Settings</b> · ${esc(user.displayName)}<small>${esc(user.email)}</small></div><span class="x">✕</span></div>
+  <div class="settings-layout"><nav class="settings-nav" role="tablist" aria-label="Settings sections">${[['account','Account'],['ai','AI & models'],['voice','Voice & music'],['mic','Microphone'],['time','Time skips']].map(([id,label])=>`<button role="tab" id="settings-tab-${id}" aria-controls="settings-page-${id}" data-settings-tab="${id}" aria-selected="${id==='account'}">${label}</button>`).join('')}</nav><div class="modal-body settings-content"><section data-settings-page="account" id="settings-page-account" role="tabpanel" aria-labelledby="settings-tab-account">
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <div class="panel" style="flex:1;text-align:center"><div style="font-size:24px;font-weight:700;color:#a86f0d">🪙 ${user.credits}</div><small style="color:var(--soft)">credits</small></div>
       <div class="panel" style="flex:1;text-align:center"><div style="font-size:24px;font-weight:700">${(+spentToday).toFixed(1)}</div><small style="color:var(--soft)">spent today</small></div>
@@ -3876,7 +3912,7 @@ async function accountModal() {
         <span>${esc(l.reason)}${l.model ? ` <span style="color:var(--soft)">· ${esc(l.model)}</span>` : ''}</span>
         <b style="color:${l.credits < 0 ? '#d92e66' : '#0d9463'}">${l.credits > 0 ? '+' : ''}${(+l.credits).toFixed(2)}</b></div>`).join('') || '<small>No usage yet.</small>'}
     </div>
-    <div class="panel" style="margin-top:14px;padding:14px 16px">
+    </section><div class="panel" data-settings-page="voice" hidden style="margin-top:14px;padding:14px 16px">
       <b style="font-size:13px">🔊 Voice & narration</b>
       <div style="display:flex;flex-direction:column;gap:11px;margin-top:9px;font-size:12.5px">
         <label style="display:flex;align-items:center;gap:8px">Narrator voice
@@ -3911,13 +3947,16 @@ async function accountModal() {
           <input id="tp-custom" placeholder="e.g. slightly slower; a hint of a smile" value="${esc(ttsPrefs().custom)}" style="border:1px solid var(--line);border-radius:9px;padding:6px 10px"></label>
       </div>
     </div>
-    <div class="panel" style="margin-top:14px;padding:14px 16px">
+    <div class="panel" data-settings-page="ai" hidden style="margin-top:14px;padding:14px 16px">
+      <div id="byok-settings" style="margin-top:9px;font-size:12.5px">Loading…</div>
+    </div>
+    <div class="panel" data-settings-page="mic" hidden style="margin-top:14px;padding:14px 16px">
       <b style="font-size:13px">🎤 Microphone <span style="font-weight:400;color:var(--soft);font-size:11px">— for speaking instead of typing (the 🎙 buttons)</span></b>
       <div id="mic-settings" style="margin-top:9px;font-size:12.5px">Loading…</div>
     </div>
     <!-- Time-skip behaviour: whether big jumps play as a scene-by-scene film, and how much
          of the plan makes the cut (main plot only vs also side plots). See skipPrefs(). -->
-    <div class="panel" style="margin-top:14px;padding:14px 16px">
+    <div class="panel" data-settings-page="time" hidden style="margin-top:14px;padding:14px 16px">
       <b style="font-size:13px">⏭ Time skips</b>
       <div style="display:flex;flex-direction:column;gap:11px;margin-top:9px;font-size:12.5px">
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="sk-animate" ${skipPrefs().animate ? 'checked' : ''}> Animate big time skips as a scene-by-scene film (off = jump straight to the outcome)</label>
@@ -3930,11 +3969,24 @@ async function accountModal() {
       </div>
     </div>
     <button class="btn btn-ghost small" id="logout" style="margin-top:14px">Sign out</button>
-  </div></div>`;
+  </div></div></div>`;
   document.body.appendChild(m);
-  m.onclick = (e) => { if (e.target === m) m.remove(); };
-  $('.x', m).onclick = () => m.remove();
+  const previousFocus = document.activeElement;
+  const settingsTabs = [...m.querySelectorAll('[data-settings-tab]')];
+  const showSettingsPage = id => {
+    settingsTabs.forEach(t => { t.setAttribute('aria-selected', String(t.dataset.settingsTab === id)); t.tabIndex = t.dataset.settingsTab === id ? 0 : -1; });
+    m.querySelectorAll('[data-settings-page]').forEach(p => { p.hidden = p.dataset.settingsPage !== id; p.id = 'settings-page-'+p.dataset.settingsPage; p.setAttribute('role','tabpanel');p.setAttribute('aria-labelledby','settings-tab-'+p.dataset.settingsPage); });
+  };
+  settingsTabs.forEach((t,index) => { t.onclick = () => showSettingsPage(t.dataset.settingsTab); t.onkeydown = e => { if (!['ArrowDown','ArrowUp','ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const next=settingsTabs[(index+(['ArrowDown','ArrowRight'].includes(e.key)?1:settingsTabs.length-1))%settingsTabs.length];showSettingsPage(next.dataset.settingsTab);next.focus(); }; });
+  showSettingsPage('account'); settingsTabs[0].focus();
+  const closeSettings = () => { m.remove(); previousFocus?.focus(); };
+  m.addEventListener('keydown', e => { if(e.key==='Escape') closeSettings(); if(e.key==='Tab') { const nodes=[...m.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]')].filter(el=>el.getClientRects().length&&!el.disabled);const first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();} } });
+
+  m.onclick = (e) => { if (e.target === m) closeSettings(); };
+  $('.x', m).outerHTML = '<button class="x" type="button" aria-label="Close settings">✕</button>';
+  $('.x', m).onclick = closeSettings;
   renderMicSettings($('#mic-settings', m));
+  renderByokSettings($('#byok-settings', m));
   const savePrefs = () => {
     saveTtsPrefs({ narrator: $('#tp-narr', m).value, prepare: $('#tp-prepare', m).checked, autoplay: $('#tp-auto', m).checked, innerVoice: $('#tp-inner', m).checked, musicOn: $('#tp-music', m).checked, musicVol: (+$('#tp-musicvol', m).value) / 100, voiceVol: (+$('#tp-voicevol', m).value) / 100, voiceRate: (+$('#tp-voicerate', m).value) / 100, narratorStyle: $('#tp-narr-style', m).value, characterStyle: $('#tp-char-style', m).value, custom: $('#tp-custom', m).value });
     // apply live: volume ramps immediately; toggling off fades the score out, on resumes it

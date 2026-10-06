@@ -29,11 +29,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import fs from 'node:fs';
 import { db, pj } from './db.js';
-import { tts, getTtsProvider } from './providers.js';
+import { tts, getTtsProvider, hostedTtsCacheVoice } from './providers.js';
 import { preflight, debitCall, EST } from './credits.js';
 import { saveAsset, getAsset, assetPath, findCached } from './assets.js';
 import { logCall } from './telemetry.js';
 import { referenceFor } from './voice_profiles.js';
+import { currentPrincipal } from './byok.js';
+import { voiceFor } from './openrouter.js';
 
 const httpErr = (statusCode, code, message) => Object.assign(new Error(message), { statusCode, code });
 
@@ -50,27 +52,11 @@ const httpErr = (statusCode, code, message) => Object.assign(new Error(message),
 // recasting a character still regenerates (candidates change with the voice),
 // while provider flips and style-template evolution reuse the stored audio.
 export function findReusableAudio({ text, voice, characterId = null }) {
-  const cands = [];
-  let vname = voice;
-  if (characterId) {
-    const c = db.prepare('SELECT voice, voice_ref_asset_id FROM characters WHERE id=?').get(characterId);
-    if (c) {
-      vname = c.voice || voice;
-      if (c.voice_ref_asset_id) cands.push(`laionbox:${c.voice_ref_asset_id}`);
-    }
-  }
-  if (vname) {
-    cands.push(vname);                                                   // gemini key
-    const profTok = referenceFor(vname, 'en').cacheToken.replace(/:[a-z]{2}$/, '');
-    cands.push(`laionbox:${profTok}:%`);                                 // profile key, any language
-  }
-  if (!cands.length) return null;
-  const conds = [], args = [String(text)];
-  for (const cd of cands) {
-    conds.push(cd.endsWith('%') ? `json_extract(meta,'$.voice') LIKE ?` : `json_extract(meta,'$.voice')=?`);
-    args.push(cd);
-  }
-  return db.prepare(`SELECT * FROM assets WHERE kind='audio' AND json_extract(meta,'$.text')=? AND (${conds.join(' OR ')}) ORDER BY created_at DESC LIMIT 1`).get(...args) || null;
+  // Attached clips remain playable, but new requests obey the selected model and user.
+  const p = currentPrincipal();
+  if (!p?.id || getTtsProvider() === 'laionbox') return null;
+  const token = hostedTtsCacheVoice(voice);
+  return db.prepare("SELECT * FROM assets WHERE user_id=? AND kind='audio' AND json_extract(meta,'$.text')=? AND json_extract(meta,'$.voice')=? ORDER BY created_at DESC LIMIT 1").get(p.id, String(text), token) || null;
 }
 
 // Synthesise (or fetch from cache) one line of speech for `user`.
@@ -78,10 +64,15 @@ export function findReusableAudio({ text, voice, characterId = null }) {
 export async function synthesizeLine(user, { text, voice = 'Sulafat', style = '', characterId = null, lang = 'en', surface = 'tts' }) {
   if (!text) throw httpErr(400, 'NO_TEXT', 'Nothing to say.');
   const provider = getTtsProvider();
+  // BYOK: the player's own OpenRouter key + chosen TTS model/voice (server/byok.js).
+  // No reference clips are involved — the voice is the model's, mapped deterministically
+  // from the character's canonical (Gemini) voice so the cast stays distinguishable.
+  const principal = currentPrincipal();
+  const byok = !!(principal?.byok && principal.prefs?.models?.tts);
 
   // resolve the LAIONBox reference clip (language-aware; see header comment)
   let referenceB64 = null, cacheToken = null;
-  if (provider === 'laionbox') {
+  if (!byok && provider === 'laionbox') {
     let speakerVoice = voice;                       // narrator default: the requested voice name
     if (characterId) {
       const c = db.prepare(`SELECT c.* FROM characters c JOIN worlds w ON w.id=c.world_id WHERE c.id=? AND w.user_id=?`).get(characterId, user.id);
@@ -100,7 +91,7 @@ export async function synthesizeLine(user, { text, voice = 'Sulafat', style = ''
     }
   }
 
-  const cacheVoice = provider === 'laionbox' ? `laionbox:${cacheToken}` : voice;
+  const cacheVoice = provider === 'laionbox' ? `${user.id}:laionbox:${cacheToken}` : hostedTtsCacheVoice(voice);
   // FULL string, never truncated: long styles (~500 chars) once pushed the text clean out of
   // a sliced key, making ALL same-style narrator lines share one cached clip across worlds
   // (the "wrong world's audio plays" bug). SQLite TEXT is unbounded; exact match is cheap.
@@ -118,7 +109,7 @@ export async function synthesizeLine(user, { text, voice = 'Sulafat', style = ''
   const res = await tts(String(text).slice(0, 600), { voice, style, referenceB64 });
   const genMs = Date.now() - t0;
   debitCall(user.id, res, 'tts');
-  const a = saveAsset({ userId: user.id, kind: 'audio', prompt: cacheKey, buffer: res.buffer, mime: 'audio/mpeg', meta: { seconds: res.meter?.seconds, genMs, voice: cacheVoice, style, text, speaker: characterId || 'narrator', lang } });
-  logCall({ userId: user.id, kind: 'tts', surface, request: { text, voice: cacheVoice, style, provider }, response: { seconds: res.meter?.seconds }, assetId: a.id, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.meter });
+  const a = saveAsset({ userId: user.id, kind: 'audio', prompt: cacheKey, buffer: res.buffer, mime: res.mime || 'audio/mpeg', meta: { seconds: res.meter?.seconds, genMs, voice: cacheVoice, style, text, speaker: characterId || 'narrator', lang, provider: res.provider, model: res.model } });
+  logCall({ userId: user.id, kind: 'tts', surface, request: { text, voice: cacheVoice, style, provider: res.provider }, response: { seconds: res.meter?.seconds }, assetId: a.id, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.meter, meta: res.byok ? { byok: true } : undefined });
   return { assetId: a.id, cached: false, genMs, seconds: res.meter?.seconds ?? null };
 }

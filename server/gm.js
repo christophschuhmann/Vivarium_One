@@ -175,7 +175,7 @@ export async function generatePortrait(user, world, { name, appearance, outfit, 
   }
   const img = await genImage(prompt, { aspect: '2:3', refs });
   debitCall(user.id, img, 'image_gen', { worldId: world.id });
-  const portrait = saveAsset({ userId: user.id, worldId: world.id, kind: 'portrait', ownerRef, prompt, buffer: img.buffer, mime: 'image/png', meta: { outfitName } });
+  const portrait = saveAsset({ userId: user.id, worldId: world.id, kind: 'portrait', ownerRef, prompt, buffer: img.buffer, mime: img.mime || 'image/png', meta: { outfitName } });
   let cutout = null;
   try {
     const cut = await matte(img.buffer);
@@ -190,7 +190,7 @@ export async function generateBackground(user, world, location) {
   const prompt = `${location.name}${location.description ? ' — ' + location.description : ''}${LOC_SUFFIX}`;
   const img = await genImage(prompt, { aspect: '16:9' });
   debitCall(user.id, img, 'image_gen', { worldId: world.id });
-  const bg = saveAsset({ userId: user.id, worldId: world.id, kind: 'background', ownerRef: location.id, prompt, buffer: img.buffer, mime: 'image/png' });
+  const bg = saveAsset({ userId: user.id, worldId: world.id, kind: 'background', ownerRef: location.id, prompt, buffer: img.buffer, mime: img.mime || 'image/png' });
   db.prepare('UPDATE locations SET background_asset_id=? WHERE id=?').run(bg.id, location.id);
   logCall({ userId: user.id, worldId: world.id, kind: 'image', surface: 'background', request: { prompt, aspect: '16:9' }, assetId: bg.id, provider: img.provider, model: img.model, rawUsd: img.rawUsd, meter: img.meter });
   return bg;

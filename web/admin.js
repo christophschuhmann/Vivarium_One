@@ -96,7 +96,7 @@ async function users() {
     const { users } = await api('/admin/api/users?q=' + encodeURIComponent(q));
     $('#u-table').innerHTML = `<table><tr><th>User</th><th>Status</th><th>Credits</th><th>Daily cap</th><th>Lifetime spend</th><th>Worlds</th><th>Actions</th></tr>
       ${users.map(u => `<tr data-id="${u.id}">
-        <td><b>${esc(u.displayName)}</b><br><small style="color:var(--soft)">${esc(u.email)}${u.role === 'admin' ? ' · <b style="color:#a86f0d">admin</b>' : ''}</small></td>
+        <td><b>${esc(u.displayName)}</b><br><small style="color:var(--soft)">${esc(u.email)}${u.role === 'admin' ? ' · <b style="color:#a86f0d">admin</b>' : ''}${u.byok ? ' · <b style="color:#0d9463" title="Runs on their own OpenRouter key — no credits spent">🔑 BYOK</b>' : ''}</small></td>
         <td>${u.status === 'active' ? (u.verified ? '<span class="tag t">active</span>' : '<span class="tag g">unverified</span>') : '<span class="tag c">suspended</span>'}</td>
         <td><b>${u.credits.toFixed(1)}</b></td><td>${u.dailyCap}</td><td>${u.lifetimeSpend.toFixed(1)}</td><td>${u.worlds}</td>
         <td style="white-space:nowrap">
@@ -235,8 +235,8 @@ async function dataExplorerModal(userId, u) {
 }
 
 async function models() {
-  const { routes, ttsProvider } = await api('/admin/api/model-routes');
-  const providers = (await api('/admin/api/providers')).providers;
+  const { routes, ttsProvider, byok, byokUsers } = await api('/admin/api/model-routes');
+
   // provider-aware reasoning-LLM presets (model + endpoint + key env + est. costs)
   const LLM_PRESETS = [
     { p: 'HyprLab', m: 'glm-5.2', base: 'https://api.hyprlab.io/v1', ke: 'HYPRLAB_API_KEY', cost: { in_per_mtok: 0.7, out_per_mtok: 2.2 } },
@@ -247,9 +247,7 @@ async function models() {
     { p: 'Cerebras', label: 'gpt-oss-120b', m: 'gpt-oss-120b', base: 'https://api.cerebras.ai/v1', ke: 'CEREBRAS_API_KEY', cost: { in_per_mtok: 0.25, out_per_mtok: 0.69 } },
   ];
   $('#tabc').innerHTML = `
-    <!-- TTS engine switch: Gemini (prebuilt voices) vs LAIONBox (self-hosted voice cloning).
-         Switching to LAIONBox health-probes the box first (server-side) and changes the whole
-         player experience: characters then need reference-voice clips instead of voice names. -->
+    <div id="admin-provider-studio"></div><details class="admin-advanced"><summary>Advanced routes & self-hosted speech</summary>
     <div class="panel" style="margin-bottom:14px"><b style="font-size:14px">🔊 TTS engine</b>
       <p style="font-size:12px;color:var(--soft)">Which speech engine the game uses. <b>Gemini</b>: 30 prebuilt voices, hosted. <b>LAIONBox</b>: self-hosted expressive voice-acting model — every character gets a <i>cloned reference voice</i> (generated from a description or uploaded by the player); lines run raw → Chatterbox voice-conversion → Sidon restoration.</p>
       <div style="display:flex;gap:9px;margin-top:8px">
@@ -271,7 +269,7 @@ async function models() {
         ${LLM_PRESETS.filter(p => p.p === prov).map(p => `<button class="btn btn-soft small" data-preset='${JSON.stringify(p)}' style="padding:3px 10px;font-size:11.5px">${p.label || p.m}</button>`).join('')}
       </div>`).join('')}
     </div>
-    <table style="margin-top:8px"><tr><th>Role</th><th>Model</th><th>Base URL</th><th>Key (env)</th><th>Unit costs</th><th>On</th><th></th></tr>
+    <div class="admin-route-scroll"><table style="margin-top:8px"><tr><th>Role</th><th>Model</th><th>Base URL</th><th>Key (env)</th><th>Unit costs</th><th>On</th><th></th></tr>
     ${routes.map(r => `<tr data-role="${r.role}">
       <td><b>${esc(r.role)}</b></td>
       <td><input value="${esc(r.model)}" data-f="model" style="width:150px;border:1px solid var(--line);border-radius:8px;padding:4px 8px"></td>
@@ -279,22 +277,10 @@ async function models() {
       <td><input value="${esc(r.key_env || '')}" data-f="keyenv" style="width:150px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-family:monospace;font-size:11px"></td>
       <td><input value='${esc(JSON.stringify(r.unit_cost))}' data-f="cost" style="width:190px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-family:monospace;font-size:11px"></td>
       <td><input type="checkbox" ${r.enabled ? 'checked' : ''} data-f="on"></td>
-      <td><button class="btn btn-soft small" data-save>Save</button></td></tr>`).join('')}</table></div>
+      <td><button class="btn btn-soft small" data-save>Save</button></td></tr>`).join('')}</table></div></div>
 
-    <!-- API-KEY / PROVIDER STATUS — which provider keys are loaded into the server (masked). -->
-    <div class="panel" style="margin-top:14px"><b style="font-size:14px">🔑 API keys &amp; providers</b>
-    <p style="font-size:12px;color:var(--soft)">Which provider credentials are loaded into the server. Keys live only in the server environment (<code>.env</code>, referenced by name) — never in the database or the browser. Shown masked so you can confirm the right key without exposing it.</p>
-    <table style="margin-top:8px"><tr><th>Provider</th><th>Env var</th><th>Status</th><th>Key</th><th>Base URL</th><th>Used by</th></tr>
-    ${providers.map(p => `<tr>
-      <td><b>${esc(p.label)}</b>${p.note ? `<div style="font-size:10.5px;color:var(--soft)">${esc(p.note)}</div>` : ''}</td>
-      <td style="font-family:monospace;font-size:11px">${esc(p.key_env)}</td>
-      <td>${p.configured ? '<span style="color:#16a34a;font-weight:700">● loaded</span>' : '<span style="color:#dc2626;font-weight:700">○ missing</span>'}</td>
-      <td style="font-family:monospace;font-size:11px">${p.masked ? esc(p.masked) : '—'}</td>
-      <td style="font-size:11px;color:var(--soft)">${esc(p.base_url || '—')}</td>
-      <td style="font-size:11px;color:var(--soft)">${p.roles.length ? esc(p.roles.join(', ')) : '—'}</td>
-    </tr>`).join('')}</table>
-    <p style="font-size:11px;color:var(--soft);margin-top:8px">To add or change a key, set its env var in the server's <code>.env</code> and restart. A “missing” key means any route using it will fail until it's provided.</p>
-    </div>`;
+    </details>`;
+  await window.VivariumProviders.mount($('#admin-provider-studio'), { admin:true, api, esc, toast });
   // LLM presets: fill the reasoning_llm row (model + endpoint + key env + costs) and save.
   $$('#tabc [data-preset]').forEach(b => b.onclick = async () => {
     const tr = $('#tabc tr[data-role="reasoning_llm"]');
@@ -309,6 +295,14 @@ async function models() {
         model: p.m, baseUrl: p.base, keyEnv: p.ke, unitCost: p.cost, enabled: $('[data-f=on]', tr).checked } });
       toast('LLM → ' + (p.label || p.m) + ' (' + p.p + ')', 'gold');
       models();   // refresh so the key-status panel reflects the new provider
+    } catch (e) { fail(e); }
+  });
+  // BYOK policy switch (fleet-wide allow/deny player-supplied OpenRouter keys)
+  $$('#tabc [data-byok]').forEach(b => b.onclick = async () => {
+    try {
+      const r = await api('/admin/api/byok', { method: 'PATCH', body: { enabled: b.dataset.byok === 'on' } });
+      toast('Player-supplied keys: ' + (r.byok.enabled ? 'allowed' : 'disabled'), 'gold');
+      models();
     } catch (e) { fail(e); }
   });
   // provider switch — server validates LAIONBox health before accepting

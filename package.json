@@ -9,6 +9,7 @@
     "start:plain": "node server/index.js",
     "seed": "node --env-file=.env scripts/seed_demo.js",
     "reset-demo": "node --env-file=.env scripts/reset_demo.js",
+    "test:providers": "node scripts/test-providers.mjs",
     "test:e2e": "node e2e/io_features.cjs && node e2e/timetravel.cjs && node e2e/scene.cjs"
   },
   "license": "MIT",

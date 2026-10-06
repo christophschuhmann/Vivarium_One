@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Vivarium × Living World · Implementierungsplan</title>
+<style>
+:root{--ink:#23382f;--muted:#617168;--paper:#f4f1e8;--card:#fffdf7;--line:#d7dfd2;--green:#245d48;--mint:#e4eee1;--gold:#c69445;--violet:#675596}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:var(--green);text-underline-offset:3px}a:hover{color:var(--violet)}header{padding:64px max(24px,calc((100vw - 1160px)/2));background:var(--green);color:#fffdf4}header p{max-width:810px;color:#e4ecdf;font-size:19px}h1{font:600 clamp(36px,5vw,66px)/1.12 Georgia,serif;margin:18px 0}h2{font:600 32px/1.22 Georgia,serif;margin:0 0 20px}h3{font-size:20px;line-height:1.35;margin:25px 0 10px}h4{font-size:17px;margin:20px 0 8px}p{margin:12px 0}.eyebrow{font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700}.pill{display:inline-block;border:1px solid #95b69e;border-radius:30px;padding:6px 12px;font-size:12px;margin:3px 6px 3px 0}.layout{max-width:1210px;margin:auto;display:grid;grid-template-columns:225px minmax(0,1fr);gap:35px;padding:32px 24px}nav{align-self:start;position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto;font-size:13px}nav a{display:block;text-decoration:none;padding:7px 9px;border-left:2px solid var(--line)}nav a:hover{background:var(--mint);border-color:var(--green)}main{min-width:0}section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:30px;margin-bottom:24px;box-shadow:0 4px 16px #253a3010}.intro{font-size:18px}.note{padding:16px 20px;border-left:4px solid var(--gold);background:#f8f0df;border-radius:0 10px 10px 0}.good{border-color:var(--green);background:var(--mint)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{padding:18px;border:1px solid var(--line);border-radius:12px;background:#f8faf4}.card h3{margin-top:0}.metric{font-size:32px;font-family:Georgia,serif;color:var(--green);display:block}.small,figcaption{font-size:13px;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;background:var(--mint);font-size:12px;letter-spacing:.3px}td,th{padding:12px 10px;vertical-align:top;border-bottom:1px solid var(--line)}.table-wrap{overflow:auto;margin:16px 0}code{font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;background:#edf1e7;border-radius:4px;padding:2px 5px;overflow-wrap:anywhere}pre{background:#19332a;color:#e8f1e1;padding:20px;border-radius:12px;overflow:auto;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}pre code{background:none;padding:0;color:inherit;overflow-wrap:normal}ul,ol{padding-left:23px}li{margin:8px 0}.flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;margin:20px 0}.flow .box{flex:1;min-width:125px;padding:16px 12px;background:var(--mint);border:1px solid #bbcfb7;border-radius:10px;text-align:center;font-size:13px}.flow .arrow{align-self:center;color:var(--green);font-size:24px}.flow .accent{background:#eee8f7;border-color:#c7b7df}.tree{font:14px/1.7 ui-monospace,monospace;border-left:3px solid var(--green);padding:12px 18px;background:#edf2e8}.tree div{padding-left:20px}.tree .l2{padding-left:40px}.tree .l3{padding-left:60px}.tree .l4{padding-left:80px}.step{border-left:2px solid #acc7aa;padding:1px 0 14px 20px;margin-left:7px}.step b{color:var(--green)}details{margin:14px 0;border:1px solid var(--line);border-radius:10px;padding:12px 16px}summary{cursor:pointer;font-weight:650}button{font:inherit;cursor:pointer;border:1px solid #b6c8b0;border-radius:9px;background:var(--mint);color:var(--green);padding:9px 16px}button.active,button:hover{background:var(--green);color:white}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.controls{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.controls label{display:block;flex:1;min-width:190px;background:var(--mint);border-radius:10px;padding:12px}input[type=range]{display:block;width:100%;accent-color:var(--green);margin:14px 0 5px}.demo-world{display:grid;grid-template-columns:1fr 1fr;gap:10px}.actor{border:1px solid var(--line);border-radius:9px;padding:12px;font-size:14px}.actor.llm{border-color:#bba5d4;background:#f0e9fa}.actor.player{border-color:#e0b769;background:#fff3da}.actor span{display:block;font-size:12px;color:var(--muted)}footer{padding:20px 0 50px;color:var(--muted);font-size:13px}.print-button{background:transparent;color:#fffdf4;border-color:#a9c2ad}header a{color:#fffdf4}.tags{font-size:12px;color:var(--muted)}@media(max-width:950px){.layout{grid-template-columns:1fr;gap:18px}nav{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:5px}nav a{border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12px}}@media(max-width:620px){header{padding:34px 20px}.layout{padding:20px 12px}section{padding:22px 17px}h2{font-size:27px}.grid,.demo-world{grid-template-columns:1fr}td,th{min-width:150px}pre{padding:14px;font-size:11px}.tree{font-size:11px}.tree .l4{padding-left:38px}}@media print{nav,.print-button,.controls{display:none}header{background:white;color:var(--ink);padding:20px}header p,header a{color:var(--ink)}.layout{display:block;padding:0}section{box-shadow:none;break-inside:auto;border-radius:0;margin:10px 0;padding:20px}body{background:white;font-size:11pt}pre{white-space:pre-wrap;background:#f3f5ef;color:#19332a}a{color:var(--ink)}h2,h3{break-after:avoid}}
+</style>
+</head>
+<body>
+<header>
+<div class="eyebrow">Technischer Entwurf · 5. Oktober 2026 · für das vorhandene Repository</div>
+<h1>Eine Stadt, die weiterlebt.<br>Im Stil von Vivarium.</h1>
+<p>Hunderte eigenständige Schauplätze, prozedurales Alltagsleben und gezielte Sprachmodell-Szenen. Der Spieler bestimmt, wann fünf Minuten vergehen. Die Welt behält ihre Menschen, ihre Erinnerungen und ihre Konsequenzen.</p>
+<span class="pill">Illustrationen statt Pixelart</span><span class="pill">Schrittweise Zeit</span><span class="pill">Eine verbindliche Welthistorie</span><span class="pill">Wiederverwendbare Bildbibliothek</span>
+<p><button class="print-button" id="print-plan">Drucken / als PDF speichern</button></p>
+</header>
+<div class="layout">
+<nav aria-label="Inhaltsverzeichnis">
+<a href="#entscheidung">01 · Ziel &amp; Architekturentscheidung</a><a href="#betrieb">02 · Vivarium läuft</a><a href="#quellen">03 · Befund aus PDFs &amp; Code</a><a href="#architektur">04 · Systemarchitektur</a><a href="#orte">05 · Straßen, Häuser, Räume</a><a href="#assets">06 · Bild- &amp; Figurenbibliothek</a><a href="#regeln">07 · Prozedurales Leben</a><a href="#felder">08 · Aufmerksamkeit &amp; LLM</a><a href="#zeitschritt">09 · Fünf Minuten vorwärts</a><a href="#gedaechtnis">10 · Erinnerung &amp; Wissen</a><a href="#daten">11 · Daten &amp; Zeitreisen</a><a href="#api">12 · API &amp; Worker-Vertrag</a><a href="#oberflaeche">13 · Oberfläche &amp; Bewegung</a><a href="#migration">14 · Eingriffe im Repository</a><a href="#phasen">15 · Umsetzungsphasen</a><a href="#tests">16 · Abnahmetests</a><a href="#kosten">17 · Kosten &amp; Skalierung</a><a href="#risiken">18 · Entscheidungen &amp; Grenzen</a><a href="#referenzen">19 · Quellen &amp; Einstieg</a>
+</nav>
+<main>
+<section id="entscheidung">
+<div class="eyebrow">01 / Empfehlung</div><h2>Vivarium als Bühne, OpenSims als Ausgangspunkt für den Alltag, LWM als verbindender Vertrag.</h2>
+<p class="intro">Ich würde das bestehende Vivarium um einen ereignisgesteuerten Simulationskern erweitern. Normale Bewohner handeln nach Bedürfnissen, Terminen und Möglichkeiten. Der Spieler, ausgewählte wichtige NPCs und ihre tatsächlichen Interaktionspartner erhalten Sprachmodell-Aufmerksamkeit. Alle Änderungen landen im selben versionierten Ereignisprotokoll.</p>
+<div class="grid"><div class="card"><h3>So spielt es sich</h3><p>Du betrittst die Lindenstraße, öffnest Haus 12 und wechselst ins Wohnzimmer. Du sprichst als dein Charakter mit Lea und klickst auf <b>„+5 Minuten“</b>. Anderswo gehen Bewohner essen, arbeiten oder schlafen. In deiner Szene reagieren Lea und anwesende Figuren auf deine Handlung; ein angerufener Freund wird ebenfalls einbezogen.</p></div><div class="card"><h3>Was die Welt zusammenhält</h3><p>Personen, Möbel, Räume und Gespräche besitzen stabile IDs. Ein Wechsel zwischen prozeduraler Steuerung und Sprachmodell-Steuerung erhält dieselbe Identität, laufende Aktion, Reservierung und Erinnerung. Ein Bildwechsel verändert ausschließlich die Darstellung.</p></div></div>
+<div class="note good"><b>Der erste Ausbau ist rundenbasiert.</b> Ohne Spielerauftrag bleibt die Spielzeit stehen. Während der Wiedergabe können Figuren weich animiert werden; diese Animation erzeugt keine zusätzliche Weltzeit. Ein späterer Echtzeitmodus kann dieselben Verträge verwenden.</div>
+<p class="small">Status dieses Dokuments: geprüfter Ist-Zustand plus Implementierungsentwurf. Die beschriebene Hybrid-Simulation ist noch nicht in Vivarium eingebaut. Ausgeführte Prüfungen sind in Abschnitt 02 und 16 ausdrücklich markiert.</p>
+</section>
+
+<section id="betrieb">
+<div class="eyebrow">02 / Laufender Stand</div><h2>Das vorhandene Vivarium ist erreichbar und spielbar.</h2>
+<p>Eine bestehende Node-Instanz läuft bereits aus <code>/storage/spirit-zfs/vivarium</code> auf Port <code>8890</code>. Ihr Start liegt nach den geprüften Änderungen der zentralen Servermodule. Die Instanz wurde weiterverwendet; die bestehenden Welten wurden für den Funktionstest nicht weitergeschaltet.</p>
+<div class="table-wrap"><table><thead><tr><th>Zugang</th><th>Adresse / Details</th></tr></thead><tbody>
+<tr><td>Spiel lokal</td><td><a href="http://localhost:8890/">http://localhost:8890/</a> – auf dem Rechner, auf dem der Server läuft.</td></tr>
+<tr><td>Bereits vorhandener Browserzugang</td><td><a href="https://size-provisions-slowly-purchasing.trycloudflare.com/">Vivarium über den bestehenden Tunnel öffnen</a>. Beim Test HTTP 200; eine temporäre Tunneladresse kann später wechseln.</td></tr>
+<tr><td>Demo-Anmeldung</td><td><code>demo@vivarium.local</code> / <code>alice-and-bob</code></td></tr>
+<tr><td>Admin-Oberfläche</td><td><a href="http://localhost:8890/admin">/admin</a>; Anmeldung und Übersicht im Browser geprüft.</td></tr>
+<tr><td>Startbefehl für einen späteren Neustart</td><td><code>bash scripts/start-local.sh</code>, ausgeführt im Projektverzeichnis. Läuft im Vordergrund. Nur verwenden, wenn die bisherige Instanz beendet ist oder einen anderen Port wählen.</td></tr>
+<tr><td>Node in dieser Umgebung</td><td><code>/tmp/vivrun/node-v22.17.1-linux-x64/bin/node</code>, Version 22.17.1. Der Starthelfer findet diese vorhandene Runtime, falls Node nicht im PATH liegt. Für einen dauerhaften Betriebsdienst sollte Node regulär installiert werden.</td></tr>
+</tbody></table></div>
+<h3>Was tatsächlich geprüft wurde</h3>
+<ul><li>Spielseite und bestehender Tunnel antworten mit HTTP 200.</li><li>Demo-Login; drei sichtbare Demo-Welten; „Alice &amp; Bob“ bei Tick 42 mit geladenen Figurensprites und gespeicherter Szene.</li><li>Atlas, Wechsel zurück zur Bühne, mobile Ansicht mit 390 × 844 Pixeln; Dokumentbreite 390 Pixel, kein horizontaler Seitenüberlauf.</li><li>Admin-Login und Übersicht; keine JavaScript-Ausnahmen im durchgeführten Browserdurchlauf.</li><li>Ein echter Sprachmodell-Schritt <code>+5m</code> auf einer konsistenten Kopie der Vivarium-Datenbank: Tick 42 → 43, SSE-Ereignisse <code>tick</code> und <code>done</code>, rund 27 Sekunden. Der reale Modellaufruf verwendet die vorhandene Provider-Konfiguration.</li><li>Beim Öffnen der bestehenden Bühne hat deren automatische Sprachvorbereitung neun TTS-Aufrufe ausgelöst; diese sind im vorhandenen Providerprotokoll erfasst. Bildgenerierung wurde nicht angestoßen. Die ursprünglichen Demo-Welten blieben bei ihren bisherigen Tickständen.</li></ul>
+<p>Der Starthelfer ergänzt lediglich die Runtime-Suche und wurde mit der isolierten Datenbank auf einem separaten Port gestartet. Bestehende lokale Änderungen an Server und Oberfläche sowie die <code>.env</code> wurden nicht umgeschrieben. Login erzeugt reguläre Sitzungen und aktualisiert den Aktivitätszeitpunkt; automatisch vorbereitetes Audio ergänzt den Mediencache und die Verbrauchsdaten. Die bestehenden Geschichten wurden nicht fortgesetzt oder zurückgesetzt.</p>
+<p class="small">Die mobile Ansicht ist technisch erreichbar und bleibt innerhalb der Seitenbreite. In der vorhandenen Bühne stehen mehrere Portraits und Sprechblasen auf kleinen Bildschirmen dicht beieinander; die im Plan vorgesehene Teilnehmerliste und Dialogansicht sollen das verbessern.</p>
+</section>
+
+<section id="quellen">
+<div class="eyebrow">03 / Analyse</div><h2>Was schon vorhanden ist – und was wirklich neu gebaut werden muss.</h2>
+<p>Beide bereitgestellten PDFs wurden vollständig als Text ausgewertet: <a href="Living_World_Model_Technical_Report%20%284%29.pdf">Living World Model</a>, 32 Seiten, und <a href="Procedural_Living_Worlds_Whitepaper%20%281%29.pdf">Procedural Living Worlds</a>, 40 Seiten. Zusätzlich wurden Vivariums Implementierung und der OpenSims-Quellstand <code>c968251faffb99e012af4795902ef643802f14d5</code> geprüft.</p>
+<div class="table-wrap"><table><thead><tr><th>Quelle</th><th>Übernehmen</th><th>Konsequenz für Vivarium</th></tr></thead><tbody>
+<tr><td>LWM, §§3–5, S. 5–10</td><td>Stabile Identität; Beats und geordnete Changes; Tatsachen, Wahrnehmung, Erinnerung und Überzeugung unterscheiden.</td><td>Neue strukturierte Ereignis- und Evidenzdaten ergänzen freie Figurenattribute und Textzusammenfassungen.</td></tr>
+<tr><td>LWM, §§6–11, S. 11–21</td><td>Aufmerksamkeit nach Kontakt und Kausalität; getrennte Detaildimensionen; sichere Grenzen und Zuständigkeit.</td><td>Ein Telefonat kann ein entferntes Gegenüber aktivieren. Ein gesamter Stadtteil muss dadurch keine LLM-Szene werden.</td></tr>
+<tr><td>LWM, §§12–15, S. 22–29</td><td>Hintergrundleben; Ergänzen von Detail innerhalb bestehender Fakten; Erzähler nur mit begrenzter Autorität.</td><td>Vergangenheit darf bei einer Begegnung nicht neu erfunden werden. Ein Meta-Erzähler wird erst nach stabiler lokaler Simulation ergänzt.</td></tr>
+<tr><td>PLW, §§2–7 und A1–A8</td><td>Komponenten, Bedürfnisse, Handlungsketten, Affordanzen, Reservierungen, nachvollziehbare Zufallsentscheidungen.</td><td>Alltag funktioniert ohne Modellaufruf; die Auswahl einer Tätigkeit ist getrennt von ihrer physischen Durchführung.</td></tr>
+<tr><td>PLW, B1–B4 und E1–E2</td><td>Nur fällige Ereignisse berechnen; dieselbe Engine für UI und Headless-Test; vollständiger Übergabevertrag.</td><td>Kein Vollscan aller Figuren pro Renderframe. Ein Steuerungswechsel unterbricht keine bereits bezahlte oder reservierte Handlung.</td></tr>
+<tr><td>PLW, C und D</td><td>Messbare Skalierung; separate Entwicklungswerkstatt mit versionierten Regeln.</td><td>Die Kapazitätszahlen im PDF sind Planannahmen. Eine selbstverändernde Agentenwerkstatt gehört in einen späteren, isolierten Ausbau.</td></tr>
+</tbody></table></div>
+<h3>Vivariums Ausgangslage</h3>
+<p><code>server/gm.js → runTickInner()</code> lädt derzeit den gesamten aktiven Cast, die Locations, Beziehungen und Historie in den GM-Kontext. Ein Modellaufruf schlägt Figurenänderungen und die Erzählung vor. Danach werden gültige IDs und einzelne Werte geprüft und in die Datenbank geschrieben. Das ist für kleine Geschichten brauchbar, aber für 500 Bewohner und 570 Orte kein passender Hauptpfad.</p>
+<p><code>locations.place_group</code> gruppiert Orte bereits locker. Es fehlt eine belastbare Elternhierarchie und eine Trennung von Kartendarstellung, Navigation und Gebäudezugang. <code>paths</code> besitzen bisher keine verbindliche Reisedauer oder Türbedingungen. Die Bühne verteilt vorhandene Figurenillustrationen auf feste Bildschirmpositionen; eine Raumgeometrie mit Möbeln, Wegen und Interaktionspunkten fehlt.</p>
+<p>Wiederverwendung lohnt sich bei Authentifizierung, Provider-Routing/BYOK, Credits, Medienablage, Atlas, Bühne, Timeline, TTS und Export. Der neue Kern braucht hingegen einen zusammenhängenden Transaktionsabschluss: Im geprüften GM-Pfad werden Figuren, Beziehungen, Tick und Uhr in mehreren Statements geschrieben. Für den neuen Hybridpfad gehören diese Projektionen zusammen mit Ledger und Warteschlange in eine Transaktion.</p>
+<h3>OpenSims: geprüfte Bausteine</h3>
+<p>Die <a href="https://github.com/LAION-AI/open-sims/blob/c968251faffb99e012af4795902ef643802f14d5/living_world/engine.py">Python-Engine</a> hat bereits Scheduler, Bedürfnisse, Handlungslaufzeiten, Reservierungen, prozedurale Sozialinteraktionen, <code>perspective()</code>, <code>transfer()</code> und <code>submit_intent()</code>. Die <a href="https://github.com/LAION-AI/open-sims/blob/c968251faffb99e012af4795902ef643802f14d5/living_world/ledger.py">BeatStore-Implementierung</a> kann geordnete Komponentenänderungen wiedergeben und Checkpoints speichern. Der bestehende Bridge-Vertrag kennt Versions- und Ownership-Epoch-Prüfungen.</p>
+<p>Ein isolierter Lauf des Originalkerns mit Seed 73 und <code>neighborhood-v1</code> ergab 54 Bewohner, 667 Objekte, 173 verarbeitete Scheduler-Ereignisse in fünf Spielminuten, etwa 836 ms reine <code>advance(300)</code>-Zeit, keine gemeldeten Invariantenfehler und identischen Replay-Zustand. Das ist ein einzelner kleiner Funktionstest, kein Belastungsbenchmark.</p>
+<div class="note"><b>Wichtige Integrationsgrenze:</b> OpenSims implementiert noch keine vollständigen LWM-Fields, Watermarks oder verteilte Merge-/Split-Protokolle. Seine Haus-/Stadtgeneratoren sind teilweise separate Werkstätten, nicht automatisch mit dem bewohnten Laufzeitmodell verbunden. Die eigene Pixelart-Oberfläche wird für diesen Ausbau nicht benötigt. Die Einschränkungen sind in <a href="https://github.com/LAION-AI/open-sims/blob/c968251faffb99e012af4795902ef643802f14d5/docs/architecture.md">OpenSims’ Architekturvertrag</a> dokumentiert.</div>
+</section>
+
+<section id="architektur">
+<div class="eyebrow">04 / Bauplan</div><h2>Ein zentraler Koordinator nimmt alle Weltänderungen an.</h2>
+<div class="flow" aria-label="Systemablauf"><div class="box">Spielerauftrag<br><b>+5 Minuten / Handlung</b></div><div class="arrow">→</div><div class="box">Node-Koordinator<br><b>Zeit · Fokus · Budget</b></div><div class="arrow">→</div><div class="box accent">Python-Regelkern<br>+ Figuren-LLM</div><div class="arrow">→</div><div class="box">Validierung + SQLite<br><b>Beats · Zustand · Outbox</b></div><div class="arrow">→</div><div class="box">Vivarium-Bühne<br>Text · Bild · Ton</div></div>
+<p><b>Empfehlung für den ersten Ausbau:</b> Fastify und SQLite behalten. OpenSims’ Python-Kern hinter einem lokalen, versionierten Worker-Protokoll adaptieren. Ein Node-Koordinator ist der einzige dauerhafte Schreiber des Vivarium-Spielzustands. Python verarbeitet einen versionierten Snapshot in einer privaten Arbeitskopie und liefert Vorschläge, Event-Traces und einen Fortsetzungscheckpoint zurück.</p>
+<p>Damit müssen nicht sofort alle Python-Regeln in JavaScript übersetzt werden. Gleichzeitig laufen nicht zwei unabhängige Server mit getrennten Uhren und Datenbanken. Ein zweiter autonom tickender OpenSims-Webserver wäre für diese Kombination die falsche Integrationsgrenze.</p>
+<div class="table-wrap"><table><thead><tr><th>Baustein</th><th>Aufgabe</th><th>Schreibrecht</th></tr></thead><tbody>
+<tr><td>Fastify / <code>WorldCoordinator</code></td><td>Spielerbefehle, Jobfortschritt, Branches, Versionen, Fokus, Budgets, Transaktionsabschluss.</td><td>Alle akzeptierten persistenten Änderungen; genau ein Koordinator pro Welt.</td></tr>
+<tr><td>Python / <code>ProceduralAdapter</code></td><td>Fällige Routinen, zulässige Aktionen, Wege, Reservierungen, mechanische Effekte; Checkpoint fortsetzen.</td><td>Nur private Kandidatenkopie; keine direkte Änderung der Vivarium-DB.</td></tr>
+<tr><td><code>AttentionAllocator</code></td><td>Aktive Figuren, Kontaktgruppen, Read-Kontext und Abhängigkeiten auswählen.</td><td>Zuständigkeit und geplante Detailverträge, mit Versionierung.</td></tr>
+<tr><td><code>AgentDecisionService</code></td><td>Aus individueller Perspektive nächste Handlung, Äußerung oder Interpretation vorschlagen.</td><td>Vorschläge im zugeteilten Entscheidungsscope; keine freie Änderung von Geld, Inventar oder Ort.</td></tr>
+<tr><td><code>BeatValidator</code> + Resolver</td><td>IDs, Zeit, Eigentum, Ressourcen, Weg, Evidenz, Versionsstand und Regeln prüfen.</td><td>Verbindliche physische und soziale Ergebnisse aus zulässigen Vorschlägen ableiten.</td></tr>
+<tr><td><code>NarrationService</code></td><td>Akzeptierte Handlungen und Äußerungen in Vivarium-Erzählung verwandeln.</td><td>Präsentation mit Quellenbezug; keine zusätzlichen Ereignisse.</td></tr>
+<tr><td>Web-Client</td><td>Aktuellen Ort laden, bekannte Trajektorien animieren, Texte/TTS abspielen.</td><td>Spieleraufträge anfordern; keine lokale Weltmutation.</td></tr>
+</tbody></table></div>
+<h3>Wie der Python-Adapter konkret entsteht</h3>
+<ol><li>Den geprüften Quellstand fixieren. <code>World</code>-Initialisierung, Speicher und Kartenzufuhr als injizierbare Schnittstellen herauslösen; der aktuelle Konstruktor erzeugt sonst selbst eine Mosswood-Karte und lädt automatisch eigene Checkpoints/Migrationen.</li><li><code>InMemoryBeatSink</code>, <code>from_checkpoint()</code>, <code>export_checkpoint()</code> und <code>advance_until(boundary)</code> hinzufügen. Snapshots enthalten auch Heap, stabile Serials, Entscheidungen, aktive Aktionen, Reservations- und Evidenzzustand.</li><li>Im <code>advance()</code>-Pfad vor einer extern gesteuerten Entscheidungsgrenze anhalten und ein <code>DecisionRequest</code> zurückgeben. Der aktuelle pauschale Sprung bis zum Ziel genügt nicht für LLM-Entscheidungen unterwegs.</li><li>Die feste Originalkarte durch einen Vivarium-<code>WorldBlueprint</code> ersetzen. IDs über eine explizite Mapping-Tabelle halten; Gebäude und Objekte im Originalcode hängen teilweise an konkreten Layouts und müssen entkoppelt werden.</li><li>Das originale automatische Provider-Modul und den Echtzeit-Serverloop im Adapter deaktivieren. Alle Modellaufrufe laufen durch Vivariums vorhandenes <code>server/providers.js</code>, damit Kosten, BYOK und Logs zusammenbleiben.</li><li>Pro Welt zunächst einen serialisierten Worker-Auftrag erlauben. Private Kandidatenzustände verwerfen, wenn der Node-Commit scheitert; erst nach Commit-Bestätigung den Checkpoint als neuen Ausgangspunkt cachen.</li></ol>
+<p>Ein dauerhafter Prozess kann über gerahmtes JSON auf stdin/stdout kommunizieren; stderr ist für redigierte Diagnosen reserviert. IDs, Protokollversion, Zeitlimit und maximale Payloadgröße sind Pflicht. Bei wenigen Welten reicht ein kleiner Worker-Pool; ein verteilter Dienst ist kein MVP-Bedarf.</p>
+<div class="note">Kein verteilter Two-Phase-Commit nötig: Der Worker schreibt keinen dauerhaften Canon. Der Node-Commit speichert Beat, Outbox, Projektionen und Fortsetzungscheckpoint gemeinsam. Verliert der Worker die Bestätigung, lädt er den bestätigten Stand anhand <code>job_id + snapshot_version</code> erneut. Derselbe Auftrag darf nicht zweimal angewendet werden.</div>
+</section>
+
+<section id="orte">
+<div class="eyebrow">05 / Weltstruktur</div><h2>Ein Haus ist ein begehbarer Verbund von Locations.</h2>
+<div class="tree" aria-label="Hierarchie der Orte">Welt: Lindenstadt<div>Viertel: Universitätsviertel</div><div class="l2">Straße: Lindenstraße</div><div class="l3">Grundstück / Haus 12</div><div class="l4">Erdgeschoss → Flur, Küche, Wohnzimmer, Bad</div><div class="l4">Obergeschoss → Schlafzimmer, Kinderzimmer</div><div class="l3">Haus 14 → eigene Zimmer, Bewohner und Objekte</div><div class="l2">Campusstraße → Wohnheim, Café, Bibliothek</div></div>
+<p>Die <b>Containment-Hierarchie</b> beantwortet, wozu ein Ort gehört. Ein separater <b>Navigationsgraph</b> beantwortet, wie man dorthin gelangt. Wohnzimmer und Schlafzimmer sind nicht direkt verbunden, nur weil beide im selben Haus liegen. Überlappende Regionen wie Park und Viertel erhalten zusätzliche Regionsbezüge; die primäre Elternkette bleibt azyklisch.</p>
+<div class="table-wrap"><table><thead><tr><th>Ebene</th><th>Darstellung</th><th>Simulation</th></tr></thead><tbody>
+<tr><td>Welt / Viertel</td><td>Atlas mit Straßengruppen; aggregierte Bewohnerzahlen.</td><td>Wetter, Kalender, erreichbare Regionen und geplante öffentliche Ereignisse.</td></tr>
+<tr><td>Straße</td><td>Wiederverwendbares Straßenpanorama mit Haus-Hotspots, Nummern und Beschilderung als Overlays.</td><td>Route zwischen Eingängen, Begegnungen, Lärm- und Sichtzugang.</td></tr>
+<tr><td>Haus / Wohnung</td><td>Adresskarte, Eingang, kompakter Zimmernavigator; kein eigenes Bild für jede Zwischenebene nötig.</td><td>Haushaltsmitglieder, Besitz, Zutritt, gemeinsame Einrichtungen.</td></tr>
+<tr><td>Stockwerk</td><td>Optionaler Reiter oder schematischer Grundriss.</td><td>Treppenportal, Höhenebene, Reisedauer; kein direkter Zimmerwechsel über die Decke.</td></tr>
+<tr><td>Raum</td><td>Illustration + Interaktionszonen + Figuren; eindeutiger Name und Breadcrumb.</td><td>Eigene Möbelinstanzen, Türen, Reservierungen, Bewohnerpositionen und wahrnehmbare Ereignisse.</td></tr>
+</tbody></table></div>
+<h3>Konkrete Größe eines ersten größeren Viertels</h3>
+<p><b>10 Straßen × 8 Häuser × 6 Räume = 480 Raum-Locations.</b> Dazu kommen 80 Gebäudecontainer und 10 Straßen: 570 hierarchische Ortsknoten. Mit zunächst 5 Bewohnern pro Haus sind das 400 individuelle Bewohner. Zusätzliche Cafés, Geschäfte und Campusorte werden ausdrücklich dazugezählt. Container brauchen nicht jeweils eine eigene gerenderte Szene oder eine aktive Simulation.</p>
+<p>Diese Größen sind Ausbauziele. Zuerst wird eine Straße mit zwei Häusern und 12–20 Figuren stabil simuliert; danach 100, 400 und schließlich 1.000 Figuren als gemessene Stufen. „570 Orte gespeichert“ ist eine andere Last als „570 gleichzeitig aktive LLM-Szenen“.</p>
+<h3>Generierung in zwei Schritten</h3>
+<ol><li><b>Struktur:</b> Seed, Straßentyp, Grundstücke, Häuser, Haushalte, Zimmergraph, Kapazitäten und Infrastruktur generieren. Ein Hausbrief definiert Zimmerrollen und benötigte Türen. Erst nach Erreichbarkeits-, Betten-, Sanitär- und Arbeitsplatzprüfung wird die Struktur freigegeben.</li><li><b>Ausstattung:</b> Zu jedem Raum ein kompatibles Szenentemplate wählen, dann konkrete Möbel und Bewohner instanziieren. Bibliotheksreferenzen speichern statt neue Bilder anzufordern. Gleiches Template ergibt gleiche Grundgeometrie, eigene Instanzen ergeben eigenen Zustand.</li></ol>
+<p>Private Räume prüfen Bewohnerzugehörigkeit, Schlüssel oder Einladung. Eine Beobachterkamera kann für Debugging den Ort betrachten; sie gewährt dem Player dadurch weder Zugang noch Information. Ein gesperrter Eingang bleibt in Navigation und Interaktion gesperrt.</p>
+<p class="small">Grundlage: PLW §5 und A7, S. 6 und 20; LWM §12.2, S. 22. OpenSims’ Generator-Werkstätten müssen erst an den bewohnten Kern angeschlossen werden.</p>
+</section>
+
+<section id="assets">
+<div class="eyebrow">06 / Assetbibliothek</div><h2>Ein Bild darf viele Räume darstellen. Ein Raum behält seinen eigenen Zustand.</h2>
+<p>Ein Wohnzimmerbild ist ein Bibliotheksasset. „Wohnzimmer in Haus 12“ ist eine unabhängige Location mit eigener Einrichtung, Bewohnerliste und Historie. Zehn Wohnzimmerbilder können Hunderte Wohnzimmer darstellen, ohne dass sich ihre Reservierungen, Gegenstände oder Erinnerungen vermischen.</p>
+<div class="table-wrap"><table><thead><tr><th>Bibliothek</th><th>Startumfang</th><th>Auswahlkriterien</th></tr></thead><tbody>
+<tr><td>Wohnzimmer, Küche, Schlafzimmer, Kinderzimmer, Bad, Flur</td><td>Je 10 Varianten = 60 Raumtemplates.</td><td>Zimmerrolle, Weltstil, Platzangebot, Möbel-/Türlayout, Lichtbasis und freigegebene Varianten.</td></tr>
+<tr><td>Straßenzüge</td><td>10 Varianten; Fassaden-/Eingangs-Overlays optional.</td><td>Wohnstraße, Altstadt, Campus, Geschäftsstraße usw.; Haus-Hotspots müssen zur Illustration passen.</td></tr>
+<tr><td>Öffentliche Orte</td><td>Beispielsweise 20 passende Templates.</td><td>Café, Geschäft, Bibliothek, Büro, Schule, Sport usw.; notwendige Affordanzen und Kapazitäten.</td></tr>
+<tr><td>Figurenidentitäten</td><td>100 visuelle Archetypen mit jeweils 4 Kleidungsvarianten = 400 Bilder.</td><td>Stabile visuelle Identität; Größen-/Altersprofil; Alltag, Arbeit, Sport, formell.</td></tr>
+<tr><td>Ausdruck / Stimmung</td><td>Zunächst über Gesichtssymbole, Farbton und Pose; echte Mimikvarianten selektiv.</td><td>Nur zur selben visuellen Identität und Kleidung passende Variante abrufen.</td></tr>
+</tbody></table></div>
+<h3>Bibliotheksumfang ausprobieren</h3>
+<p class="small">Dieser Rechner ist eine Planillustration. Er löst keine Bildgenerierung aus und verwendet keine Providerpreise.</p>
+<div class="controls"><label>Raumtypen: <output id="room-types-out">6</output><input id="room-types" type="range" min="4" max="20" value="6"></label><label>Bilder je Raumtyp: <output id="room-variants-out">10</output><input id="room-variants" type="range" min="1" max="20" value="10"></label><label>Kleidung je Identität: <output id="outfits-out">4</output><input id="outfits" type="range" min="3" max="6" value="4"></label><label>Echte Ausdrücke je Kleidung: <output id="expressions-out">1</output><input id="expressions" type="range" min="1" max="6" value="1"></label></div>
+<div class="grid" aria-live="polite"><div class="card"><span class="metric" id="background-total">90</span>Hintergrundbilder einschließlich 10 Straßen und 20 öffentlichen Orten.</div><div class="card"><span class="metric" id="character-total">400</span>Figurenbilder für 100 visuelle Identitäten.</div></div>
+<p>Vier echte Ausdrücke für jede der vier Kleidungsvarianten ergeben bereits <b>1.600 Figurenbilder</b>. Deshalb würde ich Outfit und Stimmung zuerst unabhängig speichern und nur wichtige Kombinationen vorab malen. Ein neutraler Sprite mit passender Sprechblase ist ein besserer Fallback als ein unpassendes Gesicht oder eine andere Person.</p>
+<h3>Jedes Bild bekommt ein Szenentemplate</h3>
+<pre><code>{
+  "template_id": "livingroom_warm_03",
+  "asset_id": "library_bg_livingroom_03",
+  "style_pack": "vivarium_warm_v1",
+  "room_type": "living_room",
+  "world_size_m": [7, 5],
+  "walk_polygon": [[1,1],[6,1],[6,4],[1,4]],
+  "portals": [{"name":"hall_door", "anchor_m":[1,2]}],
+  "affordance_slots": [{"kind":"sofa", "anchor_m":[4,3], "capacity":3}],
+  "presentation": {
+    "projection_id":"livingroom_warm_03_projection_v1",
+    "occlusion_mask_asset_id":"library_mask_livingroom_03",
+    "portrait_anchors":[[0.25,0.8],[0.5,0.8],[0.75,0.8]]
+  }
+}</code></pre>
+<p>Die Projektion bildet Bodenkoordinaten auf normalisierte Bildkoordinaten ab; Tiefenskalierung und Fußpunkt sind pro Template kalibriert. Laufpolygon, Portale, Sitzplätze und Vordergrundmasken werden einmal für ein Bibliotheksbild annotiert und geprüft. Ein reines Hintergrund-JPEG kann diese Regeln nicht liefern.</p>
+<h3>Bild und Mechanik müssen zueinander passen</h3>
+<p>Ein fest gemalter Tisch bleibt an dieser Stelle. Frei platzierbare Möbel brauchen einen leeren Raumhintergrund und eigene Möbeloverlays; andernfalls würden zwei verschiedene Tischpositionen dargestellt. Im MVP ist das Raumlayout deshalb pro Template fest. Austauschbare Dekoration, Licht, Namensschilder und kleine Gegenstände dürfen als Overlays variieren.</p>
+<p>Auch Türen sind kein beliebiges Dekoelement: Ein Template mit einer Tür kann nicht ein Zimmer mit vier sichtbaren Ausgängen darstellen. Die strukturelle Generierung wählt nur kompatible Templates oder verwendet ausdrücklich dargestellte virtuelle Hotspots mit Übergangskarte.</p>
+<h3>Figuren: Bibliotheksidentität und Personenidentität trennen</h3>
+<p><code>character_id</code> bezeichnet die Person, <code>visual_identity_id</code> den konsistenten Bildsatz. Zwei Hintergrundpersonen dürfen denselben visuellen Archetyp verwenden, erhalten jedoch eigene Namen, Profile, Ziele und Historien. Die seedbasierte Zuordnung vermeidet möglichst gleiche Looks im selben Haushalt und in einer häufig gemeinsam sichtbaren Gruppe. Bei 400 Bewohnern und 100 Looks bleiben Wiederholungen sichtbar; prominente NPCs können später individuelle Portraits bekommen.</p>
+<p>Das Retrieval erfolgt zuerst deterministisch über kompatible Tags und stabile Identitätsreferenzen. Eine Embedding-Suche kann beim Authoring ähnliche Assets finden, darf aber im Spiel nicht aus Versehen eine andere Figurenidentität liefern. Reihenfolge: exakte Identität + Outfit + Ausdruck → Identität + Outfit + neutral → Identität + Standardkleidung.</p>
+<h3>Herstellung und Abruf</h3>
+<ol><li>Style-Pack festlegen; bestehende Vivarium-Bilder als stilistische Ausgangsbasis inventarisieren.</li><li>Hintergründe ohne Menschen erzeugen, Figurenvarianten mit derselben Referenzidentität; Transparenz, Körperausschnitt und Größen prüfen.</li><li>Geometrie und Masken annotieren. Tags, Rechteherkunft, Prompt-/Referenzversion und Qualitätsfreigabe speichern.</li><li>Content-Hash verwenden, kleinere WebP-/AVIF-Varianten für Abruf erzeugen, Originale getrennt halten. Einen globalen Bibliotheksbestand über referenzierte Links verwenden.</li><li>Beim Betreten eines Raums nur dessen Hintergrund, sichtbare Figuren und nahe Nachbarorte laden. Keine Komplettbibliothek von 400 Bildern aufs Handy übertragen.</li></ol>
+<div class="note"><b>Bewegungsdarstellung:</b> Die bisherigen Vivarium-Sprites sind frontal und bis ungefähr Knie/Hüfte ausgeschnitten. Sie eignen sich als Gesprächsportraits. Für sichtbar laufende Sims braucht die Bibliothek zusätzliche Ganzkörperbilder mit Fußankern und wenigstens passenden Blickrichtungen. Für den ersten Ausbau sind gleitende Ganzkörper-Cutouts mit weichen Übergängen und Sitzposen ausreichend; echtes Gehloop-Material kommt später.</div>
+<p>Gemeinsame Bibliotheksdateien dürfen beim Löschen einer Welt nicht entfernt werden. <code>server/world_io.js</code> und <code>server/assets.js</code> müssen deshalb Weltassets und Bibliotheksreferenzen unterscheiden. Exportpakete enthalten benötigte freigegebene Assets genau einmal oder ein versioniertes Manifest mit Prüfsummen.</p>
+</section>
+
+<section id="regeln">
+<div class="eyebrow">07 / Prozeduraler Kern</div><h2>Bewohner handeln aus Bedürfnissen, Terminen und konkreten Möglichkeiten.</h2>
+<p>Eine Figur erhält Komponenten für Bedürfnisse, Persönlichkeitspräferenzen, Haushalt, Kontakte, Wissen, Ziele, Tagesplan, Geld/Inventar und aktuelle Handlung. Eine Erwerbstätigkeit verändert den Zeitplan; sie erzeugt keine neue Identität. Profile und Tätigkeiten bleiben deklarativ und versioniert.</p>
+<div class="table-wrap"><table><thead><tr><th>System</th><th>Mechanik</th><th>Verbindliches Ergebnis</th></tr></thead><tbody>
+<tr><td>Bedürfnisse</td><td>Hunger, Durst, Müdigkeit, Hygiene, Blase, Sozialkontakt, Beschäftigung. Dringlichkeit 0–1; Rate pro Spielsekunde und Schwellenzeit.</td><td>Analytische Segmente statt ständiger Updates. Anzeige zeigt bei Bedarf invertierte Zufriedenheit.</td></tr>
+<tr><td>Zeitplan</td><td>Arbeit, Schule/Studium, Schlaf, Termine und Wegevorlauf.</td><td>Eine Schicht um 09:00 und 15 Minuten Weg erzeugen rechtzeitig einen Abfahrtsimpuls.</td></tr>
+<tr><td>Aktionsauswahl</td><td>Nur bekannte, erreichbare und erlaubte Affordanzen; Utility aus Bedürfnislinderung, Ziel, Präferenz und Verpflichtung minus Kosten.</td><td>Beschränkte Kandidatenliste, erklärbare Scores; ein Zufallszug pro Entscheidungsmöglichkeit.</td></tr>
+<tr><td>Handlungslaufzeit</td><td>Plan → reservieren → hinlaufen → benutzen → abschließen; Unterbrechung bei echten Ereignissen.</td><td>Bereits verbrauchte Zeit, Nahrung oder Geld werden bei Abbruch nicht zurückgezaubert.</td></tr>
+<tr><td>Möbel und Geräte</td><td>Eigene Instanz-ID, Haushaltszugriff, Zustand, Slots und Reservierungen.</td><td>Ein WC hat einen Slot; ein Sofa mehrere. Zwei Sims können nicht denselben exklusiven Slot gleichzeitig belegen.</td></tr>
+<tr><td>Sozialkontakt</td><td>Erreichbarer Partner, Aufmerksamkeit und Einverständnis, Gesprächsphase, gerichtete Beziehung.</td><td>Ein Vorschlag ist noch keine Zustimmung. Wissen ändert sich erst durch einen tatsächlich zugänglichen Informationsweg.</td></tr>
+<tr><td>Scheduler</td><td>Min-Heap für Ankunft, Aktionsende, Bedürfnisgrenze, Effektablauf und eingehende Kommunikation.</td><td>Nur fällige Arbeit; keine Berechnung aller Personen in jedem Browserframe.</td></tr>
+</tbody></table></div>
+<pre><code>decision_seed = hash(world_seed, actor_id, decision_id, rule_hash, purpose)
+
+need(t) = clamp(baseline + rate_per_second * (t - baseline_time), 0, 1)
+
+choose_action(actor):
+    candidates = known_and_feasible_affordances(actor, max_candidates=24)
+    candidates = respect_emergencies_access_commitments(candidates)
+    scores = expected_relief + goal_progress + preference - costs
+    return stable_seeded_choice(candidates, scores, decision_seed)</code></pre>
+<p>Entscheidungs-IDs bleiben bei Retries und einer Unterteilung der Zeit gleich. Sonst erhält eine wichtige Figur durch häufigere LLM-Beats mehr Chancen auf Erfolg. Ausfälle, Verschleiß und seltene Ereignisse hängen von Spielzeit/Gelegenheiten ab, nicht von Anzahl der UI-Refreshs.</p>
+<h3>Beispiel: Aufstehen und Frühstück</h3>
+<p>Sam wacht wegen Wecker oder Müdigkeitsschwelle auf. Er muss ins Bad, reserviert das verfügbare WC und läuft zum Anker. Ist es belegt, wählt er eine Alternative oder wartet mit begrenzter Wiedervorlage. Anschließend braucht Frühstück Zutaten, Gerät, Zubereitungszeit, eine Portion und einen Sitzplatz. Ein Text „Sam hat gefrühstückt“ ersetzt diese Ressourcenübergänge nicht.</p>
+<p>Für Hintergrundroutinen reichen strukturierte Ursache-/Ergebnislabels und kurze Texttemplates. Ausformulierte innere Monologe werden erst bei relevanten Wendepunkten benötigt. Wird Sam wichtig, bleiben seine bisherigen Routineentscheidungen und deren Folgen erhalten.</p>
+<p class="small">Grundlage: PLW A3–A6 und B2, S. 16–19 und 23. Die vorhandene OpenSims-Engine liefert einen Ausgangspunkt; die Übertragung auf neue Hausblueprints braucht zusätzliche Integrationsarbeit.</p>
+</section>
+
+<section id="felder">
+<div class="eyebrow">08 / Aufmerksamkeit</div><h2>Wichtig wird, wer mit der aktuellen Handlung kausal verbunden ist.</h2>
+<p>„Simuliert“ sind alle Bewohner. Für die Oberfläche heißen die Steuerungsarten <b>prozedural</b>, <b>Story-Fokus</b> und <b>Player</b>. Der Begriff „simulierter NPC“ wird intern nicht als Gegenstück zu „normalem NPC“ verwendet, weil auch Hintergrundfiguren einen Zustand und eine Historie besitzen.</p>
+<div class="table-wrap"><table><thead><tr><th>Modus</th><th>Entscheidungen</th><th>Weiterhin prozedural</th></tr></thead><tbody>
+<tr><td>Prozeduraler Bewohner</td><td>Utility, Routinen, begrenzte soziale Regeln.</td><td>Alle mechanischen Systeme und deklarierte Informationsfolgen.</td></tr>
+<tr><td>NPC im Story-Fokus</td><td>Modellgestützte Interpretation und relevante Handlungs-/Dialogvorschläge aus eigener Perspektive.</td><td>Bedürfnisse, Wege, Zeiten, Besitz, Reservierungen, Voraussetzungen und Auflösung.</td></tr>
+<tr><td>Player</td><td>Explizite Spielerabsicht. Das Modell formuliert Ausführung und Reaktion innerhalb dieser Absicht.</td><td>Machbarkeit, Zeitkosten, Umgebung und vereinbarte laufende Handlung.</td></tr>
+<tr><td>Direkter Partner / Raumkontakt</td><td>Wird bei gemeinsamem Aufenthalt bzw. direktem Kontakt in den Szenenvertrag aufgenommen; bei einer eigenen relevanten Entscheidung erhält er einen eigenen Agentenaufruf.</td><td>Ein anwesender, still schlafender Bewohner benötigt keinen fortlaufenden inneren Monolog.</td></tr>
+</tbody></table></div>
+<h3>Aktive, lesbare und abhängige Mengen</h3>
+<p><code>active_set</code> enthält Figuren/Ereignisse, deren Entscheidungen die Szene gerade führen darf. <code>context_set</code> enthält nur lesbare Fakten und Umgebungsbedingungen. <code>dependency_set</code> enthält entfernte Prozesse, die vor Kontakt nachgeführt sein müssen. Figuren im selben Haus, aber hinter geschlossener Tür, sind nicht automatisch anwesende Gesprächspartner.</p>
+<p>Startanker sind Player, manuell ausgewählte wichtige NPCs und unmittelbar beteiligte Ereignisse. Dann folgen der aktuelle Raum, anwesende Personen, wahrnehmbarer Kontakt, laufende Telefonate, zugestellte Nachrichten, ankommende Figuren, relevante Gegenstände und offene Verpflichtungen. Breite Beziehungen wie „wohnt in derselben Stadt“ erweitern keinen Prompt auf alle Bewohner.</p>
+<p><b>Deine Vorgabe wird als Mindestabdeckung umgesetzt:</b> Alle Personen im aktuellen Szenenraum werden erfasst und ihr Verhalten berücksichtigt. Personen mit Handlung, Äußerung oder Entscheidung in der Szene werden LLM-gestützt geführt. Ruhige Begleiter können als strukturierter Szenenkontext eingehen; ihre privaten Gedanken werden nicht dem gesamten Raum offengelegt.</p>
+<h3>Den Fokus interaktiv ansehen</h3>
+<p class="small">Illustrative Auswahl, keine Verbindung zum laufenden Spiel. Ein Telefonat aktiviert sein Gegenüber, ein Raumwechsel verändert die räumlichen Teilnehmer.</p>
+<div class="controls" id="focus-controls"><button class="active" data-case="room">Im Wohnzimmer</button><button data-case="phone">Telefonat mit Mira</button><button data-case="arrival">Sam kommt herein</button><button data-case="remote">Wichtiger NPC anderswo</button></div>
+<div class="demo-world" id="focus-world" aria-live="polite"></div><p class="small" id="focus-explanation"></p>
+<h3>Detail ist mehr als eine Stufe</h3>
+<p>Der MVP verwendet L1 für Routine, L3 für Beziehungen/Intentionen und L4 für sichtbare soziale Szenen. <code>temporal_precision</code>, mechanische Genauigkeit, kognitives Detail und Präsentation bleiben getrennte Einstellungen. Eine ganze Minute kann mechanisch exakt verarbeitet und anschließend in einem Absatz erzählt werden. Ein LLM-Aufruf alle zwei Sekunden ist dafür nicht nötig.</p>
+<h3>Übergabe ohne Identitätsbruch</h3>
+<ol><li>Am nächsten sicheren Zeitpunkt halten; laufende Handlung und Terminwarteschlange nachführen.</li><li>Entscheidungssteuerung mit neuer <code>owner_epoch</code> vergeben; mechanische Verarbeitung bleibt unter dem Resolver.</li><li>Eigene Wahrnehmung, Wissen, Ziele, Zustand und zulässige Möglichkeiten an das Figurenmodell schicken.</li><li>Nach Ende des Kontakts aktive Intentionen in typisierte Ziele übersetzen, etwa „Mira um 18:00 anrufen“, statt nur einen Text „kümmert sich später“ zu speichern.</li><li>Bei Rückgabe dieselbe Aktion, Reservierungen und Belege erhalten. Alte Modellantworten mit falscher Epoch verwerfen.</li></ol>
+<p>Fokusänderungen bekommen Hysterese: Eine Figur fällt nicht bei einem Schritt durch die Tür aus der Steuerung, solange das Gespräch oder seine unmittelbar offene Folge fortbesteht. Neue Raumkontakte werden sofort aufgenommen. Entfernte wichtige NPCs besitzen eigene Fokusanker und entwickeln sich auch dann weiter, wenn die Kamera beim Player bleibt.</p>
+<div class="note">Wählt der Nutzer mehr wichtige Figuren, als ein Schrittbudget tragen kann, zeigt das Spiel den Bedarf vorab oder hält an einer sicheren Grenze. Es darf diese Figuren nicht still aus dem Modellpfad entfernen und den Schritt trotzdem als vollständig erledigt melden. Die Hintergrundmechanik aller Bewohner bleibt abgedeckt.</div>
+</section>
+
+<section id="zeitschritt">
+<div class="eyebrow">09 / Kernalgorithmus</div><h2>„Fünf Minuten vorwärts“ ist ein Auftrag mit mehreren sicheren Teilgrenzen.</h2>
+<p>Die gewünschte Reihenfolge – erst das Hintergrundgeschehen, dann wichtige Figuren erzählen – wird <b>an jeder relevanten Zeitgrenze</b> umgesetzt. Die gesamte Hintergrundwelt vorab endgültig bis 08:05 zu schreiben wäre problematisch, wenn der Player um 08:02 einen Anruf auslöst, der eine Hintergrundfigur beeinflusst. Daher erzeugt der Hintergrund zunächst Vorschläge bis zur nächsten Kontaktgrenze; erst die gemeinsam aufgelösten Ergebnisse werden verbindlich.</p>
+<div class="step"><b>1 · Auftrag annehmen</b><p>Welt, Branch, Ausgangsversion, Dauer 300 Sekunden, Playerhandlung und gewählte wichtige NPCs lesen. Idempotency-Key prüfen, Job persistent anlegen, Budget reservieren. Die Welt bleibt gegen konkurrierende Zeitaufträge gesperrt.</p></div>
+<div class="step"><b>2 · Hintergrund vorbereiten</b><p>Prozedural fällige Bedürfnisse, Abfahrten, Wege, Reservierungen und Aktionsenden ermitteln. Eine private Vorschau entdeckt Kontakte, Ankünfte, Anrufe und gemeinsame Ressourcen. Keine nachträglichen zufälligen Begegnungen aus bereits abgeschlossenem Erzähltext ableiten.</p></div>
+<div class="step"><b>3 · Nächste sichere Grenze bestimmen</b><p>Minimum aus Zielzeit, Aktionsende, Effektablauf, Nachrichtenzustellung, sichtbarem Kontakt und nächster nötiger Entscheidung. Ein Wechsel um 08:02:17 wird auch bei einem Fünf-Minuten-Auftrag genau an dieser Grenze aufgelöst.</p></div>
+<div class="step"><b>4 · Fokus und Perspektiven bauen</b><p>Player, wichtige NPCs, Raumteilnehmer und Kommunikationspartner zusammenstellen. Alle verbindlichen mechanischen Fakten bleiben verfügbar. Jeder Figurenaufruf erhält ausschließlich seine eigene zulässige Evidenz und aktuelle beobachtbare Situation.</p></div>
+<div class="step"><b>5 · Relevante Entscheidungen vorschlagen</b><p>Sprachmodell formuliert Handlungsabsicht/Äußerung der geführten Figuren. Bei reiner Fortsetzung einer bestehenden Aktion entfällt ein neuer Agentenaufruf. Dialoge laufen in kausaler Reihenfolge; Antworten auf noch nicht gesprochene Sätze sind unzulässig.</p></div>
+<div class="step"><b>6 · Auflösen, prüfen, gemeinsam speichern</b><p>Wege, Zeiten, Zustimmung, Ressourcen und Versionsstände erneut prüfen. Der Resolver erzeugt akzeptierte Changes und Wahrnehmungen. Beat, Checkpoint, Nachrichten, Projektionszustand und Jobcursor in einer SQLite-Transaktion speichern.</p></div>
+<div class="step"><b>7 · Erzählen und wiederholen</b><p>Akzeptierte Ereignisse in eine kompakte Szene übersetzen, SSE-Fortschritt veröffentlichen und nächsten Teilabschnitt berechnen. Erst wenn die Zielzeit vollständig erreicht ist, <code>done</code> melden. Anschließend wartet die Spielzeit wieder.</p></div>
+<pre><code>advance_world(command):
+    job = get_or_create_idempotent_job(command)
+    acquire_world_writer(job.world_id)
+    while committed_time &lt; job.target_time:
+        state = read_committed_snapshot(job.branch_id)
+        preview = procedural_worker.prepare(state, job.target_time)
+        end = earliest_required_boundary(preview, job.target_time)
+        groups = attention.resolve(state, preview, end, command.focus)
+
+        # Modelle schlagen Entscheidungen vor, keine ungeprüften Weltpatches.
+        intents = decide_from_individual_perspectives(groups, end)
+        if intents.introduce_earlier_boundary:
+            discard_preview_and_retry_at_boundary_using_same_draw_ids()
+            continue
+
+        candidate = procedural_worker.resolve(state, intents, end)
+        validate(candidate, versions, epochs, access, evidence, rules)
+        transaction:
+            append_beats_and_changes(candidate)
+            save_checkpoint_and_projections(candidate)
+            persist_outbox_and_job_cursor(candidate)
+        narrate_accepted_beats_or_mark_presentation_pending(candidate)
+        publish_committed_progress(job)
+    finish_job_without_advancing_further()</code></pre>
+<h3>Konkrete Fünf-Minuten-Sequenz</h3>
+<div class="table-wrap"><table><thead><tr><th>Zeit</th><th>Hintergrundmechanik</th><th>Aktive Szene</th></tr></thead><tbody>
+<tr><td>08:00:00</td><td>Sam läuft von der Küche ins Wohnzimmer; sein Weg und die Ankunft um 08:00:40 stehen fest. Mira studiert in Haus 14.</td><td>Player und Lea sprechen. Sams geplante Ankunft ist eine bekannte Szenengrenze.</td></tr>
+<tr><td>08:00:40</td><td>Sam erreicht den Raum; Position und Reservierungen werden übernommen.</td><td>Sam kommt als vorhandene Person hinzu. Seine Reaktion entsteht mit eigener Perspektive.</td></tr>
+<tr><td>08:02:17</td><td>Ein typisierter Anruf an Mira wird zugestellt; ihr Zustand ist bis dahin nachgeführt.</td><td>Mira wird Kommunikationspartnerin. Ob sie abnimmt, folgt ihrer Situation; die Straße dazwischen bleibt prozedural.</td></tr>
+<tr><td>08:03:10</td><td>Anruf endet; seine Information und ein vereinbarter Termin sind protokolliert.</td><td>Mira verlässt den gemeinsamen Kontakt. Ihre neue Verpflichtung bleibt als Ziel erhalten.</td></tr>
+<tr><td>08:05:00</td><td>Alle betroffenen Prozesse haben den Zielstand erreicht; keine frühere Nachricht ist offen.</td><td>Zusammenhängende Kurzszene und begründete Übersicht relevanter Hintergrundereignisse.</td></tr>
+</tbody></table></div>
+<h3>Ausfälle, Abbruch und neue Spieleraktionen</h3>
+<p>Ein Providerfehler führt zu begrenztem Retry oder zu einer ausdrücklich erlaubten prozeduralen Ersatzentscheidung. Geschützte Playerentscheidungen werden nicht automatisch ersetzt. Falls schon Teilbeats committed sind, zeigt der Job die wirklich erreichte Zeit und kann ab dort fortgesetzt werden. Erzählung darf später nachgeliefert werden, aber ein fehlgeschlagenes Modell darf keine leere „erfolgreiche“ soziale Szene erzeugen.</p>
+<p>Ein Browser-Reload bricht einen angenommenen Job nicht automatisch ab. Der Nutzer verbindet sich anhand der Job-ID erneut. Ein explizites „Abbrechen“ stoppt an der nächsten sicheren Grenze; angenommene Ereignisse bleiben erhalten. Neue Playeraktionen werden für die nächste aktuelle Grenze eingereiht und dürfen nicht nachträglich in bereits gespielte Minuten eingefügt werden.</p>
+<h3>Kausale Synchronisation im MVP</h3>
+<p>Es gibt eine gemeinsame Weltzeit und zunächst einen seriellen Koordinator. Er verarbeitet registrierte Kanäle für Türen/Bewegung, hörbare Rede, Anruf und Nachrichten. Gleichzeitige Kontakte werden als zusammenhängende Gruppe aufgelöst; eine A–B–C-Kette darf keine zwei widersprüchlichen Paar-Szenen erzeugen. Bei Telefonaten mit unmittelbarer Kopplung führt derselbe Koordinator beide Seiten.</p>
+<p>Die „alle Ausgänge bis hier bekannt“-Garantie entsteht im MVP durch den gemeinsamen ereignisgesteuerten Lauf. Separate, unabhängig vorauslaufende Feldcursor und echte Kanal-Watermarks werden erst später eingeführt. Die Schnittstelle enthält schon Epoch, Quelle und Zustellgrenze; ein verteiltes Protokoll wird nicht als bereits vorhanden ausgegeben.</p>
+<p class="small">Grundlage: LWM §§9–11, S. 16–21; PLW B4, S. 25. Kein stilles Zurückrollen bereits beobachteter Weltgeschichte.</p>
+</section>
+
+<section id="gedaechtnis">
+<div class="eyebrow">10 / Wissen &amp; Erinnerung</div><h2>Eine Person erfährt etwas durch einen Weg, nicht durch den globalen Prompt.</h2>
+<p>Vivariums bisheriger GM sieht den gesamten Castzustand. Für das neue Modell werden <b>Figurenentscheidung, Weltauflösung und Erzählung getrennt</b>. Ein Erzähler darf je nach gewählter Sicht mehr wissen; dieses Wissen geht nicht automatisch an Figuren weiter.</p>
+<div class="table-wrap"><table><thead><tr><th>Ebene</th><th>Beispiel</th><th>Quelle</th></tr></thead><tbody>
+<tr><td>Canon</td><td>Lea legt den Schlüssel in die Küchenschublade.</td><td>Akzeptierter Objekttransfer mit Zeitpunkt.</td></tr>
+<tr><td>Wahrnehmung</td><td>Sam sieht Leas Hand an der Schublade, aber nicht den Schlüssel.</td><td>Sichtprüfung und Wahrnehmungsrecord.</td></tr>
+<tr><td>Erinnerung</td><td>Sam erinnert eine Bewegung an der Schublade.</td><td>Verweis auf genau diese Wahrnehmung.</td></tr>
+<tr><td>Überzeugung</td><td>Sam vermutet, der Schlüssel sei dort.</td><td>Vermutung mit zugänglicher Evidenz und ordinaler Sicherheit.</td></tr>
+<tr><td>Zugeschriebenes Wissen</td><td>Sam denkt, Lea glaube, er habe den Schlüssel gesehen.</td><td>Eigene begründete Attribution; keine Behauptung über Leas tatsächlichen Glauben.</td></tr>
+</tbody></table></div>
+<p>Das Agentenpaket enthält eigenen Zustand, eigene Wahrnehmungen, zugelassene Erinnerungen, bekannte Verpflichtungen und beobachtbare Hinweise auf andere. Die geheimen Ziele oder Bedürfnisse der anderen fehlen physisch im Paket. Die Anweisung „ignoriere fremde Gedanken“ in einem allwissenden Prompt reicht nicht.</p>
+<h3>Retrieval-Reihenfolge</h3>
+<ol><li>Verbindliche aktuelle Projektionen: Ort, Inventar, aktive Handlung, Türen, Reservierungen, Effektablauf, Termine.</li><li>Eigene neue Wahrnehmungen und relevante akzeptierte Gesprächsakte.</li><li>Eigene alte Erinnerung anhand konkreter Personen-, Objekt- und Themen-IDs.</li><li>Begrenzte Text-/Semantiksuche mit Perspektivfilter, Quellen-IDs, Branch und Gültigkeitszeit.</li></ol>
+<p>Eine Zusammenfassung kann „Vertrauen nimmt ab“ sagen, muss aber auf Beats und Perspektive verweisen. Sie ersetzt nicht den aktuellen Eigentümer eines Schlüssels oder den genauen Zeitpunkt eines Termins. Initiales Wissen wird als Initialisierung markiert. Später erfundene biografische Details dürfen keine schon abgeschlossene Wirkung rückwirkend erzeugen.</p>
+<h3>Erzählung mit Folgen</h3>
+<p>Ein wörtlicher Dialogsatz kann eine Verpflichtung, eine Behauptung oder eine Drohung enthalten. Deshalb werden relevante Äußerungen vor der finalen Erzählung als typisierte <code>SpeechAct</code>-Vorschläge geprüft und akzeptiert. Empfängerwahrnehmung und mögliche Überzeugungsänderung folgen danach. Die reine Narration darf keinen neuen Satz „Ich zahle morgen 100 Euro“ hinzufügen, dessen Versprechen im Zustand fehlt.</p>
+<p>Im MVP reicht Theory of Mind erster Ordnung für gewöhnliche Kontakte; ausgewählte wichtige Szenen können eine zweite Ebene erhalten. Tiefere Zuschreibungen sind ein begrenzter Ausbau. Freie Thought-Texte bleiben authored state und werden nicht als Zugriff auf private Modellüberlegungen behandelt.</p>
+<p class="small">Grundlage: LWM §§5, 8 und 14, S. 8–10, 15 und 26–27.</p>
+</section>
+
+<section id="daten">
+<div class="eyebrow">11 / Datenverträge</div><h2>Beats sind die Wahrheit; Snapshots sind ihre schnelle Projektion.</h2>
+<p>SQLite genügt für das erste Viertel. Beziehungen und zeitliche Fakten sind über indizierte Tabellen als Graph abfragbar; eine neue Graphdatenbank ist dafür nicht Voraussetzung. Vorhandene <code>characters.materialised</code>-Daten bleiben eine UI-Projektion, deren mechanische Werte im Hybridmodus nur aus dem Koordinator stammen.</p>
+<div class="table-wrap"><table><thead><tr><th>Erweiterung</th><th>Wesentliche Felder / Index</th></tr></thead><tbody>
+<tr><td><code>worlds</code></td><td><code>simulation_mode</code>, Seed, Schema-/Regelhash, <code>snapshot_version</code>, Epoch, Kalenderursprung, Spielsekunden. Bestehendes <code>sim_time</code> für Darstellung ableiten.</td></tr>
+<tr><td><code>locations</code></td><td><code>parent_id</code>, Ebenentyp, Template-ID, Stockwerk, Haushalts-/Gebäudebezug, Kapazität, Zugriff, Geometrieversion. Index <code>(world_id,parent_id)</code>.</td></tr>
+<tr><td><code>paths</code> / Portale</td><td>Richtung, Tür-/Treppen-ID, Dauer, Zugang, Sperrbedingungen, Start-/Zielanker. Ortsreferenzen müssen zur selben Welt gehören.</td></tr>
+<tr><td><code>actor_components</code></td><td><code>world_id,branch_id,actor_id,component_key,version,payload</code>. Bedürfnisse, Aktion, Zeitplan, Intentionen, Wissen, Körper und Aufenthalts-/Routezustand.</td></tr>
+<tr><td><code>object_instances</code></td><td>Ort, Template, Zustand, Besitz und physische Verwahrung, Slots, Inventar. Objekt-ID gehört zur Instanz, niemals zum geteilten Bildasset.</td></tr>
+<tr><td><code>beats</code> / <code>changes</code></td><td>Welt/Branch, logische Sequenz, Intervall, Microsteps, Teilnehmer, Modell-/Regelversion, Coverage, Inputversion, Quellen, Ergebnis und Prüfbeleg. Änderungen nach Entity und Zeit indizieren.</td></tr>
+<tr><td><code>event_entities</code></td><td>Gespräch, Reise, Arbeitsschicht usw.; Teilnehmer/Rollen, Phase, Elternereignis, Verpflichtungen, Start/Ende. IDs bleiben über Fokuswechsel stabil.</td></tr>
+<tr><td><code>perceptions</code>, <code>belief_versions</code>, <code>memory_traces</code></td><td>Halter, Inhalt/Proposition, Gültigkeit, Quellen, Sicherheit und Branch. Index <code>(world_id,branch_id,holder_id,time)</code>.</td></tr>
+<tr><td><code>sim_checkpoints</code></td><td>Snapshotversion, Uhr, Heap/Serials, Aktionsfortschritt, RNG-Gelegenheits-IDs, Fields/Epochs, Ressourcen, Outbox-/Dedupstand, Regelhash. Anfangs vollständiger Checkpoint; später Delta + periodischer Vollstand.</td></tr>
+<tr><td><code>boundary_messages</code></td><td>Stabile Message-ID, Sender, Empfänger, Emission, Lieferung, Ursache, Payload, Status; Idempotenz pro Empfänger. Zustellzeit und Welt/Branch indizieren.</td></tr>
+<tr><td><code>advance_jobs</code> / <code>input_commands</code></td><td>Idempotency-Key, unveränderlicher Auftrag, Branch, Ausgangs-/Zielzeit, erreichte Zeit, Status, Budget, Cursor, Abbruch und Fehler.</td></tr>
+<tr><td><code>asset_library</code> / <code>scene_templates</code></td><td>Style-Pack, Typ, Tags, visueller Identitätssatz, Content-Hash, Rechteherkunft, Geometrie-/Projektionsversion, Freigabe und unveränderliche Datei.</td></tr>
+</tbody></table></div>
+<details><summary>Beispiel für einen akzeptierten Beat</summary><pre><code>{
+  "id":"beat_000152", "world_id":"w_demo", "branch_id":"br_main",
+  "interval":{"t0":28800,"t1":28840}, "base_snapshot_version":151,
+  "field_id":"scene_livingroom", "owner_epoch":8,
+  "event_ids":["journey_sam_12"],
+  "coverage":{"sam.position":"evaluated_changed","sam.needs":"analytical",
+              "sam.private_dialogue":"unmodeled"},
+  "changes":[{
+    "id":"chg_152_0", "subject_id":"sam", "component_path":"location_id",
+    "effective_time":28840,"microstep":0,"operation":"set",
+    "expected_prior_version":19,"new_value":"house12_livingroom",
+    "scope":"canonical","evidence_ids":["journey_sam_12"]
+  }],
+  "model_and_rule_versions":{"rules":"manifest_sha256","prompt":"agent_v1"},
+  "status":"committed", "validation_receipt":{"invariants_passed":true}
+}</code></pre></details>
+<p>Eine geänderte Location ist nur das vereinfachte Beispiel. Die eigentliche Reise enthält zulässigen Weg, Zeit, Routefortschritt und Türpassage. Mehrere Änderungen an derselben Komponente innerhalb eines Beats prüfen die Versionsfolge im Kandidatenzustand statt wiederholt denselben alten Wert als gültig zu behandeln.</p>
+<h3>Zeitreisen betreffen die ganze Simulation</h3>
+<p>Der bisherige Branch-Snapshot enthält insbesondere Figuren und Beziehungen. Für den Hybridpfad muss ein Undo zusätzlich Möbelzustand, Geld/Inventar, Warteschlange, Reservierungen, Wahrnehmung, Wissen, laufende Event-Entities und Zustand/Epoch der Steuerung zurücksetzen. Sonst wäre eine frühere Szene optisch wieder da, während ein damaliger Telefonanruf bereits zugestellt bleibt.</p>
+<p>Jeder sichtbare Tick referenziert einen <code>sim_checkpoint_id</code> und ein Beatintervall. Ein neuer Zweig übernimmt bestätigte Vergangenheit per Referenz, eröffnet einen eigenen Fortsetzungsstand und eigene Message-/Job-Deduplication. Bei Restore wird die Runtime-Epoch angehoben, damit eine Antwort aus der verlassenen Zukunft nicht in die zurückgesprungene Welt schreiben kann.</p>
+<p>Globale Bibliotheksassets bleiben unverändert; spielrelevante Auswahl und Instanzreferenzen folgen dem Branch. Providergebühren werden durch Zeitreisen nicht rückgängig gemacht – ein Replay verwendet gespeicherte Ergebnisse und benötigt keine erneuten Modellaufrufe.</p>
+<h3>Atomarer Abschluss</h3>
+<pre><code>BEGIN IMMEDIATE;
+  verify(world_version, branch_id, authority_epoch);
+  append(accepted_beats, changes, evidence, outbound_messages);
+  update(actor_and_object_projections, relationships, active_events);
+  save(sim_checkpoint_with_scheduler_and_reservations);
+  link(vivarium_tick_to_beats_and_checkpoint);
+  update(world_clock, snapshot_version, advance_job_cursor);
+COMMIT;
+# Erst jetzt bestätigten Zustand an UI/Worker veröffentlichen.</code></pre>
+<p>Externe Providerrechnung ist nicht Teil derselben SQLite-Transaktion. Eine tatsächlich ausgeführte, später ungültige Modellanfrage kann trotzdem Kosten verursacht haben. Budgetreservierungen, <code>provider_call_id</code>, tatsächliches Metering und genau einmal gebuchte Credits machen das nachvollziehbar; fehlgeschlagene Zustandsvalidierung darf keine zweite Belastung für denselben Call auslösen.</p>
+</section>
+
+<section id="api">
+<div class="eyebrow">12 / API</div><h2>Ein Zeitauftrag ist wiederverbindbar und vollständig per API prüfbar.</h2>
+<p>Bestehende Authentifizierung und Weltbesitzprüfung werden für alle neuen Routen verwendet. <code>GET</code>-Anfragen beobachten nur; sie erzeugen weder eine NPC-Entscheidung noch einen Beat. Die folgenden Routen sind <b>geplante Ergänzungen</b>, keine Aussage über heute vorhandene Endpoints.</p>
+<div class="table-wrap"><table><thead><tr><th>Route</th><th>Vertrag</th></tr></thead><tbody>
+<tr><td><code>POST /api/worlds/:id/advance</code></td><td>Zeitauftrag mit Dauer, Handlung, Fokus, erwarteter Version und Idempotency-Key annehmen; HTTP 202 + Job-ID. Konkurrierender Weltauftrag: 409.</td></tr>
+<tr><td><code>GET /api/worlds/:id/advance/:jobId</code></td><td>Status, tatsächliche Uhr, Zielzeit, akzeptierte Beat-IDs, Verbrauch, Fehler und nächste offene Grenze.</td></tr>
+<tr><td><code>GET /api/worlds/:id/advance/:jobId/events</code></td><td>SSE mit stabilen Event-IDs; Wiederverbindung über <code>Last-Event-ID</code>. Events: status, boundary, beat_committed, scene_ready, budget_wait, done, error.</td></tr>
+<tr><td><code>POST /api/worlds/:id/advance/:jobId/cancel</code></td><td>An nächster sicherer Grenze stoppen; committed Vergangenheit erhalten.</td></tr>
+<tr><td><code>PUT /api/worlds/:id/focus</code></td><td>Player-ID, explizite wichtige NPCs und zulässige Detailpräferenzen; bei laufendem Job als neuer versionierter Folgeauftrag behandeln.</td></tr>
+<tr><td><code>GET /api/worlds/:id/locations?parent=:id</code></td><td>Kinder einer Ortsgruppe, paginiert; Browser lädt nicht den kompletten Stadtgraph.</td></tr>
+<tr><td><code>GET /api/worlds/:id/scene?locationId=:id</code></td><td>Hintergrundreferenz, öffentliche Zustände, beobachtbare Figuren, Türhotspots, akzeptierte Trajektorien, Scene-Version und Coverage.</td></tr>
+<tr><td><code>POST /api/worlds/:id/player-intents</code></td><td>Typisierte Aktion wie move, talk, call, use, wait. Text unterstützt semantische Interpretation; strukturell unzulässige Aktion wird begründet zurückgegeben.</td></tr>
+<tr><td><code>GET /api/worlds/:id/actors/:actorId/perspective</code></td><td>Eigene zugängliche Perspektive; nicht den Observer-/Debug-Snapshot in einen Figurenprompt übernehmen.</td></tr>
+<tr><td><code>GET /api/worlds/:id/actors/:actorId/timeline</code></td><td>Branchgefilterte Beteiligung und zugelassene Evidenz; paginiert.</td></tr>
+<tr><td><code>GET /api/worlds/:id/beats</code></td><td>Akzeptierte Änderungen, Zeit, Ursache und Prüfbeleg; begrenzte Cursorpagination.</td></tr>
+<tr><td><code>POST /api/worlds/:id/generate-neighborhood</code></td><td>Seed + gewünschte Häuser-/Zimmer-/Bewohnerstruktur; Vorschau, Validierungsbericht und Assetbedarf vor Weltanlage.</td></tr>
+<tr><td><code>GET /api/library/assets</code></td><td>Freigegebene kompatible Templates/Looks mit Tags; keine Weltmutation oder automatische Generierung.</td></tr>
+<tr><td><code>GET /api/worlds/:id/simulation-health</code></td><td>Invariantenzustand, Writer, Job, Queue, Checkpoint, Coverage und Performance; kein Providerkey.</td></tr>
+</tbody></table></div>
+<details open><summary>Beispiel: fünf Minuten mit Handlung</summary><pre><code>POST /api/worlds/w_demo/advance
+Idempotency-Key: action-20261005-00017
+Content-Type: application/json
+
+{
+  "duration_seconds":300,
+  "expected_snapshot_version":151,
+  "player_intent":{
+    "actor_id":"player_01", "kind":"talk", "target_id":"lea",
+    "text":"Ich frage Lea, ob sie nachher mit ins Café kommt."
+  },
+  "focus":{"important_npc_ids":["lea"]},
+  "presentation":{"lang":"de","detail":"scene","voice":false}
+}
+
+HTTP 202
+{
+  "job_id":"advance_017", "status":"accepted",
+  "start_time":28800, "target_time":29100,
+  "events_url":"/api/worlds/w_demo/advance/advance_017/events"
+}</code></pre></details>
+<h3>Provider-/Worker-Vertrag</h3>
+<pre><code>Request:
+{
+  "protocol":"vivarium.procedural/1", "request_id":"req_17",
+  "operation":"prepare|resolve|perspective|health",
+  "world_id":"w_demo", "branch_id":"br_main",
+  "base_snapshot_version":151, "runtime_epoch":8,
+  "rule_manifest":"sha256:...", "checkpoint":{ "...":"..." },
+  "target_time":29100, "decision_intents":[]
+}
+
+Response:
+{
+  "request_id":"req_17", "base_snapshot_version":151,
+  "advanced_to":28840, "stop_reason":"contact_boundary",
+  "candidate_beats":[], "decision_requests":[],
+  "checkpoint_candidate":{}, "outbox":[],
+  "invariant_errors":[], "metrics":{}
+}</code></pre>
+<p>Der Adapter muss Sekundenpräzision explizit deklarieren; der geprüfte OpenSims-Kern verwendet Integersekunden. Falls später Millisekunden gebraucht werden, ist das eine versionierte Änderung aller Dauer-/Rateverträge. API-Timestamps zeigen Weltzeit und Microstep, nicht die Dauer eines HTTP-Aufrufs.</p>
+<h3>Abwärtskompatibilität</h3>
+<p>Vivariums bisheriges <code>POST /api/worlds/:id/ticks</code> kann im Hybridmodus einen Advance-Job anlegen und seine Ereignisse in das bekannte Tick-/Done-Format übersetzen. Im bisherigen Storymodus bleibt der vorhandene GM-Pfad verfügbar. <code>perspective</code> als Kamerawahl ist dabei von Player-ID und Simulationsfokus zu trennen.</p>
+</section>
+
+<section id="oberflaeche">
+<div class="eyebrow">13 / Benutzeroberfläche</div><h2>Die Welt wird größer, die aktuelle Szene bleibt übersichtlich.</h2>
+<div class="grid"><div class="card"><h3>Atlas</h3><p>Viertel → Straße → Haus → Stockwerk → Zimmer. Breadcrumb und Suche; auf jeder Ebene nur deren Kinder und Verbindungen. Bestehendes Pan/Zoom behalten. Häuser zeigen Bewohnerzahl, Szene und Zugang.</p></div><div class="card"><h3>Bühne</h3><p>Aktuelles Panorama und sichtbare Figuren. Türhotspots und kompakter Zimmernavigator. Fokusindikator, kleine Aktivitäts-/Bedürfnisanzeige, Playeraktion und „+5 Minuten“. Große Gesprächsportraits erscheinen erst beim Dialog.</p></div><div class="card"><h3>Figurenliste</h3><p>Suche und Filter nach Haushalt, Standort, Beruf und Story-Fokus. Player auswählen; wichtige NPCs anheften. Liste für Hunderte Bewohner virtualisieren und keine Vollbildgalerie vorladen.</p></div><div class="card"><h3>Fortschritt &amp; Historie</h3><p>„Alltag berechnen → Begegnung auflösen → Szene erzählen“. Erreichte Uhr sichtbar; kein scheinbarer Abschluss vor Zielzeit. Timeline bietet die Szene und bei Bedarf strukturierte Hintergründe mit Ursachen.</p></div></div>
+<h3>Raumkamera und Playerbewegung sind getrennt</h3>
+<p>Ein Klick auf „Haus ansehen“ kann die Beobachterkamera bewegen, ohne Weltzeit zu verbrauchen. Ein Playerbefehl „Dorthin gehen“ erzeugt hingegen eine Reise mit Dauer und zulässigem Weg. Ein Blick in einen entfernten Raum bedeutet nicht, dass dein Charakter dessen Gespräch hört.</p>
+<h3>Bewegung im Raum</h3>
+<p>Der Kern liefert Route, Start-/Endzeit und Zwischenpunkte. Der Browser zeichnet bei Bedarf 30/60 Bildern pro Sekunde eine weiche Bewegung über die freigegebene Bodenfläche. Render-Reihenfolge folgt Tiefe und Vordergrundmasken. Ein sitzender NPC steht am Sitzanker und verwendet eine kompatible Pose. Bei Raumwechsel blendet die Szene um; sie teleportiert niemanden über die Tür.</p>
+<p>Im zeitgesteuerten MVP läuft diese Bewegung als <b>Wiedergabe des akzeptierten Zeitabschnitts</b>, beispielsweise auf 4–12 Sekunden verdichtet. „Wiedergabe stoppen“ stoppt Bild und Ton, nicht bereits akzeptierte Weltzeit. „Simulationsauftrag abbrechen“ ist eine separate Aktion. Ein reduzierter Bewegungsmodus zeigt Standbilder/Übergänge.</p>
+<h3>Leistung bei langsamer Verbindung</h3>
+<p>Illustrationen nach Bildschirmgröße ausliefern, Figuren transparent komprimieren, unveränderliche Hash-URLs cachen, nur die aktuelle Szene und wenige wahrscheinliche Nachbarorte vorladen. Bei 1 Mbit/s benötigt schon 1 MB Nutzdaten theoretisch etwa acht Sekunden. Ein Szenenziel von 150–350 KB Hintergrund plus wenigen kleinen Cutouts ist deshalb sinnvoller als unkomprimierte PNG-Originale.</p>
+<p>API-Szenen liefern Deltas oder begrenzte Projektionen. Eine komplette Checkpointübertragung bleibt intern zwischen Koordinator und Worker. Mobile Geräte sehen bei vielen Anwesenden eine reduzierte Figurenanzahl plus Teilnehmerliste; relevante Personen bleiben über den Dialog erreichbar und werden nicht aus der Simulation entfernt.</p>
+</section>
+
+<section id="migration">
+<div class="eyebrow">14 / Konkrete Codeänderungen</div><h2>Der Ausbau bekommt einen eigenen Pfad im bestehenden Repository.</h2>
+<pre><code>server/
+  simulation/
+    coordinator.js       # serialisierte Advance-Jobs und sichere Commitgrenzen
+    attention.js         # Player, wichtige NPCs, Kontakte, Pflichtabhängigkeiten
+    worker_bridge.js     # Python-Protokoll, Timeouts, Snapshot/Epoch-Prüfung
+    beat_store.js        # Changes, Projektionen, Checkpoints, Outbox
+    validators.js        # IDs, Zeit, Ressourcen, Besitz, Evidenz, Coverage
+    perspectives.js      # eigene Agentenpakete, autorisierte History-Retrievals
+    scene_narrator.js    # akzeptierte SpeechActs/Beats → Vivarium-Script
+    library.js           # freigegebene Templates und stabile Assetauswahl
+  routes/simulation.js
+  db.js                  # additive, versionierte Migrationen
+  gm.js                  # legacy + Hybrid-Dispatch; Storyteller später anschließen
+  branches.js            # vollständige Simulationscheckpoints wiederherstellen
+  assets.js              # Bibliothekslinks von Weltassets unterscheiden
+  world_io.js            # Checkpoints, Regelversionen und Assets exportieren
+
+simulation-python/
+  adapter.py             # import/export checkpoint, prepare, resolve, perspective
+  worker.py              # gerahmtes JSON, ohne autonomen Ticker/öffentlichen Server
+  schemas/               # WorldBlueprint, Protokoll, Regel-/Szenenpakete
+  rules/                 # versionierte Bedürfnisse, Tätigkeiten, Haushaltsprofile
+
+web/
+  app.js                 # Fokus, Ortehierarchie, Advance-Job und Scene-Ansicht
+  scene_motion.js        # akzeptierte Trajektorien und Tiefensortierung
+  styles.css             # Standortnavigator, Status, responsive Figurenlisten
+
+scripts/
+  start-local.sh          # ergänzter Starthelfer für die vorhandene Node-Runtime
+  migrate_hybrid.js       # Vorschau, Validierung, dann explizite Weltkonvertierung
+  build_asset_library.js  # offline/vorab; Ausgabe erst nach Qualitätsfreigabe
+
+e2e/                     # zusätzliche Hybrid-Szenarien auf isolierten Testwelten</code></pre>
+<div class="table-wrap"><table><thead><tr><th>Bestehender Bereich</th><th>Umsetzung</th></tr></thead><tbody>
+<tr><td><code>server/db.js</code></td><td>Migrationstabellen und <code>simulation_mode=story|hybrid</code>. Bestehende Welt standardmäßig im Storymodus lassen; keine implizite Umdeutung alter Texte zu belegten Ereignissen.</td></tr>
+<tr><td><code>server/gm.js</code></td><td>Den Hybridpfad vor dem Voll-Cast-Prompt dispatchen. <code>runChapter()</code> erzählt lange Sprünge künftig aus Simulationsergebnissen; ein Kapitelplan ist keine zweite Weltuhr.</td></tr>
+<tr><td><code>server/routes/api.js</code></td><td>Aktuelle Owner-Prüfung wiederverwenden; neue Routen separat registrieren; vorhandene Tick-SSE kompatibel anbinden. Große Weltabfragen paginieren.</td></tr>
+<tr><td><code>server/providers.js</code>, Credits, BYOK</td><td>Einzige externe Modellgrenze behalten; neue Rollen für Agentenentscheidungen und Narration zuweisbar machen. Wenige Figuren mit kleinen Paketen statt Gesamtwelt schicken.</td></tr>
+<tr><td><code>server/branches.js</code></td><td>Simulationssnapshot an Tick referenzieren und vollständige Restore-Logik ergänzen. Assetgalerie bleibt außerhalb der mechanischen Rückabwicklung.</td></tr>
+<tr><td><code>server/wizard.js</code></td><td>Haus-/Straßen-/Haushaltsbriefs erzeugen; Assetbedarf aus Bibliotheksabdeckung berechnen. Bilder nur für echte Lücken generieren.</td></tr>
+<tr><td><code>web/app.js</code></td><td><code>stageScreen()</code> von beliebigem Vollweltzustand auf Scene-Projektion umstellen; <code>atlasScreen()</code> um Elternnavigation erweitern.</td></tr>
+<tr><td><code>export_cues.js</code>, TTS, Player</td><td>Vorhandenes Narrationsformat behalten; akzeptierte Dialoge und Bewegungssegmente als optionale Film-Cues ergänzen. Audio nur für sichtbare Storyszenen anfordern.</td></tr>
+</tbody></table></div>
+<h3>Migration einer vorhandenen Geschichte</h3>
+<ol><li>Konsistente SQLite-Sicherung über Backup-API erstellen, einschließlich WAL-Inhalt. Konvertierung zunächst auf Kopie durchführen.</li><li>Am gewählten Branchkopf den derzeitigen Figuren-/Beziehungs-/Ortszustand übernehmen. Vorhandene IDs erhalten und freien <code>place_group</code>-Text in geprüfte Gebäudecontainer übersetzen.</li><li>Aus vorhandenen Hintergründen Raumtemplates nur dort machen, wo Geometrie und Ausgänge annotiert sind. Ungeeignete Orte bleiben zunächst reine Portraitszenen.</li><li>Bedürfnisse und Objektbestand ausdrücklich initialisieren; Herkunft <code>hybrid_initialization</code> speichern. Alte Storytexte sind historische Referenzen, keine erfundenen damaligen Wahrnehmungsrecords.</li><li>Hybrid-Genesischeckpoint ab Konvertierungszeit speichern. Vorherige Storyticks bleiben mit altem Replay lesbar; die Engine simuliert sie nicht nachträglich um.</li><li>Nach Abnahme den ausgewählten neuen Hybridzweig freigeben. Der ursprüngliche Storyzweig bleibt als unabhängige Fortsetzung erhalten.</li></ol>
+</section>
+
+<section id="phasen">
+<div class="eyebrow">15 / Umsetzung</div><h2>Erst eine überzeugende Straße, dann das größere Viertel.</h2>
+<p>Die Reihenfolge richtet sich nach technischen Abhängigkeiten. Zeitaufwände sind ohne Umsetzung und Messung nicht belastbar; jede Phase hat deshalb einen prüfbaren Abschluss statt einer versprochenen Kalenderdauer.</p>
+<div class="table-wrap"><table><thead><tr><th>Phase</th><th>Lieferumfang</th><th>Abnahme</th></tr></thead><tbody>
+<tr><td>0 · Ist-Zustand</td><td>Bestehendes Vivarium starten/prüfen; PDFs und OpenSims auswerten; diesen Plan erstellen.</td><td>Für diese Aufgabe erledigt: Browser und isolierter echter Tick funktionieren.</td></tr>
+<tr><td>1 · Orts- und Assetgrundlage</td><td>Hierarchie, Türen, Reisezeiten, SceneTemplates; eine Straße, zwei Häuser, Räume und Bibliotheksverweise.</td><td>Jeder Raum erreichbar oder ausdrücklich gesperrt; geteiltes Bild, getrennte Möbelzustände; Atlas/Bühne navigierbar.</td></tr>
+<tr><td>2 · Deterministischer Kern</td><td>Python-Adapter, versionierte Snapshots, Routinen, Scheduler, Objekte, BeatStore und volle Restore-Fähigkeit; 12–20 Bewohner.</td><td>Ein Tageslauf ohne verlorene Aktionen/Reservierungen; gespeicherter Replayzustand identisch; derselbe Kern headless.</td></tr>
+<tr><td>3 · Player und soziale Perspektive</td><td>Typisierte Playeraktion, individueller Kontext, strukturierte SpeechActs, LLM-Intents, gültige soziale Auflösung.</td><td>Lea kann ablehnen; Sam kennt keine ungesehene Information; Playerentscheidungen bleiben geschützt.</td></tr>
+<tr><td>4 · Fokus und Kontakt</td><td>Wichtige NPCs, automatische Raumteilnehmer, Telefonat, Ankünfte, Ownership-Epoch und kausale Teilgrenzen.</td><td>Eine entfernte Person wird per Anruf aktiviert; fünf Minuten mit mehreren Unterbrechungen bleiben konsistent.</td></tr>
+<tr><td>5 · Neue Vivarium-Bühne</td><td>Ganzkörper-Cutouts, Wege, Sitz-/Stehanker, Masken, Szene/Portraitwechsel, wiederverbindbare Advance-Jobs.</td><td>Kein Lauf durch Möbel; Animation unabhängig von Weltuhr; Desktop und Mobil.</td></tr>
+<tr><td>6 · 100–400 Bewohner</td><td>Bibliotheksausbau, Haushaltsgenerator mit validierten Blueprints, paginierter Atlas/Cast und begrenzte Szenenprojektionen.</td><td>570 Ortsknoten als Ausbauziel; echte 24-Stunden- und Wochenläufe mit Messbericht, nicht nur anzeigbare Karte.</td></tr>
+<tr><td>7 · Erweiterte Dramaturgie</td><td>Eigenständige wichtige NPC-Arcs, lokale Zusammenfassungen, vorsichtige Erzählimpulse; optional spätere Echtzeit.</td><td>Wichtiger NPC entwickelt sich außerhalb der Kamera; Plotvorschlag kann scheitern, ohne Weltgeschichte zu ändern.</td></tr>
+<tr><td>8 · Entwicklungswerkstatt / Verteilung</td><td>Isolierte Regeländerungen, Tests, Freigabe, Migration; bei nachgewiesenem Bedarf mehrere Feldworker mit Watermarks.</td><td>Getestete Vertrags- und Verhaltensverbesserung; keine ungeprüfte Änderung im laufenden Spiel.</td></tr>
+</tbody></table></div>
+<div class="note good"><b>Erste überzeugende Demo:</b> Player und Lea wohnen in Haus 12. Sam frühstückt prozedural. Mira lebt in Haus 14. Während eines Fünf-Minuten-Schritts kommt Sam herein und Mira wird angerufen. Danach geht der Player ins Café, kommt zurück und sieht dieselben weiterentwickelten Figuren und Räume. Undo stellt auch den Anruf, den Schlüsselbestand und die laufenden Aktionen wieder her.</div>
+</section>
+
+<section id="tests">
+<div class="eyebrow">16 / Verifikation</div><h2>Gute Erzählung muss die mechanische und epistemische Prüfung bestehen.</h2>
+<p><b>Bereits ausgeführt:</b> Vivarium-Browserdurchlauf, bestehender Tunnel, isolierter realer Fünf-Minuten-Tick sowie OpenSims-Funktionstest mit 54 Bewohnern. Die nachfolgende Matrix beschreibt die Abnahme des geplanten Ausbaus und ist noch nicht implementiert oder bestanden.</p>
+<div class="table-wrap"><table><thead><tr><th>Test</th><th>Erwarteter Nachweis</th></tr></thead><tbody>
+<tr><td>1 × 300 s gegen 5 × 60 s</td><td>Mit gleicher rein prozeduraler Eingabe, Regeln und Gelegenheits-IDs gleiche kanonische Ergebnisse. Kein Zufallsbonus durch kleinere Zeitschritte.</td></tr>
+<tr><td>Zwei Personen, ein WC</td><td>Kein überlappender exklusiver Zugriff; Alternative/Warten; nach Abbruch keine verwaiste Reservierung.</td></tr>
+<tr><td>Ankunft im Gespräch</td><td>Neue Figur um Sekunde 40 aufgenommen, vorher keine Rede im Raum; laufende Handlung geht bei Promotion nicht verloren.</td></tr>
+<tr><td>Anruf bei Sekunde 137</td><td>Entfernter NPC bis Kontakt nachgeführt; Empfänger reagiert erst nach Zustellung; keine LLM-Aktivierung aller dazwischenliegenden Straßen.</td></tr>
+<tr><td>Effektablauf vor Kontakt</td><td>Ein Ablauf bei Sekunde 7 wird vor Begegnung bei Sekunde 17 verarbeitet, auch bei einem bevorzugten 60-Sekunden-Beat.</td></tr>
+<tr><td>Geteiltes Hintergrundasset</td><td>Beschädigtes Möbel in Haus 12 verändert nicht das Möbel in Haus 14; Löschen einer Welt löscht keine gemeinsam verwendete Bibliotheksdatei.</td></tr>
+<tr><td>Falsche Ownership-Epoch</td><td>Verspätete Antwort nach Fokuswechsel, Undo oder Branchwechsel abgelehnt; kein Zeit-/Zustandssprung.</td></tr>
+<tr><td>A–B–C-Kontaktkette</td><td>Ein gemeinsamer Konfliktabschluss; ein Writer pro Scope, eindeutige Objektverwahrung, keine doppelt zugestellte Nachricht.</td></tr>
+<tr><td>Wissen und Täuschung</td><td>Ungehörte Aussage fehlt im Figurenpaket; falsche Überzeugung ändert keinen Canon; Korrektur verweist auf zugängliche Gegenbelege.</td></tr>
+<tr><td>Geschützte Playerentscheidung</td><td>Modell darf nicht ungefragt Einladung annehmen, Geld ausgeben oder eine Beziehung entscheiden. Absicht/Handlungsvorschau bleibt überprüfbar.</td></tr>
+<tr><td>Providerfehler / Budgetende</td><td>Bekannter aktueller Cursor, keine scheinbare Zielzeit, erlaubter Fallback oder Wartezustand; endlich begrenzte Retries.</td></tr>
+<tr><td>Browser-Reload / identischer POST</td><td>Auftrag wird wiedergefunden; derselbe Schlüssel bewirkt nicht zweimal Zeit, Inventartransfer oder Creditbelastung.</td></tr>
+<tr><td>Prozessabbruch vor/nach Commit</td><td>Neustart lädt den alten oder den vollständig neuen Checkpoint. Kein Zustand mit halbem Beat und neuer Uhr.</td></tr>
+<tr><td>Undo / Replay / Fork / ZIP</td><td>Figuren, Möbel, Queue, Wissen, Reservierungen und RNG-IDs stimmen; Replay benötigt keine neue Modellantwort; ZIP-Fortsetzung verhält sich gleich.</td></tr>
+<tr><td>Nachträgliches Detail</td><td>Eine Szene darf Beschreibung ergänzen; vorheriger Transfer, Nachricht und gehörte Formulierung bleiben unverändert. Verdeckter rückwirkender Transfer wird abgelehnt.</td></tr>
+<tr><td>24 Stunden / 7 Tage</td><td>Keine wachsenden Timerleichen, eingefrorenen Ziele oder Ressourcen aus dem Nichts; Kosten-/Queue-/Speicherkurve dokumentiert.</td></tr>
+<tr><td>Mobile / langsames Netz</td><td>Ortsnavigator und wichtige Figuren bedienbar, kein Seitenüberlauf, Bibliothek nicht komplett geladen; Wiedergabe arbeitet mit bestätigten Szenendaten.</td></tr>
+</tbody></table></div>
+<p>Mechaniktests nutzen den echten Kern und deterministische Providerfixtures. Ein kleiner realer Provider-Smoke-Test prüft separat die Modellintegration. Erzählerqualität wird anhand gleicher akzeptierter Ereignisse bewertet; schönere Texte dürfen einen mechanischen Fehler nicht ausgleichen.</p>
+<p>Die bestehenden E2E-Skripte enthalten teilweise absolute Scratchpad-Pfade und historische Selektoren. Vor Verwendung als CI-Suite müssen sie auf lokale Playwright-Abhängigkeit, konfigurierbare Base-URL und isolierte Testdaten umgestellt werden. Für den heutigen Startcheck wurde ein eigener temporärer Browserdurchlauf mit den aktuellen UI-Selektoren verwendet.</p>
+</section>
+
+<section id="kosten">
+<div class="eyebrow">17 / Ressourcen</div><h2>Modellkosten richten sich nach wichtigen Entscheidungen, nicht nach Einwohnerzahl.</h2>
+<p>Bei 400 Bewohnern bleiben die meisten Fünf-Minuten-Aufträge rein prozedurale Kernarbeit plus eine kleine Anzahl wichtiger Figurenentscheidungen und eine Szenennarration. Wenige Modellaufrufe können trotzdem langsam sein; der heutige bestehende GM-Schritt brauchte in einem Versuch rund 27 Sekunden. Der neue Pfad muss deshalb anhand echter Szenen gemessen werden.</p>
+<h3>Startbudgets als konfigurierbare Planwerte</h3>
+<ul><li>Pro Figurenentscheidung ungefähr 2.000–4.000 Inputtokens und 300–800 Outputtokens; nur eigene relevante Perspektive. Nicht als gemessene Verbrauchswerte verstehen.</li><li>Für Szenennarration ungefähr 3.000–6.000 Inputtokens und 800–1.800 Outputtokens, bei Bedarf mehrere kurze Szenen statt eines unbeschränkten Films.</li><li>Für eine einfache Szene 2–6 Modellaufrufe als Startziel, davon typischerweise 1–4 relevante NPC-Entscheidungen, 1 Narration und maximal 1 Reparatur. Neue Kontakte oder viele wichtige NPCs erhöhen diesen Bedarf sichtbar.</li><li>Prozedurale Wiederholungen und fortlaufende Handlungen benötigen keinen Agentenaufruf. Mechanische Untergrenzen werden nicht zugunsten eines Calllimits weggelassen.</li><li>TTS nur für ausgewählte präsentierte Zeilen; keine Stimmen für jeden Hintergrund-Beat. Bilder ausschließlich bei Bibliotheksaufbau oder genehmigter neuer individueller Variante.</li></ul>
+<pre><code>step_cost_usd = sum(input_tokens/1e6 * configured_input_price
+                  + output_tokens/1e6 * configured_output_price)
+              + actually_generated_audio_cost
+              + actually_generated_image_cost
+
+# Im normalen Alltagsschritt ist image_cost = 0.
+# Preise werden aus den aktuellen Provider-Routen gelesen, nicht fest im Plan kodiert.</code></pre>
+<h3>Skalierung messen</h3>
+<p>Messreihen mit 20, 100, 400 und 1.000 Bewohnern; jeweils fünf Minuten, einen Tag und eine Woche. Separate Lastfälle: normaler Haushaltstag, voller Campus, viele gemeinsame Anrufe, gesperrte Wege und ein regionales Ereignis. Erfassen: Kernelzeit, Workertransfer, Serialisierung, Pathfinding, Commit-/Historybytes, Queuegrößen, Speicher, p95/p99-Latenz und Modellverbrauch.</p>
+<p>Der Startkern darf bei Hunderterpopulationen zunächst Python-Dictionaries verwenden. Wenn Profiling diese als Engpass zeigt, heiße Komponenten in kompakte Arrays überführen oder einen numerischen/nativen Kern nachziehen. Ein einzelner 836-ms-Test erlaubt keine lineare Hochrechnung auf Millionen Bewohner und keinen garantierten Handy- oder Echtzeitbetrieb.</p>
+<p>Für große Ortszahlen verhindern Lazy-Loading und regionale Graphen Vollwelt-Scans. Für große Historien speichern analytische Segmente und echte Änderungen statt unveränderter Wiederholungen. Periodische Checkpoints beschleunigen Replay; benötigte kausale Belege dürfen nicht durch eine lose Textzusammenfassung ersetzt werden.</p>
+</section>
+
+<section id="risiken">
+<div class="eyebrow">18 / Grenzen &amp; gewählte Defaults</div><h2>Die offenen Punkte sind konkrete Integrationsaufgaben.</h2>
+<div class="table-wrap"><table><thead><tr><th>Punkt</th><th>Gewählte Richtung</th><th>Wann weiterentscheiden</th></tr></thead><tbody>
+<tr><td>OpenSims-Codeübernahme</td><td>Für die Analyse wurde der Quellstand lokal geprüft. Bei tatsächlicher Codeintegration Herkunft und Nutzungsrechte festhalten; das Repository hat nach eigener Dokumentation keine gewählte Lizenz.</td><td>Vor Übernahme und insbesondere Weitergabe des abgeleiteten Codes. Falls Rechte nicht passend verfügbar sind, Schnittstellen beibehalten und kleine benötigte Regeln eigenständig implementieren.</td></tr>
+<tr><td>Ein Kern, zwei Sprachen</td><td>Python-Regeln adaptieren, Node als persistenter Koordinator; keine geteilte SQLite-Schreibhoheit.</td><td>Nach Worker-/Checkpoint-Prototyp anhand gemessener Transferlast; erst dann über Portierung entscheiden.</td></tr>
+<tr><td>100 Standardlooks für mehr Bewohner</td><td>Eigene Personenidentitäten, seedbasierte visuelle Zuordnung; selten gemeinsame identische Looks, wichtige Figuren personalisieren.</td><td>Nach Sichtprüfung einer repräsentativen Nachbarschaft.</td></tr>
+<tr><td>Gemalte Geometrie</td><td>Annotierte feste Templates mit Türen, Masken und Möbelslots.</td><td>Freies Bauen braucht später getrennte Möbelassets und Raumlayout-Rendering.</td></tr>
+<tr><td>Bestehende Figurenillustrationen</td><td>Als Gesprächsportraits weiterverwenden; Ganzkörperbibliothek für sichtbare Bewegung ergänzen.</td><td>Vor dem Bewegungsrenderer gemeinsam Projektions-/Fußankerstandard festlegen.</td></tr>
+<tr><td>Playerautonomie</td><td>Explizite Absicht; wichtige Entscheidungen nicht vom Erzähler vorgeben. „Warten“ lässt eine gewählte laufende Tätigkeit fortsetzen.</td><td>Optionaler Autorenmodus könnte später ausdrückliche automatische Playerführung anbieten.</td></tr>
+<tr><td>Große Kontaktgruppe</td><td>Pflichtteilnehmer erhalten Coverage; optionale Details reduzieren, Dialoge in zulässige Teile zerlegen oder anhalten.</td><td>Nach Messung von Gruppen mit 5, 15 und 50 Personen.</td></tr>
+<tr><td>Fernere wichtige NPCs</td><td>Eigene Fokusanker mit garantierter Bearbeitung im Auftrag, nicht abhängig von der Kamera.</td><td>Bei vielen Ankern Budgetvorschau und faire Schedulerprioritäten ausbauen.</td></tr>
+<tr><td>Modellfehler</td><td>Typisierte Vorschläge, unabhängige Validierung, kleine Repairgrenze, vollständiger Jobcursor.</td><td>Mit echten Providerantworten Latenz und Fehlermuster messen.</td></tr>
+<tr><td>Meta-Erzähler und Regelwerkstatt</td><td>Späterer Ausbau nach kausalem Ledger und sozialer Integrität.</td><td>Wenn Alltag, Fokuswechsel, Telefonszene und Undo zuverlässig funktionieren.</td></tr>
+</tbody></table></div>
+<p class="small">Die Rechtefrage folgt der expliziten <a href="https://github.com/LAION-AI/open-sims/blob/c968251faffb99e012af4795902ef643802f14d5/README.md">Provenienzangabe des OpenSims-Projekts</a>. Sie verhindert nicht den hier ausgeführten lokalen Lesetest oder diesen unabhängigen Architekturentwurf.</p>
+</section>
+
+<section id="referenzen">
+<div class="eyebrow">19 / Quellen &amp; nächster Baustein</div><h2>Der konkrete Einstieg: eine Straße und eine vollständige Telefonszene.</h2>
+<p>Als erste Umsetzung würde ich Orts-/Assetinstanzen und einen vollständigen checkpointfähigen Kern bauen. Danach folgt die Player–Lea–Sam–Mira-Demo: eine Raumankunft, ein entferntes Telefonat, prozedurale Nachbarn und ein Fünf-Minuten-Auftrag mit Undo. Diese vertikale Demo prüft die schwierigsten Verträge, bevor Bilder für eine ganze Stadt erzeugt werden.</p>
+<h3>Primärquellen</h3>
+<ol><li><a href="Living_World_Model_Technical_Report%20%284%29.pdf">Living World Model · Technical Report, bereitgestellte Datei</a>, 21.09.2026, 32 Seiten. Besonders §§4–5, 7–12 und 14–16.</li><li><a href="Procedural_Living_Worlds_Whitepaper%20%281%29.pdf">Procedural Living Worlds · Whitepaper, bereitgestellte Datei</a>, 27.09.2026, 40 Seiten. Besonders A2–A7, B1–B4, D5 und E1–E2.</li><li><a href="https://github.com/LAION-AI/open-sims/tree/c968251faffb99e012af4795902ef643802f14d5">OpenSims · geprüfter Commit</a>; <a href="https://github.com/LAION-AI/open-sims/blob/c968251faffb99e012af4795902ef643802f14d5/docs/architecture.md">Architektur und Whitepaper-Mapping</a>; <a href="https://github.com/LAION-AI/open-sims/blob/c968251faffb99e012af4795902ef643802f14d5/docs/api.md">API und Bridge 0.1</a>.</li><li><a href="https://github.com/LAION-AI/open-sims/blob/c968251faffb99e012af4795902ef643802f14d5/living_world/engine.py">OpenSims-Engine</a>, <a href="https://github.com/LAION-AI/open-sims/blob/c968251faffb99e012af4795902ef643802f14d5/living_world/ledger.py">Ledger</a>, <a href="https://github.com/LAION-AI/open-sims/blob/c968251faffb99e012af4795902ef643802f14d5/living_world/openrouter_control.py">optionaler Provideradapter</a>. Funktionsumfang aus Quellcode und einem kleinen Headless-Lauf geprüft.</li><li>Lokaler Vivarium-Code: <a href="server/gm.js">gm.js</a>, <a href="server/db.js">db.js</a>, <a href="server/branches.js">branches.js</a>, <a href="server/routes/api.js">API</a>, <a href="server/assets.js">Assets</a>, <a href="server/world_io.js">Export/Import</a>, <a href="web/app.js">Web-App</a>, <a href="docs/DOCUMENTATION.md">Dokumentation</a> und <a href="README.md">README</a>. Die Analyse bezieht sich auf den vorgefundenen, lokal geänderten Arbeitsstand.</li></ol>
+<p>Alle Größen-, Budget- und Phasenangaben dieses Plans sind Implementierungsentscheidungen bzw. Startannahmen. Nur die ausdrücklich beschriebenen Start-/Browser-/Tick-/Headless-Prüfungen wurden für diese Aufgabe ausgeführt.</p>
+</section>
+<footer>Vivarium × Living World · lokaler Implementierungsplan · 05.10.2026<br>Standalone-HTML ohne externe Schriftarten, Bibliotheken, Tracking oder API-Aufrufe. Interaktive Beispiele rechnen ausschließlich im Browser.</footer>
+</main>
+</div>
+<script>
+document.getElementById('print-plan').addEventListener('click',()=>window.print());
+function updateAssets(){
+ const vals={};for(const id of ['room-types','room-variants','outfits','expressions']){const el=document.getElementById(id);vals[id]=Number(el.value);document.getElementById(id+'-out').textContent=el.value;}
+ document.getElementById('background-total').textContent=vals['room-types']*vals['room-variants']+30;
+ document.getElementById('character-total').textContent=100*vals.outfits*vals.expressions;
+}
+for(const el of document.querySelectorAll('input[type=range]'))el.addEventListener('input',updateAssets);
+updateAssets();
+const cases={
+ room:{active:['lea'],sam:'Küche · Frühstück zubereiten',mira:'Haus 14 · Lernen',note:'Player und Lea sind die aktive Szene. Sam und Mira führen ihre Routinen fort. Die laufenden Wege und möglichen Kontaktgrenzen bleiben bekannt.'},
+ phone:{active:['lea','mira'],sam:'Küche · Frühstück zubereiten',mira:'Haus 14 · Telefonat angenommen',note:'Mira erhält einen eigenen Perspektivkontext und wird über den Anruf gekoppelt. Die übrigen Menschen in Haus 14 oder auf der Straße werden dadurch nicht zu Gesprächsteilnehmern.'},
+ arrival:{active:['lea','sam'],sam:'Wohnzimmer · gerade angekommen',mira:'Haus 14 · Lernen',note:'Sam erreicht das Wohnzimmer an der protokollierten Kontaktgrenze. Er gehört jetzt zur Szene, ohne seine bisherige Aktion oder Erinnerung zu verlieren.'},
+ remote:{active:['lea','mira'],sam:'Küche · Frühstück zubereiten',mira:'Haus 14 · wichtiger NPC mit eigenem Fokus',note:'Mira verfolgt ihre eigene wichtige Handlung unabhängig von der Kamera. Ihr privates Wissen wird dem Player nicht mitgeteilt; ihre scene narrative bleibt separat.'}
+};
+function showFocus(key){const c=cases[key];const actors=[['player','Dein Charakter','Wohnzimmer · explizite Spielerabsicht'],['lea','Lea','Wohnzimmer · Gespräch'],['sam','Sam',c.sam],['mira','Mira',c.mira],['neighbor','Nachbar in Haus 16','Haus 16 · prozedurale Arbeitsroutine'],['student','Studentin am Campus','Campus · prozeduraler Unterricht']];const root=document.getElementById('focus-world');root.replaceChildren();for(const [id,name,desc] of actors){const d=document.createElement('div');d.className='actor'+(id==='player'?' player':c.active.includes(id)?' llm':'');const b=document.createElement('b');b.textContent=name;const span=document.createElement('span');span.textContent=desc;const mode=document.createElement('span');mode.textContent=id==='player'?'Player · eigene Entscheidung':c.active.includes(id)?'Story-Fokus · Sprachmodell bei relevanter Entscheidung':'Prozedural · Regeln und Scheduler';d.append(b,span,mode);root.append(d);}document.getElementById('focus-explanation').textContent=c.note;for(const b of document.querySelectorAll('[data-case]')){const on=b.dataset.case===key;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));}}
+for(const b of document.querySelectorAll('[data-case]'))b.addEventListener('click',()=>showFocus(b.dataset.case));showFocus('room');
+</script>
+</body>
+</html>

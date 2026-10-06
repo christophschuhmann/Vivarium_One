@@ -555,3 +555,61 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .bp-opt.bp-primary .bp-d{color:rgba(255,255,255,.92)}
 .bp-opt.bp-primary:hover{box-shadow:0 8px 22px rgba(132,101,255,.4)}
 .bp-opt:disabled{opacity:.6;cursor:default}
+
+/* AI settings share the game's rounded cards and violet accent, with room to read. */
+.provider-studio { --studio-accent:#6d4aff; color:var(--ink,#302b4b); min-width:0; }
+.studio-intro { margin-bottom:20px; }
+.studio-eyebrow { font-size:10px; letter-spacing:.13em; font-weight:700; color:var(--studio-accent); }
+.studio-intro h2 { font-size:22px; margin:6px 0; font-weight:600; }
+.studio-intro p,.studio-banner { font-size:12px; line-height:1.65; }
+.studio-intro p { color:var(--soft); margin:0; max-width:650px; }
+.provider-studio h3 { font-size:14px; margin:23px 0 10px; }
+.studio-banner { background:#f3f0ff; border:1px solid #e1dafa; border-radius:12px; padding:12px 15px; margin:14px 0; }
+.studio-mode,.studio-keys,.studio-models { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
+.studio-mode label { display:flex; align-items:center; gap:10px; border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer; }
+.studio-mode label:has(input:checked) { background:#f4f0ff;border-color:#9c86ec; }
+.studio-mode small,.studio-card-head small { display:block; font-size:10.5px; color:var(--soft);margin-top:3px;line-height:1.5; }
+.studio-key,.studio-model { border:1px solid var(--line); border-radius:14px;background:#fff; padding:16px; min-width:0; }
+.studio-card-head { display:flex; justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:12px;font-size:13px;flex-wrap:wrap; }
+.studio-badge,.studio-role { font-size:9px;background:#f2f0f8;padding:4px 7px;border-radius:6px;white-space:nowrap;color:var(--soft); }
+.studio-badge.connected { background:#eaf7f0;color:#19724d; }
+.studio-role { letter-spacing:.08em; }
+.studio-field { display:flex;flex-direction:column;gap:5px; margin:11px 0;font-size:10.5px;font-weight:500;color:var(--soft); }
+.studio-field input,.studio-field select { width:100%;min-width:0;font:12px inherit;font-family:inherit;font-size:12px;color:var(--ink,#302b4b);padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fcfbff; }
+.studio-field input:focus,.studio-field select:focus { outline:2px solid #c6b8fb;outline-offset:1px; }
+.studio-key>small,.studio-model-meta { font-size:10px;line-height:1.6;color:var(--soft);display:block; }
+.studio-actions { display:flex;gap:7px;flex-wrap:wrap;margin:12px 0; }
+.studio-feedback { font-size:11px;line-height:1.55;color:#23784f;min-height:17px;margin-top:5px; }
+.studio-feedback.error,.studio-model-meta.error { color:#b33450; }
+.studio-section-heading { display:flex;justify-content:space-between;gap:10px;align-items:center; }
+.studio-policy { display:flex;gap:9px;align-items:center;font-size:12px;margin-top:20px; }
+.studio-footer { display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--line);margin-top:20px;padding-top:16px; }
+.settings-dialog { width:min(1040px,96vw)!important;max-width:1040px!important; }
+.settings-dialog .modal-head { padding:22px 26px; }
+.settings-layout { display:grid;grid-template-columns:155px minmax(0,1fr);min-height:460px; }
+.settings-nav { background:#faf8ff;border-right:1px solid var(--line);padding:22px 12px;display:flex;flex-direction:column;gap:6px; }
+.settings-nav button { border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:9px;color:var(--soft);font:12px inherit;cursor:pointer; }
+.settings-nav button[aria-selected=true] { background:#eee8ff;color:#6341ce;font-weight:600; }
+.settings-content { padding:24px!important; min-width:0;max-height:70vh;overflow:auto; }
+.settings-content [data-settings-page][hidden] { display:none!important; }
+.settings-content>[data-settings-page] { margin:0!important; }
+.settings-content>.panel[data-settings-page] { border:0;box-shadow:none;background:transparent;padding:0!important; }
+.settings-content .settings-logout { display:block;margin-top:22px;font-size:12px;color:var(--soft); }
+.admin-advanced { margin-top:22px; }
+.admin-advanced>summary { cursor:pointer;font-size:13px;font-weight:600;padding:14px 4px; }
+.admin-route-scroll { overflow-x:auto; }
+@media(max-width:700px) {
+ .studio-keys,.studio-models,.studio-mode { grid-template-columns:1fr; }
+ .settings-layout { display:block; }
+ .settings-nav { flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:9px; }
+ .settings-nav button { flex-shrink:0;padding:9px 11px; }
+ .settings-content { padding:17px!important;max-height:68vh; }
+ .settings-dialog .modal-head { padding:17px; }
+ .studio-footer { align-items:stretch;flex-direction:column; }
+ .studio-section-heading h3 { margin-top:18px; }
+ .tabs { overflow-x:auto;flex-wrap:nowrap; }
+}
+
+.settings-dialog .x { background:transparent;border:0;color:inherit;font-family:inherit;font-size:20px;cursor:pointer; }
+.admin-tabs { overflow-x:auto; }
+.admin-tabs button { white-space:nowrap; }

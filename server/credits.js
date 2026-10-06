@@ -1,6 +1,9 @@
 // Credit accounting: append-only ledger, atomic balance updates, guardrails.
 // 1 credit = 1_000_000 micro-credits. 100 credits ≈ $1 retail (markup over raw).
+// BYOK users (their own HyprLab or OpenRouter key, see server/byok.js) pay the provider directly:
+// their calls skip preflight and never debit the ledger — usage is still logged.
 import { db, uid, now, j, getSetting } from './db.js';
+import { byokActive, byokPolicy } from './byok.js';
 
 export const MICRO = 1_000_000;
 export const toMicro = (credits) => Math.round(credits * MICRO);
@@ -28,11 +31,13 @@ export function spentToday(userId) {
 
 // Throws if the user cannot afford an action estimated at estMicro.
 export function preflight(userId, estMicro) {
-  const u = db.prepare('SELECT credit_balance, daily_cap, status FROM users WHERE id=?').get(userId);
+  const u = db.prepare('SELECT * FROM users WHERE id=?').get(userId);
   if (!u) throw new CreditError('NO_USER', 'user not found');
   if (u.status !== 'active') throw new CreditError('SUSPENDED', 'account suspended');
-  if (u.credit_balance < estMicro) throw new CreditError('INSUFFICIENT_CREDITS', `Not enough credits — this needs ~${Math.ceil(toCredits(estMicro))} and you have ${Math.floor(toCredits(u.credit_balance))}. Ask your admin for a top-up.`);
-  if (spentToday(userId) + estMicro > u.daily_cap) throw new CreditError('DAILY_CAP', 'Daily spend cap reached — try again tomorrow or ask your admin to raise it.');
+  if (u.or_enabled && byokPolicy().enabled && !byokActive(u)) throw Object.assign(new Error('Your personal provider keys are incomplete. Open Settings → AI & models.'), { statusCode: 400, code: 'PERSONAL_KEY_MISSING' });
+  if (byokActive(u)) return;   // own key → OpenRouter bills them; no credits involved
+  if (u.credit_balance < estMicro) throw new CreditError('INSUFFICIENT_CREDITS', `Not enough credits — this needs ~${Math.ceil(toCredits(estMicro))} and you have ${Math.floor(toCredits(u.credit_balance))}. Ask your admin for a top-up, or connect your own HyprLab or OpenRouter key in Settings.`);
+  if (spentToday(userId) + estMicro > u.daily_cap) throw new CreditError('DAILY_CAP', 'Daily spend cap reached — try again tomorrow, ask your admin to raise it, or connect your own HyprLab or OpenRouter key in Settings.');
 }
 
 const applyTx = db.transaction((userId, delta, row) => {
@@ -53,6 +58,9 @@ export function record(userId, { delta, reason, provider = null, model = null, r
 
 // Debit for a completed provider call (rawUsd measured).
 export function debitCall(userId, callResult, reason, ctx = {}) {
+  // Own OpenRouter key (BYOK): billed by OpenRouter directly, never debited. The
+  // provider check is a belt-and-braces guard should a result forget its byok flag.
+  if (callResult.byok) return 0;
   const micro = usdToMicro(callResult.rawUsd || 0);
   record(userId, { delta: -micro, reason, provider: callResult.provider, model: callResult.model, rawUsd: callResult.rawUsd || 0, meter: callResult.meter || callResult.usage || {}, ...ctx });
   return micro;

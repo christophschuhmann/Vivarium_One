@@ -12,10 +12,13 @@ import apiRoutes from './routes/api.js';
 import adminRoutes from './routes/admin.js';
 import testRoutes from './routes/test.js';
 import './db.js';
+import providerSettingsRoutes from './routes/provider_settings.js';
+import { isolatedRequest } from './byok.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 12 * 1024 * 1024 });
 
+app.addHook('onRequest', (req, reply, done) => isolatedRequest(done));
 await app.register(cookie);
 // Generous global ceiling so save-game ZIP imports (tens of MB of images) fit; individual
 // routes tighten this per-request (ASR caps at 8 MB via its own req.file limit).
@@ -52,6 +55,7 @@ app.setErrorHandler((err, req, reply) => {
   reply.code(status).send({ error: { code: err.code || 'INTERNAL', message: status >= 500 ? 'Something went wrong on our side.' : err.message } });
 });
 
+await app.register(providerSettingsRoutes);
 await app.register(apiRoutes);
 await app.register(adminRoutes);
 if (process.env.TEST_MODE === '1' && process.env.NODE_ENV !== 'production') await app.register(testRoutes);

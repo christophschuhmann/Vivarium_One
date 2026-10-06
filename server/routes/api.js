@@ -17,6 +17,7 @@ import { synthesizeLine, findReusableAudio } from '../tts_service.js';
 import { PROFILES } from '../voice_profiles.js';
 import { buildWorldManifest, worldAssetFiles, importWorldManifest } from '../world_io.js';
 import { wizardChat, estimatePlan, startWizardBuild, getWizardJob } from '../wizard.js';
+import { byokActive } from '../byok.js';
 
 // Temp scratch for zip pack/unpack; cleaned per request.
 const EXPORT_TMP = path.join(DATA_DIR, 'tmp_export');
@@ -123,7 +124,8 @@ export default async function apiRoutes(app) {
     const u = requireUser(req);
     // ttsProvider tells the client which voice UI to show: Gemini voice names vs
     // LAIONBox reference-voice management (generate/upload/confirm a cloned voice).
-    return { user: publicUser(u), spentToday: toCredits(spentToday(u.id)), ttsProvider: getTtsProvider() };
+    // byok tells it whether AI runs on the player's own OpenRouter key (no credits).
+    return { user: publicUser(u), spentToday: toCredits(spentToday(u.id)), ttsProvider: getTtsProvider(), byok: byokActive(u) };
   });
   app.get('/api/me/ledger', async (req) => {
     const u = requireUser(req);
@@ -131,6 +133,9 @@ export default async function apiRoutes(app) {
     return { ledger: rows.map(r => ({ at: r.created_at, credits: toCredits(r.delta), reason: r.reason, model: r.model, meter: pj(r.meter, {}) })) };
   });
 
+  // ---------- BYOK: player's own OpenRouter key (standalone, no admin/credits) ----------
+  // The key is stored encrypted (server/byok.js); only a masked preview ever leaves the
+  // server. Everything else — model choices per role, TTS voice — lives in users.or_prefs.
   // Generate (or regenerate) a world's cover/preview image for the home cards. Prompt is
   // player-editable in the 🎬 Direction modal; default is derived from the world identity.
   app.post('/api/worlds/:id/cover', async (req) => {
@@ -142,7 +147,7 @@ export default async function apiRoutes(app) {
     const { genImage } = await import('../providers.js');
     const res = await genImage(prompt, { aspect: '16:9' });
     debitCall(u.id, res, 'cover', { worldId: w.id });
-    const a = saveAsset({ userId: u.id, worldId: w.id, kind: 'cover', prompt, buffer: res.buffer, mime: 'image/png' });
+    const a = saveAsset({ userId: u.id, worldId: w.id, kind: 'cover', prompt, buffer: res.buffer, mime: res.mime || 'image/png' });
     db.prepare('UPDATE worlds SET cover_asset_id=?, updated_at=? WHERE id=?').run(a.id, now(), w.id);
     return { coverId: a.id };
   });
@@ -613,7 +618,7 @@ export default async function apiRoutes(app) {
       setImmediate(() => gm.runMemoryMaintenance(u, w).catch(() => {}));   // background summarisation
     } catch (e) {
       if (e.code !== 'ABORTED') {   // ABORTED = the client already left; nothing to report to
-        console.error(`[tick] world=${w.id} delta=${req.body?.timeDelta} failed:`, e.code || '', e.message);
+        console.error(`[tick] world=${w.id} delta=${req.body?.timeDelta} failed:`, e.code || '', e.message, e.cause?.message || '');
         send('error', { code: e.code || 'TICK_FAILED', message: e.message });
       }
     } finally { finished = true; clearInterval(hb); try { reply.raw.end(); } catch {} }
@@ -758,10 +763,11 @@ export default async function apiRoutes(app) {
     const buf = await file.toBuffer();
     if (buf.length > 8 * 1024 * 1024) throw httpErr(400, 'TOO_LARGE', 'Audio too large (max ~60s).');
     const mime = file.mimetype || 'audio/webm';
-    const inputAsset = saveAsset({ userId: u.id, kind: 'asr_input', prompt: null, buffer: buf, mime: mime.includes('mp4') ? 'audio/mp4' : mime.includes('mpeg') ? 'audio/mpeg' : 'audio/webm' });
-    const res = await asr(buf, mime, file.filename || 'clip.webm');
+    const storedMime = /wav/.test(mime) ? 'audio/wav' : mime.includes('mp4') ? 'audio/mp4' : mime.includes('mpeg') ? 'audio/mpeg' : 'audio/webm';
+    const inputAsset = saveAsset({ userId: u.id, kind: 'asr_input', prompt: null, buffer: buf, mime: storedMime });
+    const res = await asr(buf, mime, file.filename || 'clip.webm', { lang: req.body?.lang || 'en' });
     debitCall(u.id, res, 'asr');
-    logCall({ userId: u.id, kind: 'asr', surface: 'stage_mic', request: { inputAssetId: inputAsset.id, mime }, response: { text: res.text, seconds: res.seconds }, assetId: inputAsset.id, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.meter });
+    logCall({ userId: u.id, kind: 'asr', surface: 'stage_mic', request: { inputAssetId: inputAsset.id, mime }, response: { text: res.text, seconds: res.seconds }, assetId: inputAsset.id, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.meter, meta: res.byok ? { byok: true } : undefined });
     return { text: res.text, seconds: res.seconds };
   });
   // Text → speech. All engine dispatch, LAIONBox reference-clip resolution, caching and
@@ -922,7 +928,8 @@ export default async function apiRoutes(app) {
       totalLines: lines.length, cachedLines: cached, missingLines: missing,
       estCredits: Math.ceil(toCredits(estMicro)),
       balance: Math.floor(toCredits(balance(u.id))),
-      canAfford: balance(u.id) >= estMicro,
+      canAfford: byokActive(u) || balance(u.id) >= estMicro,
+      byok: byokActive(u),
     };
   });
 

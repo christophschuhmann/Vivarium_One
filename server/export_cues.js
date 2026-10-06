@@ -81,16 +81,21 @@ export function ttsCacheKey(voice, style, text) {
 //              reference; otherwise 'laionbox:profile:<Voice>:<lang>' — the language-aware
 //              voice-profile reference (see server/voice_profiles.js). Narrator lines
 //              resolve the narrator voice's profile the same way.
-import { getTtsProvider } from './providers.js';
+import { getTtsProvider, hostedTtsCacheVoice } from './providers.js';
 import { referenceFor } from './voice_profiles.js';
+import { currentPrincipal } from './byok.js';
+import { voiceFor } from './openrouter.js';
 export function cueCacheVoice(cue, lang = 'en') {
   const { voice } = cueVoiceStyle(cue);
-  if (getTtsProvider() !== 'laionbox') return voice;
+  // BYOK: mirror tts_service.js exactly — the cache "voice" token embeds the OpenRouter
+  // model + the deterministic voice mapping, so export preflight and live playback agree.
+  const p = currentPrincipal();
+  if (getTtsProvider() !== 'laionbox') return hostedTtsCacheVoice(voice);
   if (cue.name) {
     const c = db.prepare('SELECT voice_ref_asset_id FROM characters WHERE id=?').get(cue.speaker);
-    if (c?.voice_ref_asset_id) return `laionbox:${c.voice_ref_asset_id}`;
+    if (c?.voice_ref_asset_id) return `${p?.id || 'central'}:laionbox:${c.voice_ref_asset_id}`;
   }
-  return `laionbox:${referenceFor(voice, lang).cacheToken}`;
+  return `${p?.id || 'central'}:laionbox:${referenceFor(voice, lang).cacheToken}`;
 }
 
 // Build the full ordered cue list for a world/branch up to toIdx. Pure read; no side effects.

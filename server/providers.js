@@ -1,9 +1,19 @@
 // Model Router — the only module that talks to model providers. Injects the key,
 // meters raw cost, returns results + meter. Mock mode for CI (MOCK_PROVIDERS=1).
+//
+// BYOK: when the current request's principal (see server/byok.js) runs on their own
+// OpenRouter key, route() returns an OpenRouter override for every role and the
+// calls below dispatch to server/openrouter.js. Cost comes back as usage.cost and
+// is only logged — never debited from the credit ledger (see server/credits.js).
 import { db, pj, getSetting } from './db.js';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { Agent } from 'undici';
+import { currentPrincipal, PROVIDERS, operatorKey } from './byok.js';
+import {
+  generateImage as orGenerateImage, synthesizeSpeech as orSynthesizeSpeech,
+  transcribeAudio as orTranscribeAudio, voiceFor, orError,
+} from './openrouter.js';
 
 // Reasoning models (glm-5.2 with a big context) can think for MINUTES before the first
 // response byte — undici's default 300 s headers timeout killed long ticks mid-flight
@@ -12,14 +22,25 @@ const PATIENT = new Agent({ headersTimeout: 900_000, bodyTimeout: 900_000 });
 
 const MOCK = process.env.MOCK_PROVIDERS === '1';
 const key = (route) => {
-  const k = process.env[route.key_env];
+  if (route.api_key) return route.api_key;          // BYOK: the player's own key
+  const k = route.byok ? null : PROVIDERS[route.provider] ? operatorKey(route.provider) : process.env[route.key_env];
   if (!k) throw new Error(`provider key ${route.key_env} not configured`);
   return k;
 };
 export function route(role) {
+  const p = currentPrincipal();
+  // Model-route roles and BYOK pref keys differ for the LLM ('reasoning_llm' vs 'llm').
+  const prefKey = role === 'reasoning_llm' ? 'llm' : role;
+  if (process.env.VIV_DEBUG_ALS) console.error('[route]', role, 'principal=', p && JSON.stringify({ id: p.id, byok: p.byok, hasKey: !!p.key, model: p.prefs?.models?.[prefKey] }));
+  if (p?.requestedOwn && !p.byok) throw Object.assign(new Error('Persönliche Anbieter-Schlüssel fehlen. Bitte Einstellungen öffnen.'), { statusCode: 400, code: 'PERSONAL_KEY_MISSING' });
+  if (p?.byok && ['llm','image','tts','asr'].includes(prefKey)) {
+    const config = p.prefs.roles[prefKey], provider = config.provider;
+    const base = provider === 'hyprlab' && role === 'tts' && /gemini/.test(config.model) ? 'https://api.hyprlab.io/v1beta' : PROVIDERS[provider].base;
+    return { role, provider, model: config.model, base_url: base, key_env: 'PERSONAL', api_key: p.keys[provider], byok: true, unit_cost: { in_per_mtok: 0.5, out_per_mtok: 9, per_image: 0.02, per_minute: 0.0042 }, params: {} };
+  }
   const r = db.prepare('SELECT * FROM model_routes WHERE role=? AND enabled=1').get(role);
   if (!r) throw new Error(`no enabled model route for role ${role}`);
-  return { ...r, unit_cost: pj(r.unit_cost, {}), params: pj(r.params, {}) };
+  return { ...r, provider: r.base_url.includes('openrouter.ai') ? 'openrouter' : r.base_url.includes('hyprlab.io') ? 'hyprlab' : 'custom', unit_cost: pj(r.unit_cost, {}), params: pj(r.params, {}) };
 }
 
 // ---------- LLM ----------
@@ -45,17 +66,25 @@ export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, s
       dispatcher: PATIENT, signal: abortSignal,
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key(r)}` },
-      body: JSON.stringify({ model: r.model, messages, max_tokens: maxTokens, temperature }),
+      // OpenRouter: ask for the real cost in the response (usage.cost) so BYOK usage
+      // is still fully logged for the player/admin without touching the credit ledger.
+      body: JSON.stringify({ model: r.model, messages, max_tokens: maxTokens, temperature, ...(r.provider === 'openrouter' ? { usage: { include: true } } : {}) }),
     });
   } catch (e) {
-    if (timeout.aborted) throw Object.assign(new Error(`The AI model took longer than ${Math.round(LLM_TIMEOUT_MS / 1000)}s and was stopped. Try again, or switch to a faster model in the admin panel.`), { code: 'LLM_TIMEOUT', statusCode: 504 });
+    if (timeout.aborted) throw Object.assign(new Error(`The AI model took longer than ${Math.round(LLM_TIMEOUT_MS / 1000)}s and was stopped. Try again, or switch to a faster model in your settings.`), { code: 'LLM_TIMEOUT', statusCode: 504 });
     if (signal?.aborted) throw Object.assign(new Error('Generation cancelled.'), { code: 'ABORTED', statusCode: 499 });
     throw e;
   }
-  if (!resp.ok) throw new Error(`LLM ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
+  if (!resp.ok) {
+    // BYOK: surface OpenRouter's own reason (rate limits, billing, moderation) verbatim.
+    if (r.provider === 'openrouter') await orError(resp, `LLM (${r.model})`);
+    throw new Error(`LLM ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
+  }
   const data = await resp.json();
   const usage = data.usage || { prompt_tokens: 0, completion_tokens: 0 };
-  const rawUsd = (usage.prompt_tokens / 1e6) * r.unit_cost.in_per_mtok + (usage.completion_tokens / 1e6) * r.unit_cost.out_per_mtok;
+  const rawUsd = r.provider === 'openrouter'
+    ? (usage.cost ?? 0)
+    : (usage.prompt_tokens / 1e6) * (r.unit_cost.in_per_mtok || 0) + (usage.completion_tokens / 1e6) * (r.unit_cost.out_per_mtok || 0);
   const msg = data.choices?.[0]?.message || {};
   // content may be: a plain string (usual) | an array of content blocks (Anthropic-style
   // pass-through) | empty when a reasoning model burned the whole token budget thinking.
@@ -65,7 +94,7 @@ export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, s
     throw new Error(`LLM (${r.model}) spent the whole ${maxTokens}-token budget on reasoning and returned no answer — raise maxTokens or lower reasoning effort.`);
   }
   if (content == null) throw new Error(`LLM (${r.model}) returned no content: ${JSON.stringify(data).slice(0, 200)}`);
-  return { content, usage, rawUsd, provider: 'hyprlab', model: r.model };
+  return { content, usage, rawUsd, provider: r.provider, model: r.model, byok: !!r.byok };
 }
 
 export function parseJsonLoose(text) {
@@ -108,6 +137,9 @@ export async function llmJson(messages, opts = {}) {
 export async function genImage(prompt, { aspect = '2:3', refs = [] } = {}) {
   const r = route('image');
   if (MOCK) return mockImage(aspect);
+  // BYOK → OpenRouter image models (Nano Banana 2 Lite & friends) via chat completions;
+  // reference images travel as image_url parts, exactly like the HyprLab path's `image`.
+  if (r.provider === 'openrouter') return { ...await orGenerateImage(key(r), { model: r.model, prompt, aspect, refs }), byok: !!r.byok };
   const body = {
     model: r.model, prompt, aspect_ratio: aspect, resolution: r.params.resolution || '1K',
     google_search: false, image_search: false, response_format: 'b64_json',
@@ -119,7 +151,7 @@ export async function genImage(prompt, { aspect = '2:3', refs = [] } = {}) {
   });
   if (!resp.ok) throw new Error(`image ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
   const data = await resp.json();
-  return { buffer: Buffer.from(data.data[0].b64_json, 'base64'), mime: 'image/png', rawUsd: r.unit_cost.per_image || 0.02, meter: { images: 1 }, provider: 'hyprlab', model: r.model };
+  return { buffer: Buffer.from(data.data[0].b64_json, 'base64'), mime: 'image/png', rawUsd: r.unit_cost.per_image || 0.02, meter: { images: 1 }, provider: r.provider, model: r.model, byok: !!r.byok };
 }
 
 // ---------- TTS (returns mp3 buffer) ----------
@@ -129,7 +161,14 @@ const NATURAL_DIRECTION = 'Perform this naturally and organically, like a real p
 // cloning; characters need a reference-voice clip first — see server/routes/api.js voice-ref
 // endpoints). Admins flip this in the Models tab (PATCH /admin/api/tts-provider).
 export function getTtsProvider() {
+  if (currentPrincipal()?.byok) return 'gemini';
   return getSetting('tts_provider') === 'laionbox' ? 'laionbox' : 'gemini';
+}
+
+export function hostedTtsCacheVoice(voice) {
+  const r = route('tts'), p = currentPrincipal();
+  const mapped = r.provider === 'openrouter' || !/gemini/.test(r.model) ? voiceFor(r.provider === 'hyprlab' ? 'openai/'+r.model : r.model, voice, p?.prefs.tts_voice || getSetting('central_tts_voice')) : voice;
+  return `${p?.id || 'central'}:${r.provider}:${r.model}:${mapped}`;
 }
 
 // ---------- TTS front door ----------
@@ -140,24 +179,36 @@ export function getTtsProvider() {
 //   speakerDesc    — DramaBox speaker description (age/gender/timbre). Only needed when there
 //                    is NO reference: with a reference the identity comes from the clip and the
 //                    style prompt should carry just emotion/pace/delivery.
+// BYOK: when the player runs on their own OpenRouter key, speech is synthesised there
+// (gpt-audio & friends) with a per-model prompt template and a deterministic voice per
+// character (Gemini voice name → OpenRouter voice, so cast members stay distinguishable).
 export async function tts(text, { voice = 'Sulafat', style = '', referenceB64 = null, speakerDesc = '' } = {}) {
   if (getTtsProvider() === 'laionbox') return ttsLaionbox(text, { style, referenceB64, speakerDesc });
+  const r = route('tts');
+  if (MOCK) return { ...mockTts(), provider: r.provider, model: r.model, byok: !!r.byok };
+  if (r.provider === 'openrouter') return { ...await orSynthesizeSpeech(key(r), { model: r.model, text, voice: voiceFor(r.model, voice, currentPrincipal()?.prefs.tts_voice || getSetting('central_tts_voice')), style }), byok: !!r.byok };
+  if (r.provider === 'hyprlab' && !/gemini/.test(r.model)) {
+    const resp = await fetch(`${r.base_url}/audio/speech`, { method: 'POST', headers: { 'Content-Type':'application/json', Authorization:`Bearer ${key(r)}` }, body:JSON.stringify({model:r.model,input:text,voice:voiceFor('openai/'+r.model,voice,currentPrincipal()?.prefs.tts_voice),response_format:'mp3'}),signal:AbortSignal.timeout(180000) });
+    if (!resp.ok) throw new Error(`HyprLab TTS ${resp.status}`);
+    return {buffer:Buffer.from(await resp.arrayBuffer()),mime:'audio/mpeg',rawUsd:text.length*0.000015,meter:{characters:text.length},provider:r.provider,model:r.model,byok:!!r.byok};
+  }
   return ttsGemini(text, { voice, style });
 }
 
 async function ttsGemini(text, { voice = 'Sulafat', style = '' } = {}) {
   const r = route('tts');
   if (MOCK) return mockTts();
-  const prompt = `${NATURAL_DIRECTION}${style ? ' ' + style + '.' : ''} Say: ${text}`;
+  const modern = /gemini-3\.8/.test(r.model);
+  const prompt = modern ? text : `${NATURAL_DIRECTION}${style ? ' ' + style + '.' : ''} Say: ${text}`;
   const resp = await fetch(`${r.base_url}/models/${r.model}:generateContent?key=${key(r)}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      contents: [{ role: 'user', parts: [{ text: prompt, ...(modern ? { speechMetadata: { style: [NATURAL_DIRECTION, style].filter(Boolean).join(' ') } } : {}) }] }],
       // temperature slightly below the 1.0 default for a steadier delivery. Route-param
       // tunable. (Note: the 2026-07-02 sweep showed LARGE reductions hurt — 0.3/0.6 scored
       // worse than 1.0 for narrator reliability — so keep any adjustment gentle.)
       generationConfig: { responseModalities: ['audio'], temperature: r.params.temperature ?? 0.9,
-        speech_config: { voice_config: { prebuilt_voice_config: { voice_name: voice } } } },
+        speechConfig: { voiceConfig: modern ? { voice } : { prebuiltVoiceConfig: { voiceName: voice } } } },
     }),
   });
   if (!resp.ok) throw new Error(`tts ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
@@ -165,10 +216,12 @@ async function ttsGemini(text, { voice = 'Sulafat', style = '' } = {}) {
   const part = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
   if (!part) throw new Error('tts: no audio in response');
   const pcm = Buffer.from(part.inlineData.data, 'base64');
-  const mp3 = await pcmToMp3(pcm);
+  const wav = pcm.subarray(0,4).toString() === 'RIFF';
+  const rate = Number(/rate=(\d+)/.exec(part.inlineData.mimeType || '')?.[1]) || 24000;
+  const mp3 = await pcmToMp3(pcm, { wav, rate });
   const um = data.usageMetadata || {};
-  const rawUsd = ((um.promptTokenCount || 0) / 1e6) * r.unit_cost.in_per_mtok + ((um.candidatesTokenCount || 0) / 1e6) * r.unit_cost.out_per_mtok;
-  return { buffer: mp3, mime: 'audio/mpeg', rawUsd, meter: { audio_tokens: um.candidatesTokenCount || 0, seconds: Math.round(pcm.length / 48000) }, provider: 'hyprlab', model: r.model };
+  const rawUsd = ((um.promptTokenCount || 0) / 1e6) * (r.unit_cost.in_per_mtok || 0) + ((um.candidatesTokenCount || 0) / 1e6) * (r.unit_cost.out_per_mtok || 0);
+  return { buffer: mp3, mime: 'audio/mpeg', rawUsd, meter: { audio_tokens: um.candidatesTokenCount || 0, seconds: Math.round((pcm.length - (wav ? 44 : 0)) / (rate * 2)) }, provider: r.provider, model: r.model, byok: !!r.byok };
 }
 
 // ---------- LAIONBox (DramaBox / LTX-2 expressive TTS + Chatterbox VC + Sidon) ----------
@@ -247,11 +300,11 @@ async function ttsLaionbox(text, { style = '', referenceB64 = null, speakerDesc 
   return laionboxGenerate({ prompt, referenceB64, output });
 }
 
-function pcmToMp3(pcm) {
+function pcmToMp3(pcm, { wav = false, rate = 24000 } = {}) {
   return new Promise((resolve, reject) => {
     // 200 ms end-fade baked in (same reasoning as fadeTail: hard clip ends click when
     // lines play back-to-back in the narration player)
-    const ff = spawn('ffmpeg', ['-f', 's16le', '-ar', '24000', '-ac', '1', '-i', 'pipe:0',
+    const ff = spawn('ffmpeg', [...(wav ? ['-f','wav'] : ['-f','s16le','-ar',String(rate),'-ac','1']), '-i', 'pipe:0',
       '-af', 'areverse,afade=t=in:st=0:d=0.2,areverse',
       '-f', 'mp3', '-b:a', '48k', 'pipe:1']);
     const chunks = [];
@@ -263,9 +316,11 @@ function pcmToMp3(pcm) {
 }
 
 // ---------- ASR ----------
-export async function asr(buffer, mime, filename = 'audio.webm') {
+export async function asr(buffer, mime, filename = 'audio.webm', { lang = '' } = {}) {
   const r = route('asr');
-  if (MOCK) return { text: 'mock transcription of your voice note', seconds: 3, rawUsd: 0.0002, meter: { seconds: 3 }, provider: 'hyprlab', model: r.model };
+  if (MOCK) return { text: 'mock transcription of your voice note', seconds: 3, rawUsd: 0.0002, meter: { seconds: 3 }, provider: r.provider, model: r.model, byok: !!r.byok };
+  // BYOK → transcribe with an audio-input chat model on OpenRouter (WAV/MP3 only).
+  if (r.provider === 'openrouter') return { ...await orTranscribeAudio(key(r), { model: r.model, buffer, mime, lang }), byok: !!r.byok };
   const form = new FormData();
   form.append('file', new Blob([buffer], { type: mime || 'audio/webm' }), filename);
   form.append('model', r.model);
@@ -275,7 +330,7 @@ export async function asr(buffer, mime, filename = 'audio.webm') {
   if (!resp.ok) throw new Error(`asr ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
   const data = await resp.json();
   const seconds = data.usage?.seconds ?? Math.ceil(data.duration ?? 1);
-  return { text: data.text, seconds, rawUsd: (seconds / 60) * (r.unit_cost.per_minute || 0.0042), meter: { seconds }, provider: 'hyprlab', model: r.model };
+  return { text: data.text, seconds, rawUsd: (seconds / 60) * (r.unit_cost.per_minute || 0.0042), meter: { seconds }, provider: r.provider, model: r.model, byok: !!r.byok };
 }
 
 // ---------- mocks (deterministic, free — used by CI) ----------

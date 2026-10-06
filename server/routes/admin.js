@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { db, uid, now, j, pj, getSetting, setSetting } from '../db.js';
 import * as auth from '../auth.js';
+import { operatorKey, maskKey, byokActive } from '../byok.js';
 import { requireAdmin, httpErr } from '../auth.js';
 import { record, toMicro, toCredits } from '../credits.js';
 import { getAsset, assetPath } from '../assets.js';
@@ -81,6 +82,7 @@ export default async function adminRoutes(app) {
     return { users: rows.map(u => ({
       id: u.id, email: u.email, displayName: u.display_name, role: u.role, status: u.status, rating: u.rating || 'adult',
       verified: !!u.email_verified_at, credits: toCredits(u.credit_balance), dailyCap: toCredits(u.daily_cap),
+      byok: byokActive(u),   // running on their own OpenRouter key (no credit spend)
       worlds: db.prepare('SELECT COUNT(*) n FROM worlds WHERE user_id=?').get(u.id).n,
       lifetimeSpend: toCredits(db.prepare('SELECT COALESCE(SUM(-delta),0) s FROM credit_ledger WHERE user_id=? AND delta<0').get(u.id).s),
       lastActive: u.last_active_at, createdAt: u.created_at,
@@ -136,7 +138,25 @@ export default async function adminRoutes(app) {
     return {
       routes: db.prepare('SELECT * FROM model_routes').all().map(r => ({ ...r, unit_cost: pj(r.unit_cost, {}), params: pj(r.params, {}) })),
       ttsProvider: getSetting('tts_provider') || 'gemini',   // which TTS engine is live (see below)
+      byok: getSetting('byok') || { enabled: true },         // player-supplied OpenRouter keys policy
+      byokUsers: db.prepare('SELECT COUNT(*) n FROM users WHERE or_enabled=1 AND (or_key IS NOT NULL OR hypr_key IS NOT NULL)').get().n,
     };
+  });
+
+  // Bring-your-own-key policy: allow/forbid player-supplied OpenRouter keys fleet-wide and
+  // edit the default model picks a fresh BYOK user starts with. Players can always override
+  // their own picks; this only sets the starting point (and the kill switch).
+  app.patch('/admin/api/byok', async (req) => {
+    const a = requireAdmin(req);
+    const cur = getSetting('byok') || { enabled: true, defaults: {} };
+    const b = req.body || {};
+    const next = {
+      enabled: b.enabled === undefined ? cur.enabled !== false : !!b.enabled,
+      defaults: { ...(cur.defaults || {}), ...(b.defaults && typeof b.defaults === 'object' ? b.defaults : {}) },
+    };
+    setSetting('byok', next);
+    audit(a.id, 'update_byok', 'byok', next);
+    return { ok: true, byok: next };
   });
 
   // API-key / provider status for the admin "API keys" panel. Reports, per provider env var,
@@ -146,6 +166,7 @@ export default async function adminRoutes(app) {
   app.get('/admin/api/providers', async (req) => {
     requireAdmin(req);
     const KNOWN = {
+      OPENROUTER_API_KEY: { label:'OpenRouter', docs:'https://openrouter.ai/api/v1', note:'LLM · image · TTS · ASR' },
       HYPRLAB_API_KEY: { label: 'HyprLab', docs: 'https://api.hyprlab.io/v1', note: 'LLM · image · TTS · ASR' },
       CEREBRAS_API_KEY: { label: 'Cerebras', docs: 'https://api.cerebras.ai/v1', note: 'ultra-fast LLM inference' },
       LAIONBOX_API_KEY: { label: 'LAIONBox', docs: '', note: 'self-hosted voice cloning' },
@@ -157,7 +178,7 @@ export default async function adminRoutes(app) {
     const mask = (v) => !v ? null : v.length <= 10 ? v.slice(0, 3) + '…' : v.slice(0, 5) + '…' + v.slice(-4);
     return {
       providers: envs.map(env => {
-        const val = process.env[env];
+        const val = env === 'HYPRLAB_API_KEY' ? operatorKey('hyprlab') : env === 'OPENROUTER_API_KEY' ? operatorKey('openrouter') : process.env[env];
         return {
           key_env: env,
           label: KNOWN[env]?.label || env.replace(/_API_KEY$/, ''),
@@ -165,7 +186,7 @@ export default async function adminRoutes(app) {
           base_url: byEnv[env]?.urls || KNOWN[env]?.docs || '',
           roles: byEnv[env]?.roles ? byEnv[env].roles.split(',') : [],
           configured: !!val,
-          masked: mask(val),
+          masked: maskKey(val),
         };
       }),
     };

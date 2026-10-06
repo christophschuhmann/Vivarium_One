@@ -187,13 +187,25 @@ db.exec(`CREATE TABLE IF NOT EXISTS wizard_jobs (
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 )`);
 
+// ---- bring-your-own-key (BYOK) — per-user OpenRouter credentials & model choices ----
+// Players can run the whole app on their OWN OpenRouter key instead of the operator's
+// HyprLab key + credits. The key is stored ENCRYPTED (AES-256-GCM, see server/byok.js);
+// or_prefs holds the chosen model per role (llm/image/tts/asr) + TTS voice; or_enabled
+// flips the user from "server AI (credits)" to "my own key (billed by OpenRouter)".
+try { db.exec(`ALTER TABLE users ADD COLUMN or_key TEXT`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE users ADD COLUMN or_prefs TEXT DEFAULT '{}'`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE users ADD COLUMN or_enabled INTEGER NOT NULL DEFAULT 0`); } catch { /* exists */ }
+
+try { db.exec(`ALTER TABLE users ADD COLUMN hypr_key TEXT`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE users ADD COLUMN provider_prefs TEXT DEFAULT '{}'`); } catch { /* exists */ }
+
 // ---- default model routes & pricing policy ----
 const seedRoute = db.prepare(`INSERT OR IGNORE INTO model_routes(role, model, base_url, key_env, unit_cost, params) VALUES (?,?,?,?,?,?)`);
 seedRoute.run('reasoning_llm', 'gemini-3.5-flash', 'https://api.hyprlab.io/v1', 'HYPRLAB_API_KEY',
   JSON.stringify({ in_per_mtok: 0.75, out_per_mtok: 4.5 }), JSON.stringify({ max_tokens: 8000 }));
 seedRoute.run('image', 'nano-banana-2', 'https://api.hyprlab.io/v1', 'HYPRLAB_API_KEY',
   JSON.stringify({ per_image: 0.02 }), JSON.stringify({ resolution: '1K' }));
-seedRoute.run('tts', 'gemini-3.1-flash-tts', 'https://api.hyprlab.io/v1beta', 'HYPRLAB_API_KEY',
+seedRoute.run('tts', 'gemini-3.8-flash-tts', 'https://api.hyprlab.io/v1beta', 'HYPRLAB_API_KEY',
   JSON.stringify({ in_per_mtok: 0.5, out_per_mtok: 10 }), JSON.stringify({ temperature: 0.9 }));
 seedRoute.run('asr', 'whisper-1', 'https://api.hyprlab.io/v1', 'HYPRLAB_API_KEY',
   JSON.stringify({ per_minute: 0.0042 }), JSON.stringify({}));
@@ -213,6 +225,36 @@ db.prepare(`INSERT OR IGNORE INTO settings(key,value) VALUES ('pricing', ?)`)
 // Context / memory tuning — admin-editable on the Context page (see server/gm.js ctxConfig()).
 db.prepare(`INSERT OR IGNORE INTO settings(key,value) VALUES ('context_config', ?)`)
   .run(JSON.stringify({ tickWindow: 50, memChunk: 5, contextBudget: 200000, compressionRatio: 0.5 }));
+// Bring-your-own-key policy. `enabled` lets the operator switch player-supplied OpenRouter
+// keys off fleet-wide (default on — the app works standalone without an admin). The
+// `defaults` are the per-role model picks a fresh BYOK user starts with: cheapest good
+// options (Muse Spark 1.3 Contributor + Nano Banana 2 Lite + Gemini 3.1 Flash TTS
+// Preview + Gemini Flash Lite for transcription). Players can change every one in Settings.
+db.prepare(`INSERT OR IGNORE INTO settings(key,value) VALUES ('byok', ?)`)
+  .run(JSON.stringify({
+    enabled: true,
+    defaults: {
+      llm: 'meta/muse-spark-1.3-contributor',
+      image: 'google/gemini-3.1-flash-lite-image',
+      tts: 'google/gemini-3.1-flash-tts-preview',
+      asr: 'google/gemini-3.1-flash-lite',
+      tts_voice: 'Sulafat',
+    },
+  }));
+// Existing installs: migrate the old BYOK TTS default (gpt-audio-mini) to Gemini 3.1
+// Flash TTS Preview — but never touch a player's own explicit pick.
+try {
+  const byok = getSetting('byok');
+  if (byok?.defaults?.tts === 'openai/gpt-audio-mini') {
+    byok.defaults.tts = 'google/gemini-3.1-flash-tts-preview';
+    if (byok.defaults.tts_voice === 'alloy') byok.defaults.tts_voice = 'Sulafat';
+    setSetting('byok', byok);
+  }
+  db.prepare(`UPDATE users SET or_prefs = json_set(or_prefs, '$.tts', 'google/gemini-3.1-flash-tts-preview')
+              WHERE json_extract(or_prefs,'$.tts') = 'openai/gpt-audio-mini'`).run();
+  db.prepare(`UPDATE users SET or_prefs = json_set(or_prefs, '$.tts_voice', 'Sulafat')
+              WHERE json_extract(or_prefs,'$.tts_voice') = 'alloy' AND json_extract(or_prefs,'$.tts') = 'google/gemini-3.1-flash-tts-preview'`).run();
+} catch { /* pre-JSON1 or first run — nothing to migrate */ }
 
 export const now = () => new Date().toISOString();
 export const uid = (p = '') => p + randomBytes(9).toString('base64url');
@@ -220,3 +262,11 @@ export const j = (o) => JSON.stringify(o);
 export const pj = (s, fallback = null) => { try { return JSON.parse(s); } catch { return fallback; } };
 export function getSetting(key) { const r = db.prepare('SELECT value FROM settings WHERE key=?').get(key); return r ? JSON.parse(r.value) : null; }
 export function setSetting(key, value) { db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key, JSON.stringify(value)); }
+
+// One-time requested default upgrade; later explicit model selections survive restarts.
+if (!getSetting('migration_tts_38')) {
+  db.prepare("UPDATE model_routes SET model='gemini-3.8-flash-tts', unit_cost=? WHERE role='tts' AND base_url LIKE '%hyprlab.io%'").run(JSON.stringify({ in_per_mtok: 0.5, out_per_mtok: 9 }));
+  const policy = getSetting('byok') || { enabled: true, defaults: {} };
+  policy.defaults = { ...policy.defaults, tts: 'google/gemini-3.8-flash-tts' };
+  setSetting('byok', policy); setSetting('tts_provider', 'gemini'); setSetting('migration_tts_38', true);
+}
