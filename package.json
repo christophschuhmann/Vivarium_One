@@ -42,7 +42,9 @@
     "test:hf-assets": "node scripts/test-hf-assets.mjs",
     "test:turbo": "node scripts/test-turbo.mjs",
     "test:progression": "node scripts/test-progression.mjs",
-    "audit:life": "node scripts/audit-bennington-life.mjs"
+    "audit:life": "node scripts/audit-bennington-life.mjs",
+    "test:portraits-map": "node scripts/test-portraits-outlooks-map.mjs",
+    "test:portraits-map-browser": "node scripts/test-portrait-map-browser.mjs"
   },
   "license": "MIT",
   "dependencies": {

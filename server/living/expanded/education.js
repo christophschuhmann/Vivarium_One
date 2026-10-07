@@ -135,16 +135,16 @@ export function initializeEducation(town) {
         us?11:10,
         us || p.age < 18
           ? 18
-          : academic.has(role) || p.profile.job === "Student"
+          : (academic.has(role)||JOBS[role]?.education==="university") || p.profile.job === "Student"
             ? 18
             : 16,
         school,
         "Allgemeinbildung",
-        academic.has(role) || p.profile.job === "Student"
+        (academic.has(role)||JOBS[role]?.education==="university") || p.profile.job === "Student"
           ? "Abitur"
           : "Mittlerer Schulabschluss",
       );
-    if (p.age >= 18 && (academic.has(role) || p.profile.job === "Student")) {
+    if (p.age >= 18 && ((academic.has(role)||JOBS[role]?.education==="university") || p.profile.job === "Student")) {
       const finish = role === "Physician" ? 25 : role === "Professor" ? 27 : 22;
       stage(
         "university",
@@ -351,6 +351,7 @@ export function educationDaily(d, time, emit) {
     if(c.kind==="secondary"&&p.age>=18&&!d.contracts.has(p.id)){p.profile.job="Unemployed";p.profile.workplace_id=null;}
     if (["university", "vocational"].includes(c.kind)) {
       p.state.credentials.push("degree:" + c.field);
+      if(c.skill&&!p.state.credentials.includes("degree_skill:"+c.skill))p.state.credentials.push("degree_skill:"+c.skill);
       if (p.profile.job === "Student") {
         p.profile.job = "Unemployed";
         p.profile.workplace_id = null;

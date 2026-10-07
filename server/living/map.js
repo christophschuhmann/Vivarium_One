@@ -7,6 +7,19 @@ const error=(message)=>Object.assign(new Error(message),{statusCode:400});
 function index(worldId){
   const places=db.prepare('SELECT id,parent_id,name,kind,purpose,asset_id,anchored,landmark FROM lw_places WHERE world_id=? ORDER BY rowid').all(worldId),byId=new Map(places.map(p=>[p.id,p])),children=new Map();
   for(const p of places){if(!children.has(p.parent_id))children.set(p.parent_id,[]);children.get(p.parent_id).push(p);}
+  // Display-only blocks keep large civic centers expandable. They never change
+  // real locations, routes or occupancy in the simulation database.
+  for(const parent of [...places]){
+    const kids=children.get(parent.id)||[];if(kids.length<=40)continue;
+    const direct=kids.slice(0,24),remaining=kids.slice(24),blocks=[];
+    for(let i=0;i<remaining.length;i+=16){
+      const members=remaining.slice(i,i+16),id='map:block:'+parent.id+':'+i/16;
+      const block={...parent,id,parent_id:parent.id,name:parent.name+' · '+(members.every(p=>p.landmark)?'Public places':'More places')+' '+(1+i/16),kind:'block',virtual:true,placeId:parent.id,anchored:0,landmark:0,asset_id:members.find(p=>p.asset_id)?.asset_id||parent.asset_id,purpose:'Open this group to see '+members.length+' places.'};
+      byId.set(id,block);places.push(block);blocks.push(block);children.set(id,members);
+      for(const member of members)member.parent_id=id;
+    }
+    children.set(parent.id,[...direct,...blocks]);
+  }
   const path=id=>{const result=[];for(let p=byId.get(id);p&&result.length<24;p=byId.get(p.parent_id))result.unshift(p);return result;};
   return {places,byId,children,path};
 }
@@ -22,7 +35,7 @@ export function circleMap(worldId,{expanded='[]',focus}={}){
   const roots=[...rootCandidates].sort((a,b)=>Number(focusPath.has(b.id))-Number(focusPath.has(a.id))).slice(0,60);
   const wanted=new Set(requested),rootIds=new Set(roots.map(p=>p.id));
   // A requested house is meaningful even if its parent was not explicitly supplied.
-  for(const id of requested)for(const p of path(id))if(rootIds.has(p.id)||['district','neighborhood','building'].includes(p.kind))wanted.add(p.id);
+  for(const id of requested)for(const p of path(id))if(rootIds.has(p.id)||['district','neighborhood','building','block'].includes(p.kind))wanted.add(p.id);
   const occupants=new Map(),anchors=new Map();
   for(const s of db.prepare('SELECT location_id,state,anchored FROM lw_sims WHERE world_id=?').all(worldId)){
     const id=currentPlaceId(s,pj(s.state,{}));
@@ -33,7 +46,7 @@ export function circleMap(worldId,{expanded='[]',focus}={}){
     const kids=children.get(p.id)||[],canExpand=kids.length>0;
     const open=wanted.has(p.id)&&canExpand&&kids.length<=40&&nodes.length+kids.length+(['building','neighborhood'].includes(p.kind)?1:0)+roots.length<180;
     if(wanted.has(p.id)&&canExpand&&!open)refused.push(p.id);
-    const n={...p,community:communities[p.id],parent_id:parent,placeId:p.id,expanded:open,leaf:!canExpand,occupants:occupants.get(p.id)||0,simAnchors:anchors.get(p.id)||0,thumbnail:null};nodes.push(n);
+    const n={...p,community:communities[p.id],parent_id:parent,placeId:p.placeId||p.id,expanded:open,leaf:!canExpand,occupants:occupants.get(p.id)||0,simAnchors:anchors.get(p.id)||0,thumbnail:null};nodes.push(n);
     if(!open)return;accepted.push(p.id);
     if(p.kind==='neighborhood'&&!kids.some(k=>k.kind==='street'))nodes.push({...n,id:'map:street:'+p.id,placeId:p.id,parent_id:p.id,name:communities[p.id]?.street||'Straße · '+p.name,kind:'street',expanded:false,leaf:true,virtual:true,thumbnail:null});
     if(p.kind==='building')nodes.push({...n,id:'map:entry:'+p.id,placeId:p.id,parent_id:p.id,name:'Eingang · '+p.name,purpose:'Zugang von der Straße zu den Räumen',kind:'entry',expanded:false,leaf:true,virtual:true,asset_id:null,thumbnail:null,landmark:0,anchored:0,simAnchors:0,occupants:0});
@@ -57,7 +70,7 @@ export function circleMap(worldId,{expanded='[]',focus}={}){
     if(a&&b&&a!==b){const key=[a,b].sort().join('|');edges.set(key,{from_id:a,to_id:b});}
   }
   const presence=new Map();
-  for(const s of db.prepare('SELECT id,name,age,asset_id,colour,anchored,location_id FROM lw_sims WHERE world_id=? AND location_id IS NOT NULL ORDER BY anchored DESC,name').all(worldId)){if(!presence.has(s.location_id))presence.set(s.location_id,[]);presence.get(s.location_id).push(s);}
+  for(const s of db.prepare("SELECT id,name,age,json_extract(profile,'$.job') job,asset_id,colour,anchored,location_id FROM lw_sims WHERE world_id=? AND location_id IS NOT NULL ORDER BY anchored DESC,name").all(worldId)){if(!presence.has(s.location_id))presence.set(s.location_id,[]);presence.get(s.location_id).push(s);}
   for(const n of nodes)if(n.leaf&&n.kind!=='entry'){
     const sims=presence.get(n.placeId)||[];n.presentCount=sims.length;n.occupants=sims.length;
     n.presentSims=sims.slice(0,sims.length>5?4:5).map(({location_id,...s})=>s);n.overflow=Math.max(0,sims.length-n.presentSims.length);
@@ -73,7 +86,7 @@ export function searchMap(worldId,query){
   const {places,path,byId}=index(worldId),q=normalize(query).trim().slice(0,100);if(!q)return {results:[]};
   const terms=new Set([q]);for(const group of aliases)if(group.some(word=>normalize(word)===q))for(const word of group)terms.add(normalize(word));
   const score=(name,purpose='')=>{const n=normalize(name),p=normalize(purpose);return Math.max(...[...terms].map(t=>n===t?100:n.includes(t)?60:p.includes(t)?20:0));};
-  const results=places.map(p=>({...p,type:'place',score:score(p.name,p.purpose),location:p.name,revealId:p.id,target:{type:'location',id:p.id}})).filter(p=>p.score>0);
+  const results=places.filter(p=>!p.virtual).map(p=>({...p,type:'place',score:score(p.name,p.purpose),location:p.name,revealId:p.id,target:{type:'location',id:p.id}})).filter(p=>p.score>0);
   for(const s of db.prepare('SELECT id,name,location_id,state,anchored FROM lw_sims WHERE world_id=?').all(worldId)){
     const rank=score(s.name);if(!rank)continue;const loc=currentPlaceId(s,pj(s.state,{}));results.push({id:s.id,name:s.name,type:'sim',score:rank,anchored:s.anchored,location:byId.get(loc)?.name||'Unterwegs',revealId:loc,target:{type:'character',id:s.id}});
   }

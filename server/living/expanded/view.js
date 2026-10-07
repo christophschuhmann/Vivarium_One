@@ -42,7 +42,7 @@ export function personResources(d, p) {
       asset_id: p.asset_id,
       locationId: p.state.location_id,
     },
-    dynamics:dynamicsView(p,d.town),
+    dynamics:dynamicsView(p,d.town,d),
     currency:JSON.parse(d.town.world.rules||'{}').currency||'EUR',
     workplace:p.profile.workplace_id?{id:p.profile.workplace_id,name:d.town.places.get(p.profile.workplace_id)?.name}:null,
     version: d.town.world.version,
@@ -216,7 +216,7 @@ export function townResources(d, { simId = null, search = "" } = {}) {
     time = d.town.world.seconds,
     terms = String(search).toLowerCase();
   return {
-    dynamics:dynamicsView(p,d.town),
+    dynamics:dynamicsView(p,d.town,d),
     currency:JSON.parse(d.town.world.rules||'{}').currency||'EUR',
     workplace:p.profile.workplace_id?{id:p.profile.workplace_id,name:d.town.places.get(p.profile.workplace_id)?.name}:null,
     version: d.town.world.version,

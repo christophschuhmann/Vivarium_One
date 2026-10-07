@@ -94,7 +94,7 @@ try {
   );
   assert.equal(
     await page
-      .locator("#ex-content .lw-vitals .lw-attributes-grid progress")
+      .locator("#ex-content .lw-vitals .lw-attributes-grid .lw-stat:not(.lw-social-attribute) progress")
       .count(),
     7,
   );
@@ -107,11 +107,11 @@ try {
   await page.evaluate(() => exConceptDialog("anger"));
   await page
     .locator(".ex-insight-example")
-    .getByText("Ein Elternteil", { exact: false })
+    .getByText(/Ein Elternteil|A parent/, { exact: false })
     .waitFor();
   assert.match(
     await page.locator(".ex-insight-question").innerText(),
-    /Vereinbarung|Grenze/,
+    /Vereinbarung|Grenze|agreement|boundary/i,
   );
   await page.keyboard.press("Escape");
   await page.screenshot({
@@ -124,6 +124,8 @@ try {
   }
   await tab("finances");
   await page.locator("#ex-finance-period").waitFor();
+  await page.locator("#ex-finance-period").selectOption("previous");
+  await page.waitForFunction(()=>document.querySelector("#ex-content")?.textContent.includes("no recorded transactions"));
   assert.match(
     await page.locator("#ex-content").innerText(),
     /keine gespeicherten Buchungen|no recorded transactions|no stored transactions/i,
@@ -163,7 +165,7 @@ try {
   await page.getByRole("dialog").waitFor();
   assert.match(
     await page.getByRole("dialog").innerText(),
-    /bucht kein Geld ab/,
+    /bucht kein Geld ab|neither withdraws money/,
   );
   await page.keyboard.press("Tab");
   assert.ok(
@@ -218,7 +220,7 @@ try {
       .evaluate((el) => el.getBoundingClientRect().top < innerHeight),
   );
   assert.equal(
-    await page.locator(".lw-profile-attributes progress").count(),
+    await page.locator(".lw-profile-attributes .lw-stat:not(.lw-social-attribute) progress").count(),
     7,
   );
   await page.locator(".lw-profile").evaluate((el) =>
@@ -233,8 +235,10 @@ try {
     path: "artifacts/expanded-world/profile-needs-desktop.png",
   });
   await page.locator("#lw-profile-resources").click();
-  await page.locator("#ex-open-finances").click();
+
   await page.locator("#ex-finance-period").waitFor();
+  await page.locator("#ex-finance-period").selectOption("previous");
+  await page.waitForFunction(()=>document.querySelector("#ex-content")?.textContent.includes("no recorded transactions"));
   assert.equal(
     await page.locator("[data-ex-tab=finances]").getAttribute("aria-selected"),
     "true",
@@ -324,8 +328,8 @@ try {
     path: "artifacts/expanded-world/everyday-needs-mobile.png",
   });
   await mp.locator("#ex-profile").click();
-  await mp.locator(".lw-profile-attributes progress").first().waitFor();
-  assert.equal(await mp.locator(".lw-profile-attributes progress").count(), 7);
+  await mp.locator(".lw-profile-attributes .lw-stat:not(.lw-social-attribute) progress").first().waitFor();
+  assert.equal(await mp.locator(".lw-profile-attributes .lw-stat:not(.lw-social-attribute) progress").count(), 7);
   assert.ok(
     await mp.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
   );

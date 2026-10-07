@@ -202,7 +202,7 @@ try {
   };
   ok(
     E.jobAssessment(d, adult, job, time).reasons.some((x) =>
-      x.includes("dieser Firma"),
+      /dieser Firma|this employer/i.test(x),
     ),
   );
   employer.payload.impressions[adult.id] = {

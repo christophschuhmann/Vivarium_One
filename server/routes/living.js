@@ -1,3 +1,6 @@
+import {prepareSocialDynamics} from '../living/social-dynamics.js';
+import {refreshBiographyPronouns} from '../living/occupations.js';
+import {socialAttributes} from '../living/social-attributes.js';
 import {startTurbo,turboStatus,cancelTurbo,stopTurboWorkers} from '../living/turbo.js';
 import {catalogSearch,catalogStats,materializeAsset,catalogEntry} from '../living/asset-catalog.js';
 import {ensureLocationMusic} from '../living/music.js';
@@ -26,7 +29,7 @@ import {stageView,graphView,character,converse,chatHistory,clearChat} from '../l
 const limit=(value,max=50)=>Math.max(1,Math.min(max,Number(value)||20));
 function own(req,verified=false){const user=verified?requireVerified(req):requireUser(req);const world=db.prepare('SELECT * FROM worlds WHERE id=? AND user_id=? AND simulation_mode=\'living\'').get(req.params.worldId,user.id);if(!world)throw httpErr(404,'NOT_FOUND','Living world not found.');return {user,world};}
 function mutable(req){const result=own(req,true);if(busy.has(result.world.id))throw httpErr(409,'WORLD_BUSY','Wait for the current tick to finish.');return result;}
-const simView=p=>{const person={...p,profile:pj(p.profile,{}),state:pj(p.state,{})};normalizeRomance(person);projectWellbeing(person,person.state.wellbeing?.updated_at||0);if(person.profile.social)person.profile.social=socialPerspective(person);person.activityStatus=activityStatus(person);return person;};
+const simView=p=>{const person={...p,profile:pj(p.profile,{}),state:pj(p.state,{})};normalizeRomance(person);projectWellbeing(person,person.state.wellbeing?.updated_at||0);if(person.profile.social)person.profile.social=socialPerspective(person);prepareSocialDynamics(person,db.prepare('SELECT seed FROM lw_worlds WHERE world_id=?').get(p.world_id)?.seed||73);if(person.profile.locale==='en'&&person.biography_mode!=='written')person.biography=refreshBiographyPronouns(person);person.activityStatus=activityStatus(person);person.state.socialAttributes=socialAttributes(person);return person;};
 export default async function livingRoutes(app) {
   app.addHook('onClose',async()=>stopTurboWorkers());
   app.get('/api/living/worlds/:worldId/turbo',async req=>{const {world}=own(req);return {job:turboStatus(world.id)};});
@@ -133,7 +136,7 @@ export default async function livingRoutes(app) {
     const candidates=searchAssets(String(b.caption || entity.purpose || entity.name).slice(0,800),{kind:b.kind==='sim'?'character':'background',age:entity.age,gender:entity.gender});if(!candidates.length)throw httpErr(409,'NO_LIBRARY','Load the Living World asset library first.');
     busy.add(world.id);try{let selected=b.assetId || candidates[0].id;
     if(b.useModel){preflight(user.id,EST.chat());const result=await withPrincipal(user,()=>llmChat([{role:'system',content:'Choose the best matching image from the supplied metadata. Return JSON {id,reason}; only supplied IDs are valid. Respect the intended setting and age. You cannot change the caption or invent a new image.'},{role:'user',content:j({caption:b.caption || entity.purpose || entity.name,candidates})}],{maxTokens:600}));debitCall(user.id,result,'living_asset_choice',{worldId:world.id});selected=JSON.parse(result.content.replace(/^```json\s*|\s*```$/g,'')).id;}
-    if(!candidates.some(c=>c.id===selected))throw httpErr(400,'BAD_ASSET','Choose one of the five candidates.');db.prepare(`UPDATE ${table} SET asset_id=? WHERE id=?`).run(selected,entity.id);return {ok:true,id:selected,candidates};}finally{busy.delete(world.id);}
+    if(!candidates.some(c=>c.id===selected))throw httpErr(400,'BAD_ASSET','Choose one of the five candidates.');db.transaction(()=>{db.prepare(`UPDATE ${table} SET asset_id=? WHERE id=?`).run(selected,entity.id);if(b.kind==='sim'){const profile=pj(entity.profile,{});profile.artwork={...profile.artwork,manual:true};db.prepare('UPDATE lw_sims SET profile=? WHERE id=?').run(j(profile),entity.id);}})();return {ok:true,id:selected,candidates};}finally{busy.delete(world.id);}
   });
   app.post('/api/living/worlds/:worldId/grow',async req=>{
     const {world}=mutable(req),count=db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=?').get(world.id).n,add=Number(req.body?.count);

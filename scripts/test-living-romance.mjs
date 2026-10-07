@@ -12,7 +12,7 @@ try{
   assert.ok(p.state.needs.romantic_affection<=romanticCap(age));if(age<18)assert.ok(!p.state.affect.states.some(e=>e.id==='sexual_lust'));if(age<14)assert.ok(!p.state.affect.states.some(e=>e.id==='infatuation'));
   evaluateMind(p,0,catalog);assert.ok(p.state.current_desire);if(age>=18)assert.ok(p.state.affect.states.some(e=>e.id==='sexual_lust'));
  }
- const actor=(id,age)=>{const p=structuredClone(town.people[0]);p.id=id;p.age=age;p.family={parent_ids:[],partner_id:null};p.profile.family=p.family;p.relations={};p.needs={...p.state.needs,romantic_affection:romanticCap(age)};return p;};
+ const actor=(id,age)=>{const p=structuredClone(town.people[0]);p.id=id;p.age=age;p.family={parent_ids:[],partner_id:null};p.profile.family=p.family;p.profile.romanticPreferences={genders:['female','male']};p.relations={};p.needs={...p.state.needs,romantic_affection:romanticCap(age)};return p;};
  const ages=[0,13,14,15,16,17,18,19,30,75],cases=[];
  for(const aAge of ages)for(const bAge of ages)for(const category of ['teen_romantic_talk','teen_date','flirt','ask_date','adult_private_intimacy']){
   const a=actor('a',aAge),b=actor('b',bAge);a.relations.b={closeness:.7,trust:.7,layers:{family:{score:0,status:'none'},romance:{score:.5,status:'developing'}}};b.relations.a=structuredClone(a.relations.b);if(category==='adult_private_intimacy'){a.family.partner_id='b';b.family.partner_id='a';}
@@ -23,6 +23,7 @@ try{
   const permitted=p.category.startsWith('teen_')?a>=14&&a<18&&b>=14&&b<18&&Math.abs(a-b)<=1:a>=18&&b>=18;
   assert.equal(r.allowed,permitted,`${p.category}: ${a}/${b}`);
  }
+ const incompatibleA=actor('x',30),incompatibleB=actor('y',30);incompatibleA.profile.romanticPreferences.genders=[];assert.equal((await openSims('social',{pairs:[{a:incompatibleA,b:incompatibleB,category:'flirt',seed:1,eventId:'incompatible',venue:{purpose:'town park',occupant_ids:['x','y']}}],now:0}))[0].allowed,false,'An adult preference boundary also gates romance');
  const a=actor('a',16),b=actor('b',17),base={a,b,category:'teen_date',seed:1,eventId:'date'};
  assert.equal((await openSims('social',{pairs:[{...base,venue:{purpose:'family bedroom'}}],now:0}))[0].allowed,false);
  a.family.parent_ids=['same'];b.family.parent_ids=['same'];assert.equal((await openSims('social',{pairs:[{...base,venue:{purpose:'town park'}}],now:0}))[0].allowed,false);

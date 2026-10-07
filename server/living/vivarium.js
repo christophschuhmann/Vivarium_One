@@ -1,3 +1,7 @@
+import {prepareSocialDynamics} from './social-dynamics.js';
+import {refreshBiographyPronouns} from './occupations.js';
+import {socialAttributes} from './social-attributes.js';
+import {activityStatus} from './expanded/education.js';
 import {emotionAsset} from './asset-catalog.js';
 import {projectWellbeing,removeWellbeingSources} from './wellbeing.js';
 import {normalizeRomance,ROMANCE_INSTRUCTIONS,assertMinorSafeText} from './romance.js';
@@ -19,7 +23,9 @@ const media=(id,variant)=>id?'/api/living/library/'+encodeURIComponent(id)+'?var
 const sceneActivity=(state,catalog)=>state.route?'is on the way':activity(state.action?.kind,catalog)||'takes a moment to decide what to do next';
 export function character(p,catalog){
   const profile=pj(p.profile,{}),state=pj(p.state,{});normalizeRomance({...p,profile,state});projectWellbeing({...p,profile,state},state.wellbeing?.updated_at||0);
-  return {...p,base:{...profile,age:p.age,pronouns:p.gender==='female'?'she / her':'he / him',backstory:p.biography,goals:(state.psychology?.ambitions||[]).map(a=>a.title_de||a.title||a.description||a.kind),personality:state.psychology?.big_five},voice:p.gender==='female'?'Leda':'Puck',state:{...state,activity:sceneActivity(state,catalog),intentions:[state.current_desire,state.goal?.reason,...(state.psychology?.ambitions||[]).map(a=>a.title_de||a.title||a.description||a.kind)].filter(Boolean),emotions:(state.affect?.states||[]).map(e=>({name:e.label_de||e.label||e.id,intensity:e.intensity})),perceptions:state.perceptions||{},outfit:'everyday',outfits:p.asset_id?[{name:'everyday',cutout_asset_id:media(emotionAsset(p.asset_id,state.affect?.primary),'sprite')}]:[]},intro_tick_idx:0};
+  prepareSocialDynamics({...p,profile,state},db.prepare('SELECT seed FROM lw_worlds WHERE world_id=?').get(p.world_id)?.seed||73);
+  const biography=profile.locale==='en'&&p.biography_mode!=='written'?refreshBiographyPronouns({...p,profile}):p.biography;
+  return {...p,biography,activityStatus:activityStatus({...p,profile,state}),base:{...profile,age:p.age,pronouns:profile.pronouns||(p.gender==='female'?'she / her':p.gender==='male'?'he / him':'they / them'),backstory:biography,goals:(state.psychology?.ambitions||[]).map(a=>a.title_de||a.title||a.description||a.kind),personality:state.psychology?.big_five},voice:p.gender==='female'?'Leda':'Puck',state:{...state,socialAttributes:socialAttributes({...p,profile,state}),activity:sceneActivity(state,catalog),intentions:[state.current_desire,state.goal?.reason,...(state.psychology?.ambitions||[]).map(a=>a.title_de||a.title||a.description||a.kind)].filter(Boolean),emotions:(state.affect?.states||[]).map(e=>({name:e.label||e.label_de||e.id,intensity:e.intensity})),perceptions:state.perceptions||{},outfit:'everyday',outfits:p.asset_id?[{name:'everyday',cutout_asset_id:media(emotionAsset(p.asset_id,state.affect,state.presentation),'sprite')}]:[]},intro_tick_idx:0};
 }
 export async function stageView(world,query={}){
   const clock=db.prepare('SELECT * FROM lw_worlds WHERE world_id=?').get(world.id),catalog=await openSimsCatalog();

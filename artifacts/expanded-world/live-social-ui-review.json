@@ -1,0 +1,15 @@
+{
+  "testedAt": "2026-10-07T20:08:05.280Z",
+  "world": "w_aNRDGmrQLRjz",
+  "population": 1000,
+  "readOnly": true,
+  "appearance": 24,
+  "reputation": "50/100",
+  "attributesVisible": true,
+  "consistentScoresBetweenScreens": true,
+  "profileEnglish": true,
+  "ageAndJobPreviews": true,
+  "bondsPagination": true,
+  "loadedGraphPortraits": 8,
+  "browserErrors": []
+}

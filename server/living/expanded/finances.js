@@ -293,6 +293,8 @@ export function financialOutlook(d, p, time) {
       return {
         simId: id,
         name: q.name,
+        grossCents: c && !c.payload.leave && !q.state.economy.parentalCare ? c.payload.grossMonthlyCents : null,
+        deductionsCents: c && !c.payload.leave && !q.state.economy.parentalCare ? c.payload.grossMonthlyCents - amount : null,
         label: q.state.economy.parentalCare
           ? "Care benefit"
           : c

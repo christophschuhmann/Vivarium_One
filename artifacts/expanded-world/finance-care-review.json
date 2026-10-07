@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-07T16:56:14.706Z",
+  "generatedAt": "2026-10-07T20:15:57.179Z",
   "providerCalls": 0,
   "checks": [
     "calendar-month ledger and pagination",
@@ -13,5 +13,5 @@
     "idempotent reload",
     "500 residents actual ten-minute tick"
   ],
-  "largeTickMs": 1765
+  "largeTickMs": 1952
 }

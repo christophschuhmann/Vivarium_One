@@ -4,11 +4,21 @@ import {rng} from './random.js';
 import {reputationFor} from './expanded/community.js';
 import {addFeeling} from './cognition.js';
 import {recordExperience} from './wellbeing.js';
+import {socialAttributes} from './social-attributes.js';
 const clamp=n=>Math.max(0,Math.min(1,n));
+export function preparePartnerPreferences(p,town){
+ if(p.age<18||p.profile.romanticPreferences)return;
+ const partner=town.byId.get(p.profile.family?.partner_id),draw=rng(town.world.seed+':partner-preference:'+p.profile.seed_key)();
+ // Existing partnerships take precedence. Never rewrite a marriage or identity
+ // to achieve a population ratio; new singles receive a stable individual draw.
+ p.profile.romanticPreferences={genders:partner?[partner.gender]:draw<.9?[p.gender==='female'?'male':'female']:draw<.97?[p.gender]:['female','male'],source:partner?'consistent_with_existing_partnership':'initialized_individual_preference'};
+}
 export function prepareSocialDynamics(p,seed){
  const s=p.state;if(s.socialDynamics?.version===1)return s.socialDynamics;
  const r=rng(seed+':social-dynamics:'+p.profile.seed_key),b=s.psychology.big_five||{};
- const raw={appearance:.2+r()*.8,warmth:.3+r(),reliability:.3+r(),competence:.15+r()*.7,status:.1+r()*.6,sharedInterests:.2+r()*.8},sum=Object.values(raw).reduce((a,b)=>a+b,0);
+ // Fictional, overlapping preference distributions, not fixed biological laws.
+ // Individuals vary much more than these small gender-associated offsets.
+ const raw={appearance:.55+r()*.9+(p.gender==='male'?.2:0),warmth:.3+r(),reliability:.3+r(),competence:.15+r()*.7,status:.35+r()*.8+(p.gender==='female'?.2:0),sharedInterests:.2+r()*.8},sum=Object.values(raw).reduce((a,b)=>a+b,0);
  return s.socialDynamics={version:1,ambition:s.psychology.social_style?.drive??(.2+r()*.75),prosociality:clamp((b.agreeableness??.5)*.65+r()*.35),communicationPractice:0,appearance:p.age>=18?.2+r()*.75:null,preferences:p.age>=18?Object.fromEntries(Object.entries(raw).map(([k,v])=>[k,v/sum])):null,knownGoals:{},responses:[],recentCollaborations:[]};
 }
 export function sharedGoals(a,b){
@@ -24,15 +34,28 @@ export function adultAttraction(a,b,economy=null){
  // Adult attraction is separate from consent and from friendship. Never score a
  // minor's sexual desirability, including when paired with an adult.
  if(a.age<18||b.age<18)return null;
+ if(!romanticCompatible(a,b))return 0;
  const pref=a.state.socialDynamics?.preferences;if(!pref)return null;
  const rel=a.relations[b.id]||{},bf=b.state.psychology.big_five||{},shared=sharedGoals(a,b).length;
  const publicView=economy?reputationFor(economy,b,a.id):null;
- const observable={appearance:b.state.socialDynamics?.appearance??.5,warmth:rel.closeness??.3,reliability:rel.trust??.3,competence:clamp(rel.trust??.5),status:publicView?clamp(publicView.visibleStatus*.3+publicView.recognition*.35+publicView.helpfulness*.35):.5,sharedInterests:Math.min(1,shared/3)};
+ const observable={appearance:b.state.socialDynamics?.appearance??.5,warmth:rel.closeness??.3,reliability:publicView?clamp((rel.trust??.3)*.5+publicView.reliability*.5):rel.trust??.3,competence:clamp(rel.trust??.5),status:publicView?clamp(publicView.visibleStatus*.2+publicView.recognition*.4+publicView.helpfulness*.4):.5,sharedInterests:Math.min(1,shared/3)};
  return clamp(Object.entries(pref).reduce((n,[k,w])=>n+w*observable[k],0));
+}
+export function romanticCompatible(a,b){
+ const af=a.profile.family||{},bf=b.profile.family||{};
+ if(/family|parent|child|sibling|cousin|aunt|uncle|grand/i.test(a.relations?.[b.id]?.kind||''))return false;
+ if(af.parent_ids?.includes(b.id)||bf.parent_ids?.includes(a.id)||af.parent_ids?.some(id=>bf.parent_ids?.includes(id)))return false;
+ const allows=(p,q)=>!p.profile.romanticPreferences?.genders||p.profile.romanticPreferences.genders.includes(q.gender);
+ return allows(a,b)&&allows(b,a);
+}
+export function driveLevels(p){
+ const d=p.state.socialDynamics||{},n=p.state.needs||{},w=p.state.wellbeing?.scores||{},b=p.state.psychology?.big_five||{};
+ return {connection:clamp((n.social||0)*.65+(b.extraversion??.5)*.35),achievement:clamp((d.ambition??.5)*.65+(1-(w.A??.5))*.35),recognition:clamp((d.ambition??.5)*.65+(1-(w.R??.5))*.2+(1-(d.prosociality??.5))*.15),romance:p.age>=18?clamp(n.romantic_affection||0):null};
 }
 export function socialMotivations(a,b,economy=null){
  const shared=sharedGoals(a,b),d=a.state.socialDynamics||{},strain=Math.max(a.state.needs.fatigue||0,a.state.needs.hunger||0),five=a.state.psychology.big_five||{},r=a.relations[b.id]||{};
- return {sharedGoals:shared.map(g=>g.kind),ambition:d.ambition??.5,prosociality:d.prosociality??.5,strain,attraction:adultAttraction(a,b,economy),rivalry:clamp((d.ambition??.5)*(1-(d.prosociality??.5))*(shared.some(g=>g.kind==='work')?.6:.1)+(r.tension||0)*.4),extraversion:five.extraversion??.5};
+ const publicView=economy?reputationFor(economy,b,a.id):null;
+ return {sharedGoals:shared.map(g=>g.kind),ambition:d.ambition??.5,prosociality:d.prosociality??.5,strain,drives:driveLevels(a),attraction:adultAttraction(a,b,economy),otherReputation:publicView?clamp((publicView.helpfulness+publicView.reliability)/2):.5,otherRecognition:publicView?.recognition||0,rivalry:clamp((d.ambition??.5)*(1-(d.prosociality??.5))*(shared.some(g=>g.kind==='work')?.6:.1)+(r.tension||0)*.4),extraversion:five.extraversion??.5};
 }
 export function responseProbabilities(p,other){
  const b=p.state.psychology.big_five||{},d=p.state.socialDynamics||{},n=p.state.needs,rel=p.relations[other.id]||{},strain=Math.max(n.hunger||0,n.fatigue||0,1-(p.state.wellbeing?.scores?.P??.5)),practice=Math.min(.2,d.communicationPractice||0);
@@ -60,7 +83,8 @@ export function applySocialDynamics(town,e){
  b.state.socialDynamics.responses.push({style,otherId:a.id,at:e.end,eventId:e.id});b.state.socialDynamics.responses=b.state.socialDynamics.responses.slice(-12);
  if(style==='active_constructive')b.state.socialDynamics.communicationPractice=Math.min(.2,b.state.socialDynamics.communicationPractice+.0005);
 }
-export function dynamicsView(p,town){
+export function dynamicsView(p,town,economy=null){
  prepareSocialDynamics(p,town.world.seed);
- return {lifeProgression:p.state.lifeProgression||null,birthDate:p.profile.birthDate,blockedNeed:p.state.blockedNeed,currentTask:p.state.action,pausedTasks:p.state.pausedTasks||[],conversation:p.state.conversation,bigFive:p.state.psychology.big_five,...p.state.socialDynamics,sharedGoals:Object.keys(p.relations).slice(0,64).map(id=>{const other=town.byId.get(id);return other?{simId:id,name:other.name,assetId:other.asset_id,goals:sharedGoals(p,other),lastCooperation:p.state.socialDynamics.recentCollaborations.filter(x=>x.otherId===id).at(-1)}:null;}).filter(x=>x?.goals.length)};
+ const reputation=economy?reputationFor(economy,p,p.id,town.world.seconds):p.state.economy?.reputation;
+ return {socialAttributes:socialAttributes(p,reputation),drives:driveLevels(p),partnerPreferences:p.age>=18?p.profile.romanticPreferences||null:null,attractions:p.age>=18?Object.keys(p.relations).map(id=>town.byId.get(id)).filter(q=>q?.age>=18&&romanticCompatible(p,q)).slice(0,12).map(q=>({id:q.id,name:q.name,value:adultAttraction(p,q,economy)})):[],lifeProgression:p.state.lifeProgression||null,birthDate:p.profile.birthDate,blockedNeed:p.state.blockedNeed,currentTask:p.state.action,pausedTasks:p.state.pausedTasks||[],conversation:p.state.conversation,bigFive:p.state.psychology.big_five,...p.state.socialDynamics,sharedGoals:Object.keys(p.relations).slice(0,64).map(id=>{const other=town.byId.get(id);return other?{simId:id,name:other.name,assetId:other.asset_id,goals:sharedGoals(p,other),lastCooperation:p.state.socialDynamics.recentCollaborations.filter(x=>x.otherId===id).at(-1)}:null;}).filter(x=>x?.goals.length)};
 }

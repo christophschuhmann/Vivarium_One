@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import {OCCUPATIONS} from "../occupations.js";
 const root = new URL("../../../", import.meta.url);
 export const ECONOMY_CATALOG = JSON.parse(
   fs.readFileSync(new URL("docs/living-world-economy-design.json", root)),
@@ -160,6 +161,17 @@ export const JOBS = {
     holiday: true,
   },
 };
+// Every occupation has a real contract/skill/workplace family and can be offered
+// on the job board. Weights are sampling rules, not hiring eligibility.
+for(const [title,family,weight,minAge,education] of OCCUPATIONS){
+ const base=JOBS[family];JOBS[title]={...base,...JOBS[title],family,weight,minAge,education};
+ // Fictional qualification gates, shared by job listings and applications.
+ if(education==='university'&&!JOBS[title].credential)JOBS[title].credential='degree_skill:'+JOBS[title].skill;
+ if(family==='Nurse'&&title!=='Nurse')JOBS[title].gross=Math.round(base.gross*(/aide|assistant|technician/i.test(title)?.78:/therapist|counselor/.test(title)?1.12:1));
+ if(/assistant|clerk|Cashier|Dishwasher|assembler/i.test(title))JOBS[title].gross=Math.min(JOBS[title].gross,265000);
+}
+JOBS['Library assistant'].venue='library';
+for(const role of ['Hotel receptionist','Housekeeper'])JOBS[role].venue='hotel';
 export const SKILL_LABELS = {
   teaching: "Lehren",
   craft: "Handwerk & Gestaltung",

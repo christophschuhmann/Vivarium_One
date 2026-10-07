@@ -1,5 +1,6 @@
 import {rng} from './random.js';
 import {searchAssets} from './library.js';
+import {catalogSearch,catalogEntry} from './asset-catalog.js';
 export const BENNINGTON={id:'bennington',name:'Bennington, Vermont',currency:'USD',language:'en',referencePopulation:14953,censusYear:2025,demographics:{under5:.035,under18:.177,over65:.252,female:.514},source:'https://www.census.gov/quickfacts/fact/table/benningtontownbenningtoncountyvermont/RHI125224',note:'Synthetic residents in a stylized, researched town. Streets and selected public institutions are real; private businesses, households and stories are fictional. Age-cohort targets use Census QuickFacts; race and Hispanic ethnicity are overlapping census dimensions, not interchangeable skin labels.'};
 const quarters=[['Downtown','Main Street','shops, civic life and chance encounters'],['Silver Street Gardens','Silver Street','families, gardens and library visits'],['Old Bennington','Monument Avenue','historic houses, quiet walks and intergenerational neighbors'],['North Bennington','Main Street, North Bennington','village homes and community gatherings'],['College Hill','College Drive','students, arts, research and shared projects'],['Benmont Riverside','Benmont Avenue','workshops, apartments and mutual practical help'],['East Main','East Main Street','mixed housing, services and everyday errands'],['South Street','South Street','family homes, care and neighborhood routines'],['Northside','Northside Drive','shops, workplaces and varied household budgets']];
 const given={female:['Abigail','Alice','Amelia','Audrey','Avery','Charlotte','Claire','Eleanor','Elizabeth','Emma','Evelyn','Fiona','Grace','Harper','Hazel','Isabel','Jane','Julia','Katherine','Leah','Lily','Lucy','Maya','Nora','Olivia','Penelope','Rose','Ruby','Sarah','Sophie','Violet','Zoe'],male:['Adam','Andrew','Benjamin','Caleb','Charles','Daniel','David','Eli','Ethan','Finn','George','Henry','Isaac','Jack','James','Jonah','Joseph','Julian','Leo','Liam','Lucas','Miles','Nathan','Noah','Oliver','Owen','Samuel','Theo','Thomas','William']};
@@ -14,6 +15,32 @@ export function benningtonHouseholds(population,seed){
 }
 export function benningtonName(gender,index,household,seed){const r=rng(seed+':name:'+index);return given[gender][Math.floor(r()*given[gender].length)]+' '+lastNames[household%lastNames.length];}
 export function benningtonHeritage(index,seed){const n=rng(seed+':heritage:'+index)();return n<.891?'white':n<.922?'latino':n<.934?'black':n<.949?(index%2?'japanese':'indian'):n<.951?'indigenous_american':['white','black','latino','southeast_asian','arab'][index%5];}
+// Distinct establishing pictures for each neighborhood. Captions describe
+// reusable illustrative art, not photographs of the actual Bennington streets.
+export function assignNeighborhoodArtwork(places){
+ // These establishing views were visually checked: exterior views, distinct
+ // compositions, no shop interiors accidentally matched through 'street grid'.
+ const reviewed=['hfb-base-083-v1','hfb-bg-supp-0343','hfb-bg-supp-0395','hfb-bg-city-0125','hfb-bg-supp-0145','hfb-bg-drama-0092','hfb-bg-city-0290','hfb-bg-city-0132','hfb-bg-city-0214','hfb-base-083-v2','hfb-bg-supp-0347','hfb-bg-city-0154','hfb-base-088-v1','hfb-bg-supp-0153','hfb-bg-drama-0091','hfb-bg-city-0398','hfb-bg-city-0128','hfb-base-083-v3','hfb-bg-supp-0158','hfb-bg-supp-0146','hfb-bg-drama-0104'];
+ const used=new Set(),queries=[
+  'main street storefronts diner brick town', 'suburban street houses lawns maple gardens',
+  'historic clapboard houses village green', 'village main street farming town',
+  'red brick university quadrangle college lawn', 'riverside park brick workshops',
+  'neighborhood high street shops sidewalk', 'residential houses porch trees',
+  'retail neighborhood boulevard storefronts'
+ ];
+ const fallback=catalogSearch('street residential park courtyard exterior',{kind:'background',limit:50});
+ let i=0;
+ for(const p of places.filter(p=>p.kind==='neighborhood')){
+  const preferred=reviewed[i]?catalogEntry(reviewed[i]):null,q=queries[i++%queries.length],all=[...catalogSearch(q,{kind:'background',limit:50}),...fallback];
+  const suitable=all.filter(a=>{
+   const text=a.caption.en.toLowerCase();
+   const subject=text.split('.')[0],scale=a.metadata?.variant_axes?.find(v=>v.axis==='scale')?.value||'';
+   return !/interior/.test(scale)&&/street|exterior|quadrangle|plaza|village green|park|boulevard|promenade|campus|courtyard/.test(subject)&&!/medieval|desert|japan|asian|european|scandinavian|mediterranean|canal|coastal|seaside|hitching|feed store|arcade|interior|indoor|bedroom|classroom|lecture|auditorium|corridor|room|horror|ruined|abandoned|snow/.test(text);
+  });
+  const chosen=preferred&&!used.has(preferred.id)?preferred:suitable.find(a=>!used.has(a.id))||searchAssets(q).find(a=>!used.has(a.id));
+  if(chosen){p.asset_id=chosen.id;used.add(chosen.id);}
+ }
+}
 export function localizeBennington(places,edges,people,identities,worldId){
  const neighborhoods=places.filter(p=>p.kind==='neighborhood'),byId=new Map(places.map(p=>[p.id,p]));
  for(let i=0;i<neighborhoods.length;i++){const p=neighborhoods[i],[base,street,character]=quarters[i%quarters.length],block=Math.floor(i/quarters.length);p.name=base+(block?' · '+['North','East','South','West'][((block-1)%4)]+' block '+block:'');p.purpose='Vermont New England residential street autumn '+character;identities[p.id]={name:p.name,street,district:base,character,ritual:'Neighbors meet after work for a walk, a shared hobby or practical help.',meetingPurpose:i%2?'town park':'public library',theme:i%2?'walking':'reading'};}
@@ -29,5 +56,6 @@ export function localizeBennington(places,edges,people,identities,worldId){
  add('arts','Bennington College · VAPA','college visual performing arts building',[['Arts studio','university art studio painting drawing',['desk','table']],['Rehearsal room','music rehearsal room university',['desk','table']],['Student lounge','college student lounge sofa books',['sofa','bookshelf','table']]],4);
  add('crossett','Bennington College · Crossett Library','college library exterior',[['Study room','university library quiet study desks',['bookshelf','desk']],['Seminar room','college seminar room classroom',['desk','table']]],4);
  add('mystery','Alder Hollow House · fictional','secluded New England old house forest dusk mystery',[['Private study','old study room books desk mysterious scientific instruments',['desk','bookshelf']],['Overgrown garden','abandoned garden twilight forest',['bench','planter']]],8);
+ assignNeighborhoodArtwork(places);
  return BENNINGTON;
 }

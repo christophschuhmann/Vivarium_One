@@ -1,0 +1,55 @@
+{
+  "testedAt": "2026-10-07T20:17:16.487430+00:00",
+  "checks": {
+    "livingBrowser500": "PASS",
+    "financeEducationCareBrowser": "PASS",
+    "portraitsMapBrowser1000": "PASS",
+    "neutralAgeIdentityExpressionThresholds": "PASS",
+    "minuteEquivalenceAndFullDay20": "PASS",
+    "mindAndConversations": "PASS",
+    "wellbeing": "PASS",
+    "minorRomancePolicy": "PASS",
+    "expandedSemantics": "PASS",
+    "financeEducationCare": "PASS",
+    "hfAssets": "PASS",
+    "expandedRegressionSuites14": "PASS",
+    "socialAttributesAndCrossScreenScores": "PASS",
+    "attractionAndReputationBehaviorInputs": "PASS",
+    "newOccupationContractsAndQualifications": "PASS",
+    "newCoupleDistributionAndPreferenceGates": "PASS",
+    "bondsAgeJobAndEightContactPagination": "PASS",
+    "EnglishDynamicGoalsPermaAndProfileLabels": "PASS"
+  },
+  "liveMigration": {
+    "neighborhoodArtwork": 21,
+    "automaticPortraitsUpdated": 720,
+    "initializedOutlooks": 998,
+    "previouslyContactedSimsPreserved": 2,
+    "originalEventsClocksBiographiesHouseholdsAndOtherTownsPreserved": true,
+    "rerunChanges": 0
+  },
+  "limits": [
+    "Artwork is stylized; age selection uses source metadata, with representative visual checks rather than individual review of all 1,000 faces.",
+    "Missing matching expression variants keep the neutral face and existing identity.",
+    "Map group nodes are presentation-only; initial outlook components last two to six simulated hours."
+  ],
+  "initialMigrationExpressionDistribution": {
+    "neutral": 858,
+    "annoyed": 133,
+    "afraid": 9
+  },
+  "generationFixture": {
+    "population": 1000,
+    "actualProfessions": 77,
+    "couples": 346,
+    "sameSexCouples": 41,
+    "probabilitySetting": 0.1
+  },
+  "liveDeployment": {
+    "readOnlyReview": true,
+    "existingClockEventsAndAccountTotalsPreserved": true,
+    "attractivenessReputationPopularityRecognitionAmbitionVisible": true,
+    "screensUseSameCurrentReputation": true,
+    "existingFamiliesAndCareersPreserved": true
+  }
+}

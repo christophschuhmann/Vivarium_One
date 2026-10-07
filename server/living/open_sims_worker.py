@@ -38,6 +38,13 @@ def handle(request):
             category = pair.get('category')
             rng = random.Random(str(pair['seed']))
             possible = [c for c in candidates if c['allowed'] and (c['category'] != 'phone_call' or pair.get('remote')) and (not category or c['category'] == category)]
+            # Adult partner preferences gate romance; friendship is unaffected.
+            # All original age, kinship, privacy and consent checks still apply.
+            def preference_allows(x, y):
+                genders = x.get('profile', {}).get('romanticPreferences', {}).get('genders')
+                return genders is None or y.get('gender') in genders
+            if a.get('age', 0) >= 18 and b.get('age', 0) >= 18 and not (preference_allows(a, b) and preference_allows(b, a)):
+                possible = [c for c in possible if c.get('tone') != 'romance' and c['category'] not in {'flirt', 'ask_date', 'express_affection', 'adult_private_intimacy'}]
             # Include variation instead of deterministically picking the same top category.
             if not possible:
                 results.append({'allowed': False}); continue
@@ -57,11 +64,22 @@ def handle(request):
                     score += min(.3, float(a.get('needs', {}).get('romantic_affection', 0)) * .3)
                 motivation = a.get('social_motivations', {})
                 if motivation.get('sharedGoals') and candidate['category'] in {'collaborate_project', 'coordinate_work', 'make_plans', 'share_interest', 'offer_help', 'ask_help'}:
-                    score += .10 + .16 * float(motivation.get('prosociality', .5))
+                    score += .10 + .24 * float(motivation.get('prosociality', .5))
                 if candidate['category'] in {'challenge', 'undermine', 'provoke'}:
-                    score += min(.22, float(motivation.get('rivalry', 0)) * .3)
+                    score += min(.38, float(motivation.get('rivalry', 0)) * .55)
                 if candidate.get('tone') == 'romance' and a.get('age', 0) >= 18 and b.get('age', 0) >= 18:
-                    score += max(-.1, (float(motivation.get('attraction') or .5)-.5) * .3)
+                    attraction = motivation.get('attraction')
+                    score += max(-.35, (float(.5 if attraction is None else attraction)-.5) * .9)
+                drives = motivation.get('drives', {})
+                if candidate['category'] in {'ask_advice', 'ask_help', 'collaborate_project', 'coordinate_work'}:
+                    score += (float(motivation.get('otherReputation', .5))-.5)*.45
+                    score += float(drives.get('achievement', 0))*.16
+                if candidate['category'] in {'small_talk', 'invite_activity', 'check_in'}:
+                    score += float(drives.get('connection', 0))*.2
+                if candidate['category'] in {'share_news', 'share_interest', 'tell_story', 'collaborate_project'}:
+                    score += float(drives.get('recognition', 0))*.2
+                if candidate['category'] in {'ask_advice', 'small_talk'}:
+                    score += float(drives.get('recognition', 0))*float(motivation.get('otherRecognition', 0))*.16
                 if tension > .035 and candidate['category'] in {'apologize', 'reconcile', 'set_boundary'}:
                     score += min(.35, tension * 1.5)
                 return max(.01, score) ** 2

@@ -1,0 +1,26 @@
+{
+  "population": 1000,
+  "professions": 77,
+  "couples": 346,
+  "sameSexCouples": 41,
+  "attractionAndReputationAffectMotives": true,
+  "initialSituations": {
+    "anticipation": 122,
+    "different_futures": 156,
+    "autonomy": 22,
+    "belonging": 156,
+    "boundaries": 134,
+    "settled": 187,
+    "care": 10,
+    "divided_loyalties": 126,
+    "comparison": 63,
+    "money": 12,
+    "work": 12
+  },
+  "facades": 206,
+  "uniqueNeighborhoodImages": 21,
+  "largeGroupsOpened": 3,
+  "maximumMapNodes": 49,
+  "expressionThresholds": true,
+  "ageMatching": true
+}

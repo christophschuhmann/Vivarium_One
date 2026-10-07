@@ -25,7 +25,7 @@ try {
   const catalog=await openSimsCatalog();assert.equal(catalog.manifest.version,'3.3.0');assert.ok(Object.keys(catalog.actions).length>=80);
   const a=await generateTown('one',{population:100,seed:73}),b=await generateTown('two',{population:100,seed:73});assert.deepEqual(a.people.map(p=>[p.name,p.age,p.psychology.big_five]),b.people.map(p=>[p.name,p.age,p.psychology.big_five]));
   for(const p of a.people){assert.ok(p.biography.length>100);assert.ok(p.psychology.ambitions.length);for(const parent of p.family.parent_ids)assert.ok(a.people.find(q=>q.id===parent).age-p.age>=18);if(p.age<18)assert.equal(p.family.partner_id,null);if(p.workplace_id&&p.age>=18)assert.ok(a.places.find(l=>l.id===p.workplace_id).affordances.includes(catalog.jobStations[p.profile.job]?.[0]));}
-  const {worldId}=await createTown(user,{population:10});let town=loadTown(worldId);assert.equal(town.people.length,10);assert.equal(db.prepare('SELECT count(*) n FROM lw_journal').get().n,40);
+  const {worldId}=await createTown(user,{population:10});let town=loadTown(worldId);assert.equal(town.people.length,10);assert.equal(db.prepare('SELECT count(*) n FROM lw_journal').get().n,50);
   const sim=town.people[0],visitor=town.people[2],other=town.people[3],room=sim.location_id;
   // Any resident has bounded navigation metadata and an independently focusable graph.
   const position=(await request('GET',`/api/living/worlds/${worldId}/sims/${visitor.id}/position`)).json();assert.ok(position.path.some(p=>p.kind==='neighborhood'));assert.equal(position.path.at(-1).id,visitor.location_id);assert.equal(position.target.id,visitor.id);

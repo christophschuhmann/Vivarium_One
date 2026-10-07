@@ -4,7 +4,8 @@ export {rng} from './random.js';
 import {nameNeighborhoods} from './neighborhoods.js';
 import {weaveSocial,socialBackground,interestLabel} from './social.js';
 import {searchAssets} from './library.js';
-import {catalogSearch} from './asset-catalog.js';
+import {sampleOccupation,refreshBiographyPronouns} from './occupations.js';
+import {characterCandidates} from './asset-catalog.js';
 import {openSims,openSimsCatalog} from './open_sims.js';
 import {prepareMind,evaluateMind} from './cognition.js';
 import {expandFacilities,assignFacilities} from './facilities.js';
@@ -64,17 +65,18 @@ export async function generateTown(worldId,{population=10,seed=73,title='Lindens
     }
     const seniors=count<=2&&index%7===5,baseAge=seniors?68+Math.floor(r()*15):26+Math.floor(r()*25),members=[];
     for(let k=0;k<count;k++) {
-      const gender=isBennington?(rng(seed+':gender:'+people.length)()<.514?'female':'male'):(k===0?'female':k===1?'male':r()<.5?'female':'male'),age=cohorts?.[index]?.ages[k]??(k<2?(count===1&&index%5===3?18+Math.floor(r()*8):baseAge+(k===1?2:0)):Math.min(baseAge-20,index%4===1?1+Math.floor(r()*5):6+Math.floor(r()*12)));
-      const generatedJob=age<6?'Kindergarten child':age<18?'Pupil':age>=66?'Retired':pick(jobs,r);
+      const gender=isBennington?(k===1&&(cohorts?.[index]?.parents||0)>=2?(rng(seed+':couple:'+index)()<.1?members[0].gender:members[0].gender==='female'?'male':'female'):(rng(seed+':gender:'+people.length)()<.514?'female':'male')):(k===0?'female':k===1?'male':r()<.5?'female':'male'),age=cohorts?.[index]?.ages[k]??(k<2?(count===1&&index%5===3?18+Math.floor(r()*8):baseAge+(k===1?2:0)):Math.min(baseAge-20,index%4===1?1+Math.floor(r()*5):6+Math.floor(r()*12)));
+      const legacyJob=age<6?'Kindergarten child':age<18?'Pupil':age>=66?'Retired':pick(jobs,r);
+      const generatedJob=isBennington&&age>=18&&age<66?sampleOccupation(age,seed,'sim-'+people.length):legacyJob;
       // A separate deterministic draw preserves the existing world's identity
       // stream. New young adults can be students; qualified careers requiring
       // many years of study cannot start with a fictitious finished degree at 18.
       const tooYoungForDegree=(generatedJob==='Physician' && age<25)||(['Teacher','Researcher'].includes(generatedJob)&&age<22);
       const job=age>=18&&age<24&&(tooYoungForDegree || rng(seed+':study-phase:'+people.length)()<.4)?'Student':generatedJob,ethnicity=isBennington?benningtonHeritage(people.length,seed):pick(heritage,r);
       const workplace=job==='Pupil'?civic.school:job==='Kindergarten child'?civic.daycare:job==='Teacher'?civic.school:['Researcher','Student'].includes(job)?civic.campus:job==='Physician'?civic.clinic:job==='Carpenter'?civic.fire:job==='Civic planner'?civic.townhall:['Bookseller','Illustrator'].includes(job)?civic.library:['Baker','Gardener'].includes(job)?civic.cafe:job==='Retired'?null:civic.townhall;
-      const librarySkins=catalogSearch('',{kind:'character',age,gender,heritage:ethnicity,emotion:'neutral',limit:50});const identitySkins=[...new Map(librarySkins.map(a=>[a.identityId,a])).values()];const candidates=identitySkins.length?identitySkins:searchAssets('',{kind:'character',age,gender,heritage:ethnicity});const asset=pick(candidates,r);
+      const librarySkins=characterCandidates({age,gender,heritage:ethnicity});const candidates=librarySkins.length?librarySkins:searchAssets('',{kind:'character',age,gender,heritage:ethnicity});const asset=pick(candidates,r);
       const id=worldId+'_s_'+people.length,person={id,world_id:worldId,name:isBennington?benningtonName(gender,people.length,index,seed):pick(names[gender],r)+' '+last,age,gender,household_id:home,asset_id:asset?.id || null,colour:`hsl(${Math.floor(r()*360)} 64% 46%)`,anchored:people.length<2?1:0,
-        seed_key:'sim-'+people.length,profile:{job,...(isBennington?{locale:'en',heritage:ethnicity}:{}),interests:[pick(interests,r),pick(interests,r)]},family:{parent_ids:[],partner_id:null},workplace_id:workplace,
+        seed_key:'sim-'+people.length,profile:{job,pronouns:gender==='female'?'she/her':'he/him',...(isBennington?{locale:'en',heritage:ethnicity}:{}),interests:[pick(interests,r),pick(interests,r)]},family:{parent_ids:[],partner_id:null},workplace_id:workplace,
         home:rooms,preferences:Object.fromEntries(interests.map(key=>[key,.2+r()*.6])),needs:Object.fromEntries(Object.keys(catalog.rates).map(key=>[key,.1+r()*.3])),relations:{}};
       if(workplace && catalog.jobStations[job]){const place=places.find(p=>p.id===workplace);if(!place.affordances.includes(catalog.jobStations[job][0]))place.affordances.push(catalog.jobStations[job][0]);}
       if(isBennington){let attempt=0;while(usedSimNames.has(person.name)&&attempt<80){attempt++;person.name=benningtonName(gender,people.length+attempt*population,index,seed);}if(usedSimNames.has(person.name)){const parts=person.name.split(" ");person.name=parts[0]+" "+String.fromCharCode(65+Math.floor(people.length/26)%26)+String.fromCharCode(65+people.length%26)+". "+parts.slice(1).join(" ");}usedSimNames.add(person.name);}
@@ -96,6 +98,8 @@ export async function generateTown(worldId,{population=10,seed=73,title='Lindens
     const relatives=groups.get(person.household_id).filter(p=>p.id!==person.id).map(p=>p.name);
     person.biography=`${person.name} ist ${person.age} Jahre alt und ${person.profile.job==='Retired'?'im Ruhestand':person.profile.job==='Student'?'studiert':person.profile.job==='Pupil'?'geht zur Schule':person.profile.job==='Kindergarten child'?'besucht den Kindergarten':'arbeitet als '+person.profile.job}. ${relatives.length?'Lebt mit '+relatives.join(', ')+' im gemeinsamen Haushalt.':'Lebt allein und pflegt Kontakte in der Nachbarschaft.'} Zuhause ist ${person.profile.neighborhood?.name||'die Stadt'}. Interessiert sich für ${[...new Set(person.profile.interests)].map(interestLabel).join(' und ')}. ${socialBackground(person,byId)} Ziel: ${person.psychology.ambitions.map(a=>a.title).join('; ')}.`;
     if(isBennington){person.biography=`${person.name} is ${person.age} years old. ${person.profile.job==='Retired'?'They are retired.':person.profile.job==='Pupil'?'They attend school.':person.profile.job==='Kindergarten child'?'They receive early childhood care.':person.profile.job==='Student'?'They study at college.':'They work as a '+person.profile.job+'.'} ${relatives.length?'Their household includes '+relatives.join(', ')+'.':'They live independently.'} Home is in ${person.profile.neighborhood?.name||'Bennington'}. They enjoy ${[...new Set(person.profile.interests)].join(' and ')}. ${socialBackground(person,byId)} Their ambitions include ${person.psychology.ambitions.map(a=>a.title).join("; ")}. This is a fictional initial background, not a record of events already simulated.`;}
+    if(isBennington)person.biography=refreshBiographyPronouns(person);
+    if(person.age>=18){const partner=byId.get(person.family.partner_id),draw=rng(seed+':partner-preference:'+person.seed_key)();person.profile.romanticPreferences={genders:partner?[partner.gender]:draw<.9?[person.gender==='female'?'male':'female']:draw<.97?[person.gender]:['female','male'],source:'initialized_individual_preference'};}
     person.biography_mode=person.anchored?'written_pending':'procedural';
     person.location_id=person.home.kitchen;
     person.state={needs:person.needs,psychology:person.psychology,career:person.career,location_id:person.location_id,action:null,route:null,goal:null,mood:'zuversichtlich',thought:isBennington?'A new day begins. I want to make time for my responsibilities and someone I care about.':'Ein neuer Tag beginnt.',last_social:-99999};

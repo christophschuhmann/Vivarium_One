@@ -922,7 +922,7 @@ function exConceptKey(key) {
 function exInfo(key) {
   const id = exConceptKey(key);
   if (!id) return "";
-  const title = EX_CONCEPTS[id][0];
+  const title = exConceptData(id)[0];
   const english = typeof getLang === "function" && getLang() === "en";
   const explanation = english ? `Learn about ${title}` : `${title} erklären`;
   return `<button type="button" class="ex-info" data-concept="${esc(id)}" aria-label="${esc(explanation)}" title="${esc(explanation)}">i</button>`;
@@ -930,13 +930,18 @@ function exInfo(key) {
 function exExplain(label, key = label) {
   return `${esc(label)} ${exInfo(key)}`;
 }
+function exConceptData(key) {
+  return typeof getLang === 'function' && getLang() === 'en' && typeof EX_CONCEPTS_EN !== 'undefined'
+    ? EX_CONCEPTS_EN[key] : EX_CONCEPTS[key];
+}
 function exConceptDialog(key, trigger) {
-  const c = EX_CONCEPTS[key];
+  const c = exConceptData(key);
   if (!c) return;
+  const english = getLang() === "en", wording=(en,de)=>english?en:de;
   const previous = document.activeElement;
   const m = document.createElement("div");
   m.className = "modal-bg ex-learning";
-  m.innerHTML = `<section class="ex-learning-card" role="dialog" aria-modal="true" aria-labelledby="ex-learning-title"><div class="ex-learning-top"><small>NEBENBEI VERSTEHEN</small><button type="button" class="btn btn-soft small" aria-label="Erklärung schließen">✕</button></div><h2 id="ex-learning-title">${esc(c[0])}</h2>${String(c[1]).split("\n\n").map(p=>"<p>"+esc(p)+"</p>").join("")}${c[5] ? `<div class="ex-insight-example"><b>Ein Gedankenexperiment</b><p>${esc(c[5])}</p></div>` : ""}${c[4] ? `<div class="ex-insight-question"><b>Eine hilfreiche Frage</b><p>${esc(c[4])}</p></div>` : ""}<div class="ex-note"><b>So wirkt es in Vivarium</b><p>${esc(c[2])}</p></div>${c[3] ? `<a href="${esc(c[3])}" target="_blank" rel="noopener noreferrer">Hintergrund bei der Fachquelle ↗</a>` : ""}<small class="ex-learning-note">Spielwerte sind vereinfachte Modelle. Du kannst die Erklärung schließen und direkt weiterspielen.</small></section>`;
+  m.innerHTML = `<section class="ex-learning-card" role="dialog" aria-modal="true" aria-labelledby="ex-learning-title"><div class="ex-learning-top"><small>${wording('LEARN AS YOU PLAY','NEBENBEI VERSTEHEN')}</small><button type="button" class="btn btn-soft small" aria-label="${wording('Close explanation','Erklärung schließen')}">✕</button></div><h2 id="ex-learning-title">${esc(c[0])}</h2>${String(c[1]).split("\n\n").map(p=>"<p>"+esc(p)+"</p>").join("")}${c[5] ? `<div class="ex-insight-example"><b>${wording('A thought experiment','Ein Gedankenexperiment')}</b><p>${esc(c[5])}</p></div>` : ""}${c[4] ? `<div class="ex-insight-question"><b>${wording('A useful question','Eine hilfreiche Frage')}</b><p>${esc(c[4])}</p></div>` : ""}<div class="ex-note"><b>${wording('How this works in Vivarium','So wirkt es in Vivarium')}</b><p>${esc(c[2])}</p></div>${c[3] ? `<a href="${esc(c[3])}" target="_blank" rel="noopener noreferrer">${wording('Read the source ↗','Hintergrund bei der Fachquelle ↗')}</a>` : ""}<small class="ex-learning-note">${wording('Game values are simplified models. Close this explanation whenever you are ready to continue playing.','Spielwerte sind vereinfachte Modelle. Du kannst die Erklärung schließen und direkt weiterspielen.')}</small></section>`;
   const close = () => {
     m.remove();
     if (previous?.isConnected) previous.focus({ preventScroll: true });

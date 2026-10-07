@@ -60,3 +60,18 @@
 .scene-audio-controls input { margin:0; accent-color:#a088ff; }
 #tts-replay { white-space:nowrap; }
 .lw-library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}.lw-library-grid .ex-card{min-width:0;display:flex;flex-direction:column;gap:8px}.lw-library-grid img{width:100%;height:190px;object-fit:contain;background:#e8ebe7;border-radius:12px}.lw-library-grid small{overflow-wrap:anywhere}.lw-library-grid details{font-size:.85rem}.lw-library-grid details p{max-height:180px;overflow:auto}
+/* Feelings remain visible alongside needs in Play, profiles and daily life. */
+.lw-emotions{grid-column:1/-1}.lw-emotion-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;margin-top:12px}.lw-emotion .lw-stat{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:5px 8px}.lw-emotion .lw-stat>span{grid-column:1/-1}.lw-emotion progress{width:100%;min-width:0;accent-color:#668f91}.lw-emotion.strained progress{accent-color:#bf8369}.lw-emotion details{font-size:11px;color:var(--soft);line-height:1.65}.lw-emotion details p{margin:7px 0}.lw-emotion summary{cursor:pointer}.lw-mind-identity{display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 0;font-size:13px;color:inherit}.lw-mind-identity span+span:before{content:'·';margin-right:12px;opacity:.65}.lw-profile #lw-profile-emotions{margin:18px 0}.lw-mind .lw-emotions h3{font-size:15px}@media(max-width:650px){.lw-emotion-grid{grid-template-columns:minmax(0,1fr)}.lw-mind-identity{font-size:12px;gap:6px 10px}}
+/* Mind: conversation and feelings share the first row, before detailed stats. */
+.lw-mind-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,400px);gap:16px;padding:16px 22px 0;align-items:start}.lw-mind-top-left{display:grid;gap:12px;min-width:0}.lw-mind-top .iv-panel{grid-column:auto!important;min-width:0;padding:16px}.lw-mind-top .iv-log{min-height:110px;max-height:220px}.lw-mind-top .lw-emotion-grid{grid-template-columns:minmax(0,1fr)}.lw-mind-top .mind-box.thoughts{margin:0}.lw-mind .mind-cols{display:block}.lw-mind .lw-mind-vitals{scroll-margin-top:180px}.lw-mind-heading-face{float:left;width:54px;height:70px;border-radius:14px;overflow:hidden;background:#fff3;margin-right:14px}.lw-mind-heading-face>div{width:100%;height:100%;background-size:200%;background-position:50% 4%;background-repeat:no-repeat}.lw-mind .modal-head>div{min-width:0}.lw-mind .lw-mind-identity b{font-size:inherit}@media(max-width:800px){.lw-mind-top{display:flex;flex-direction:column;padding:12px;gap:12px}.lw-mind-top .iv-panel{order:-1;width:100%;box-sizing:border-box}.lw-mind-top-left{width:100%}.lw-mind-top .iv-log{min-height:75px;max-height:150px}.lw-mind-heading-face{width:42px;height:60px;margin-right:10px}.lw-mind .lw-mind-vitals{scroll-margin-top:240px}}
+.lw-name-tag b,.lw-name-tag small{display:block}.lw-name-tag small{font-size:11px;white-space:normal;line-height:1.4}.lw-bond-meta{font:500 14px Poppins,sans-serif;fill:#655775;text-anchor:middle;paint-order:stroke;stroke:#fbf8fd;stroke-width:4px;stroke-linejoin:round}.lw-bond-anchor-person small{display:block;line-height:1.5}
+
+.lw-character-sections{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px;padding:8px;border-radius:12px;background:var(--paper,#faf5ed)}
+.lw-social-attribute{border-left:3px solid #ba7c47;padding-left:8px;background:#f9f3e9;border-radius:6px}
+.lw-social-attribute-note{grid-column:1/-1;line-height:1.5;color:#695f52}
+
+.lw-bond-node .lw-bond-name{font-size:17px}.lw-bond-node .lw-bond-meta{font-size:16px}
+
+.lw-bond-anchor-person small{color:#695d70}.lw-bond-sidebar .eyebrow{color:#6e5e74}
+
+.lw-bond-node{pointer-events:bounding-box}

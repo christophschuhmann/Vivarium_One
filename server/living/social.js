@@ -70,11 +70,23 @@ export function socialBackground(p,byId){
   const ties=Object.entries(p.relations).filter(([id,r])=>byId.has(id)&&r.background).sort((a,b)=>(b[1].closeness||0)-(a[1].closeness||0)).slice(0,3);
   return `${p.profile.social.background} ${p.profile.social.wish} ${p.profile.social.sensitivity} ${ties.map(([id,r])=>`${byId.get(id).name}: ${r.background.sharedHistory}`).join(' ')}`;
 }
+// Initialization only: the economy assigns actual employers after the first
+// household pass. Current colleague labels must agree with those contracts.
+export function alignInitialWorkConnections(town){
+ for(const p of town.people)for(const [id,rel] of Object.entries(p.relations)){
+  const q=town.byId.get(id);if(!q||p.profile.workplace_id&&p.profile.workplace_id===q.profile.workplace_id)continue;
+  if(rel.background?.contexts)rel.background.contexts=rel.background.contexts.filter(k=>k!=='Coworker');
+  if(rel.kind==='Coworker')rel.kind='Acquaintance';
+  if(rel.layers?.coworker)delete rel.layers.coworker;
+  if(rel.background?.label==='Coworker')Object.assign(rel.background,{label:'Acquaintance',sharedHistory:'They have met around town and are getting to know one another beyond a first impression.'});
+ }
+ weaveSocial(town.people,town.places,JSON.parse(town.world.rules).neighborhoods||{},{seed:town.world.seed});
+}
 export function socialPerspective(p){
   const social=p.profile.social,englishPlaceholder=typeof social?.wish==='string'&&social.wish.startsWith('Personal wishes are drawn from'),legacyGermanPlaceholder=typeof social?.wish==='string'&&social.wish.startsWith('Die persönlichen Wünsche ergeben sich');
   if(!social||p.biography_mode!=='written'||(!englishPlaceholder&&!legacyGermanPlaceholder))return social;
   // Use the Sim's already-written words, without inferring a new life history.
-  const sentences=(String(p.state?.thought||'')+' '+String(p.biography||'')).match(/[^.!?]+[.!?]?/g)||[];
+  const sentences=(String(p.biography||'')+' '+String(p.state?.thought||'')).match(/[^.!?]+[.!?]?/g)||[];
   const wish=sentences.map(s=>s.trim()).find(s=>s.length<=400&&(/\b(want(?:s|ed|ing)?|wish(?:es|ed)?|long(?:s|ed|ing)?|need(?:s|ed|ing)?|aspir(?:e|es|ed|ing))\b/i.test(s)||/\b(möchte|wünsch\w*|sehn\w*|brauche|Wunsch|Bestreben)\b/i.test(s)));
   return wish?{...social,wish,wishSource:/[äöüÄÖÜß]/i.test(wish)?'eigene Gedanken und ausgearbeitete Biografie':'the Sim’s own thoughts and written biography'}:social;
 }

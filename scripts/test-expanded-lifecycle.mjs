@@ -160,13 +160,13 @@ try {
   p.state.economy.expectations.minimumNetCents = 0;
   assert.ok(
     E.jobAssessment(d, p, listing, 42000).reasons.some((x) =>
-      x.includes("öffentlicher"),
+      /öffentlicher|documented public reliability incident/.test(x),
     ),
   );
   claim.payload.public = false;
   assert.ok(
     !E.jobAssessment(d, p, listing, 42000).reasons.some((x) =>
-      x.includes("öffentlicher"),
+      /öffentlicher|documented public reliability incident/.test(x),
     ),
   );
   // Youth holiday contracts end on the actual eighteenth birthday, keeping earned wages.

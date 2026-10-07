@@ -196,9 +196,10 @@ export function initializeNewPopulation(town) {
         p.age >= 18 &&
         !["Retired", "Student", "Unemployed"].includes(p.profile.job)
       ) {
-        const role = JOBS[p.profile.job] ? p.profile.job : "Office analyst",
+        const requested = JOBS[p.profile.job] ? p.profile.job : "Office analyst",
+          role = d.calendar.payload.venues[JOBS[requested].venue] ? requested : JOBS[requested].family || "Office analyst",
           spec = JOBS[role],
-          firm = rows(d, "firm").find((f) => f.payload.role === role),
+          firm = rows(d, "firm").find((f) => f.payload.role === role) || rows(d,"firm").find(f=>f.payload.role===(JOBS[role].family||"Office analyst")),
           venue = d.calendar.payload.venues[spec.venue],
           contract = put(
             d,
@@ -230,7 +231,9 @@ export function initializeNewPopulation(town) {
           rooms: { hall: firm.payload.workplaceId, wc: venue.bath },
           economicWorkplace: true,
         };
-        p.state.career = { ...p.state.career, job: role, skill: spec.skill };
+        p.state.career = { ...p.state.career, job: role, skill: spec.skill,task:"Carry out "+role.toLowerCase()+" duties" };
+        p.state.skills[spec.skill]=Math.max(p.state.skills[spec.skill]||0,spec.minimum);
+        if(spec.credential&&!p.state.credentials.includes(spec.credential))p.state.credentials.push(spec.credential);
         firm.payload.capacity++;
         touch(d, firm);
       }

@@ -1,6 +1,7 @@
 /* Deterministic English labels for the living interface. Exact matches only. */
 'use strict';
 const LIVING_ENGLISH_LABELS = {
+  '💬 In Ruhe sprechen':'💬 Talk in peace', '◌ Soziale Sicht & Haushalt':'◌ Social perspective & household', '📊 Stats & Protokoll':'📊 Stats & journal',
   'Eine Kleinstadt in der vertrauten Vivarium-Bühne':'A small town on the familiar Vivarium stage',
   'Living World: bitte einen Schritt von 1 bis 60 Minuten wählen.':'Living World: choose a step from 1 to 60 minutes.',
   'Persönliche Hintergründe werden ausgearbeitet…':'Developing personal backgrounds…',
@@ -525,6 +526,39 @@ Object.assign(LIVING_ENGLISH_LABELS, {
   'Gesamte Szene erneut von Anfang an vorlesen':'Read the entire scene again in order',
   'jetzt':'now', 'unterwegs':'on the way'
 });
+Object.assign(LIVING_ENGLISH_LABELS, {
+  'Gerade wichtig:': 'Important right now:',
+  'Sichtbarer Besitz, Anerkennung und Verlässlichkeit sind getrennt. Kontostand ist kein sozialer Status.': 'Visible possessions, recognition and reliability are separate. A bank balance is not social standing.',
+  'Die Voraussetzungen passen, doch diesmal kommt kein Vertrag zustande. Andere Bewerbungen und die Bewertung des Auftretens lassen Spielraum.': 'The requirements fit, but this application did not result in a contract. Competition and the employer’s impression also influence the decision.',
+  'Der neue Tag bringt ruhiges Wetter. Der Stadtmarkt meldet seine reguläre Lieferung.': 'The new day brings calm weather. The town market reports its regular delivery.',
+  'Sozialversicherung & Unterstützung': 'Social insurance & support',
+  'Längerfristig': 'Long term',
+  'Ausgangshintergrund': 'Starting background',
+  'seit Beginn': 'since the start',
+  'Minuten Praxis': 'minutes of practice',
+  'Vorhaben': 'Plan',
+  'erste Schritte': 'first steps',
+  'M · Sinn & Zugehörigkeit': 'M · Meaning & belonging',
+  'A · Erlebtes Gelingen': 'A · Accomplishment',
+  'P · Positive Gefühle': 'P · Positive emotion',
+  'E · Engagement': 'E · Engagement',
+  'R · Beziehungen': 'R · Relationships',
+  'Wohlbefinden · PERMA': 'Well-being · PERMA',
+  'Eigene Erfahrungsquellen': 'Personal sources of experience',
+  'Höher = besser gestützt. Die fünf Bereiche zählen einzeln; der Mittelwert ist nur eine Orientierung. Spielheuristik, kein psychologischer Test.': 'Higher means better supported by experience. Read the five dimensions separately; their average is only a guide. This is a game heuristic, not a psychological test.',
+  'Heute': 'Today',
+  'Heute erreicht': 'Achieved today',
+  'Heute noch vor mir': 'Still ahead today',
+  'Nähe': 'Closeness',
+  'Vertrauen': 'Trust',
+  'Spannung': 'Tension',
+  'Noch keine Bekanntschaften.': 'No acquaintances yet.',
+  'Ziele & Alltag': 'Goals & daily life',
+  'Zuhause in': 'At home in',
+  'Soziale Sicht & Haushalt': 'Social perspective & household',
+  'Freizeit & nächste Schritte →': 'Leisure & next steps →',
+  'Kosten & Unterstützung ansehen →': 'View costs & support →'
+});
 
 function livingEnglishLabel(text) {
   if (typeof text !== 'string') return text;
@@ -539,7 +573,12 @@ function livingEnglishLabel(text) {
   }
   if (translated === undefined) {
     let m;
-    if ((m = trimmed.match(/^(.+) · die Stadt entdecken$/))) translated = `${m[1]} · explore the town`;
+    if ((m = trimmed.match(/^(.+) nimmt sich tatsächlich Zeit für (.+)\. Der Zugang ist kostenlos\.$/))) translated = `${m[1]} spends time on ${LIVING_ENGLISH_LABELS[m[2]] || m[2]}. Access is free.`;
+    else if ((m = trimmed.match(/^Ausgangshintergrund (\d+(?:[.,]\d+)?%) · seit Beginn (\d+(?:[.,]\d+)?) Minuten Praxis$/))) translated = `Starting background ${m[1]} · ${m[2]} minutes of practice since the start`;
+    else if ((m = trimmed.match(/^Gerade wichtig: (.+)$/))) translated = `Important right now: ${m[1]}`;
+    else if ((m = trimmed.match(/^Zuhause in (.+)$/))) translated = `At home in ${m[1]}`;
+    else if ((m = trimmed.match(/^Nähe (\d+(?:[.,]\d+)?)% · Vertrauen (\d+(?:[.,]\d+)?)%(?: · Spannung (\d+(?:[.,]\d+)?)%)?$/))) translated = `Closeness ${m[1]}% · Trust ${m[2]}%${m[3] === undefined ? '' : ` · Tension ${m[3]}%`}`;
+    else if ((m = trimmed.match(/^(.+) · die Stadt entdecken$/))) translated = `${m[1]} · explore the town`;
     else if ((m = trimmed.match(/^Wohlbefinden · PERMA (.+)$/))) translated = `Wellbeing · PERMA ${m[1]}`;
     else if ((m = trimmed.match(/^(\d+) Einwohner$/))) translated = `${m[1]} residents`;
     else if ((m = trimmed.match(/^Haus (\d+)$/))) translated = `House ${m[1]}`;
@@ -568,3 +607,7 @@ function livingEnglishLabel(text) {
   const start = text.match(/^\s*/)[0], end = text.match(/\s*$/)[0];
   return start + translated + end;
 }
+
+Object.assign(LIVING_ENGLISH_LABELS,{"Mutter": "Mother", "Vater": "Father", "Elternteil": "Parent", "Großmutter": "Grandmother", "Großvater": "Grandfather", "Großelternteil": "Grandparent", "Urgroßmutter": "Great-grandmother", "Urgroßvater": "Great-grandfather", "Urgroßelternteil": "Great-grandparent", "Tochter": "Daughter", "Sohn": "Son", "Kind": "Child", "Enkelin": "Granddaughter", "Enkel": "Grandson", "Enkelkind": "Grandchild", "Urenkelin": "Great-granddaughter", "Urenkel": "Great-grandson", "Urenkelkind": "Great-grandchild", "Schwester": "Sister", "Bruder": "Brother", "Geschwister": "Sibling", "Tante": "Aunt", "Onkel": "Uncle", "Tante/Onkel": "Aunt / uncle", "Nichte": "Niece", "Neffe": "Nephew", "Nichte/Neffe": "Niece / nephew", "Cousine": "Cousin", "Cousin/Cousine": "Cousin", "Ehefrau": "Wife", "Ehemann": "Husband", "Ehepartner/in": "Spouse", "Romantische Partnerin": "Romantic partner", "Romantischer Partner": "Romantic partner", "Romantische Partnerschaft": "Romantic relationship", "Jugendliches Schwärmen": "Teen crush", "Romantisches Interesse": "Romantic interest", "Freundin": "Friend", "Freund": "Friend", "Freundschaft": "Friendship", "Nachbarin": "Neighbor", "Nachbar": "Neighbor", "Nachbarschaft": "Neighbor", "Kollegin": "Colleague", "Kollege": "Colleague", "Arbeitskontakt": "Work contact", "Klassenkameradin": "Classmate", "Klassenkamerad": "Classmate", "Klassenkontakt": "School contact", "Feindin": "Enemy", "Feind": "Enemy", "Feindschaft": "Hostility", "Rivalin": "Rival", "Rivale": "Rival", "Rivalität": "Rivalry", "Konflikt": "Conflict", "Familie": "Family", "Partnerschaft": "Partnership", "Bekanntschaft": "Acquaintance", "Schulfreundschaft": "School friend"});
+
+Object.assign(LIVING_ENGLISH_LABELS,{'Fortbildung':'continuing education'});

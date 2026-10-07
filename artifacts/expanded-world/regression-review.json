@@ -1,22 +1,22 @@
 {
-  "generatedAt": "2026-10-07T16:56:30.326Z",
+  "generatedAt": "2026-10-07T20:16:18.043Z",
   "node": "v22.17.1",
   "providerCalls": 0,
   "results": [
     {
       "suite": "test-expanded-world.mjs",
-      "passed": false,
-      "durationMs": 291
+      "passed": true,
+      "durationMs": 1403
     },
     {
       "suite": "test-finance-education-care.mjs",
       "passed": true,
-      "durationMs": 3772
+      "durationMs": 4210
     },
     {
       "suite": "test-expanded-semantics.mjs",
-      "passed": false,
-      "durationMs": 430
+      "passed": true,
+      "durationMs": 2733
     },
     {
       "suite": "test-social-perspectives.mjs",
@@ -25,53 +25,53 @@
     },
     {
       "suite": "test-expanded-lifecycle.mjs",
-      "passed": false,
-      "durationMs": 420
+      "passed": true,
+      "durationMs": 2710
     },
     {
       "suite": "test-living.mjs",
       "passed": true,
-      "durationMs": 9233
+      "durationMs": 9778
     },
     {
       "suite": "test-location-music.mjs",
       "passed": true,
-      "durationMs": 607
+      "durationMs": 626
     },
     {
       "suite": "test-living-mind.mjs",
       "passed": true,
-      "durationMs": 559
+      "durationMs": 606
     },
     {
       "suite": "test-living-social.mjs",
       "passed": true,
-      "durationMs": 1262
+      "durationMs": 1247
     },
     {
       "suite": "test-living-romance.mjs",
       "passed": true,
-      "durationMs": 1031
+      "durationMs": 1061
     },
     {
       "suite": "test-living-wellbeing.mjs",
       "passed": true,
-      "durationMs": 654
+      "durationMs": 690
     },
     {
       "suite": "test-living-biographies.mjs",
       "passed": true,
-      "durationMs": 538
+      "durationMs": 539
     },
     {
       "suite": "test-providers.mjs",
       "passed": true,
-      "durationMs": 373
+      "durationMs": 362
     },
     {
       "suite": "test-storage.mjs",
       "passed": true,
-      "durationMs": 371
+      "durationMs": 357
     }
   ]
 }

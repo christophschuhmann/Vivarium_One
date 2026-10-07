@@ -19,6 +19,7 @@ import {
 import { JOBS, estimatedNet, calendarDate } from "./catalog.js";
 import { prepareCapabilities } from "./percentile.js";
 const venues = {
+  hotel:["Maple Street Inn · fictional","small town hotel inn reception lobby",["Reception","Guest services"],["desk","table","sofa","shop_counter"]],
   carehome: ["Seniorenhaus Lindenblick", "nursing home senior care residential supportive", ["Wohnbereich", "Gemeinschaftsküche", "Pflegestützpunkt", "Bewohnerzimmer", "Garten"], ["sofa", "table", "desk", "bed", "fridge", "bookshelf", "sink"]],
   police: [
     "Polizeiwache",
@@ -235,6 +236,7 @@ export function addExpandedPlaces(town) {
   }
   for (const [key, pattern] of Object.entries({
     school: "Schule",
+    library: "Bibliothek",
     daycare: "Kindergarten",
     campus: "Campus & Labor",
     townhall: "Rathaus",
@@ -845,10 +847,13 @@ export function initializeExpansion(town, { force = false } = {}) {
     p.state.career = {
       ...p.state.career,
       job: role,
+      task: "Carry out " + role.toLowerCase() + " duties",
       skill: spec.skill,
       pay_factor: 1,
       schedule_start: 8 * 3600,
     };
+    p.state.skills[spec.skill]=Math.max(p.state.skills[spec.skill]||0,spec.minimum);
+    if(spec.credential&&!p.state.credentials.includes(spec.credential))p.state.credentials.push(spec.credential);
     firm.payload.capacity++;
     touch(d, firm);
     return contract;
@@ -943,7 +948,7 @@ export function initializeExpansion(town, { force = false } = {}) {
         estimatedNetCents: estimatedNet(spec.gross),
         workplaceId: firm.payload.workplaceId,
         slots: Math.max(1, Math.ceil(population / 100)),
-        ageMin: 18,
+        ageMin: spec.minAge || 18,
         hoursPerDay: 8,
         safe: true,
         holiday: false,

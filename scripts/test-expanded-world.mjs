@@ -108,9 +108,7 @@ try {
   );
   adult.state.skills[listing.payload.skill] = 0;
   assert.ok(
-    jobAssessment(d, adult, listing, town.world.seconds).reasons.includes(
-      "Fertigkeit noch unter der Anforderung",
-    ),
+    jobAssessment(d, adult, listing, town.world.seconds).reasons.some(x=>/Fertigkeit noch unter der Anforderung|Skill .*below the requirement/i.test(x)),
   );
   await advanceTown(user, worldId, { minutes: 5, story: false });
   town = loadTown(worldId);

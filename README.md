@@ -27,6 +27,27 @@ In a Living World, **one tick is always one minute**. Choosing an hour executes 
 
 English is the default for UI labels, new core procedural narration, social interpretations and Storyteller output. Existing histories retain their wording; some inherited detailed economy catalog descriptions remain German. The language menu can enable local translation of older passages when the browser provides its Translator API. There is no automatic upload of private Sim journals to an unrelated free translation service.
 
+### Portraits, feelings and a readable town map
+
+Click a Sim in **Play** to open **Mind**. Their portrait, name, age, gender and current occupation appear in the header. **Inner voice** and emotion bars are at the top; **Needs & attributes ↓** takes you straight to the physical needs and abilities. Emotion percentages are simultaneous intensities, not probabilities or a pie chart. Open **Why this feeling?** to see its causes.
+
+Automatic casting uses neutral base portraits and the closest recorded image age within the appropriate age band. Mild contentment or hope keeps a neutral expression. Strong feelings can select an available expression of the same identity and outfit (ordinary expression threshold 50%, broad laughter 80%); missing variants fall back to neutral. Source ages describe stylized artwork, not a guarantee of how old every face looks. Explicitly selected portraits are retained by the repair utility.
+
+New towns begin with varied, age-appropriate outlooks: contentment and anticipation, but also belonging concerns, family boundaries, recognition rivalry, job uncertainty or an actual household funding gap. Some Sims initially maintain a composed public manner while feeling unsettled privately; Mind displays that difference. Background concerns affect the existing emotions, relationship tension and decision rules, and are supplied to the Sim's own conversation context. They do not assert knowledge of another person's intentions. Initial emotion components expire after two to six simulated hours; subsequent experiences and needs drive the ongoing state. The journal labels these starting conditions as **initialized background**, rather than claiming that a new conflict has already happened during play.
+
+**World** uses distinct illustrative neighborhood pictures. Large groups such as Downtown contain additional display groups so every real building remains reachable. These groups do not add walking distance or change the simulation's real rooms. Click to select a location; double-click a room to enter its Play scene. The shared thumbnail budget remains 50, with offscreen images unloaded and older expansions collapsed as needed.
+
+**Finances** starts with three questions: money accessible today, actual payments in the selected month, and the next month's plan. The equation shows **expected take-home income − planned costs − earmarked saving = monthly margin**. Outstanding bills are shown separately. A savings plan is not a payment; a forecast is not money already received. Income rows identify the earner and show gross pay and deductions where applicable. All 100 concept cards have an English version, including their examples, reflection questions and source links.
+
+For an existing installation, back up the database and stop the game server before an explicit artwork repair. Without `--apply`, these utilities only report proposed changes:
+
+```bash
+node --env-file=.env scripts/refresh-living-art.mjs --world=YOUR_WORLD_ID
+node --env-file=.env scripts/refresh-living-art.mjs --world=YOUR_WORLD_ID --apply
+```
+
+`initialize-living-outlooks.mjs --world=YOUR_WORLD_ID` can add starting outlooks only before a world's first time advance. Add `--apply` to persist them. Sims with authored biographies, existing outlooks or logged player interactions are skipped. It never upgrades a town after its first simulated tick.
+
 ### Install or update the HF image libraries
 
 The two public datasets are optional. The measured snapshot contains 12,943 indexed images (1,693 backgrounds and 11,250 character variants across 740 identities), about 15.8 GB in original shards. Setup installs Pillow and NumPy for transparent character matting. No image-generation API calls are needed to reuse these assets.
@@ -46,6 +67,8 @@ npm run test:minute-engine
 npm run test:expanded-regressions
 npm run test:turbo
 npm run test:progression
+VIV_ASSET_LIBRARY=/path/to/hf-asset-library npm run test:portraits-map
+VIV_ASSET_LIBRARY=/path/to/hf-asset-library npm run test:portraits-map-browser
 npm run audit:life
 VIV_ASSET_LIBRARY=/path/to/hf-asset-library npm run test:hf-assets
 VIV_ASSET_LIBRARY=/path/to/hf-asset-library npm run test:bennington-browser
@@ -370,14 +393,13 @@ Each Explorer card now shows the **actual current location path** (town/neighbor
 
 The right sidebar provides a searchable list of **verankerte Sims**, showing their current locations. Anchored nodes and their connections use gold accents. **Kontakte mit Anker** filters the current center's contacts while retaining the center itself. Click a relationship line to inspect its trust, closeness, tension and shared background. **Profil**, **Spielen** and **Welt** are available for the current center.
 
-The graph shows at most 24 contacts plus its center; additional contacts are paginated. The anchor list has six portraits per page, and the general Sim selector remains paginated. **✋ Verschieben** explicitly enables/disables dragging; **Escape** disables it. Pointer cancellation, focus loss and release terminate a drag. Zoom controls, the Sim selector and dialogs are outside the graph's hit area. The layout also works on mobile.
+The graph shows at most eight contacts plus its center, each with age and current occupation/status below the portrait; additional contacts are paginated. The anchor list has six portraits per page, and the general Sim selector remains paginated. **✋ Verschieben** explicitly enables/disables dragging; **Escape** disables it. Pointer cancellation, focus loss and release terminate a drag. Zoom controls, the Sim selector and dialogs are outside the graph's hit area. The layout also works on mobile.
 
 ### Consistent language without extra model charges
 
-Living World uses **German originals and German UI labels by default**, independently of a legacy English setting used by classic scenarios. New Living World conversations remain German so the saved history stays consistent.
+Living World defaults to **English interface labels and English new stories**. PERMA dimensions, goals, practice time, profile status, relationship roles and help-card explanations use English in English mode. Interface translation is deterministic and does not require an API key. The optional German display remains available through the language menu.
 
-Click **🌐 DE → English · lokale Übersetzung** for an optional English display layer. It uses the browser's built-in Translator API, translates the currently displayed text, and caches up to 1,000 snippets in memory. Names, input values, identifiers and simulation records are preserved. Switching back restores the German originals. There are no provider/API charges; originals and audio remain German. The first activation may download a language pack. This feature depends on browser support, primarily desktop Chrome; unsupported browsers keep German and show a clear explanation. A browser-local translator fixture validates translation and restoration; actual language-pack availability depends on the user's browser.
-
+Existing authored journals keep their original wording. Where supported, **Language → Enable local translation** can translate older German passages for display using the browser’s Translator API. This requires browser support and may download a language pack on explicit activation. It does not change saved facts, names, input values or original audio, and does not send journals to a public translation service.
 Research sources: [Chrome Translator API](https://developer.chrome.com/docs/ai/translator-api) documents local translation and its browser/device limitations. [LibreTranslate](https://docs.libretranslate.com/) is a free self-hosted alternative; its hosted service requires a paid API key. Vivarium does not automatically send scene text or personal journals to a public translation service. For a future server-side fallback, self-hosting LibreTranslate would avoid per-call provider fees but still require local compute and installation.
 
 
@@ -622,6 +644,24 @@ LIVING_REVIEW_URL=http://localhost:8890 npm run review:expanded
 
 Browser review requires Playwright Chromium (`npx playwright install chromium`, plus the platform dependencies) and a running demo install with `demo@vivarium.local / alice-and-bob`; it creates and removes its own fixture. Core/semantic/lifecycle tests use temporary databases and make no paid provider calls. The music test requires the downloaded library (`MUSIC_DATA_DIR=/path/to/music-library npm run test:music`). Real-provider review is a separate deliberate check and uses actual provider billing.
 
-The recorded load test covers **10, 20, 50, 100 and 500 Sims for a complete simulated day**, with balanced financial ledgers. The 500-Sim five-minute tick had a median around **1.03 seconds**, and the full day took **131 seconds**, without model latency. The cumulative test process used about **1.1 GiB RSS** and its cumulative SQLite file roughly **500 MiB**, largely due to detailed durable history. This implementation is capped at 500 and is not yet a distributed million-resident engine. Browser graph images remain capped at 50 visible thumbnails including Sim previews; CPU text simulation does not load all resident portraits.
+The recorded load test covers **10, 20, 50, 100 and 500 Sims for a complete simulated day**, with balanced financial ledgers. The 500-Sim five-minute tick had a median around **1.03 seconds**, and the full day took **131 seconds**, without model latency. The cumulative test process used about **1.1 GiB RSS** and its cumulative SQLite file roughly **500 MiB**, largely due to detailed durable history. Creation supports up to 2,000 Sims; the above measurements concern the earlier 500-Sim benchmark and are not a claim of million-resident scalability. Browser graph images remain capped at 50 visible thumbnails including Sim previews; CPU text simulation does not load all resident portraits.
 
 All economy rates, tax brackets and legal/administrative timelines are fictional game parameters. Physical Living World undo/replay, continuous walking animations, distributed processing, full legal proceedings and detailed divorce/custody are not exposed as finished features. The 100 duties use nine safe operator families; 600 social catalog entries provide guarded contexts and expectation variants, rather than 600 independent physical simulations. See the implementation report for the precise boundary between implemented behavior and later engine work.
+
+
+### Social attributes and connected character views
+
+Open a Sim in **Play → Mind** or **Cast → Profile → Attributes** to see attractiveness (adult appearance), reputation, popularity among known contacts, public recognition and ambition alongside the existing capabilities. The same scores appear under **Town life → Personality & reputation**. Its breakdown shows appearance preferences, attraction toward compatible adult contacts, current social drives, Big Five, shared goals and the Sim’s uncertain interpretation of encounters. The character-section buttons keep the selected Sim when moving between needs/attributes, personality/reputation, finances and work/education. Finances opens directly rather than adding another resource popup.
+
+- **Reputation** averages known helpfulness and reliability. With no evidence, 50 is an uncertain starting prior, not a verified achievement. Public recognition counts favorable public reports; possessions and bank balance remain separate. The sources panel identifies documented and unverified reports.
+- **Popularity** reports the proportion of incoming contacts with closeness at least 50%, trust at least 45% and tension below 50%. It always shows the size of that network. No contacts means unscored.
+- **Attractiveness** is an adult appearance attribute. Attraction is observer-specific and also uses warmth, reliability, competence, status and shared interests. Individual preference distributions overlap widely; small gender-associated offsets are explicit fictional design settings, not claims about every man or woman. No adult attractiveness or sexual-desire score is assigned to minors. Existing age, kinship, privacy and consent restrictions remain authoritative.
+- **Drives** change eligible social-action weights: connection favors approaches, achievement favors advice and collaboration, recognition favors sharing accomplishments and approaching publicly known people, and rivalry can favor challenges or undermining. Strong attraction and observed reputation now contribute more strongly to these weights. A favorable reputation cannot replace professional qualifications or independent consent.
+
+New Bennington households use a **10% same-sex starting-couple probability**, rather than drawing both partners’ genders independently. This is a scenario setting requested for this game, not a demographic estimate. Adult Sims have consistent individual partner preferences; future relationships still need compatible preferences and reciprocal relationship development. Existing played marriages and identities are preserved.
+
+Bennington’s occupation sampler includes **76 weighted occupations**, plus existing civic/status roles. Health and care, education, retail, manufacturing/trades, hospitality, office work, creative work and public services have different frequencies and appropriate minimum starting ages. Jobs are real contracts with skill requirements, workplaces and job-board listings. Degree-requiring roles use the same qualification gate for applications; initialized credentials are background, while new study requires recorded time. The weights are game assumptions informed by the [Vermont DOL Bennington County profile](https://www.vtlmi.info/profile2024.pdf), not an exact census or real wage schedule. Existing careers are not silently rewritten after play begins.
+
+New starting outlooks include differing priorities within couples, divided loyalties, recognition rivalry, financial worry, boundary tensions and contented lives. Initial concerns are marked as background, not invented witnessed events. The storyteller follows the actual current state and can leave disagreement unresolved instead of automatically producing reconciliation and gratitude.
+
+Validation: `npm run test:portraits-map` checks a 1,000-Sim fixture (77 actual professions, 41 same-sex couples among 346 couples for seed 73), real job contracts and qualifications, varied starting outlooks, adult attraction/reputation effects and all neighborhood expansions. `npm run test:portraits-map-browser` checks the actual stage, English dynamic labels, character-section links, social attributes, relationship metadata, image loading and mobile layouts. `npm run test:living-romance` checks age/consent boundaries plus adult partner-preference rejection. These are game checks, not clinical or demographic validation.
