@@ -101,7 +101,7 @@ try {
   assert.ok(
     await page
       .locator("#ex-content .lw-need")
-      .filter({ hasText: "Soziale Wärme" })
+      .filter({ hasText: /Soziale Wärme|Social warmth/ })
       .isVisible(),
   );
   await page.evaluate(() => exConceptDialog("anger"));
@@ -126,9 +126,9 @@ try {
   await page.locator("#ex-finance-period").waitFor();
   assert.match(
     await page.locator("#ex-content").innerText(),
-    /keine gespeicherten Buchungen/,
+    /keine gespeicherten Buchungen|no recorded transactions|no stored transactions/i,
   );
-  assert.match(await page.locator("#ex-content").innerText(), /Nächster Monat/);
+  assert.match(await page.locator("#ex-content").innerText(), /Nächster Monat|Next month/);
   const financialBefore = await (
     await context.request.get(
       base + "/api/living/worlds/" + world + "/sims/" + sim + "/resources",
@@ -197,10 +197,10 @@ try {
   });
   await tab("education");
   await page.locator(".ex-timeline").waitFor();
-  assert.match(await page.locator("#ex-content").innerText(), /Aktuell:/);
+  assert.match(await page.locator("#ex-content").innerText(), /Aktuell:|Current:/);
   assert.match(
     await page.locator("#ex-content").innerText(),
-    /Ausgangsbiografie/,
+    /Ausgangsbiografie|Starting biography|Procedural background|Background biography/i,
   );
   assert.equal(await page.locator(".ex-current-status").count(), 1);
   await page.screenshot({
@@ -263,7 +263,7 @@ try {
   await tab("jobs");
   assert.match(
     await page.locator("#ex-content").innerText(),
-    /Zusagechance|Voraussetzungen|Nachweisen|zurzeit|Zurzeit/,
+    /Zusagechance|Voraussetzungen|Nachweisen|zurzeit|Zurzeit|Acceptance chance|Requirements|qualifications|currently/i,
   );
   await tab("housing");
   assert.equal(
@@ -275,7 +275,7 @@ try {
   );
   assert.match(
     await page.locator("#ex-content").innerText(),
-    /Bewerbung|Angebot/,
+    /Bewerbung|Angebot|Application|Offer|available/i,
   );
   const residents = (
     await (
@@ -291,16 +291,16 @@ try {
   assert.ok(elderly && nursing);
   await page.goto(base + "/#/city?w=" + world + "&s=" + elderly.id);
   await page
-    .getByRole("button", { name: "Sim wechseln: " + elderly.name })
+    .getByRole("button", { name: "Switch Sim: " + elderly.name })
     .waitFor();
   await tab("education");
   assert.match(
     await page.locator("#ex-content").innerText(),
-    /Unterstützung zu Hause/,
+    /Unterstützung zu Hause|Support at home/i,
   );
   await page.goto(base + "/#/city?w=" + world + "&s=" + nursing.id);
   await page
-    .getByRole("button", { name: "Sim wechseln: " + nursing.name })
+    .getByRole("button", { name: "Switch Sim: " + nursing.name })
     .waitFor();
   await tab("education");
   assert.match(

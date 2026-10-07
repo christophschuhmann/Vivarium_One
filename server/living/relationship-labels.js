@@ -19,6 +19,7 @@ export function relationshipLabels(from,to,r={},lookup=()=>undefined){
   const kin=r.layers?.family?.status;
   if(!labels.length){const names={parent:gendered(to,'Mutter','Vater','Elternteil'),child:gendered(to,'Tochter','Sohn','Kind'),sibling:gendered(to,'Schwester','Bruder','Geschwister'),grandparent:gendered(to,'Großmutter','Großvater','Großelternteil'),grandchild:gendered(to,'Enkelin','Enkel','Enkelkind'),great_grandparent:gendered(to,'Urgroßmutter','Urgroßvater','Urgroßelternteil'),great_grandchild:gendered(to,'Urenkelin','Urenkel','Urenkelkind'),aunt_uncle:gendered(to,'Tante','Onkel','Tante/Onkel'),niece_nephew:gendered(to,'Nichte','Neffe','Nichte/Neffe'),cousin:gendered(to,'Cousine','Cousin','Cousin/Cousine')};add(names[kin]);}
   const partner=family(from).partner_id===to.id&&family(to).partner_id===from.id,married=partner&&(family(from).relationship_status==='married'||family(to).relationship_status==='married');
+  if(r.kind==='Former spouse')add('Former spouse');else if(r.kind==='Former partner')add('Former partner');
   const romance=r.layers?.romance,friendship=r.layers?.friendship,contexts=r.background?.contexts||[r.background?.label||r.kind];
   if(married)add(gendered(to,'Ehefrau','Ehemann','Ehepartner/in'));
   else if(partner||romance?.status==='established'||r.kind==='Lover')add(gendered(to,'Romantische Partnerin','Romantischer Partner','Romantische Partnerschaft'));

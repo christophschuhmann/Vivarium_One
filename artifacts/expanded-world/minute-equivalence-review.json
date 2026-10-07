@@ -1,0 +1,21 @@
+{
+  "testedAt": "2026-10-07T16:59:59.429Z",
+  "population": 20,
+  "seed": 80,
+  "oneHourEquals60Minutes": true,
+  "fullDay": {
+    "population": 20,
+    "events": 2890,
+    "journalEntries": 3029,
+    "eligible": 0,
+    "fields": 0,
+    "modelCalls": 0,
+    "biographyCalls": 0,
+    "cpuMs": 2295,
+    "totalMs": 2982,
+    "rejections": [],
+    "warnings": [],
+    "minutes": 1440,
+    "chunks": 24
+  }
+}

@@ -1,82 +1,77 @@
 {
-  "generatedAt": "2026-10-07T08:23:36.751Z",
+  "generatedAt": "2026-10-07T16:56:30.326Z",
   "node": "v22.17.1",
   "providerCalls": 0,
   "results": [
     {
       "suite": "test-expanded-world.mjs",
-      "passed": true,
-      "durationMs": 1467
+      "passed": false,
+      "durationMs": 291
     },
     {
       "suite": "test-finance-education-care.mjs",
       "passed": true,
-      "durationMs": 4594
+      "durationMs": 3772
     },
     {
       "suite": "test-expanded-semantics.mjs",
-      "passed": true,
-      "durationMs": 1993
+      "passed": false,
+      "durationMs": 430
     },
     {
       "suite": "test-social-perspectives.mjs",
       "passed": true,
-      "durationMs": 71
+      "durationMs": 74
     },
     {
       "suite": "test-expanded-lifecycle.mjs",
-      "passed": true,
-      "durationMs": 3314
+      "passed": false,
+      "durationMs": 420
     },
     {
       "suite": "test-living.mjs",
       "passed": true,
-      "durationMs": 9702
+      "durationMs": 9233
     },
     {
       "suite": "test-location-music.mjs",
       "passed": true,
-      "durationMs": 597
+      "durationMs": 607
     },
     {
       "suite": "test-living-mind.mjs",
       "passed": true,
-      "durationMs": 635
+      "durationMs": 559
     },
     {
       "suite": "test-living-social.mjs",
       "passed": true,
-      "durationMs": 1208
+      "durationMs": 1262
     },
     {
       "suite": "test-living-romance.mjs",
       "passed": true,
-      "durationMs": 963
+      "durationMs": 1031
     },
     {
       "suite": "test-living-wellbeing.mjs",
       "passed": true,
-      "durationMs": 678
+      "durationMs": 654
     },
     {
       "suite": "test-living-biographies.mjs",
       "passed": true,
-      "durationMs": 557
+      "durationMs": 538
     },
     {
       "suite": "test-providers.mjs",
       "passed": true,
-      "durationMs": 361
+      "durationMs": 373
     },
     {
       "suite": "test-storage.mjs",
       "passed": true,
-      "durationMs": 354
-    },
-    {
-      "suite": "test-music.mjs",
-      "passed": true,
-      "durationMs": 341
+      "durationMs": 371
     }
   ]
 }

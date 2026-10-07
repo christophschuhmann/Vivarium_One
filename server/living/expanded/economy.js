@@ -47,7 +47,9 @@ export function economicDraft(town) {
   d.jobs = rows(d, "job");
   d.firms = new Map(rows(d, "firm").map((e) => [e.id, e]));
   d.items = rows(d, "item");
-  d.invoices = rows(d, "invoice").filter((e) => e.payload.status !== "paid");
+  // Keep the same history across API boundaries. Runtime payment retains the
+  // invoice too; dropping paid rows on reload changed eligibility for budget tasks.
+  d.invoices = rows(d, "invoice");
   d.loans = rows(d, "loan");
   d.market = d.entities.get(d.calendar.payload.marketId);
   return d;
@@ -101,9 +103,9 @@ export function jointFunds(d, h, amount, time, emit) {
     );
     e.description =
       p.name +
-      " trägt " +
+      " contributes €" +
       (take / 100).toFixed(2) +
-      " € zu den gemeinsam vereinbarten Haushaltskosten bei.";
+      " toward the household costs agreed together.";
     transfer(d, ownAccount(d, p), h.payload.jointAccountId, take, {
       key: { kind: "joint_contribution", eventId: e.id },
       at: time,
@@ -220,9 +222,9 @@ export function jobAssessment(d, p, listing, time) {
     skill = p.state.skills[x.skill] || 0,
     reasons = [];
   if (x.slots < 1 || time >= x.expiresAt)
-    reasons.push("Stelle nicht mehr frei");
+    reasons.push("Position is no longer open");
   if (p.age < x.ageMin || (x.ageMax != null && p.age > x.ageMax))
-    reasons.push("Altersvoraussetzung");
+    reasons.push("Age requirement not met");
   if (
     x.holiday &&
     (p.age < 15 ||
@@ -232,13 +234,13 @@ export function jobAssessment(d, p, listing, time) {
       !isHoliday(d, time) ||
       !p.state.economy.guardianPermission)
   )
-    reasons.push("Sicherer Ferienjob mit bestätigter Zustimmung erforderlich");
+    reasons.push("A safe holiday job with confirmed guardian consent is required");
   if (skill < x.minimumSkill)
-    reasons.push("Fertigkeit noch unter der Anforderung");
+    reasons.push("Skill level is still below the requirement");
   if (x.credential && !p.state.credentials.includes(x.credential))
-    reasons.push("Qualifikation fehlt");
+    reasons.push("Required qualification is missing");
   if (x.estimatedNetCents < p.state.economy.expectations.minimumNetCents)
-    reasons.push("Entspricht nicht der eigenen Einkommenserwartung");
+    reasons.push("Does not meet the Sim’s income expectations");
   const impression = firm?.payload.impressions[p.id];
   if (
     impression &&
@@ -246,7 +248,7 @@ export function jobAssessment(d, p, listing, time) {
     impression.confidence >= 0.6 &&
     time - impression.at < 30 * 86400
   )
-    reasons.push("Belegte frühere negative Erfahrung bei dieser Firma");
+    reasons.push("A documented negative experience with this employer");
   // Employers see only public, sufficiently supported claims, never private
   // reputation values, bank balances, ethnicity, beliefs or hidden thoughts.
   const adverse = rows(d, "claim").filter(
@@ -260,17 +262,17 @@ export function jobAssessment(d, p, listing, time) {
       c.payload.expiresAt > time,
   );
   if (adverse.length)
-    reasons.push("Aktueller belegter öffentlicher Zuverlässigkeitsvorfall");
+    reasons.push("A current, documented public reliability incident");
   const route = commuteSeconds(d.town, p.profile.home.living, x.workplaceId);
   if (route === null || route > p.state.economy.expectations.maxCommuteSeconds)
-    reasons.push("Arbeitsweg entspricht nicht der eigenen Erwartung");
+    reasons.push("Commute exceeds the Sim’s preference");
   const lastBid = latestApplication(p, 'job', listing.id);
-  if (lastBid && time-lastBid.at < APPLICATION_COOLDOWN) reasons.push('Erneute Bewerbung frühestens nach sieben Tagen');
-  if (currentEducation(p) && p.age>=18 && !x.holiday) reasons.push('Aktuelle Vollzeitbildung hat Vorrang');
-  if (p.state.careSupport || p.state.economy.parentalCare) reasons.push('Aktuelle Betreuungssituation passt nicht zu dieser Vollzeitstelle');
+  if (lastBid && time-lastBid.at < APPLICATION_COOLDOWN) reasons.push('You may reapply after seven days');
+  if (currentEducation(p) && p.age>=18 && !x.holiday) reasons.push('Current full-time education takes priority');
+  if (p.state.careSupport || p.state.economy.parentalCare) reasons.push('Current caregiving responsibilities are incompatible with this full-time job');
   const previous = d.contracts.get(p.id);
   if (previous?.payload.job === x.title)
-    reasons.push("Bereits in dieser Stelle beschäftigt");
+    reasons.push("Already employed in this position");
   return {
     eligible: !reasons.length,
     ...jobChance(p,x,firm,time),
@@ -297,6 +299,8 @@ export function applyForJob(d, p, listing, time, emit) {
     old.payload.status = "ended";
     old.payload.endedAt = time;
     touch(d, old);
+    const vacated=d.jobs.find(job=>job.payload.firmId===old.payload.firmId&&job.payload.title===old.payload.job);
+    if(vacated){vacated.payload.slots++;touch(d,vacated);}
   }
   const contract = put(
     d,
@@ -355,11 +359,11 @@ export function applyForJob(d, p, listing, time, emit) {
   e.facts.contractId = contract.id;
   e.description =
     p.name +
-    " bekommt die Stelle " +
+    " has been hired for " +
     x.title +
     ": " +
     (x.grossMonthlyCents / 100).toFixed(0) +
-    " € vereinbarter Monatsbruttolohn. Das Geld wird erst durch tatsächliche Arbeit verdient.";
+    " € in agreed gross monthly pay. This income is earned only through work actually performed.";
   return { ok: true, contractId: contract.id, eventId: e.id, application:decision.application };
 }
 export function accrueWork(d, p, event, seconds) {
@@ -464,7 +468,7 @@ export function newInvoice(
   });
   e.description =
     p.name +
-    " hat eine fällige Verpflichtung: " +
+    " has a bill due: " +
     kind +
     " · " +
     (amount / 100).toFixed(2) +
@@ -508,9 +512,9 @@ export function payInvoice(d, invoice, time, emit) {
     });
     e.description =
       p.name +
-      " kann die tatsächliche fällige Rechnung " +
+      " cannot pay the bill due for " +
       x.kind +
-      " heute noch nicht bezahlen und muss Hilfe oder eine neue Absprache suchen.";
+      " today and needs to seek help or make a new arrangement.";
     x.lastAttemptDay = Math.floor(time / 86400);
     touch(d, invoice);
     return false;
@@ -522,7 +526,7 @@ export function payInvoice(d, invoice, time, emit) {
     private: true,
   });
   e.description =
-    p.name + " bezahlt " + (amount / 100).toFixed(2) + " € für " + x.kind + ".";
+      p.name + " pays €" + (amount / 100).toFixed(2) + " for " + x.kind + ".";
   const previousPaid = x.amountCents - x.remainingCents;
   const vat = x.vatRate
     ? Math.round((previousPaid + amount) / (1 + x.vatRate)) -
@@ -595,7 +599,7 @@ export function payInvoice(d, invoice, time, emit) {
   if (x.status === "paid")
     addFeeling(p, "relief", 0.3, time, {
       kind: "financial_event",
-      text: "Eine wirkliche fällige Rechnung ist bezahlt.",
+      text: "A real bill that was due has been paid.",
       evidence_id: e.id,
     });
   return x.status === "paid";
@@ -686,26 +690,27 @@ export function payroll(d, contract, time, emit) {
     p.state.economy.wageArrearsCents = 0;
     e.description =
       p.name +
-      " erhält " +
+      " receives " +
+      "€" +
       (net / 100).toFixed(2) +
-      " € Nettolohn für tatsächlich geleistete Arbeit. " +
+      " in net pay for work actually performed. " +
       ((social + employerSocial + tax) / 100).toFixed(2) +
-      " € gehen getrennt an die zuständigen Fonds.";
+      " € is distributed separately to the appropriate funds.";
     x.pendingGrossCents = 0;
     p.state.economy.pendingGrossCents = 0;
     x.lastPaidMonth = monthKey(time);
     flow(p, time, "salary", net);
     addFeeling(p, "relief", 0.35, time, {
       kind: "financial_event",
-      text: "Der tatsächliche Lohn ist eingegangen.",
+      text: "The earned wages have arrived.",
       evidence_id: e.id,
     });
   } else {
     e.description =
       p.name +
-      " wartet weiter auf " +
+      " is still waiting for " +
       (net / 100).toFixed(2) +
-      " € verdienten Nettolohn; dem Arbeitgeber fehlen die Mittel.";
+      " in earned net pay because the employer lacks the funds.";
     e.facts.status = "arrears";
     p.state.economy.wageArrearsCents = net;
   }
@@ -759,7 +764,7 @@ export function issueLoan(
     return {
       ok: false,
       reason:
-        "Unbezahlbare Rate; Hilfe oder günstigere Alternative statt neuer Schulden",
+        "Unaffordable payment; seek support or a lower-cost alternative instead of taking on more debt",
     };
   let lenderAccount = fundsOf(d).bank;
   if (lenderId) {
@@ -781,7 +786,7 @@ export function issueLoan(
       return { ok: false, reason: "Lender protects their own reserve" };
   }
   if (balance(d, lenderAccount) < amountCents)
-    return { ok: false, reason: "Tatsächlicher Kreditfonds reicht nicht" };
+    return { ok: false, reason: "The available loan fund does not have enough money" };
   const e = emit(
     "loan_accepted",
     p,
@@ -795,7 +800,7 @@ export function issueLoan(
     eventId: e.id,
     kind: "loan_principal",
   });
-  if (!result.ok) return { ok: false, reason: "Kreditfonds nicht gedeckt" };
+  if (!result.ok) return { ok: false, reason: "The loan fund cannot cover the amount" };
   const loan = put(
     d,
     "loan",
@@ -820,11 +825,11 @@ export function issueLoan(
   d.loans.push(loan);
   e.description =
     p.name +
-    " akzeptiert einen finanzierten Kredit von " +
+    " accepts a financed loan of " +
     (amountCents / 100).toFixed(0) +
-    " € mit " +
+    " € at a monthly payment of €" +
     (payment / 100).toFixed(2) +
-    " € Monatsrate. Auszahlung und neue Schuld gleichen sich im Nettovermögen aus.";
+    ". The payout and new debt offset each other in net worth.";
   return { ok: true, loanId: loan.id };
 }
 export function buyItem(d, p, itemId, time, emit) {
@@ -845,12 +850,12 @@ export function buyItem(d, p, itemId, time, emit) {
     return {
       ok: false,
       reason:
-        "Erfordert einen belegten Erfolg, Versorgung oder eigene Herstellung; kein käuflicher Nachweis",
+        "Requires a documented achievement, care, or self-made item; this cannot be bought as proof",
     };
   if (balance(d, ownAccount(d, p)) < price + reserve)
     return {
       ok: false,
-      reason: "Nicht finanzierbar ohne die Grundversorgung zu verdrängen",
+      reason: "Unaffordable without displacing essential needs",
     };
   const e = emit("item_purchase", p, time, {
       catalogId: itemId,
@@ -893,7 +898,7 @@ export function buyItem(d, p, itemId, time, emit) {
   d.items.push(item);
   flow(p, time, "item_purchase", -price);
   e.description =
-    p.name + " kauft " + spec.name + " für " + (price / 100).toFixed(2) + " €.";
+    p.name + " buys " + spec.name + " for €" + (price / 100).toFixed(2) + ".";
   return { ok: true, itemId: item.id };
 }
 export function shopping(d, h, time, emit, { force = false } = {}) {
@@ -970,13 +975,13 @@ export function shopping(d, h, time, emit, { force = false } = {}) {
   flow(buyer, time, "groceries", -cost);
   e.description =
     buyer.name +
-    " kauft " +
+    " buys " +
     portions +
-    " Portionen (" +
+    " portions of " +
     chosen +
-    ") für " +
+    ") for €" +
     (cost / 100).toFixed(2) +
-    " €. Der Vorrat wird erst beim tatsächlichen Essen verbraucht.";
+    ". Supplies are consumed only when the food is actually eaten.";
   return true;
 }
 export function consumeFood(d, p, event, time) {
@@ -1133,8 +1138,8 @@ export function monthlyEconomy(d, time, emit) {
         e.description =
           p.name +
           (paid.ok
-            ? " erhält die bewilligte Unterstützung für tatsächliche Betreuung des kleinen Kindes."
-            : " wartet auf die bewilligte Betreuungsunterstützung.");
+            ? " receives approved support for actually caring for the young child."
+            : " is waiting for the approved caregiving support.");
         if (paid.ok) flow(p, time, "parental_care_support", amount);
         continue;
       }
@@ -1176,12 +1181,12 @@ export function monthlyEconomy(d, time, emit) {
           e.description =
             p.name +
             (result.ok
-              ? " erhält " +
+              ? " receives €" +
                 ((full * fraction) / 100).toFixed(2) +
-                " € " +
-                (retired ? "Rente" : "geprüfte Unterstützung") +
+                " in " +
+                (retired ? "pension" : "approved support") +
                 "."
-              : " wartet auf die zugesagte Unterstützung, weil dem Fonds Mittel fehlen.");
+              : " is waiting for the promised support because the fund lacks sufficient money.");
           if (result.ok)
             flow(
               p,
@@ -1247,9 +1252,9 @@ export function monthlyEconomy(d, time, emit) {
         });
         e.description =
           child.name +
-          " bekommt " +
+          " receives €" +
           (amount / 100).toFixed(2) +
-          " € Taschengeld von " +
+          " as an allowance from " +
           giver.name +
           ".";
       }
@@ -1487,7 +1492,9 @@ export function economicMinute(d, time, emit) {
       )
         continue;
       const current = d.contracts.get(p.id),
+        ambitiousSearch=current && (p.state.socialDynamics?.ambition||0)>.65 && time-(current.payload.startedAt||0)>30*86400 && day%14===Math.floor((p.state.socialDynamics?.ambition||0)*100)%14,
         seek =
+          ambitiousSearch ||
           !current ||
           p.state.economy.wageArrearsCents > 0 ||
           (p.state.economy.threats.some((t) => t.kind === "cash_shortfall") &&
@@ -1496,7 +1503,7 @@ export function economicMinute(d, time, emit) {
       p.state.economy.lastJobSearch = day;
       const candidates = d.jobs
         .map((job) => ({ job, assessment: jobAssessment(d, p, job, time) }))
-        .filter((x) => x.assessment.eligible)
+        .filter((x) => x.assessment.eligible && (!ambitiousSearch || x.job.payload.grossMonthlyCents>current.payload.grossMonthlyCents*1.1 || (x.job.payload.skill===p.state.economy.expectations.preferredSkill && current.payload.skill!==x.job.payload.skill && x.job.payload.grossMonthlyCents>=current.payload.grossMonthlyCents)))
         .sort((a, b) => b.assessment.score - a.assessment.score)
         .slice(0, 5);
       if (candidates.length) applyForJob(d, p, candidates[0].job, time, emit);
@@ -1507,13 +1514,13 @@ export function economicMinute(d, time, emit) {
         });
         e.description =
           p.name +
-          " prüft Stellenanzeigen. Noch passt keine freie Stelle zu Fähigkeiten, Nachweisen und eigenen Erwartungen; Weiterbildung und Beratung bleiben Möglichkeiten.";
+          " reviews job listings. No open position yet matches their skills, qualifications, and preferences; training and career advice remain options.";
         p.state.goal = {
           kind: "read",
           destination: p.profile.home.living,
           expires: time + 7200,
           reason:
-            "Ich möchte eine fehlende Fertigkeit für passende Arbeit ausbauen.",
+            "I want to develop a skill I need for suitable work.",
           source: "procedural_economy",
         };
       }

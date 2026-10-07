@@ -14,24 +14,24 @@ import { addFeeling } from "../cognition.js";
 import { rng } from "../random.js";
 export function housingAssessment(d,p,property,time,{support=false}={}) {
   const h=householdOf(d,p),f=householdForecast(d,h,time,{observerId:p.id}),x=property.payload,reasons=[];
-  if(p.age<18)reasons.push('Erwachsene Bezugsperson erforderlich');
-  if(!x.listed || x.residents.length)reasons.push('Objekt ist nicht mehr frei');
-  if(x.capacity<h.payload.members.length)reasons.push('Zu wenig Platz für diesen Haushalt');
-  if(p.state.careSupport?.mode==='residential')reasons.push('Ein Wechsel aus der stationären Pflege muss mit einer geeigneten Betreuung vereinbart werden');
+  if(p.age<18)reasons.push('An adult guardian is required');
+  if(!x.listed || x.residents.length)reasons.push('The property is no longer available');
+  if(x.capacity<h.payload.members.length)reasons.push('The home is too small for this household');
+  if(p.state.careSupport?.mode==='residential')reasons.push('A move from residential care must be arranged with suitable support');
   const deposit=x.rentCents*2,available=householdCash(d,h);
-  if(!support && available<deposit)reasons.push('Kaution aus offengelegten gemeinsamen Mitteln nicht gedeckt');
-  if(support && balance(d,fundsOf(d).social)<deposit)reasons.push('Wohnhilfe-Kaution derzeit nicht finanziert');
+  if(!support && available<deposit)reasons.push('The deposit is not covered by disclosed shared funds');
+  if(support && balance(d,fundsOf(d).social)<deposit)reasons.push('The housing-support deposit is not currently funded');
   const ratio=f.incomeCents?x.rentCents/f.incomeCents:1;
-  if(!support && ratio>.5)reasons.push('Kaltmiete übersteigt den tragbaren bestätigten Einkommensrahmen');
+  if(!support && ratio>.5)reasons.push('Base rent exceeds the affordable range based on confirmed income');
   const owner=d.people.get(x.ownerId),known=owner?.relations[p.id];
   const facts=rows(d,'claim').filter(c=>c.payload.subjectId===p.id&&c.payload.verified&&c.payload.public&&c.payload.dimension==='reliability'&&c.payload.expiresAt>time);
   const negative=facts.some(c=>c.payload.value<-.5 && c.payload.confidence>=.8);
   const arrears=f.arrearsCents>0;
   const last=latestApplication(p,'housing',property.id);
-  if(last && time-last.at<APPLICATION_COOLDOWN)reasons.push('Erneute Bewerbung frühestens nach sieben Tagen');
+  if(last && time-last.at<APPLICATION_COOLDOWN)reasons.push('You may reapply after seven days');
   const reserveFactor=Math.min(.15,Math.max(0,available-deposit)/Math.max(1,x.rentCents*24));
   const probability=Math.max(.15,Math.min(.92,.68+(ratio<.3?.1:ratio<.4?.03:-.08)+reserveFactor+(known?.trust>.7?.04:0)-(negative?.18:0)-(arrears?.08:0)));
-  return {eligible:!reasons.length,reasons,probability,factors:[{label:'Offengelegtes bestätigtes Einkommen / Kaltmiete',value:Math.round(ratio*100)+'%'},{label:'Nachweisbare Kaution und Puffer',value:available>=deposit?'gedeckt':'Wohnhilfe erforderlich'},{label:'Belegte Zuverlässigkeit',value:negative?'belasteter Nachweis':'kein belasteter Nachweis'},{label:'Offene eigene Haushaltsforderungen',value:arrears?'vorhanden':'keine'}]};
+  return {eligible:!reasons.length,reasons,probability,factors:[{label:'Disclosed confirmed income / base rent',value:Math.round(ratio*100)+'%'},{label:'Documented deposit and buffer',value:available>=deposit?'covered':'housing support needed'},{label:'Documented reliability',value:negative?'adverse record':'no adverse record'},{label:'Outstanding household bills',value:arrears?'present':'none'}]};
 }
 export function applyForHousing(d,p,property,time,emit,{support=false}={}) {
   const assessment=housingAssessment(d,p,property,time,{support});
@@ -88,21 +88,21 @@ export function moveHousehold(
 ) {
   const x = property.payload;
   if (x.residents.length || x.capacity < h.payload.members.length)
-    return { ok: false, reason: "Wohnung nicht mehr frei oder zu klein" };
+    return { ok: false, reason: "Home is no longer available or is too small" };
   const p = h.payload.members
     .map((id) => d.people.get(id))
     .find((p) => p.age >= 18);
   if (!p)
     return {
       ok: false,
-      reason: "Eine zuständige erwachsene Bezugsperson fehlt",
+      reason: "No responsible adult guardian is available",
     };
   const ownResidence = h.payload.members.includes(x.ownerId),
     deposit = ownResidence ? 0 : x.rentCents * 2;
   if (support && balance(d, fundsOf(d).social) < deposit)
-    return { ok: false, reason: "Wohnhilfefonds derzeit nicht gedeckt" };
+    return { ok: false, reason: "The housing-support fund cannot cover the cost" };
   if (!support && !jointFunds(d, h, deposit, time, emit))
-    return { ok: false, reason: "Kaution nicht gedeckt; Wohnhilfe prüfen" };
+    return { ok: false, reason: "The deposit is not covered; consider housing support" };
   const previous = d.properties.get(h.payload.propertyId),
     oldLease = d.entities.get(h.payload.leaseId),
     e = emit(
@@ -135,7 +135,7 @@ export function moveHousehold(
         kind: "funded_housing_support",
       }).ok
     )
-      return { ok: false, reason: "Wohnhilfefonds derzeit nicht gedeckt" };
+      return { ok: false, reason: "The housing-support fund cannot cover the cost" };
   } else
     transfer(d, h.payload.jointAccountId, held.id, deposit, {
       key: { kind: "deposit", eventId: e.id },
@@ -218,21 +218,23 @@ export function moveHousehold(
   for (const id of h.payload.members) {
     const member = d.people.get(id);
     member.profile.home = { ...x.rooms };
+    member.household_id = x.buildingId;
+    for(const task of rows(d,'obligation'))if(task.payload.assigneeId===id&&task.payload.householdId===h.id&&['accepted','working'].includes(task.payload.status)&&!['work','care'].includes(task.payload.operator)){task.payload.destinationId=x.rooms.living;touch(d,task);}
     member.state.goal = {
       kind: "relax",
       destination: x.rooms.living,
       expires: time + 86400,
       reason:
-        "Der neue Mietvertrag gilt. Ich gehe tatsächlich in unser neues Zuhause.",
+        "The new lease is in effect. I am moving into our new home.",
       source: "procedural_housing",
     };
     member.state.economy.housingNotice = null;
   }
   e.description =
     p.name +
-    " und der Haushalt vereinbaren den Einzug in " +
+    " and the household agree to move into " +
     d.town.places.get(x.buildingId)?.name +
-    ". Wege und Umzug bleiben tatsächlich zu durchlaufen; niemand wird teleportiert.";
+    ". The route and move still have to happen; no one is teleported.";
   return { ok: true, leaseId: lease.id };
 }
 export function housingDaily(d, time, emit) {
@@ -296,7 +298,7 @@ export function housingDaily(d, time, emit) {
           touch(d, previous);
           e.description =
             p.name +
-            " erhält die tatsächlich hinterlegte Kaution nach dem Auszug zurück.";
+            " receives the deposit that was actually held after moving out.";
         }
       }
     for (const previous of d.properties.values())
@@ -382,10 +384,10 @@ export function housingDaily(d, time, emit) {
         x.refundSourceEventId = e.id;
         e.description =
           p.name +
-          " erhält nach dem tatsächlichen Auszug eine zeitanteilige Mietgutschrift. " +
+          " receives a prorated rent credit after actually moving out. " +
           (paid
-            ? "Die gedeckte Erstattung wird tatsächlich auf das gemeinsame Konto gebucht."
-            : "Ein möglicher Erstattungsanspruch bleibt von der tatsächlichen Zahlungsfähigkeit des Vermieters abhängig.");
+            ? "The covered refund is deposited into the shared account."
+            : "Any potential refund remains subject to the landlord’s actual ability to pay.");
       }
       touch(d, oldLease);
     }
@@ -421,14 +423,14 @@ export function housingDaily(d, time, emit) {
       });
       e.description =
         p.name +
-        " erhält zum Mietrückstand eine sachliche Mitteilung: " +
+        " receives a factual notice about the rent arrears: " +
         {
-          none: "die Lage ist geklärt",
-          reminder: "Erinnerung und Beratungsangebot",
-          notice: "formelle Nachricht mit Frist und Hilfeoptionen",
-          civil_case: "ein dokumentierter ziviler Fall mit Anhörung",
+          none: "the matter is resolved",
+          reminder: "a reminder and an offer of advice",
+          notice: "a formal notice with a deadline and support options",
+          civil_case: "a documented civil case with a hearing",
           enforced_case:
-            "ein abgeschlossener fiktiver ziviler Fall erfordert einen Wohnwechsel",
+            "a concluded fictional civil case requires a change of residence",
         }[stage] +
         ".";
       x.noticeAt = time;
@@ -449,7 +451,7 @@ export function housingDaily(d, time, emit) {
             time,
             {
               kind: "housing_notice",
-              text: "Eine tatsächlich zugestellte Wohnungsmitteilung erzeugt Sorge.",
+              text: "A housing notice that was actually delivered causes concern.",
               evidence_id: e.id,
             },
             { ttl: 3600 },
@@ -508,7 +510,7 @@ export function housingDaily(d, time, emit) {
           kind: "relax",
           destination: living,
           expires: time + 86400,
-          reason: "Wir suchen jetzt tatsächlich die geschützte Wohnhilfe auf.",
+          reason: "We are now going to the protected housing support service.",
           source: "procedural_housing",
         };
       }
@@ -519,7 +521,7 @@ export function housingDaily(d, time, emit) {
       });
       e.description =
         p.name +
-        " plant mit dem Haushalt den erreichbaren Weg in die Wohnhilfe. Geldmangel bedeutet keinen automatischen Straßenaufenthalt.";
+        " plans an accessible route to housing support with the household. Lack of money does not automatically mean living on the street.";
       touch(d, h);
       touch(d, lease);
     }
@@ -553,7 +555,7 @@ export function buyProperty(
     return {
       ok: false,
       reason:
-        "Freies Objekt und ausdrückliche erwachsene Kaufentscheidung erforderlich",
+        "The property must be available, and an adult must explicitly choose to buy it",
     };
   const price = x.valueCents,
     buyer = p.state.economy.personalAccountId,
@@ -564,7 +566,7 @@ export function buyProperty(
     return {
       ok: false,
       reason:
-        "Kaufpreis und geschützte Reserve sind nicht aus eigenen Mitteln gedeckt",
+        "The purchase price and protected reserve are not covered by personal funds",
     };
   const e = emit("property_purchase", p, time, {
     propertyId: property.id,
@@ -587,9 +589,9 @@ export function buyProperty(
   touch(d, property);
   e.description =
     p.name +
-    " kauft ein reales Wohnobjekt für " +
+    " purchases a residential property for €" +
     (price / 100).toFixed(0) +
-    " €. Eigentum und eigener Wohnort bleiben getrennt; das Objekt bleibt zur Vermietung angeboten.";
+    ". Ownership and the buyer’s residence remain separate; the property remains available to rent.";
   return { ok: true, propertyId: property.id };
 }
 export function financedPropertyPurchase(
@@ -621,7 +623,7 @@ export function financedPropertyPurchase(
     return {
       ok: false,
       reason:
-        "Mindestens 20% Eigenmittel und ausdrücklich angenommene erwachsene Finanzierung erforderlich",
+        "At least 20% down and an explicitly accepted adult financing agreement are required",
     };
   const h = d.households.get(p.state.economy.householdId),
     f = householdForecast(d, h, time),
@@ -642,7 +644,7 @@ export function financedPropertyPurchase(
     return {
       ok: false,
       reason:
-        "Rate, Eigenmittel, Reserven oder tatsächlicher Kreditfonds reichen nicht. Erwartete Mieten sind kein sicheres Einkommen",
+        "The payment, down payment, reserves, or available loan fund are insufficient. Expected rent is not guaranteed income",
     };
   const e = emit("mortgage_property_purchase", p, time, {
     propertyId: property.id,
@@ -696,7 +698,7 @@ export function financedPropertyPurchase(
   touch(d, property);
   e.description =
     p.name +
-    " kauft ein reales Objekt mit Eigenmitteln und einem tatsächlich finanzierten Hypothekendarlehen. Schuld, Eigentum, laufende Rate und Standort werden getrennt gespeichert.";
+    " purchases a residential property with a down payment and a funded mortgage. Debt, ownership, ongoing payments, and location are recorded separately.";
   return { ok: true, propertyId: property.id, loanId: loan.id };
 }
 export function propertyMaintenance(d, time, emit) {
@@ -737,9 +739,9 @@ export function propertyMaintenance(d, time, emit) {
           owner.state.economy.rentalCostsCents =
             (owner.state.economy.rentalCostsCents || 0) + amount;
         e.description =
-          "Für " +
+          "Funded maintenance is carried out at " +
           d.town.places.get(x.buildingId)?.name +
-          " wird eine tatsächlich finanzierte Instandhaltung beauftragt.";
+          ".";
       }
     }
     touch(d, prop);

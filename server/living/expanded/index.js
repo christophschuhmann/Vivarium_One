@@ -1,3 +1,5 @@
+import {progressionDaily} from "./progression.js";
+import {rowsFor} from "./store.js";
 import { financialAppraisals } from "./finances.js";
 import { educationDaily, currentEducation, completeStudy } from "./education.js";
 import { careMinute, careDestination, careAction, completeFamilyCare } from "./care.js";
@@ -100,6 +102,7 @@ export function expandedMinute(d, time, emit) {
   careMinute(d, time, emit);
   laborAndSupplyEvents(d, time, emit);
   lifeDaily(d, time, emit);
+  progressionDaily(d, time, emit);
   housingDaily(d, time, emit);
   propertyMaintenance(d, time, emit);
   communityMinute(d, time, emit);
@@ -207,7 +210,7 @@ export function expandedDestination(d, p, time) {
       ? p.profile.home.kitchen
       : d.calendar.payload.venues.shelter.rooms[1];
   if (socialDestination(d.town, p, time)) return null;
-  const task = rows(d, "obligation").find(
+  const task = rowsFor(d, "obligation", "assigneeId", p.id).find(
     (o) =>
       o.payload.assigneeId === p.id &&
       o.payload.status === "accepted" &&
@@ -521,7 +524,7 @@ export function foodDestination(d, p, time, fallback) {
     householdSpendable(d, h) >= d.market.payload.offers.basic.priceCents
   )
     return p.profile.home.kitchen;
-  return p.age >= 18 && balance(d, fundsOf(d).social) >= 250
+  return p.age >= 12 && balance(d, fundsOf(d).social) >= 250
     ? d.calendar.payload.venues.shelter.rooms[1]
     : p.profile.home.kitchen;
 }

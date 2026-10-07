@@ -1,3 +1,5 @@
+import {startTurbo,turboStatus,cancelTurbo,stopTurboWorkers} from '../living/turbo.js';
+import {catalogSearch,catalogStats,materializeAsset,catalogEntry} from '../living/asset-catalog.js';
 import {ensureLocationMusic} from '../living/music.js';
 import { activityStatus } from '../living/expanded/education.js';
 import {initializeNewPopulation} from '../living/expanded/population.js';
@@ -26,6 +28,10 @@ function own(req,verified=false){const user=verified?requireVerified(req):requir
 function mutable(req){const result=own(req,true);if(busy.has(result.world.id))throw httpErr(409,'WORLD_BUSY','Wait for the current tick to finish.');return result;}
 const simView=p=>{const person={...p,profile:pj(p.profile,{}),state:pj(p.state,{})};normalizeRomance(person);projectWellbeing(person,person.state.wellbeing?.updated_at||0);if(person.profile.social)person.profile.social=socialPerspective(person);person.activityStatus=activityStatus(person);return person;};
 export default async function livingRoutes(app) {
+  app.addHook('onClose',async()=>stopTurboWorkers());
+  app.get('/api/living/worlds/:worldId/turbo',async req=>{const {world}=own(req);return {job:turboStatus(world.id)};});
+  app.post('/api/living/worlds/:worldId/turbo',async req=>{const {user,world}=own(req,true);return {job:startTurbo(user,world.id,Number(req.body?.minutes))};});
+  app.delete('/api/living/worlds/:worldId/turbo',async req=>{const {world}=own(req,true);return {job:cancelTurbo(world.id)};});
   app.post('/api/living/worlds/:worldId/places/:id/music',async req=>{
     const {world}=own(req,true),place=db.prepare("SELECT id,purpose,name FROM lw_places WHERE world_id=? AND id=? AND kind='room'").get(world.id,req.params.id);
     if(!place)throw httpErr(404,'NOT_FOUND','Choose a location in this world.');
@@ -53,8 +59,9 @@ export default async function livingRoutes(app) {
     db.transaction(()=>{const clock=db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(world.id),id=uid('le_');evaluateMind({...p,profile:pj(p.profile,{}),state},clock.seconds,catalog);db.prepare('UPDATE lw_sims SET state=?,location_id=?,name=? WHERE id=?').run(j(state),state.location_id,String(b.name||p.name).slice(0,100),p.id);db.prepare('INSERT INTO lw_events VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(id,world.id,null,clock.seconds,clock.seconds,state.location_id,'user_edit',j([p.id]),j({changes:{location_id:b.location_id,needs:b.needs,name:b.name}}),'Eine ausdrückliche Intervention verändert meinen aktuellen Zustand.','user_intervention');db.prepare('INSERT INTO lw_journal VALUES (?,?,?,?,?,?,?)').run(p.id,id,clock.seconds,'intervention','Mein Zustand wurde durch eine Intervention verändert.','Diese Veränderung ist Teil meines tatsächlichen Protokolls.',1);db.prepare('UPDATE lw_worlds SET version=version+1 WHERE world_id=?').run(world.id);})();return {ok:true};
   });
   app.post('/api/living/towns',async req=>createTown(requireVerified(req),req.body || {}));
-  app.get('/api/living/library',async req=>{requireUser(req);return {count:library().length,characters:library().filter(e=>e.kind==='character').length,ready:library().length>0};});
-  app.get('/api/living/library/:id',async(req,reply)=>{requireUser(req);const file=assetFile(req.params.id,req.query?.variant);if(!file)throw httpErr(404,'MISSING_ASSET','Library media missing. Run the sprite preparation script.');const handle=fs.openSync(file,'r'),magic=Buffer.alloc(2);try{fs.readSync(handle,magic,0,2,0);}finally{fs.closeSync(handle);}reply.header('Cache-Control','private, max-age=86400').type(magic[0]===255&&magic[1]===216?'image/jpeg':'image/png');return reply.send(fs.createReadStream(file));});
+  app.get('/api/living/library/search',async req=>{const user=requireUser(req),q=req.query||{},excludeIdentities=[];if(q.unusedWorld){if(!db.prepare('SELECT 1 FROM worlds WHERE id=? AND user_id=?').get(q.unusedWorld,user.id))throw httpErr(404,'NOT_FOUND','World not found');for(const p of db.prepare('SELECT DISTINCT asset_id FROM lw_sims WHERE world_id=?').all(q.unusedWorld)){const entry=catalogEntry(p.asset_id);if(entry)excludeIdentities.push(entry.identity_id);}}return {items:catalogSearch(q.q,{...q,excludeIdentities}),...catalogStats()};});
+  app.get('/api/living/library',async req=>{requireUser(req);const external=catalogStats();return {...external,count:library().length+external.count,characters:library().filter(e=>e.kind==='character').length+external.characters,ready:true};});
+  app.get('/api/living/library/:id',async(req,reply)=>{requireUser(req);const file=assetFile(req.params.id,req.query?.variant)||await materializeAsset(req.params.id,req.query?.variant||'preview');if(!file)throw httpErr(404,'MISSING_ASSET','Library media missing. Run the sprite preparation script.');const handle=fs.openSync(file,'r'),magic=Buffer.alloc(2);try{fs.readSync(handle,magic,0,2,0);}finally{fs.closeSync(handle);}reply.header('Cache-Control','private, max-age=86400').type(magic[0]===255&&magic[1]===216?'image/jpeg':'image/png');return reply.send(fs.createReadStream(file));});
   app.get('/api/living/worlds/:worldId',async req=>{
     const {world}=own(req),simulation=db.prepare('SELECT * FROM lw_worlds WHERE world_id=?').get(world.id),latest=db.prepare('SELECT version,fields,story,metrics FROM lw_beats WHERE world_id=? ORDER BY version DESC LIMIT 1').get(world.id);
     return {world,simulation:{...simulation,rules:pj(simulation.rules,{})},population:db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=?').get(world.id).n,
@@ -130,9 +137,9 @@ export default async function livingRoutes(app) {
   });
   app.post('/api/living/worlds/:worldId/grow',async req=>{
     const {world}=mutable(req),count=db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=?').get(world.id).n,add=Number(req.body?.count);
-    if(!Number.isInteger(add)||add<1||count+add>500)throw httpErr(400,'BAD_POPULATION','Add enough Sims to reach at most 500.');busy.add(world.id);
+    if(!Number.isInteger(add)||add<1||count+add>2000)throw httpErr(400,'BAD_POPULATION','Add enough Sims to reach at most 2000.');busy.add(world.id);
     try{
-      const existing=loadTown(world.id),prefix=world.id+'_x'+count,generated=await generateTown(prefix,{population:add,seed:existing.world.seed+count,title:world.title,neighborhoodOffset:[...existing.places.values()].filter(p=>p.kind==='neighborhood').length,reservedNames:[...existing.places.values()].filter(p=>['neighborhood','district'].includes(p.kind)).map(p=>p.name)}),map=new Map();
+      const existing=loadTown(world.id),prefix=world.id+'_x'+count,generated=await generateTown(prefix,{population:add,scenario:pj(existing.world.rules,{}).scenario?.id||'generic',seed:existing.world.seed+count,title:world.title,neighborhoodOffset:[...existing.places.values()].filter(p=>p.kind==='neighborhood').length,reservedNames:[...existing.places.values()].filter(p=>['neighborhood','district'].includes(p.kind)).map(p=>p.name)}),map=new Map();
       for(const place of generated.places)if(['country','city'].includes(place.kind)||place.landmark||place.parent_id&&generated.places.find(p=>p.id===place.parent_id)?.landmark){const match=[...existing.places.values()].find(p=>p.kind===place.kind&&(['country','city'].includes(place.kind)||p.name===place.name));if(match)map.set(place.id,match.id);}
       const rename=value=>typeof value==='string'?map.get(value)||value:Array.isArray(value)?value.map(rename):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,rename(v)])):value;
       const houseOffset=db.prepare('SELECT count(DISTINCT household_id) n FROM lw_sims WHERE world_id=?').get(world.id).n;

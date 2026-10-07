@@ -40,11 +40,11 @@ export function dutyDestination(p,time){
   return p.profile.workplace_id;
 }
 export function serviceDestination(town,p,need){
-  const objects={bath:['toilet'],kitchen:['fridge'],living:['sofa','bench','bookshelf']},wanted=objects[need]||[];
+  const objects={bath:['toilet'],kitchen:['fridge'],water:['sink','fountain'],living:['sofa','bench','bookshelf']},wanted=objects[need]||[];
   const at=town.places.get(p.state.location_id),building=at?.kind==='building'?at:town.places.get(at?.parent_id);
   if(building?.kind==='building'){
     const candidate=[...town.places.values()].find(q=>q.parent_id===building.id&&q.kind==='room'&&wanted.some(k=>q.affordances.includes(k)));
     if(candidate)return candidate.id;
   }
-  return p.profile.home[need];
+  return p.profile.home[need==='water'?'kitchen':need];
 }

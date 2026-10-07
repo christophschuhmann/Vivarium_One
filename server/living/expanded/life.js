@@ -1,3 +1,5 @@
+import {birthdayTransition} from "./progression.js";
+import {rowsFor} from "./store.js";
 import { currentEducation } from './education.js';
 import { careAction } from './care.js';
 import { rng } from "../random.js";
@@ -19,36 +21,36 @@ export function installExpandedActions(catalog) {
   // Existing public/private action checks remain in availableActions. New
   // actions are admitted only by the typed eligibility functions below.
   for (const [key, label, objects, duration] of [
-    ['elder_care','unterstützt ein Familienmitglied im Alltag',['sofa','bed','desk','table','fridge'],900],
-    ['study','lernt im aktuellen Studium oder in der Ausbildung',['desk','bookshelf','table','lab_station'],1800],
+    ['elder_care','supports a family member in daily life',['sofa','bed','desk','table','fridge'],900],
+    ['study','studies in a current degree or training program',['desk','bookshelf','table','lab_station'],1800],
     [
       "obligation",
-      "führt eine angenommene Alltagsaufgabe aus",
+      "works on an accepted daily task",
       ["desk", "table", "sofa", "fridge", "bed", "bench", "planter"],
       900,
     ],
-    ["holiday_work", "arbeitet im sicheren Ferienjob", ["shop_counter"], 1800],
+    ["holiday_work", "works at a safe holiday job", ["shop_counter"], 1800],
     [
       "training",
-      "übt eine für das eigene Ziel passende Fertigkeit",
+      "practices a skill related to a personal goal",
       ["desk", "bookshelf"],
       1800,
     ],
     [
       "item_use",
-      "nutzt einen eigenen besonderen Gegenstand",
+      "uses a special item they own",
       ["desk", "table", "sofa"],
       1800,
     ],
     [
       "infant_care",
-      "versorgt das kleine Kind",
+      "cares for a young child",
       ["sofa", "bed", "table", "desk", "fridge"],
       900,
     ],
     [
       "supported_care",
-      "nimmt eine vereinbarte Beratung wahr",
+      "attends agreed counseling",
       ["desk", "sofa"],
       1800,
     ],
@@ -167,15 +169,15 @@ export function assignObligation(
   if (!dutyEligibility(d, p, row, time))
     return {
       ok: false,
-      reason: "Die konkreten Voraussetzungen dieser Aufgabe liegen nicht vor",
+      reason: "The specific requirements for this task are not met",
     };
-  const active = rows(d, "obligation").filter(
+  const active = rowsFor(d, "obligation", "assigneeId", p.id).filter(
     (o) =>
       o.payload.assigneeId === p.id &&
       ["accepted", "working", "proposed"].includes(o.payload.status),
   );
   if (active.length >= 3 || active.some((o) => o.payload.catalogId === row.id))
-    return { ok: false, reason: "Bereits angenommen oder Aufgabenbudget voll" };
+    return { ok: false, reason: "Already accepted or task limit reached" };
   // Child chores remain small, age-appropriate and can be declined. A parent
   // is not authority to spend a child's money or manufacture social consent.
   const draw = rng(
@@ -205,8 +207,8 @@ export function assignObligation(
   e.description =
     p.name +
     (accept
-      ? " übernimmt eine machbare Aufgabe: "
-      : " bittet um einen anderen Zeitpunkt für: ") +
+      ? " takes on a manageable task: "
+      : " asks to reschedule: ") +
     row.title +
     ".";
   if (!accept) return { ok: false, declined: true, eventId: e.id };
@@ -259,9 +261,9 @@ export function rescheduleObligation(d, p, task, time, emit) {
   )
     return {
       ok: false,
-      reason: "Eigene offene Aufgabe und konkrete Voraussetzungen erforderlich",
+      reason: "An open task assigned to this Sim and its specific requirements are required",
     };
-  const active = rows(d, "obligation").filter(
+  const active = rowsFor(d, "obligation", "assigneeId", p.id).filter(
     (o) =>
       o.id !== task.id &&
       o.payload.assigneeId === p.id &&
@@ -270,7 +272,7 @@ export function rescheduleObligation(d, p, task, time, emit) {
   if (active.length >= 2)
     return {
       ok: false,
-      reason: "Zuerst die bereits angenommenen Aufgaben abschließen",
+      reason: "Finish the already accepted tasks first",
     };
   const e = emit("obligation_rescheduled", p, time, {
     obligationId: task.id,
@@ -292,9 +294,9 @@ export function rescheduleObligation(d, p, task, time, emit) {
   touch(d, task);
   e.description =
     p.name +
-    " stimmt für " +
+    " agrees on a realistic new time for " +
     x.title +
-    " einen realistischen neuen Zeitpunkt ab. Bereits geleistete Arbeit bleibt im Protokoll.";
+    ". Work already completed remains in the record.";
   return { ok: true };
 }
 export function lifeDaily(d, time, emit) {
@@ -318,7 +320,7 @@ export function lifeDaily(d, time, emit) {
     if (Number.isFinite(newAge) && newAge > p.age) {
       p.age = newAge;
       const e = emit("birthday", p, time, { age: newAge, public: false });
-      e.description = p.name + " wird heute " + newAge + " Jahre alt.";
+      e.description = p.name + " turns " + newAge + " today.";
       const holiday = d.contracts.get(p.id);
       if (newAge >= 18 && holiday?.payload.holiday) {
         holiday.payload.status = "ended_at_adult_birthday";
@@ -329,6 +331,7 @@ export function lifeDaily(d, time, emit) {
         p.state.economy.employmentId = null;
       }
     }
+    if(p.state.birthdayToday) birthdayTransition(d,p,time,emit);
     if (p.age < 18) p.state.economy.health.substances = {}; // Never retain adult-only health/crime state on an underage imported/edited Sim.
   }
   for (const p of d.people.values()) {
@@ -341,7 +344,7 @@ export function lifeDaily(d, time, emit) {
       });
       e.description =
         p.name +
-        " beendet die bestätigte Betreuungspause; die vereinbarte Arbeit und geeignete Kinderbetreuung können wieder aufgenommen werden.";
+        " has ended the confirmed caregiving leave; agreed work and suitable childcare can resume.";
       delete p.state.economy.parentalCare;
       const c = d.contracts.get(p.id);
       if (c) {
@@ -376,7 +379,7 @@ export function lifeDaily(d, time, emit) {
     x.laundry = Math.min(1, x.laundry + members.length * 0.06);
     touch(d, h);
     for (const p of members) {
-      const active = rows(d, "obligation").filter(
+      const active = rowsFor(d, "obligation", "assigneeId", p.id).filter(
         (o) =>
           o.payload.assigneeId === p.id &&
           ["accepted", "working"].includes(o.payload.status),
@@ -442,14 +445,14 @@ export function lifeDaily(d, time, emit) {
         });
       e.description =
         p.name +
-        " konnte die angenommene Aufgabe " +
+        " could not complete the accepted task " +
         x.title +
-        " noch nicht abschließen und sucht einen neuen Zeitpunkt oder Hilfe.";
+        " yet and is looking for a new time or help.";
       x.lastEventId = e.id;
       touch(d, task);
       addFeeling(p, "disappointment", 0.25, time, {
         kind: "missed_own_plan",
-        text: "Ein eigenes angenommenes Vorhaben blieb offen.",
+        text: "A personal commitment remained unfinished.",
         evidence_id: e.id,
       });
     }
@@ -496,14 +499,17 @@ export function selectExpandedAction(d, p, time) {
     ) > 0.75
   )
     return null;
-  const task = rows(d, "obligation").find(
+  const task = rowsFor(d, "obligation", "assigneeId", p.id).find(
     (o) =>
       o.payload.assigneeId === p.id &&
       o.payload.status === "accepted" &&
       !(o.payload.nextAttemptAt > time) &&
       o.payload.destinationId === p.state.location_id,
   );
-  if (task && hour >= 7 && hour < 21) {
+  // Personal chores wait outside school/work commitments. Otherwise selecting a
+  // chore during a rest break could start and interrupt it every single minute.
+  const onDuty = Math.floor(time / 86400)%7<5 && hour>=8 && hour<(p.age<18?14:16) && (p.age<18 || contract);
+  if (task && hour >= 7 && hour < 21 && (!onDuty || (task.payload.operator === "work" && p.state.location_id === p.profile.workplace_id))) {
     p.state.economy.activeObligationId = task.id;
     return "leisure_expanded_obligation";
   }
@@ -575,9 +581,9 @@ export function completedExpandedAction(d, p, event, duration, time) {
     p.state.economy.lastTrainingDay = Math.floor(time / 86400);
     event.description =
       p.name +
-      " übt " +
+      " practices " +
       skill +
-      " für eine passende Stelle. Die tatsächliche Übung zählt; ein Berufsabschluss wird nicht erfunden.";
+      " for a suitable job. Actual practice counts; no professional qualification is invented.";
     event.facts.practice = {
       skill,
       durationSeconds: duration,
@@ -609,7 +615,7 @@ export function completedExpandedAction(d, p, event, duration, time) {
     train(p, skill, duration, event, time);
     p.state.needs.fun = Math.max(0, p.state.needs.fun - 0.15);
     event.description =
-      p.name + " nutzt " + spec.name + " für " + spec.use + ".";
+      p.name + " uses " + spec.name + " for " + spec.use + ".";
     event.facts.itemId = item.id;
     return { practiceSeconds: duration, skill };
   }
@@ -744,7 +750,7 @@ export function completedExpandedAction(d, p, event, duration, time) {
         train(p, row.execution.skill, duration, event, time);
         addFeeling(p, "pride", 0.32, time, {
           kind: "actual_obligation_complete",
-          text: "Meine angenommene Aufgabe ist tatsächlich abgeschlossen.",
+          text: "My accepted task is actually complete.",
           evidence_id: event.id,
         });
       }
@@ -755,14 +761,14 @@ export function completedExpandedAction(d, p, event, duration, time) {
       p.name +
       " " +
       (x.status === "completed"
-        ? "erledigt"
-        : "arbeitet nachvollziehbar weiter an") +
+        ? "completed"
+        : "is making documented progress on") +
       ": " +
       row.title +
       ". " +
       (x.status === "completed"
-        ? "Das konkrete Aufgabenprotokoll wurde abgeschlossen."
-        : "Ein Teil bleibt offen; Hilfe oder ein weiterer Versuch sind möglich.");
+        ? "The specific task record is complete."
+        : "Part of the task remains; help or another attempt may be possible.");
     delete p.state.economy.activeObligationId;
     return { practiceSeconds: duration * gain, skill: row.execution.skill };
   }
@@ -775,14 +781,14 @@ export function buyMembership(d, p, activityId, time, emit) {
   if (p.age < 18)
     return {
       ok: false,
-      reason: "Wiederkehrender Vertrag erfordert eine erwachsene Bezugsperson",
+      reason: "A recurring agreement requires an adult guardian",
     };
   const spec = ACTIVITIES.find((s) => s.id === activityId);
   if (
     !spec ||
     !/monat|mitglied|subscription|abo/i.test(spec.accounting + " " + spec.name)
   )
-    return { ok: false, reason: "Kein monatliches Mitgliedschaftsangebot" };
+    return { ok: false, reason: "No monthly membership offer is available" };
   if (
     rows(d, "subscription").some(
       (s) =>
@@ -791,13 +797,13 @@ export function buyMembership(d, p, activityId, time, emit) {
         s.payload.status === "active",
     )
   )
-    return { ok: false, reason: "Bereits Mitglied" };
+    return { ok: false, reason: "Already a member" };
   const amount = activityOfferPrice(spec);
   if (
     balance(d, ownAccount(d, p)) < amount ||
     householdForecast(d, householdOf(d, p), time).marginCents < amount
   )
-    return { ok: false, reason: "Keine bezahlbare zusätzliche feste Ausgabe" };
+    return { ok: false, reason: "No additional recurring expense is affordable" };
   const seller =
       [...d.firms.values()].find((f) => f.payload.role === "Fitness coach") ||
       d.firms.get(d.market.payload.firmId),
@@ -841,8 +847,8 @@ export function buyMembership(d, p, activityId, time, emit) {
   );
   e.description =
     p.name +
-    " entscheidet sich für " +
+    " chooses " +
     spec.name +
-    " als zusätzliche wiederkehrende Ausgabe.";
+    " as an additional recurring expense.";
   return { ok: true, subscriptionId: sub.id };
 }

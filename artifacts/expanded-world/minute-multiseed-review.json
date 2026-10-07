@@ -1,0 +1,172 @@
+{
+  "results": [
+    {
+      "testedAt": "2026-10-07T16:59:25.247Z",
+      "population": 20,
+      "seed": 73,
+      "oneHourEquals60Minutes": true,
+      "fullDay": {
+        "population": 20,
+        "events": 3073,
+        "journalEntries": 3245,
+        "eligible": 0,
+        "fields": 0,
+        "modelCalls": 0,
+        "biographyCalls": 0,
+        "cpuMs": 2449,
+        "totalMs": 3190,
+        "rejections": [],
+        "warnings": [],
+        "minutes": 1440,
+        "chunks": 24
+      }
+    },
+    {
+      "testedAt": "2026-10-07T16:59:30.276Z",
+      "population": 20,
+      "seed": 74,
+      "oneHourEquals60Minutes": true,
+      "fullDay": {
+        "population": 20,
+        "events": 3147,
+        "journalEntries": 3341,
+        "eligible": 0,
+        "fields": 0,
+        "modelCalls": 0,
+        "biographyCalls": 0,
+        "cpuMs": 2409,
+        "totalMs": 3165,
+        "rejections": [],
+        "warnings": [],
+        "minutes": 1440,
+        "chunks": 24
+      }
+    },
+    {
+      "testedAt": "2026-10-07T16:59:34.817Z",
+      "population": 20,
+      "seed": 75,
+      "oneHourEquals60Minutes": true,
+      "fullDay": {
+        "population": 20,
+        "events": 3017,
+        "journalEntries": 3149,
+        "eligible": 0,
+        "fields": 0,
+        "modelCalls": 0,
+        "biographyCalls": 0,
+        "cpuMs": 2197,
+        "totalMs": 2857,
+        "rejections": [],
+        "warnings": [],
+        "minutes": 1440,
+        "chunks": 24
+      }
+    },
+    {
+      "testedAt": "2026-10-07T16:59:39.641Z",
+      "population": 20,
+      "seed": 76,
+      "oneHourEquals60Minutes": true,
+      "fullDay": {
+        "population": 20,
+        "events": 3066,
+        "journalEntries": 3216,
+        "eligible": 0,
+        "fields": 0,
+        "modelCalls": 0,
+        "biographyCalls": 0,
+        "cpuMs": 2239,
+        "totalMs": 2931,
+        "rejections": [],
+        "warnings": [],
+        "minutes": 1440,
+        "chunks": 24
+      }
+    },
+    {
+      "testedAt": "2026-10-07T16:59:44.688Z",
+      "population": 20,
+      "seed": 77,
+      "oneHourEquals60Minutes": true,
+      "fullDay": {
+        "population": 20,
+        "events": 3252,
+        "journalEntries": 3424,
+        "eligible": 0,
+        "fields": 0,
+        "modelCalls": 0,
+        "biographyCalls": 0,
+        "cpuMs": 2491,
+        "totalMs": 3249,
+        "rejections": [],
+        "warnings": [],
+        "minutes": 1440,
+        "chunks": 24
+      }
+    },
+    {
+      "testedAt": "2026-10-07T16:59:49.801Z",
+      "population": 20,
+      "seed": 78,
+      "oneHourEquals60Minutes": true,
+      "fullDay": {
+        "population": 20,
+        "events": 3308,
+        "journalEntries": 3508,
+        "eligible": 0,
+        "fields": 0,
+        "modelCalls": 0,
+        "biographyCalls": 0,
+        "cpuMs": 2486,
+        "totalMs": 3273,
+        "rejections": [],
+        "warnings": [],
+        "minutes": 1440,
+        "chunks": 24
+      }
+    },
+    {
+      "testedAt": "2026-10-07T16:59:54.731Z",
+      "population": 20,
+      "seed": 79,
+      "oneHourEquals60Minutes": true,
+      "fullDay": {
+        "population": 20,
+        "events": 3118,
+        "journalEntries": 3275,
+        "eligible": 0,
+        "fields": 0,
+        "modelCalls": 0,
+        "biographyCalls": 0,
+        "cpuMs": 2407,
+        "totalMs": 3142,
+        "rejections": [],
+        "warnings": [],
+        "minutes": 1440,
+        "chunks": 24
+      }
+    },
+    {
+      "testedAt": "2026-10-07T16:59:59.429Z",
+      "population": 20,
+      "seed": 80,
+      "oneHourEquals60Minutes": true,
+      "fullDay": {
+        "population": 20,
+        "events": 2890,
+        "journalEntries": 3029,
+        "eligible": 0,
+        "fields": 0,
+        "modelCalls": 0,
+        "biographyCalls": 0,
+        "cpuMs": 2295,
+        "totalMs": 2982,
+        "rejections": [],
+        "warnings": [],
+        "minutes": 1440,
+        "chunks": 24
+      }
+    }
+  ]
+}

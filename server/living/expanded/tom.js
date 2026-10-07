@@ -1,3 +1,5 @@
+import fs from "node:fs";
+const englishTopics=JSON.parse(fs.readFileSync(new URL("../../../config/living-social-topics.en.json",import.meta.url)));
 // Probabilistic FIRST-PERSON social models. Never read another Sim's private
 // thoughts, expectations, balances, health, goals or hidden affect as evidence.
 import { encounterMemory, socialPerspective, perspectiveThought, socialEvidenceLabel } from "./tom-language.js";
@@ -6,11 +8,11 @@ import { relationshipLabels } from "../relationship-labels.js";
 import { SOCIAL_CATALOG } from "./catalog.js";
 import { rows, put, touch } from "./store.js";
 const names = {
-  support: "Hilfe oder freundlicher Kontakt",
-  obligation: "Aufgabe oder Abstimmung",
-  criticism: "Kritik oder Unzufriedenheit",
-  romance: "Freiwilliges romantisches Interesse",
-  unknown: "Ein anderer, noch unbekannter Anlass",
+  support: "Help or friendly contact",
+  obligation: "A task or coordination",
+  criticism: "Criticism or dissatisfaction",
+  romance: "Voluntary romantic interest",
+  unknown: "Another, not-yet-known reason",
 };
 const positive = new Set([
   "offer_help",
@@ -201,9 +203,9 @@ export function predict(p, other, town, event) {
     sourceRefs: stored?.sourceRefs?.slice(-6) || [],
     kind: "subjective_hypothesis_not_other_mind",
     explanations: {
-      character: "Eigene Persönlichkeit und bekannte Beziehung",
-      situation: "Eigener Kontaktkontext und wahrnehmbares Publikum",
-      evidence: "Nur eigene gehörte oder beobachtete Aussagen",
+      character: "My own personality and known relationship",
+      situation: "My encounter context and the audience I could observe",
+      evidence: "Only statements I heard or observed myself",
     },
   };
 }
@@ -352,7 +354,7 @@ export function observeSocial(
           expiresAt: event.end + 30 * 86400,
           statement:
             helper.name +
-            " hat einen tatsächlich erlebten freundlichen Beitrag geleistet.",
+            " made a kind contribution that was actually experienced.",
         },
         { ownerId: target.id },
       );
@@ -364,11 +366,11 @@ export function observeSocial(
 function predictText(probability) {
   const sorted = Object.entries(probability).sort((a, b) => b[1] - a[1]);
   return (
-    "Ich vermute " +
+    "I suspect " +
     names[sorted[0][0]].toLowerCase() +
     "; " +
     names[sorted[1][0]].toLowerCase() +
-    " bleibt eine mögliche Alternative."
+    " remains a possible alternative."
   );
 }
 // Runtime guards for authored situations. A catalog entry is a potential
@@ -379,6 +381,10 @@ export function socialEpisodeEligible(row, p, other, town, event, d) {
     place = town.places.get(event.location_id),
     category = event.facts.category;
   if (row.catalog === "duties" || row.catalog === "expectations") return false;
+  // Economic/legal adult negotiations are not children's conversation topics.
+  if ((p.age<18||other.age<18)&&/parkplatz|mietvertrag|kredit|hypothek|gehalt|beförder|scheidung|ehevertrag|sexual|prostitution|droge/.test(words))return false;
+  if ((p.age<6||other.age<6)&&!['family','friendship','school'].includes(context.topic))return false;
+
   if (
     row.catalog === "romance" &&
     (p.age < 18 ||
@@ -554,7 +560,7 @@ export function decorateSocial(d, town, event) {
     row = ranked[0].row;
   event.facts.catalog = {
     id: row.id,
-    title: row.title,
+    title: englishTopics[row.id]||row.title,
     context: row.context,
     contextValidated: true,
     selectedAs: "introduced_conversation_topic_not_proof_of_catalog_trigger",
@@ -562,8 +568,8 @@ export function decorateSocial(d, town, event) {
     actualOutcome: event.facts.outcome,
   };
   event.description +=
-    " Gesprächsthema: " +
-    row.title.replace(/ · (Kooperation|Konflikt)$/, "") +
+    " Conversation topic: " +
+    (englishTopics[row.id]||row.title).replace(/ · (Cooperation|Conflict|Kooperation|Konflikt)$/, "") +
     ".";
   a.state.social_cognition.recentCatalogIds = history.concat(row.id).slice(-12);
   b.state.social_cognition.recentCatalogIds = (
@@ -598,9 +604,9 @@ export function socialMindContext(p) {
   const secondOrder = Object.values(c.metabeliefs || {}).slice(0,1).map(meta => {
     const contact = contacts.find(c => c.subjectId === meta.subjectId);
     const matching = Object.values(contact?.topics || {}).find(t => t.sourceRefs?.at(-1)?.eventId === meta.eventId);
-    return {...meta, text:matching?.perspective.metabelief || 'Ich kenne den Eindruck meines Gegenübers nicht. Ich kann meinen eigenen Wunsch erklären, statt eine fremde Vorstellung vorauszusetzen.'};
+    return {...meta, text:matching?.perspective.metabelief || 'I do not know what impression I made. I can explain what I want instead of assuming what someone else thinks.'};
   });
-  return {perspective:'Eigene unsichere Erwartungen; kein Zugang zu fremden Gedanken', contacts,
+  return {perspective:'My own uncertain expectations; no access to other people’s thoughts', contacts,
     secondOrder, lastContext:c.lastContext};
 }
 export function expectationBias(p, otherId, category) {

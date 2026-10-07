@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-07T16:57:44.017Z",
+  "count": 12943,
+  "characters": 11250,
+  "identities": 740,
+  "sources": [
+    {
+      "repo": "laion/Anim-E-Ghibli-Backgrounds-FLUX-9B",
+      "revision": "be0d30d9e1092c9ac762f00370b0fe9b3ab3c0ea"
+    },
+    {
+      "repo": "laion/Vivarium-Greenscreen-Characters-FLUX-9B",
+      "revision": "d245d235bcc0c104b94933c53c0dd461004caef6"
+    }
+  ],
+  "checks": [
+    "Structured minor age band, gender and heritage filters",
+    "Unused identity exclusion",
+    "Same identity across expression changes",
+    "FTS punctuation handled as tokens",
+    "Unknown path rejected",
+    "Lazy sprite and background PNGs",
+    "Revision and license provenance",
+    "Referenced full images, previews and transparent sprites packaged in ZIP"
+  ]
+}

@@ -16,7 +16,7 @@ try{
   // Urgent modeled needs produce emotions and actual public-toilet use during duty.
   const pupil=town.people.find(p=>p.age>=6&&p.age<18),time=9*3600;
   pupil.state.location_id=pupil.profile.workplace_id;pupil.state.needs={...pupil.state.needs,hunger:.3,thirst:.3,bladder:.96,fatigue:.4};pupil.state.action={kind:'school_day',started:time-600,until:time+7200};pupil.state.route=null;
-  evaluateMind(pupil,time,catalog);assert.ok(pupil.state.affect.states.some(e=>e.id==='distress'));assert.match(pupil.state.current_desire,/Toilette/);
+  evaluateMind(pupil,time,catalog);assert.ok(pupil.state.affect.states.some(e=>e.id==='distress'));assert.match(pupil.state.current_desire,/bathroom/);
   const calm=structuredClone(pupil);calm.state.affect={states:[]};assert.ok(emotionalRate(pupil,'fatigue')>emotionalRate(calm,'fatigue'));assert.equal(emotionalRate(pupil,'bladder'),1);
   save(pupil);db.prepare('UPDATE lw_worlds SET seconds=? WHERE world_id=?').run(time,wid);await advanceTown(user,wid,{minutes:10,story:false});town=loadTown(wid);
   assert.ok(db.prepare("SELECT 1 FROM lw_events WHERE world_id=? AND type='departure' AND json_extract(participants,'$[0]')=? AND json_extract(facts,'$.destination')=?").get(wid,pupil.id,pupil.profile.facility.rooms.wc));assert.ok(town.byId.get(pupil.id).state.needs.bladder<.96);

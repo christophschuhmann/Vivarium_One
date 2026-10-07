@@ -1,3 +1,4 @@
+import {dynamicsView} from '../social-dynamics.js';
 import { financialReport } from "./finances.js";
 import { educationView, activityStatus, JOB_LABELS } from "./education.js";
 import { careView } from "./care.js";
@@ -41,6 +42,9 @@ export function personResources(d, p) {
       asset_id: p.asset_id,
       locationId: p.state.location_id,
     },
+    dynamics:dynamicsView(p,d.town),
+    currency:JSON.parse(d.town.world.rules||'{}').currency||'EUR',
+    workplace:p.profile.workplace_id?{id:p.profile.workplace_id,name:d.town.places.get(p.profile.workplace_id)?.name}:null,
     version: d.town.world.version,
     clock: d.town.world.seconds,
     date: calendarDate(d.town.world.seconds).toISOString(),
@@ -212,6 +216,9 @@ export function townResources(d, { simId = null, search = "" } = {}) {
     time = d.town.world.seconds,
     terms = String(search).toLowerCase();
   return {
+    dynamics:dynamicsView(p,d.town),
+    currency:JSON.parse(d.town.world.rules||'{}').currency||'EUR',
+    workplace:p.profile.workplace_id?{id:p.profile.workplace_id,name:d.town.places.get(p.profile.workplace_id)?.name}:null,
     version: d.town.world.version,
     clock: time,
     selectedSimId: p.id,

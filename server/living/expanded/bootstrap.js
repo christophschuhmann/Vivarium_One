@@ -100,6 +100,7 @@ const venues = {
   ],
 };
 export function addExpandedPlaces(town) {
+  const bennington=pj(town.world.rules,{}).scenario?.id==="bennington";
   const additions = [],
     city = [...town.places.values()].find((p) => p.kind === "city"),
     near =
@@ -136,7 +137,7 @@ export function addExpandedPlaces(town) {
       id,
       world_id: town.world.world_id,
       parent_id: parent,
-      name,
+      name:bennington?englishPlaceName(name):name,
       kind,
       purpose,
       affordances,
@@ -244,7 +245,7 @@ export function addExpandedPlaces(town) {
     bakery: "Café & Läden",
   })) {
     const b = [...town.places.values()].find(
-        (p) => p.kind === "building" && p.name === pattern,
+        (p) => p.kind === "building" && (p.id === town.world.world_id+"_l_"+({garden:"park",bakery:"cafe"}[key]||key) || p.name === pattern),
       ),
       main =
         b &&
@@ -775,7 +776,7 @@ export function initializeExpansion(town, { force = false } = {}) {
       employer = put(d, "firm", {
         name:
           { Police: "Polizeidienst", Mayor: "Stadtverwaltung" }[job] ||
-          job + " · Lindenstadt",
+          job + (pj(town.world.rules,{}).scenario?.id==="bennington"?" · Bennington":" · Lindenstadt"),
         role: job,
         workplaceId: venue.rooms[0],
         accountId: null,
@@ -877,7 +878,7 @@ export function initializeExpansion(town, { force = false } = {}) {
   // Actual staffed services, drawn from adults with explicitly initialized
   // qualifications. Old authored occupations are never silently rewritten.
   const procedural = town.people.filter(
-    (p) => p.age >= 18 && p.age < 66 && p.biography_mode === "procedural",
+    (p) => p.age >= 21 && p.age < 66 && p.profile.job !== "Student" && p.biography_mode === "procedural",
   );
   for (const role of ["Police", "Mayor", "Firefighter", "Nurse"]) {
     if (!procedural.length) break;
@@ -1122,3 +1123,5 @@ export function initializeExpansion(town, { force = false } = {}) {
     addedLocations: physical.additions.length,
   };
 }
+
+function englishPlaceName(name){const names={"Seniorenhaus Lindenblick":"Maple Haven Residential Care","Polizeiwache":"Bennington Community Police","Kontor am Markt":"Main Street Cooperative Offices","Handwerkshof":"Green Mountain Repair Works","Atelierhaus":"Willow Arts Studio","Stadtmarkt":"Benmont Community Market","Bewegungshaus":"Green Ridge Fitness","Stadtbad":"Community Pool","Lichtspielhaus":"Catamount Picture House","Brückenhaus":"Turning Leaf Shelter","Alter Güterhof":"Old Freight Yard · fictional","Beratungszentrum":"Willow Counseling & Coaching","Wiesenlager":"Riverside Temporary Camp","Haus der Chancen":"Bennington Career Center","Marktbogen":"Benmont Commons","Ringstraße":"Benmont Avenue","Wohnbereich":"Living area","Gemeinschaftsküche":"Shared kitchen","Pflegestützpunkt":"Care station","Bewohnerzimmer":"Resident room","Garten":"Garden","Empfang":"Reception","Einsatzbüro":"Operations office","Besprechung":"Meeting room","Arbeitsraum":"Workroom","Konferenzraum":"Conference room","Werkstatt":"Workshop","Materialraum":"Supplies","Gemeinschaftsatelier":"Shared studio","Projektraum":"Project room","Markthalle":"Market hall","Budgetmarkt":"Budget groceries","Feinkost":"Specialty groceries","Trainingsraum":"Training room","Kursraum":"Classroom","Schwimmhalle":"Pool hall","Umkleide":"Changing room","Kinosaal":"Screening room","Beratung":"Counseling room","Schlafraum":"Bedroom","Lagerhalle":"Warehouse","Industriehof":"Industrial yard","Seitenpassage":"Side passage","Gruppenraum":"Group room","Überdachter Treffpunkt":"Covered meeting place","Geschützte Schlafstelle":"Sheltered sleeping place","Stellenberatung":"Job advice","Lernwerkstatt":"Learning room","Toiletten":"Restrooms"};for(const [a,b] of Object.entries(names))name=name.replaceAll(a,b);return name;}

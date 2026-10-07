@@ -293,6 +293,7 @@ export function rumorExchange(d, a, b, event) {
   event.facts.heardClaim = { claimId: derived.id, unverified: true };
 }
 export function requestSupport(d, p, time, emit, { kind = "counseling" } = {}) {
+  if(!["counseling","therapy","coaching"].includes(kind))return {ok:false,reason:"Choose counseling, therapy or coaching."};
   if (p.age < 18)
     return {
       ok: false,
@@ -313,7 +314,8 @@ export function requestSupport(d, p, time, emit, { kind = "counseling" } = {}) {
         startedAt: time,
         nextAt: time + 3600,
         sessions: 0,
-        costPerSessionCents: 5500,
+        costPerSessionCents: kind==="coaching"?5000:5500,
+        payer:kind==="coaching"?"personal":"health_fund",
         sourceEventId: e.id,
         locationId: d.calendar.payload.venues.support.rooms[1],
       },
@@ -338,17 +340,19 @@ export function supportedCare(d, p, event, duration) {
       ["Nurse", "Physician"].includes(c.payload.job),
     ),
     cost = plan.payload.costPerSessionCents;
-  if (!staffed || balance(d, fundsOf(d).health) < cost) {
+  const payer=plan.payload.payer==="personal"?ownAccount(d,p):fundsOf(d).health;
+  if (!staffed || balance(d, payer) < cost) {
     event.facts.support = { waiting: true };
     return false;
   }
-  transfer(d, fundsOf(d).health, fundsOf(d).external, cost, {
+  transfer(d, payer, fundsOf(d).external, cost, {
     key: { kind: "care_session", eventId: event.id },
     at: event.end,
     eventId: event.id,
     kind: "funded_care",
   });
   plan.payload.sessions++;
+  if(p.state.socialDynamics){p.state.socialDynamics.communicationPractice=Math.min(.2,p.state.socialDynamics.communicationPractice+.008);if(plan.payload.kind==="coaching"){const five=p.state.psychology.big_five;five.conscientiousness=Math.min(.95,five.conscientiousness+.0005);}}
   plan.payload.nextAt = event.end + 3 * 86400;
   touch(d, plan);
   for (const s of Object.values(p.state.economy.health.substances)) {
@@ -369,6 +373,7 @@ export function supportedCare(d, p, event, duration) {
     session: plan.payload.sessions,
     costCents: cost,
     instantCure: false,
+    kind:plan.payload.kind,payer:plan.payload.payer||"health_fund",communicationPracticeGain:p.state.socialDynamics?.communicationPractice!=null?.008:0,
   };
   return true;
 }

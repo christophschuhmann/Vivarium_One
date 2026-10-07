@@ -63,6 +63,7 @@ const fields = {
 };
 export function initializeEducation(town) {
   const now = calendarDate(town.world.seconds);
+  const us=JSON.parse(town.world.rules||"{}").scenario?.id==="bennington";
   const place = (purpose) =>
     [...town.places.values()].find(
       (x) => x.kind === "building" && x.purpose.includes(purpose),
@@ -97,9 +98,9 @@ export function initializeEducation(town) {
       const entry = {
         id: p.id + "_edu_" + history.length,
         kind,
-        institution: institution?.name || "Bildungsstätte in Lindenstadt",
+        institution: institution?.name || (us?"Bennington learning center · fictional":"Bildungsstätte in Lindenstadt"),
         institutionId: institution?.id || null,
-        town: "Lindenstadt",
+        town: p.profile.locale==="en"?"Bennington, Vermont":"Lindenstadt",
         field: subject,
         startDate: start,
         endDate: end,
@@ -127,12 +128,12 @@ export function initializeEducation(town) {
         "Kindergartenzeit",
       );
     if (p.age >= 6)
-      stage("primary", 6, 10, school, "Grundbildung", "Grundschule");
-    if (p.age >= 10)
+      stage("primary", 6, us?11:10, school, "Grundbildung", "Grundschule");
+    if (p.age >= (us?11:10))
       stage(
         "secondary",
-        10,
-        p.age < 18
+        us?11:10,
+        us || p.age < 18
           ? 18
           : academic.has(role) || p.profile.job === "Student"
             ? 18
@@ -171,9 +172,9 @@ export function initializeEducation(town) {
     } else if (p.age >= 18 && p.profile.job !== "Student") {
       stage(
         "vocational",
-        16,
-        19,
-        { name: "Berufskolleg & Ausbildungsbetrieb Lindenstadt" },
+        us?18:16,
+        us?21:19,
+        { name: us?"Green Valley Technical Training · fictional":"Berufskolleg & Ausbildungsbetrieb Lindenstadt" },
         fields[skill] || "Berufliche Grundlagen",
         "Berufsausbildung",
         { skill },
@@ -191,12 +192,16 @@ export function initializeEducation(town) {
         entry.grade = null;
         entry.qualification = null;
       }
+    if(us){
+      const translated={"Spiel, Sprache & soziales Lernen":"Play, language and social learning","Kindergartenzeit":"Early learning","Grundbildung":"Elementary education","Grundschule":"Elementary school","Allgemeinbildung":"General education","Abitur":"High school diploma","Mittlerer Schulabschluss":"High school diploma","Medizin":"Medicine","Medizinstudium":"Medical degree","Studium & wissenschaftliche Qualifikation":"Degree and research qualification","Hochschulabschluss":"College degree","Weiterführendes Fachstudium":"Graduate study","Weiterführender Hochschulabschluss":"Graduate degree","Berufliche Grundlagen":"Vocational foundations","Berufsausbildung":"Vocational qualification","Pädagogik":"Education","Informatik & Analyse":"Computing and analysis","Pflege & Gesundheit":"Health and care","Gestaltung & Handwerk":"Design and skilled trades","Handel":"Retail","Öffentliche Verwaltung":"Public administration","Sicherheit & Gefahrenabwehr":"Public safety","Gastronomie":"Hospitality","Lebensmittel & Küche":"Culinary arts","Gartenbau":"Horticulture","Sport":"Sports","Musik":"Music"};
+      for(const entry of history){for(const key of ['field','qualification','plannedQualification'])if(entry[key])entry[key]=translated[entry[key]]||entry[key];if(entry.grade!=null)entry.grade=Math.round((5-entry.grade)*10)/10;entry.gradeScale='GPA 0–4 (game approximation)';}
+    }
     p.profile.education = {
       version: 1,
       history,
       currentId: current?.id || null,
       origin: "procedural_biographical_supplement",
-      credentialsNote:
+      credentialsNote: us?"Qualifications are fictional background records, not verification of attendance at a real institution. Observed study and new credentials require actual learning and time.":
         "Vorhandene Berufsnachweise werden separat geführt; eine ergänzte Biografie erteilt keine neue Zulassung.",
     };
     p.state.education = { studyHours: 0, attendanceDays: [], lastDay: null };
@@ -254,6 +259,7 @@ export function activityStatus(p, town = null) {
     kind = "employed";
     label = JOB_LABELS[p.profile.job] || p.profile.job;
   }
+  if(p.profile.locale==='en')label=({residential_care:'Retirement · residential care',home_care:'Retirement · care at home',early_care:'Early childhood care',kindergarten:'Early learning',school:'School',parental_care:'Parental caregiving leave',study:'College or vocational study',retired:'Retired',unemployed:'Looking for work',employed:p.profile.job})[kind]||label;
   return {
     kind,
     label,
@@ -340,7 +346,9 @@ export function educationDaily(d, time, emit) {
               Math.min(1, p.state.skills[c.skill || "analysis"] || 0.3) * 2.8) *
               10,
           ) / 10;
+    if(p.profile.locale==="en"&&c.grade!=null){c.grade=Math.round((5-c.grade)*10)/10;c.gradeScale="GPA 0–4 (game approximation)";}
     ev.description = `${p.name} schließt nach tatsächlich dokumentiertem Lernen ${c.field} an ${c.institution} ab. ${c.grade == null ? "Ohne Schulnote." : "Ergebnis: " + c.grade + "."}`;
+    if(c.kind==="secondary"&&p.age>=18&&!d.contracts.has(p.id)){p.profile.job="Unemployed";p.profile.workplace_id=null;}
     if (["university", "vocational"].includes(c.kind)) {
       p.state.credentials.push("degree:" + c.field);
       if (p.profile.job === "Student") {
@@ -348,6 +356,7 @@ export function educationDaily(d, time, emit) {
         p.profile.workplace_id = null;
       }
     }
+    if(p.profile.locale==="en")ev.description=`${p.name} completes ${c.field} at ${c.institution} after recorded learning. ${c.grade==null?"No grade assigned.":"Result: "+c.grade+" (GPA approximation)."}`;
     p.profile.education.currentId = null;
     // A real completed school stage opens the next dated enrollment; it does
     // not retroactively award years of attendance or a professional license.
@@ -367,8 +376,8 @@ export function educationDaily(d, time, emit) {
         kind: nextKind,
         institution: institution?.name || c.institution,
         institutionId: institution?.id || null,
-        town: "Lindenstadt",
-        field: nextKind === "primary" ? "Grundbildung" : "Allgemeinbildung",
+        town: p.profile.locale==="en"?"Bennington, Vermont":"Lindenstadt",
+        field: p.profile.locale==="en"?(nextKind==="primary"?"Elementary education":"General education"):(nextKind === "primary" ? "Grundbildung" : "Allgemeinbildung"),
         startDate: startYear + "-09-01",
         endDate: startYear + (nextKind === "primary" ? 4 : 8) + "-07-31",
         status: "enrolled",

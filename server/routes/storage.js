@@ -8,6 +8,7 @@ import { requireUser, requireVerified, requireAdmin, httpErr } from '../auth.js'
 import { assetPath, saveAsset } from '../assets.js';
 import { buildWorldManifest, assetIdsIn } from '../world_io.js';
 import { MUSIC_API } from '../music_client.js';
+import {assetRoot,catalogStats} from '../living/asset-catalog.js';
 
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 export const musicDirectory=()=>process.env.MUSIC_DATA_DIR || path.join(DATA_DIR,'music-library');
@@ -84,6 +85,7 @@ export default async function storageRoutes(app) {
       projects:{count:worlds.length,bytes:worlds.reduce((n,w)=>n+w.projectBytes,0)},
       music:{...music,...library,canManage:sharedAllowed(req,user),readOnly:process.env.MUSIC_READ_ONLY==='1',managed:!!process.env.MUSIC_CONTROL_TOKEN&&process.env.MUSIC_READ_ONLY!=='1'},
       assetLibrary:directoryBytes(process.env.VIV_LIVING_LIBRARY || path.join(ROOT,'assets/living-world-library')),
+      hfLibrary:{...directoryBytes(assetRoot),...catalogStats(),cache:directoryBytes(path.join(assetRoot,'cache'))},
       database:{bytes:fs.statSync(path.join(DATA_DIR,'vivarium.db')).size},
       volume:{totalBytes:volume.blocks*volume.bsize,freeBytes:volume.bavail*volume.bsize},
       note:'Scenario media totals can overlap for older shared branches. Account asset totals count each file once.'};

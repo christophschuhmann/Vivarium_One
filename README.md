@@ -4,7 +4,57 @@ Vivarium is a browser-based life simulation and visual-novel sandbox. Create an 
 
 The default local installation runs on **your own HyprLab or OpenRouter API key**. You only need **one** of those accounts. You do not need an admin login or Vivarium credits. Provider charges still apply to your own provider account.
 
-[Expanded town: implementation, usage and measurements](docs/living-world-expanded.html) · [Full architecture documentation](docs/DOCUMENTATION.md) · [Design log](plan/implementation-plan.html) · [Living World implementation plan](living-world-implementierungsplan.html) · [Implemented Living World, measurements and roadmap](docs/living-world.html)
+[Bennington engine makeover: plan and delivery](docs/bennington-engine-makeover.html) · [Expanded town: implementation, usage and measurements](docs/living-world-expanded.html) · [Full architecture documentation](docs/DOCUMENTATION.md) · [Design log](plan/implementation-plan.html) · [Living World implementation plan](living-world-implementierungsplan.html) · [Implemented Living World, measurements and roadmap](docs/living-world.html)
+
+
+## Bennington and the minute engine
+
+Start **Living World → New town** for a fictional Bennington, Vermont scenario. Choose 10–100 residents for an experiment, 1,000 for a populated town, or up to 2,000. Existing saves keep their residents, currency and history. Streets and selected public institutions are researched; people, private businesses, households and story events are fictional. The age-cohort targets come from [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/benningtontownbenningtoncountyvermont/RHI125224). This is a stylized graph, not a parcel-accurate street map. The game economy uses dollars here and retains Vivarium's simplified tax/care policy; it does not reproduce Vermont legislation or actual salaries.
+
+In a Living World, **one tick is always one minute**. Choosing an hour executes 60 of those ticks, and a day executes 1,440. Need changes, journeys, task progress, available contacts and interruptions are checked every minute. Research, reading, creative work and study retain their progress when an accepted conversation or urgent need interrupts them. A conversation occupies both participants until it ends or is interrupted. No minute is skipped simply because the Sim has no anchor.
+
+**Anchors & simulation → Storyteller** controls model narration. With it off, the whole town still runs locally without paid model calls. With it on, real events are narrated at intervals of up to five minutes for anchored characters/places and their actual contacts. Model intentions affect future actions, while committed physical facts and transactions stay fixed. A day with the Storyteller enabled may therefore require many model calls. CPU-only advances save at intervals of up to 60 minutes; narrated advances save each scene interval. Cancel preserves completed intervals and discards only the unfinished one; the scene reloads to the saved clock.
+
+**Turbo** is in the Play anchor toolbar. Open it, choose 1 hour, 6 hours, 1 day, 3 days, a week, 30 days or 365 days, and press **Start Turbo**. The dialog explicitly explains that anchored Sims also use procedural rules during this run. Their anchors are preserved. The job runs in a background worker, shows saved progress and an estimate after the first hour, and continues if you close the dialog or browser. **Stop Turbo** retains completed hourly checkpoints. Restarting the server marks the run interrupted; it never silently resumes a year of computation. The same world cannot be edited or advanced concurrently. Up to two independent worlds can have workers; a single world's minute interactions remain causally ordered.
+
+**Life progression** uses dated birthdays. Children enter age-appropriate schooling; becoming 18 does not award a degree or a job, and actual study requirements still apply. The game currently retires regular workers at 66, a configurable-design assumption rather than Vermont law. Jobs can change after applications, financial pressure, layoffs or a sustained ambition for a better fit. Reciprocal adult interest can develop into dating; sustained severe conflict can end a partnership or marriage. Shared housing, parenting, property, debt and sexual consent stay separate from the relationship decision. Moving out requires an independent budget and accepted housing application. Shared funds and children's savings are not silently taken. Existing housing rules handle rent arrears, applications, relocation and funded shelter. **My daily life → Life changes** shows recent major transitions, with the full record in the journal.
+
+**Personal journal:** open a Sim from Play or Cast, then Journal. Entries record starts, arrivals, interruptions and causes, resumptions, completions and social outcomes, with the Sim's own interpretation. Event metadata retains their needs and feelings at the event. Empty minutes produce no journal entry. A task completion that also completes a personal ambition records that achievement. Initial biography is labeled as initialized background, not as witnessed history.
+
+**Town life → My daily life** shows needs, attributes, current activity progress, paused tasks, Big Five, ambition, cooperation and shared goals with known contacts. Contact choice considers local opportunities, extraversion, relationships and shared interests. Accepted plans can create a real journey/activity. Responses to good news may be active/passive and constructive/destructive; actual responses affect relationships and PERMA. Attraction is adult-only, uses individual preferences, and does not substitute for consent. **Social perspective** explains plausible interpretations, contrary possibilities, the Sim's own emotional lens and what remains unknown.
+
+**Work & education** links directly to the actual workplace scene. **Finances** shows household income class alongside the calculation: expected monthly household net income / square root of household size, relative to the displayed game reference. Wealth, debt, cash reserves and reputation remain separate. Coaching/counseling has an explanatory booking dialog; improvements require attendance, time, available service resources and payment through the appropriate account. Research-linked **i** cards explain shared goals, response styles, Big Five, PERMA, income comparisons and action consequences.
+
+English is the default for UI labels, new core procedural narration, social interpretations and Storyteller output. Existing histories retain their wording; some inherited detailed economy catalog descriptions remain German. The language menu can enable local translation of older passages when the browser provides its Translator API. There is no automatic upload of private Sim journals to an unrelated free translation service.
+
+### Install or update the HF image libraries
+
+The two public datasets are optional. The measured snapshot contains 12,943 indexed images (1,693 backgrounds and 11,250 character variants across 740 identities), about 15.8 GB in original shards. Setup installs Pillow and NumPy for transparent character matting. No image-generation API calls are needed to reuse these assets.
+
+```bash
+npm run assets:sync
+```
+
+By default, shards, `catalog.sqlite` and the lazy `cache/` live in `data/hf-asset-library`. To share the download between installations, set `VIV_ASSET_LIBRARY=/absolute/path/to/hf-asset-library` in `.env` before syncing. `VIV_PYTHON_BIN` can point to an existing Python environment with Pillow and NumPy; otherwise `.venv/bin/python` is used when available. Run the same command again as the repositories grow. It pins each source revision, verifies file sizes and hashes, skips verified unchanged files and atomically replaces the FTS5 index. A failed sync/index leaves the previous catalog in place. Original shards are never expanded into thousands of full image files.
+
+Open **Cast → Image library** to search captions with BM25, filter characters by age, gender, heritage, outfit style or expression, and exclude identities already used in the current town. A page displays at most 24 results. Prompts, source revision and license provenance are retained; character expression changes use a compatible variant of the same identity when one exists, otherwise the current outfit stays. Greenscreen removal happens on demand and is cached. Upstream age/release checks are applied before a minor's image can enter the catalog; 100 unverified variants were withheld in this snapshot.
+
+Scenario ZIP exports materialize and include their referenced artwork, including transparent sprites, with provenance and license text. They do not include the entire shared image collection. ZIP downloads stream from disk. Clear the derived cache only when the server is stopped; it can be recreated from the original shards. Keep those shards and `source-tree.json` together when moving the library.
+
+```bash
+npm run test:minute-engine
+npm run test:expanded-regressions
+npm run test:turbo
+npm run test:progression
+npm run audit:life
+VIV_ASSET_LIBRARY=/path/to/hf-asset-library npm run test:hf-assets
+VIV_ASSET_LIBRARY=/path/to/hf-asset-library npm run test:bennington-browser
+VIV_ASSET_LIBRARY=/path/to/hf-asset-library npm run benchmark:bennington
+```
+
+The browser tests use isolated databases and no paid calls. Install Chromium with `npx playwright install chromium`. Reports and screenshots are in `artifacts/expanded-world/`. One-hour versus sixty-single-minute equivalence, full-day runs, worker cancellation and targeted life-transition fixtures are separate checks. [The multiday review](docs/bennington-life-audit.html) contains representative personal journals, including children, teenagers and older adults. Larger population measurements are recorded separately; they are not evidence for a 10,000-Sim or million-resident city. Current API/UI limit: 2,000 Sims.
+
+Performance and storage are measured, not guaranteed: full-day tests are saved in `artifacts/expanded-world/bennington-*-day*.json` and `bennington-day-*.json`. Long runs retain every meaningful personal event and can accumulate substantial history. A year has 525,600 ticks; the month/year controls do not imply that these runs finish instantly or use little disk space. Further scaling needs partitioned persistent history and carefully synchronized neighborhood workers, not just more browser thumbnails. A million-resident city and a complete year at 2,000 Sims have not been validated.
 
 ## Install locally
 

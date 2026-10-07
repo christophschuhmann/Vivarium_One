@@ -34,7 +34,15 @@
     "benchmark:expanded": "node scripts/benchmark-living.mjs",
     "test:expanded-regressions": "node scripts/test-expanded-regressions.mjs",
     "test:finance-care": "node scripts/test-finance-education-care.mjs",
-    "test:finance-care-browser": "node scripts/test-finance-care-browser.mjs"
+    "test:finance-care-browser": "node scripts/test-finance-care-browser.mjs",
+    "test:minute-engine": "node scripts/test-minute-engine.mjs && node scripts/test-minute-equivalence.mjs",
+    "benchmark:bennington": "node scripts/benchmark-bennington.mjs",
+    "assets:sync": "node scripts/setup-hf-assets.mjs",
+    "test:bennington-browser": "node scripts/test-bennington-browser.mjs",
+    "test:hf-assets": "node scripts/test-hf-assets.mjs",
+    "test:turbo": "node scripts/test-turbo.mjs",
+    "test:progression": "node scripts/test-progression.mjs",
+    "audit:life": "node scripts/audit-bennington-life.mjs"
   },
   "license": "MIT",
   "dependencies": {

@@ -1,3 +1,4 @@
+import {catalogSearch,cachedAssetFile,externalLibraryEntries,catalogStats} from './asset-catalog.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -16,6 +17,8 @@ export function library() {
 }
 const words=text=>String(text || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
 export function searchAssets(query,{kind='background',age,gender,heritage,limit=5}={}) {
+  const external=catalogSearch(query,{kind,age,gender,heritage,emotion:kind==='character'?'neutral':undefined,limit});
+  if(external.length)return external;
   const docs=library().filter(e=>e.kind===kind && (kind!=='character'||(e.gender===gender && age>=e.age_range_years?.[0] && age<=e.age_range_years?.[1] && e.sfw===true)));
   const tokens=[...new Set(words(query))],counts=new Map(),rows=docs.map(e=>{const w=words([e.title,e.caption?.en,e.caption?.de,...e.tags || []].join(' ')),tf=new Map();for(const token of w)tf.set(token,(tf.get(token)||0)+1);for(const token of tf.keys())counts.set(token,(counts.get(token)||0)+1);return {e,tf,length:w.length};});
   const avg=rows.reduce((n,r)=>n+r.length,0)/(rows.length||1);
@@ -23,6 +26,7 @@ export function searchAssets(query,{kind='background',age,gender,heritage,limit=
     score:tokens.reduce((n,t)=>{const f=tf.get(t)||0,df=counts.get(t)||0;return n+Math.log(1+(rows.length-df+.5)/(df+.5))*f*2.2/(f+1.2*(.25+.75*length/(avg||1)));},0)+(heritage&&e.heritage===heritage?5:0)})).sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id)).slice(0,Math.max(1,Math.min(5,limit)));
 }
 export function assetFile(id,variant='preview') {
+  const cached=cachedAssetFile(id,variant);if(cached)return cached;
   const entry=library().find(e=>e.id===id);if(!entry)return null;
   if(entry.bundled){const relative=variant==='sprite'?entry.bundledSprite:entry.file;if(!relative)return null;const base=path.join(root,'assets'),file=path.resolve(base,relative);return file.startsWith(base+path.sep)&&fs.existsSync(file)?file:null;}
   const imported=path.join(DATA_DIR,'living-imports',entry.id+'--'+variant+'.png');if(entry.imported&&fs.existsSync(imported))return imported;
@@ -34,9 +38,9 @@ export function assetFile(id,variant='preview') {
   if(!filename.startsWith(libraryRoot+path.sep)||!fs.existsSync(filename))return null;
   return filename;
 }
-export function libraryDigest(){return createHash('sha256').update(JSON.stringify(library().map(e=>[e.id,e.sha256]))).digest('hex');}
+export function libraryDigest(){return createHash('sha256').update(JSON.stringify({local:library().map(e=>[e.id,e.sha256]),external:catalogStats().sources})).digest('hex');}
 
-export function libraryBundle(ids){return library().filter(e=>ids.has(e.id)).map(({imported,...e})=>({...e,bundleVariants:['full','preview',...(e.kind==='character'?['sprite']:[])].filter(v=>assetFile(e.id,v))}));}
+export function libraryBundle(ids){return [...new Map(library().filter(e=>ids.has(e.id)).concat(externalLibraryEntries(ids)).map(e=>[e.id,e])).values()].map(({imported,...e})=>({...e,bundleVariants:['full','preview',...(e.kind==='character'?['sprite']:[])].filter(v=>assetFile(e.id,v))}));}
 export function copyLibraryBundle(entries,directory){fs.mkdirSync(directory,{recursive:true});for(const e of entries)for(const variant of e.bundleVariants){const source=assetFile(e.id,variant);if(source)fs.copyFileSync(source,path.join(directory,'lw-'+e.id+'--'+variant+'.png'));}}
 export function restoreLibraryBundle(entries,directory){if(!directory)return;const target=path.join(DATA_DIR,'living-imports');fs.mkdirSync(target,{recursive:true});const manifest=path.join(target,'manifest.json'),previous=fs.existsSync(manifest)?JSON.parse(fs.readFileSync(manifest)).entries:[];const combined=new Map(previous.map(e=>[e.id,e]));for(const e of entries){if(!/^[a-zA-Z0-9_-]{1,160}$/.test(e.id))throw new Error('Invalid library ID in bundle');for(const v of e.bundleVariants || [])if(['full','preview','sprite'].includes(v)){const source=path.join(directory,'lw-'+e.id+'--'+v+'.png');if(fs.existsSync(source))fs.copyFileSync(source,path.join(target,e.id+'--'+v+'.png'));}combined.set(e.id,e);}fs.writeFileSync(manifest,JSON.stringify({entries:[...combined.values()]}));entriesCacheReset();}
 function entriesCacheReset(){entries=undefined;}

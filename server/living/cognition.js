@@ -11,12 +11,12 @@ const labels=new Map(taxonomy.emotions.map(e=>[e.id,e]));
 const forbidden=new Set(['intoxication_altered_states_of_consciousness','pleasure_ecstasy','malevolence_malice']);
 const clamp=n=>Math.max(0,Math.min(1,n));
 const hobbyActions={reading:['read','leisure_read_for_fun'],cooking:['leisure_cook_for_fun','leisure_bake_treats'],walking:['stroll','leisure_go_for_walk','leisure_hike'],craft:['creative_hobby','leisure_craft_project','leisure_paint'],gardening:['garden','leisure_garden'],socializing:['community_meet','leisure_make_friends','leisure_board_games'],music:['leisure_play_instrument','leisure_see_live_music']};
-const titles={create:'Etwas Eigenes gestalten',mastery:'Fähigkeiten verlässlich ausbauen',community:'Verbindungen in der Nachbarschaft pflegen',care:'Für vertraute Menschen da sein',stability:'Einen verlässlichen Alltag finden',career:'Im Beruf dazulernen',learning:'Lernen und Freundschaften aufbauen',hobby:'Zeit für mein Interesse finden'};
+const titles={create:'Create something of my own',mastery:'Build skills through regular practice',community:'Nurture neighborhood connections',care:'Be there for the people I care about',stability:'Build a dependable daily life',career:'Grow in my work',learning:'Learn and build friendships',hobby:'Make time for my interests'};
 export function prepareMind(p,time,{seed=73,newLife=false}={}){
   normalizeRomance(p,{seed});
   const s=p.state,psych=s.psychology;psych.ambitions||=[];
   for(const a of psych.ambitions){
-    a.title_de ||= p.age<3?'Sicherheit finden und spielerisch entdecken':titles[a.kind]||a.title;
+    a.title_de ||= p.age<3?'Feel secure and explore through play':titles[a.kind]||a.title;
     a.progress=clamp(Number(a.progress)||0);a.target_seconds ||= 40*3600;
     if(newLife&&p.age>=6&&a.progress===0){a.progress=Number((.05+rng(seed+':goal:'+p.seed_key+':'+a.id)()*.25).toFixed(3));a.initial_progress=a.progress;a.progress_source='initialized_background';}
     a.practice_seconds ||= 0;
@@ -28,9 +28,9 @@ export function dailyGoals(p,time){
   const day=Math.floor(time/86400),s=p.state;if(s.daily_goals?.day===day)return s.daily_goals.items;
   const interest=p.profile.interests?.[0]||'reading';
   s.daily_goals={day,items:[
-    {id:'daily_care',kind:'selfcare',title:p.age<3?'Versorgt sein und Ruhe finden':'Mich heute gut versorgen',target:2,value:0,unit:'Handlungen'},
-    {id:'daily_practice',kind:p.age<3?'explore':p.age<18?'learning':p.profile.job==='Retired'?'hobby':'career',title:p.age<3?'In Geborgenheit etwas entdecken':p.age<18?'Heute etwas lernen':p.profile.job==='Retired'?'Meinem Interesse nachgehen':'Eine Aufgabe bei der Arbeit voranbringen',target:15*60,value:0,unit:'Sekunden',interest},
-    {id:'daily_connection',kind:'connection',title:p.age<3?'Nähe zu meinen Bezugspersonen erleben':'Einen guten Moment mit jemandem teilen',target:1,value:0,unit:'Begegnungen'}
+    {id:'daily_care',kind:'selfcare',title:p.age<3?'Be cared for and find rest':'Take good care of myself today',target:2,value:0,unit:'actions'},
+    {id:'daily_practice',kind:p.age<3?'explore':p.age<18?'learning':p.profile.job==='Retired'?'hobby':'career',title:p.age<3?'Explore while feeling safe':p.age<18?'Learn something today':p.profile.job==='Retired'?'Spend time on an interest':'Make progress on a task at work',target:15*60,value:0,unit:'seconds',interest},
+    {id:'daily_connection',kind:'connection',title:p.age<3?'Feel close to my caregivers':'Share a good moment with someone',target:1,value:0,unit:'encounters'}
   ]};return s.daily_goals.items;
 }
 export function rebuildAffect(p,time){
@@ -38,7 +38,7 @@ export function rebuildAffect(p,time){
   for(const e of states){e.intensity=Math.max(...e.components.map(c=>c.intensity));e.causes=e.components.map(c=>c.cause);e.expires_at=Math.max(...e.components.map(c=>c.expires_at));}
   states.sort((a,b)=>b.intensity-a.intensity);
   p.state.affect={schema_version:2,taxonomy_id:taxonomy.taxonomy_id,states,primary:states[0]?.id||null,updated_at:time};
-  p.state.mood=states[0]?.label_de||'ruhig';
+  p.state.mood=states[0]?.label||'calm';
 }
 export function addFeeling(p,id,intensity,time,cause,{ttl=900,key}={}){
   if(!labels.has(id)||forbidden.has(id)||id==='sexual_lust'&&(p.age<18||(p.state.needs.romantic_affection||0)<ROMANCE_POLICY.romantic_need.adult_desire_threshold)||p.age<14&&id==='infatuation'||!Number.isFinite(intensity)||intensity<=0)return false;
@@ -55,20 +55,20 @@ export function evaluateMind(p,time,catalog){
   for(const e of s.affect?.states||[])e.components=(e.components||[]).filter(c=>c.source!=='need'&&!c.key?.startsWith('current:'));
   rebuildAffect(p,time);
   const bodily=[['bladder',.55],['hunger',.55],['thirst',.55],['hygiene',.65],['comfort',.65]];
-  for(const [key,threshold] of bodily)if(n[key]>=threshold)addFeeling(p,'distress',.2+(n[key]-threshold)*1.3,time,{kind:'modeled_need',need:key,text:'Aktuell dringendes Bedürfnis: '+key,evidence_id:null},{key:'current:need:'+key,ttl:120});
-  if(n.fatigue>.4)addFeeling(p,'fatigue_exhaustion',.16+(n.fatigue-.4)*1.3,time,{kind:'modeled_need',need:'fatigue',text:'Der gegenwärtige Zustand ist ermüdend.'},{key:'current:fatigue',ttl:120});
-  if(n.social>.55)addFeeling(p,'longing',.18+(n.social-.55)*1.2,time,{kind:'modeled_need',need:'social',text:'Wünscht sich soziale Wärme.'},{key:'current:social',ttl:120});
-  if(p.age>=14&&n.romantic_affection>(p.age<18?.2:.5))addFeeling(p,'longing',Math.min(p.age<18?.35:.65,n.romantic_affection*.6),time,{kind:'modeled_need',need:'romantic_affection',text:p.age<18?'Wünscht sich ein nettes, altersnahes Gespräch oder ein harmloses Date.':'Wünscht sich freiwillige romantische Nähe.'},{key:'current:romantic',ttl:120});
-  if(p.age>=18&&n.romantic_affection>=ROMANCE_POLICY.romantic_need.adult_desire_threshold)addFeeling(p,'sexual_lust',Math.min(.7,n.romantic_affection*.65),time,{kind:'modeled_need',need:'romantic_affection',text:'Erwachsenes Begehren; jede Annäherung braucht eigenständige Zustimmung.'},{key:'current:adult-desire',ttl:120});
-  if(n.fun>.65)addFeeling(p,'impatience_and_irritability',.16+(n.fun-.65)*.8,time,{kind:'modeled_need',need:'fun',text:'Braucht Abwechslung.'},{key:'current:fun',ttl:120});
+  for(const [key,threshold] of bodily)if(n[key]>=threshold)addFeeling(p,'distress',.2+(n[key]-threshold)*1.3,time,{kind:'modeled_need',need:key,text:'A current unmet need: '+key,evidence_id:null},{key:'current:need:'+key,ttl:120});
+  if(n.fatigue>.4)addFeeling(p,'fatigue_exhaustion',.16+(n.fatigue-.4)*1.3,time,{kind:'modeled_need',need:'fatigue',text:'The present situation is tiring.'},{key:'current:fatigue',ttl:120});
+  if(n.social>.55)addFeeling(p,'longing',.18+(n.social-.55)*1.2,time,{kind:'modeled_need',need:'social',text:'Longs for social warmth.'},{key:'current:social',ttl:120});
+  if(p.age>=14&&n.romantic_affection>(p.age<18?.2:.5))addFeeling(p,'longing',Math.min(p.age<18?.35:.65,n.romantic_affection*.6),time,{kind:'modeled_need',need:'romantic_affection',text:p.age<18?'Hopes for a kind conversation or innocent date with a peer close in age.':'Longs for freely chosen romantic closeness.'},{key:'current:romantic',ttl:120});
+  if(p.age>=18&&n.romantic_affection>=ROMANCE_POLICY.romantic_need.adult_desire_threshold)addFeeling(p,'sexual_lust',Math.min(.7,n.romantic_affection*.65),time,{kind:'modeled_need',need:'romantic_affection',text:'Adult desire; every approach requires freely given consent.'},{key:'current:adult-desire',ttl:120});
+  if(n.fun>.65)addFeeling(p,'impatience_and_irritability',.16+(n.fun-.65)*.8,time,{kind:'modeled_need',need:'fun',text:'Needs a change of pace.'},{key:'current:fun',ttl:120});
   const kind=s.action?.kind,doing=activity(kind,catalog);
   if(kind&&!['wait','toilet','shower','sleep'].includes(kind))addFeeling(p,['work','school_day','kindergarten_day'].includes(kind)?'concentration':'interest',.22+Math.min(.18,(s.psychology.big_five.openness||.5)*.2),time,{kind:'ongoing_activity',text:doing,category:kind,evidence_id:s.action?.event_id||null},{key:'current:activity',ttl:120});
-  if(Math.max(...Object.values(n))<.55)addFeeling(p,'contentment',.2+(1-Math.max(...Object.values(n)))*.15,time,{kind:'current_state',text:'Die gegenwärtigen Bedürfnisse sind ausreichend versorgt.'},{key:'current:contentment',ttl:120});
-  if(!s.affect.states.length)addFeeling(p,'contemplation',.2,time,{kind:'current_state',text:s.route?'Orientiert sich auf dem Weg zum nächsten Vorhaben.':'Überlegt den nächsten Schritt.'},{key:'current:contemplation',ttl:120});
-  const urgent=Object.entries(n).sort((a,b)=>b[1]-a[1])[0],phrases={bladder:'Ich sollte bald zur Toilette gehen.',hunger:'Ich bin hungrig und möchte etwas essen.',thirst:'Ich brauche etwas zu trinken.',fatigue:'Ich bin müde und brauche Ruhe.',social:'Ich wünsche mir soziale Wärme und einen vertrauten Kontakt.',romantic_affection:'Ich wünsche mir freiwillige romantische Nähe; die andere Person entscheidet frei.',fun:'Ich brauche etwas Abwechslung.',hygiene:'Ich möchte mich frisch machen.',comfort:'Ich brauche eine angenehmere Pause.'};
-  s.current_desire=urgent?.[1]>.55?phrases[urgent[0]]:s.goal?.reason||p.profile.social?.wish||'Ich möchte meinem nächsten Vorhaben nachgehen.';
+  if(Math.max(...Object.values(n))<.55)addFeeling(p,'contentment',.2+(1-Math.max(...Object.values(n)))*.15,time,{kind:'current_state',text:'Current needs are adequately met.'},{key:'current:contentment',ttl:120});
+  if(!s.affect.states.length)addFeeling(p,'contemplation',.2,time,{kind:'current_state',text:s.route?'Finding my bearings on the way to my next activity.':'Considering my next step.'},{key:'current:contemplation',ttl:120});
+  const urgent=Object.entries(n).sort((a,b)=>b[1]-a[1])[0],phrases={bladder:'I should find a bathroom soon.',hunger:'I feel hungry and would like something to eat.',thirst:'I need something to drink.',fatigue:'I feel tired and need rest.',social:'I want some social warmth and a familiar connection.',romantic_affection:'I long for mutual romantic closeness; the other person is free to choose.',fun:'I need a change of pace.',hygiene:'I would like to freshen up.',comfort:'I need a more comfortable break.'};
+  s.current_desire=urgent?.[1]>.55?phrases[urgent[0]]:s.goal?.reason||p.profile.social?.wish||'I want to work on my next intention.';
   if(urgent?.[1]>.7)proceduralThought(p,s.current_desire,time);
-  s.affect.actual_narrative=s.affect.states.map(e=>e.label_de+' '+Math.round(e.intensity*100)+'%').join(' · ');
+  s.affect.actual_narrative=s.affect.states.map(e=>e.label+' '+Math.round(e.intensity*100)+'%').join(' · ');
   s.affect.self_narrative=s.current_desire;
   dailyGoals(p,time);projectWellbeing(p,time);
 }
@@ -98,8 +98,8 @@ export function motivationBias(p,kind){
 }
 function advanceAmbition(p,a,amount,time,event){
   if(a.completed)return;const before=a.progress||0;a.practice_seconds=(a.practice_seconds||0)+amount;a.progress=clamp(before+amount/(a.target_seconds||144000));a.updated_at=time;a.last_evidence_id=event.id;
-  if(a.progress>=1){a.completed=true;addFeeling(p,'pride',.65,time,{kind:'goal_completed',text:a.title_de||a.title,evidence_id:event.id});}
-  else if(amount>0)addFeeling(p,'hope_enthusiasm_optimism',.28,time,{kind:'goal_progress',text:'Ein tatsächlicher Schritt zu: '+(a.title_de||a.title),evidence_id:event.id});
+  if(a.progress>=1){a.completed=true;(event.facts.completedGoals||=[]).push({simId:p.id,id:a.id,title:a.title_de||a.title});event.description+=' '+p.name+' reaches a personal goal: '+(a.title_de||a.title)+'.';addFeeling(p,'pride',.65,time,{kind:'goal_completed',text:a.title_de||a.title,evidence_id:event.id});}
+  else if(amount>0)addFeeling(p,'hope_enthusiasm_optimism',.28,time,{kind:'goal_progress',text:'A real step toward: '+(a.title_de||a.title),evidence_id:event.id});
 }
 export function completedActivity(p,event,duration,relief,time){
   const kind=event.facts.professionalWork?'work':event.facts.action,seconds=Math.max(0,Math.min(8*3600,duration)),beforeProgress=p.state.psychology.ambitions.reduce((n,a)=>n+(a.progress||0),0);
@@ -108,7 +108,7 @@ export function completedActivity(p,event,duration,relief,time){
     const gain=g.kind==='selfcare'&&['eat','drink','shower','toilet','sleep'].includes(kind)?1:g.kind==='career'&&kind==='work'?seconds:g.kind==='learning'&&['school_day','kindergarten_day','read','leisure_expanded_training','leisure_market_course','leisure_market_library'].includes(kind)?seconds:g.kind==='hobby'&&(hobbyActions[g.interest]||[]).includes(kind)?seconds:g.kind==='explore'&&['relax','eat'].includes(kind)?seconds:0;
     const was=g.value;g.value=Math.min(g.target,g.value+gain);if(gain){g.last_evidence_id=event.id;if(was<g.target&&g.value>=g.target)addFeeling(p,'pride',.38,time,{kind:'daily_goal_completed',text:g.title,evidence_id:event.id});}
   }
-  if(Math.max(0,...Object.values(relief))>.03)addFeeling(p,'relief',Math.min(.6,.25+Math.max(...Object.values(relief))*.3),time,{kind:'need_relief',text:'Ein tatsächliches Bedürfnis ist nach '+kind+' geringer.',relief,evidence_id:event.id});
+  if(Math.max(0,...Object.values(relief))>.03)addFeeling(p,'relief',Math.min(.6,.25+Math.max(...Object.values(relief))*.3),time,{kind:'need_relief',text:'A real unmet need has eased after '+kind+'.',relief,evidence_id:event.id});
   event.facts.goalProgress=p.state.psychology.ambitions.filter(a=>a.last_evidence_id===event.id).map(a=>({id:a.id,progress:a.progress}));
   const perma=activityWellbeing(p,event,seconds,p.state.psychology.ambitions.reduce((n,a)=>n+(a.progress||0),0)-beforeProgress,time);if(perma)(event.facts.wellbeingEffects||={})[p.id]=perma;
 }
@@ -130,7 +130,7 @@ export function romanticWitness(p,event,people,time){
   const partner=p.profile.family?.partner_id;if(!partner||!event.participants.includes(partner)||event.participants.some(id=>people.get(id)?.age<18))return null;
   normalizeRomance(p);if(p.state.needs.romantic_affection<ROMANCE_POLICY.romantic_need.adult_desire_threshold)return null;
   const trust=p.relations[partner]?.trust||.35,intensity=Math.min(.55,.12+p.state.needs.romantic_affection*.25+(1-trust)*.12);
-  const text='Der beobachtete Austausch macht mich unsicher. Ich wünsche mir romantische Nähe, kenne aber die privaten Absichten nicht und möchte ruhig nachfragen.';
+  const text='The exchange I saw left me uncertain. I long for romantic closeness, but I do not know their private intentions and would like to ask calmly.';
   addFeeling(p,'jealousy_envy',intensity,time,{kind:'witnessed_romantic_exchange',text,evidence_id:event.id},{ttl:900});return text;
 }
 export function reflect(p,proposal,event,time){
@@ -138,7 +138,7 @@ export function reflect(p,proposal,event,time){
   const effects={emotions:[],needsDelta:{}};
   if(!proposal||typeof proposal!=='object')return effects;
   for(const e of Array.isArray(proposal.emotions)?proposal.emotions.slice(0,3):[]){if(typeof e?.id!=='string'||typeof e.intensity!=='number'||!Number.isFinite(e.intensity))continue;
-    const intensity=Math.max(.05,Math.min(p.age<18&&e.id==='infatuation'?.35:.75,e.intensity));if(addFeeling(p,e.id,intensity,time,{kind:'subjective_reflection',text:String(proposal.reason||p.state.thought||'Eigene Reaktion auf das Ereignis.').slice(0,240),evidence_id:event.id},{ttl:900}))effects.emotions.push({id:e.id,intensity});}
+    const intensity=Math.max(.05,Math.min(p.age<18&&e.id==='infatuation'?.35:.75,e.intensity));if(addFeeling(p,e.id,intensity,time,{kind:'subjective_reflection',text:String(proposal.reason||p.state.thought||'My own reaction to this event.').slice(0,240),evidence_id:event.id},{ttl:900}))effects.emotions.push({id:e.id,intensity});}
   for(const [need,value] of Object.entries(proposal.needsDelta||{})){if(!['social','romantic_affection','fun','comfort','fatigue'].includes(need)||typeof value!=='number'||!Number.isFinite(value))continue;
     const bound=need==='fatigue'?.03:.08,delta=Math.max(-bound,Math.min(bound,value)),before=p.state.needs[need];p.state.needs[need]=Math.min(need==='romantic_affection'?romanticCap(p.age):1,clamp(before+delta));effects.needsDelta[need]=p.state.needs[need]-before;}
   if(typeof proposal.focusGoalId==='string'&&p.state.psychology.ambitions.some(a=>a.id===proposal.focusGoalId&&!a.completed)){p.state.focus_goal_id=proposal.focusGoalId;effects.focusGoalId=proposal.focusGoalId;}

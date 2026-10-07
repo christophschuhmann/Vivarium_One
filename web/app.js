@@ -51,7 +51,7 @@ const I18N = {
     sign_out: 'Cerrar sesión', credits: 'créditos', spent_today: 'gastado hoy',
   },
 };
-const getLang = () => { if(S.world&&S.livingWorld===S.world)return 'de'; const l = localStorage.getItem('viv_lang'); return LANGS.includes(l) ? l : 'en'; };
+const getLang = () => { if(S.world&&S.livingWorld===S.world)return localStorage.getItem('viv_living_display')||'en'; const l = localStorage.getItem('viv_lang'); return LANGS.includes(l) ? l : 'en'; };
 const setLang = (l) => localStorage.setItem('viv_lang', l);
 // t('key', 'English fallback') — dictionary lookup with graceful English fallback.
 const t = (key, fallback) => (I18N[getLang()] || {})[key] || fallback || key;
@@ -160,7 +160,7 @@ const ttsPrefs = () => {
 const skipPrefs = () => ({ animate: true, detail: 'full', ...JSON.parse(localStorage.getItem('viv_skip') || '{}') });
 const saveSkipPrefs = (p) => localStorage.setItem('viv_skip', JSON.stringify({ ...skipPrefs(), ...p }));
 const saveTtsPrefs = (p) => localStorage.setItem('viv_tts', JSON.stringify({ ...ttsPrefs(), ...p }));
-const fmtClock = (iso) => new Date(iso).toLocaleString(S.livingWorld===S.world&&S.world?'de-DE':'en-GB', {...(S.worldData?.world.simulation_mode==='living'?{timeZone:'UTC'}:{}), weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const fmtClock = (iso) => new Date(iso).toLocaleString(getLang()==='de'?'de-DE':'en-GB', {...(S.worldData?.world.simulation_mode==='living'?{timeZone:'UTC'}:{}), weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const cutoutFor = (ch) => { const o = (ch.state.outfits || []).find(o => o.name === (ch.state.outfit || 'everyday')) || (ch.state.outfits || [])[0]; return o?.cutout_asset_id; };
 
 /* ── mic component: 🎙 → record (pulse+✕) → click again → transcribe → insert ── */

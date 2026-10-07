@@ -20,7 +20,7 @@ export function jobChance(p, x, firm, time) {
     (e) => e.status === "completed" && e.skill === x.skill,
   );
   const educationFit = education.length
-    ? Math.max(...education.map((e) => (4 - (e.grade || 3)) / 3))
+    ? Math.max(...education.map((e) => e.gradeScale?.startsWith("GPA") ? (e.grade ?? 2.5)/4 : (4 - (e.grade || 3)) / 3))
     : 0;
   const communication =
     (p.state.aptitudes?.social_skills?.teamwork || 40) / 100;

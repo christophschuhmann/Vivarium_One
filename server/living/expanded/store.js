@@ -48,13 +48,13 @@ const existingKey = db.prepare(
 export function loadEconomy(worldId) {
   const accounts = new Map(
     db
-      .prepare("SELECT * FROM lw_economy_accounts WHERE world_id=?")
+      .prepare("SELECT * FROM lw_economy_accounts WHERE world_id=? ORDER BY rowid")
       .all(worldId)
       .map((a) => [a.id, { ...a, metadata: pj(a.metadata, {}) }]),
   );
   const entities = new Map(
     db
-      .prepare("SELECT * FROM lw_economy_entities WHERE world_id=?")
+      .prepare("SELECT * FROM lw_economy_entities WHERE world_id=? ORDER BY rowid")
       .all(worldId)
       .map((e) => [e.id, { ...e, payload: pj(e.payload, {}) }]),
   );
@@ -78,6 +78,15 @@ export function loadEconomy(worldId) {
 export function rows(d, kind) {
   return [...(d.groups.get(kind)?.values() || [])];
 }
+// Per-draft membership indexes preserve row order while avoiding a global scan
+// for each resident each minute. Payload changes must use touch, as for persistence.
+export function rowsFor(d,kind,field,value){
+  d.lookupIndexes ||= new Map();const key=kind+':'+field;let idx=d.lookupIndexes.get(key);
+  if(!idx){idx={kind,field,values:new Map(),membership:new Map()};d.lookupIndexes.set(key,idx);for(const e of rows(d,kind))indexEntity(idx,e);}
+  return [...(idx.values.get(value)?.values()||[])];
+}
+function indexEntity(idx,e){const value=e.payload[idx.field],old=idx.membership.get(e.id);if(idx.membership.has(e.id)&&old!==value)idx.values.get(old)?.delete(e.id);if(!idx.values.has(value))idx.values.set(value,new Map());idx.values.get(value).set(e.id,e);idx.membership.set(e.id,value);}
+function updateIndexes(d,e){for(const idx of d.lookupIndexes?.values()||[])if(idx.kind===e.kind)indexEntity(idx,e);}
 export function put(
   d,
   kind,
@@ -91,11 +100,13 @@ export function put(
   if (!d.groups.has(kind)) d.groups.set(kind, new Map());
   d.groups.get(kind).set(id, e);
   d.dirtyEntities.add(id);
+  updateIndexes(d,e);
   return e;
 }
 export function touch(d, e) {
   if (d.entities.get(e.id) !== e) throw new Error("Foreign economic entity");
   d.dirtyEntities.add(e.id);
+  updateIndexes(d,e);
   return e;
 }
 export function account(

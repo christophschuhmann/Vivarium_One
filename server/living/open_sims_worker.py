@@ -55,6 +55,13 @@ def handle(request):
                 score = candidate['score'] + max(-.2, min(.2, float(a.get('expectation_bias', {}).get(b['id'], {}).get(candidate['category'], 0)))) + (.18 if candidate['category'] in favored else 0)
                 if candidate.get('tone') == 'romance' or candidate['category'] in {'flirt','ask_date','express_affection'}:
                     score += min(.3, float(a.get('needs', {}).get('romantic_affection', 0)) * .3)
+                motivation = a.get('social_motivations', {})
+                if motivation.get('sharedGoals') and candidate['category'] in {'collaborate_project', 'coordinate_work', 'make_plans', 'share_interest', 'offer_help', 'ask_help'}:
+                    score += .10 + .16 * float(motivation.get('prosociality', .5))
+                if candidate['category'] in {'challenge', 'undermine', 'provoke'}:
+                    score += min(.22, float(motivation.get('rivalry', 0)) * .3)
+                if candidate.get('tone') == 'romance' and a.get('age', 0) >= 18 and b.get('age', 0) >= 18:
+                    score += max(-.1, (float(motivation.get('attraction') or .5)-.5) * .3)
                 if tension > .035 and candidate['category'] in {'apologize', 'reconcile', 'set_boundary'}:
                     score += min(.35, tension * 1.5)
                 return max(.01, score) ** 2

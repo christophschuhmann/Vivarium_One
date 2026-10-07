@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-07T17:10:46.376Z",
+  "population": 100,
+  "englishDefault": true,
+  "realAssets": true,
+  "bigFiveAndSharedGoals": true,
+  "workplaceJump": true,
+  "assetExplorer": true,
+  "mobileNoOverflow": true,
+  "oneHour": {
+    "population": 100,
+    "events": 488,
+    "journalEntries": 661,
+    "eligible": 0,
+    "fields": 0,
+    "modelCalls": 0,
+    "biographyCalls": 0,
+    "cpuMs": 789,
+    "totalMs": 944,
+    "rejections": [],
+    "warnings": [],
+    "minutes": 60,
+    "chunks": 1
+  },
+  "browserErrors": []
+}

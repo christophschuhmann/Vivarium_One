@@ -8,36 +8,36 @@ import { calendarDate, estimatedNet } from "./catalog.js";
 import { addFeeling } from "../cognition.js";
 import { recordExperience } from "../wellbeing.js";
 export const MONEY_LABELS = {
-  payroll: "Ausgezahlter Nettolohn",
-  salary: "Nettolohn",
-  rent: "Kaltmiete",
-  utilities: "Nebenkosten",
-  food_purchase: "Lebensmittel",
-  groceries: "Lebensmittel",
-  membership: "Mitgliedschaften",
-  leisure_purchase: "Freizeit",
-  leisure: "Freizeit",
-  item_purchase: "Besondere Anschaffungen",
-  loan_payment: "Kreditraten",
-  rent_income: "Mieteinnahmen",
-  rental_income_tax: "Steuer auf Mietgewinn",
-  voluntary_gift: "Geschenke & Hilfe",
-  pension: "Rente",
-  approved_support: "Bewilligte Unterstützung",
-  social_benefit: "Bewilligte Unterstützung",
-  parental_care_benefit: "Betreuungsleistung",
-  maintenance: "Instandhaltung",
-  donation: "Freiwillige Spenden",
-  care_copayment: "Eigenanteil Pflege",
-  self_employment_tax_and_social: "Steuern & Sozialabgaben",
+  payroll: "Net pay",
+  salary: "Net pay",
+  rent: "Base rent",
+  utilities: "Utilities",
+  food_purchase: "Groceries",
+  groceries: "Groceries",
+  membership: "Memberships",
+  leisure_purchase: "Leisure",
+  leisure: "Leisure",
+  item_purchase: "Special purchases",
+  loan_payment: "Loan payments",
+  rent_income: "Rental income",
+  rental_income_tax: "Tax on rental income",
+  voluntary_gift: "Gifts & support",
+  pension: "Pension",
+  approved_support: "Approved support",
+  social_benefit: "Approved support",
+  parental_care_benefit: "Care benefit",
+  maintenance: "Maintenance",
+  donation: "Voluntary donations",
+  care_copayment: "Care copayment",
+  self_employment_tax_and_social: "Taxes & social contributions",
 };
 Object.assign(MONEY_LABELS, {
-  served_meal: "Mahlzeit im Café",
-  activity_fee: "Freizeitangebote",
-  transport: "Fahrkarten",
-  parental_care_support: "Bestätigte Betreuungsleistung",
-  social_support: "Bewilligte Unterstützung",
-  care_copayment: "Eigenanteil Pflege",
+  served_meal: "Café meal",
+  activity_fee: "Leisure activities",
+  transport: "Travel tickets",
+  parental_care_support: "Confirmed care support",
+  social_support: "Approved support",
+  care_copayment: "Care copayment",
 });
 const internal = new Set([
   "internal_household_transfer",
@@ -143,7 +143,7 @@ export function monthStatement(
       kind: tx.category,
       label:
         MONEY_LABELS[tx.category] ||
-        "Sonstige belegte Buchungen · " + tx.category,
+        "Other documented transactions · " + tx.category,
       direction: n > 0 ? "income" : "spending",
       amountCents: 0,
       count: 0,
@@ -193,10 +193,10 @@ export function monthStatement(
         label:
           MONEY_LABELS[t.kind] ||
           (t.category === "transfer"
-            ? "Interne / gebundene Mittel"
+            ? "Internal / restricted funds"
             : t.category === "financing"
-              ? "Finanzierung / Vermögensänderung"
-              : "Sonstige Buchung · " + t.kind),
+              ? "Financing / asset change"
+              : "Other transaction · " + t.kind),
         amountCents: t.amount_cents,
         classification: t.category,
         invoiceId: t.metadata.invoiceId || null,
@@ -210,7 +210,7 @@ export function monthStatement(
           ? "partial_month"
           : "recorded_period",
     coverageNote:
-      "Ausgewertet werden nur tatsächlich gespeicherte Buchungen. Startvermögen ist kein verdientes Monatseinkommen; vor Simulationsbeginn werden keine Ausgaben erfunden.",
+      "Only transactions actually recorded are included. Starting assets are not earned monthly income, and no spending is invented for time before the simulation began.",
   };
 }
 export function financialOutlook(d, p, time) {
@@ -233,32 +233,32 @@ export function financialOutlook(d, p, time) {
   const rowsOut = [
     {
       kind: "rent",
-      label: "Kaltmiete",
+      label: "Base rent",
       amountCents:
         lease?.payload.status === "active" ? lease.payload.rentCents : 0,
       certainty: "contract",
     },
     {
       kind: "utilities",
-      label: "Nebenkosten inklusive vereinfachter Heizkosten",
+      label: "Utilities, including estimated heating costs",
       amountCents: h.payload.budget.utilities,
       certainty: "estimate",
     },
     {
       kind: "food",
-      label: "Lebensmittelbudget",
+      label: "Grocery budget",
       amountCents: h.payload.budget.foodTarget,
       certainty: "plan",
     },
     {
       kind: "loan",
-      label: "Vereinbarte Kreditraten",
+      label: "Agreed loan payments",
       amountCents: loans.reduce((n, l) => n + l.payload.paymentCents, 0),
       certainty: "contract",
     },
     {
       kind: "membership",
-      label: "Aktive Mitgliedschaften",
+      label: "Active memberships",
       amountCents: subscriptions.reduce(
         (n, s) => n + s.payload.monthlyCents,
         0,
@@ -267,7 +267,7 @@ export function financialOutlook(d, p, time) {
     },
     {
       kind: "care",
-      label: "Vereinbarter Pflege-Eigenanteil",
+      label: "Agreed care copayment",
       amountCents: careCosts,
       certainty: "plan",
     },
@@ -294,12 +294,12 @@ export function financialOutlook(d, p, time) {
         simId: id,
         name: q.name,
         label: q.state.economy.parentalCare
-          ? "Betreuungsleistung"
+          ? "Care benefit"
           : c
-            ? "Erwarteter Nettolohn"
+            ? "Expected net pay"
             : q.profile.job === "Retired"
-              ? "Rente"
-              : "Bewilligte Unterstützung",
+              ? "Pension"
+              : "Approved support",
         amountCents: amount,
         certainty: c ? "requires_actual_work_and_funded_payroll" : "approved",
       };
@@ -328,15 +328,21 @@ export function financialOutlook(d, p, time) {
           ? "tight"
           : "buffered",
     scopeNote:
-      "Prognose für den Haushalt; heutige Liquidität nur eigenes und gemeinsames Konto. Private Konten anderer bleiben privat. Einkommen ist kein garantierter Zahlungseingang; Rücklagen sind ein Plan, keine bereits gebuchte Ausgabe.",
+      "Household forecast; current liquid funds include only personal and shared accounts. Other people’s accounts remain private. Income is not guaranteed to arrive, and reserves are a plan rather than a recorded expense.",
   };
 }
 export function financialReport(d, p, time, options = {}) {
   const periods = financialPeriods(time);
+  const outlook=financialOutlook(d,p,time),h=householdOf(d,p),members=h.payload.members.length;
+  const equivalence=Math.sqrt(Math.max(1,members)),equivalizedCents=Math.round(outlook.incomeCents/equivalence);
+  const currency=JSON.parse(d.town.world.rules||'{}').currency||'EUR',referenceCents=currency==='USD'?300000:250000;
+  const ratio=equivalizedCents/referenceCents;
+  const bands=[[.4,'Lower low-income'],[.6,'Middle low-income'],[.8,'Upper low-income'],[1,'Lower middle-income'],[1.25,'Middle-income'],[1.75,'Upper middle-income'],[2.5,'Lower high-income'],[4,'Middle high-income'],[8,'Upper high-income'],[Infinity,'Exceptionally high-income']];
   return {
+    incomeClass:{label:bands.find(([ceiling])=>ratio<ceiling)[1],ratio,monthlyHouseholdNetCents:outlook.incomeCents,members,equivalence,equivalizedCents,referenceCents,currency,basis:'Expected household net income divided by the square root of household size. Income depends on actual paid work and approved support. These are game bands relative to a stated design reference, not official US or German social classes. Wealth, debt, liquid reserves and social reputation are separate.'},
     previous: monthStatement(d, p, periods.previous, options),
     current: monthStatement(d, p, periods.current, options),
-    next: financialOutlook(d, p, time),
+    next: outlook,
     lastAppraisal: p.state.economy.financialAppraisal || null,
   };
 }
@@ -363,11 +369,11 @@ export function financialAppraisals(
     });
     const text =
       outlook.security === "shortfall"
-        ? "Mein aktueller Plan zeigt eine Finanzierungslücke. Ich möchte Hilfe, passende Arbeit oder geringere Kosten prüfen."
+        ? "My current plan shows a funding gap. I want to look into support, suitable work, or lower costs."
         : outlook.security === "tight"
-          ? "Mein Plan ist knapp gedeckt. Für Ungeplantes möchte ich Schritt für Schritt einen Puffer bilden."
-          : "Mein aktueller Plan hat einen Puffer. Das gibt mir etwas Ruhe, auch wenn künftige Einnahmen unsicher bleiben.";
-    review.description = p.name + " prüft die eigene finanzielle Lage. " + text;
+          ? "My plan is just about covered. I want to build a buffer for unexpected costs, step by step."
+          : "My current plan has a buffer. That gives me some peace of mind, even though future income remains uncertain.";
+    review.description = p.name + " reviews their financial situation. " + text;
     p.state.economy.financialAppraisal = {
       day,
       at: time,

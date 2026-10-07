@@ -923,7 +923,9 @@ function exInfo(key) {
   const id = exConceptKey(key);
   if (!id) return "";
   const title = EX_CONCEPTS[id][0];
-  return `<button type="button" class="ex-info" data-concept="${esc(id)}" aria-label="Erklärung: ${esc(title)}" title="${esc(title)} erklären">i</button>`;
+  const english = typeof getLang === "function" && getLang() === "en";
+  const explanation = english ? `Learn about ${title}` : `${title} erklären`;
+  return `<button type="button" class="ex-info" data-concept="${esc(id)}" aria-label="${esc(explanation)}" title="${esc(explanation)}">i</button>`;
 }
 function exExplain(label, key = label) {
   return `${esc(label)} ${exInfo(key)}`;
@@ -934,7 +936,7 @@ function exConceptDialog(key, trigger) {
   const previous = document.activeElement;
   const m = document.createElement("div");
   m.className = "modal-bg ex-learning";
-  m.innerHTML = `<section class="ex-learning-card" role="dialog" aria-modal="true" aria-labelledby="ex-learning-title"><div class="ex-learning-top"><small>NEBENBEI VERSTEHEN</small><button type="button" class="btn btn-soft small" aria-label="Erklärung schließen">✕</button></div><h2 id="ex-learning-title">${esc(c[0])}</h2><p>${esc(c[1])}</p>${c[5] ? `<div class="ex-insight-example"><b>Ein Gedankenexperiment</b><p>${esc(c[5])}</p></div>` : ""}${c[4] ? `<div class="ex-insight-question"><b>Eine hilfreiche Frage</b><p>${esc(c[4])}</p></div>` : ""}<div class="ex-note"><b>So wirkt es in Vivarium</b><p>${esc(c[2])}</p></div>${c[3] ? `<a href="${esc(c[3])}" target="_blank" rel="noopener noreferrer">Hintergrund bei der Fachquelle ↗</a>` : ""}<small class="ex-learning-note">Spielwerte sind vereinfachte Modelle. Du kannst die Erklärung schließen und direkt weiterspielen.</small></section>`;
+  m.innerHTML = `<section class="ex-learning-card" role="dialog" aria-modal="true" aria-labelledby="ex-learning-title"><div class="ex-learning-top"><small>NEBENBEI VERSTEHEN</small><button type="button" class="btn btn-soft small" aria-label="Erklärung schließen">✕</button></div><h2 id="ex-learning-title">${esc(c[0])}</h2>${String(c[1]).split("\n\n").map(p=>"<p>"+esc(p)+"</p>").join("")}${c[5] ? `<div class="ex-insight-example"><b>Ein Gedankenexperiment</b><p>${esc(c[5])}</p></div>` : ""}${c[4] ? `<div class="ex-insight-question"><b>Eine hilfreiche Frage</b><p>${esc(c[4])}</p></div>` : ""}<div class="ex-note"><b>So wirkt es in Vivarium</b><p>${esc(c[2])}</p></div>${c[3] ? `<a href="${esc(c[3])}" target="_blank" rel="noopener noreferrer">Hintergrund bei der Fachquelle ↗</a>` : ""}<small class="ex-learning-note">Spielwerte sind vereinfachte Modelle. Du kannst die Erklärung schließen und direkt weiterspielen.</small></section>`;
   const close = () => {
     m.remove();
     if (previous?.isConnected) previous.focus({ preventScroll: true });

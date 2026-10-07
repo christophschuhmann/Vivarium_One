@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+process.env.VIV_DATA_DIR=fs.mkdtempSync(path.join(os.tmpdir(),'viv-minute-equivalence-'));
+const {db}=await import('../server/living/schema.js');const {createTown,advanceTown,loadTown}=await import('../server/living/engine.js');const {closeOpenSims}=await import('../server/living/open_sims.js');
+const user={id:'equivalence'};db.prepare('INSERT INTO users(id,email,display_name,created_at) VALUES (?,?,?,?)').run(user.id,'equivalence@local','Equivalence',new Date().toISOString());
+try{
+ const {worldId}=await createTown(user,{population:20,seed:Number(process.env.EQUIVALENCE_SEED||73),scenario:'bennington'});
+ const names=db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'lw_%' AND name NOT LIKE 'lw_memory%'").all().map(r=>r.name),saved=new Map(names.map(name=>[name,db.prepare('SELECT * FROM '+name).all()]));
+ const projection=()=>loadTown(worldId).people.map(p=>({id:p.id,needs:p.state.needs,location:p.state.location_id,route:p.state.route,action:p.state.action,goals:p.state.daily_goals,relations:p.relations,affect:p.state.affect,career:p.state.career,skills:p.state.skills,pausedTasks:p.state.pausedTasks||[]}));
+ await advanceTown(user,worldId,{minutes:60,story:false});const long=projection();const longEvents=db.prepare('SELECT * FROM lw_events ORDER BY rowid').all();
+ db.pragma('foreign_keys=OFF');db.transaction(()=>{for(const name of [...names].reverse())db.exec('DELETE FROM '+name);for(const [name,rows] of saved)for(const row of rows){const keys=Object.keys(row);db.prepare(`INSERT INTO ${name} (${keys.join(',')}) VALUES (${keys.map(()=>'?').join(',')})`).run(...keys.map(k=>row[k]));}})();db.pragma('foreign_keys=ON');
+ for(let i=0;i<60;i++)await advanceTown(user,worldId,{minutes:1,story:false});const short=projection();
+ if(JSON.stringify(long)!==JSON.stringify(short)){fs.writeFileSync('/tmp/viv-minute-long.json',JSON.stringify(long,null,2));fs.writeFileSync('/tmp/viv-minute-short.json',JSON.stringify(short,null,2));fs.writeFileSync('/tmp/viv-events-long.json',JSON.stringify(longEvents));fs.writeFileSync('/tmp/viv-events-short.json',JSON.stringify(db.prepare('SELECT * FROM lw_events ORDER BY rowid').all()));}
+ assert.deepEqual(short,long,'One hour must preserve the same causal Sim state as 60 individual minutes');
+ console.log('PASS 60 × 1 minute equals 1 × 60 minutes for needs, paths, activities, relationships, emotions, goals, skills and career.');
+ const before=loadTown(worldId).world.seconds;const day=await advanceTown(user,worldId,{minutes:1440,story:false});assert.equal(loadTown(worldId).world.seconds,before+86400);assert.equal(day.metrics.chunks,24);console.log('PASS full day: 1440 actual minute ticks.',JSON.stringify(day.metrics));fs.mkdirSync('artifacts/expanded-world',{recursive:true});fs.writeFileSync('artifacts/expanded-world/minute-equivalence-review.json',JSON.stringify({testedAt:new Date().toISOString(),population:20,seed:Number(process.env.EQUIVALENCE_SEED||73),oneHourEquals60Minutes:true,fullDay:day.metrics},null,2)+'\n');
+}finally{closeOpenSims();db.close();fs.rmSync(process.env.VIV_DATA_DIR,{recursive:true,force:true});}

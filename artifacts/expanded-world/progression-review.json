@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-07T16:57:32.543Z",
+  "checks": [
+    "unique names",
+    "actual minute tick birthday persisted",
+    "adulthood study continuity",
+    "retirement contract closure",
+    "school enrollment",
+    "adult preference maturation",
+    "sustained conflict divorce",
+    "mutual adult partnership",
+    "no child household split",
+    "no teleport or taking family funds"
+  ],
+  "fixtureTransitions": {
+    "divorce": 1,
+    "partnership_started": 1,
+    "independent_household": 1
+  }
+}

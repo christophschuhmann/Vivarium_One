@@ -17,7 +17,8 @@ import * as branches from '../branches.js';
 import { assembleCues, cueVoiceStyle, ttsCacheKey, cueCacheVoice } from '../export_cues.js';
 import { synthesizeLine, findReusableAudio } from '../tts_service.js';
 import { PROFILES } from '../voice_profiles.js';
-import {copyLibraryBundle} from '../living/library.js';
+import {copyLibraryBundle,libraryBundle} from '../living/library.js';
+import {catalogEntry,materializeAsset} from '../living/asset-catalog.js';
 import { buildWorldManifest, worldAssetFiles, importWorldManifest, assetIdsIn } from '../world_io.js';
 import { wizardChat, estimatePlan, startWizardBuild, getWizardJob } from '../wizard.js';
 import { byokActive } from '../byok.js';
@@ -1097,7 +1098,11 @@ export default async function apiRoutes(app) {
     const work = path.join(EXPORT_TMP, uid('zx_'));
     const assetsDir = path.join(work, 'assets');
     fs.mkdirSync(assetsDir, { recursive: true });
+    let streaming=false;
     try {
+      // Freeze the manifest first, then materialize only its referenced images.
+      // Lazy previews must never produce a ZIP with silently missing artwork.
+      if(manifest.livingLibrary){const ids=new Set(manifest.livingLibrary.map(a=>a.id));await Promise.all([...ids].map(async id=>{const entry=catalogEntry(id);if(entry)for(const variant of ['full','preview',...(entry.kind==='character'?['sprite']:[])])await materializeAsset(id,variant);}));manifest.livingLibrary=libraryBundle(ids);}
       fs.writeFileSync(path.join(work, 'manifest.json'), JSON.stringify(manifest));
       for (const a of worldAssetFiles(w.id)) {
         const src = assetPath({ file: a.file });
@@ -1106,13 +1111,15 @@ export default async function apiRoutes(app) {
       if(manifest.livingLibrary)copyLibraryBundle(manifest.livingLibrary,assetsDir);
       const zipPath = path.join(work, 'world.zip');
       await runCmd('zip', ['-r', '-q', '-0', 'world.zip', 'manifest.json', 'assets'], { cwd: work });
-      const buf = fs.readFileSync(zipPath);
+      const stream=fs.createReadStream(zipPath);
+      const cleanup=()=>fs.rmSync(work,{recursive:true,force:true});
+      stream.once('close',cleanup);reply.raw.once('close',()=>stream.destroy());streaming=true;
       const safe = (w.title || 'world').replace(/\W+/g, '-').slice(0, 40);
       reply.header('Content-Disposition', `attachment; filename="${safe}.vivarium.zip"`);
       reply.type('application/zip');
-      return reply.send(buf);
+      return reply.send(stream);
     } finally {
-      fs.rmSync(work, { recursive: true, force: true });
+      if(!streaming)fs.rmSync(work, { recursive: true, force: true });
     }
   });
 

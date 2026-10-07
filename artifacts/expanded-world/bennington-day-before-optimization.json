@@ -1,0 +1,21 @@
+{
+  "at": "2026-10-07T16:18:45.275Z",
+  "cpu": "AMD Ryzen 7 3700X 8-Core Processor",
+  "cores": 16,
+  "mode": "Measured procedural minute ticks; no performance extrapolation beyond tested duration",
+  "results": [
+    {
+      "population": 1000,
+      "creationMs": 6337,
+      "minutes": 1440,
+      "elapsedMs": 226755,
+      "rssMiB": 1147,
+      "locations": 2704,
+      "under5": 35,
+      "under18": 177,
+      "over65": 252,
+      "events": 200003,
+      "journals": 218082
+    }
+  ]
+}

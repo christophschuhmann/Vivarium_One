@@ -37,7 +37,7 @@ try {
  await Promise.all([ready(base),ready(env.MUSIC_API_URL+'/api/stats')]);
  browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const context=await browser.newContext({viewport:{width:1440,height:1050}}),page=await context.newPage(),errors=[];
- page.on('pageerror',e=>errors.push(e.message));await context.addInitScript(()=>localStorage.setItem('viv_tts',JSON.stringify({prepare:false,autoplay:false,innerVoice:false,musicOn:false})));
+ page.on('pageerror',e=>errors.push(e.message));await context.addInitScript(()=>{localStorage.setItem('viv_living_display','de');localStorage.setItem('viv_tts',JSON.stringify({prepare:false,autoplay:false,innerVoice:false,musicOn:false}));});
  const login=await context.request.post(base+'/api/auth/login',{data:{email:'demo@vivarium.local',password:'alice-and-bob'}});assert.equal(login.status(),200);
  const created=await context.request.post(base+'/api/living/towns',{data:{population:500,title:'Browser town',seed:73}});assert.equal(created.status(),200);const world=(await created.json()).worldId;
  const snapshot=async()=> (await context.request.get(base+'/api/living/worlds/'+world)).json();
@@ -158,7 +158,7 @@ try {
  await page.locator('#lang-chip').click();await page.locator('#lw-language-de').waitFor();await page.locator('#lw-language-de').click();
  // A browser-local translator fixture verifies display-only translation and restoration.
  await page.evaluate(()=>{window.translationCalls=0;window.Translator={create:async()=>({translate:async text=>{window.translationCalls++;return text==='Beziehungsnetz'?'Relationship graph':'English: '+text;},destroy(){}}),availability:async()=>'available'};});
- await page.locator('#lang-chip').click();await page.locator('#lw-language-en').click();await page.locator('.lw-world-heading h1').getByText('Relationship graph',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>getLang()),'de');assert.equal(await page.locator('#lw-bond-center').textContent(),chosenPosition.name);assert.ok(await page.evaluate(()=>window.translationCalls>0));
+ await page.locator('#lang-chip').click();await page.locator('#lw-language-en').click();await page.locator('.lw-world-heading h1').getByText('Relationship network',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>getLang()),'en');assert.equal(await page.locator('#lw-bond-center').textContent(),chosenPosition.name);assert.equal(await page.evaluate(()=>window.translationCalls),0);
  await page.locator('#lang-chip').click();await page.locator('#lw-language-de').click();await page.locator('.lw-world-heading h1').getByText('Beziehungsnetz',{exact:true}).waitFor();assert.equal(await page.locator('#lang-chip').textContent(),'🌐 DE');
  await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.ok(await page.locator('img,svg image').count()<=50);
  const navigationAfter=await snapshot();assert.equal(navigationAfter.simulation.seconds,navigationBefore.simulation.seconds);assert.equal(navigationAfter.simulation.version,navigationBefore.simulation.version);

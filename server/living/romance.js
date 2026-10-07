@@ -55,8 +55,11 @@ export function normalizeImportedRomance(db,worldId){
  // Imported snapshots cannot bypass age gates by preserving already forbidden
  // social categories. This runs inside the import transaction; rejection rolls
  // the new world back rather than altering the imported factual history.
- for(const e of db.prepare("SELECT participants,facts,description FROM lw_events WHERE world_id=? AND type='social'").iterate(worldId)){
-   const participants=JSON.parse(e.participants).map(id=>people.get(id)).filter(Boolean),f=JSON.parse(e.facts),minor=participants.some(p=>p.age<18);
+ for(const e of db.prepare("SELECT participants,facts,description,end FROM lw_events WHERE world_id=? AND type='social'").iterate(worldId)){
+   // Historical age comes from the recorded birth date and event date, not a
+   // current adult age or an untrusted caller-supplied participantAges field.
+   const at=new Date(Date.UTC(2026,8,21)+e.end*1000);
+   const participants=JSON.parse(e.participants).map(id=>people.get(id)).filter(Boolean).map(p=>{const birth=new Date(p.profile.birthDate+'T00:00:00Z'),age=at.getUTCFullYear()-birth.getUTCFullYear()-(at.getUTCMonth()<birth.getUTCMonth()||(at.getUTCMonth()===birth.getUTCMonth()&&at.getUTCDate()<birth.getUTCDate())?1:0);return {...p,age:Number.isFinite(age)?Math.min(p.age,age):p.age};}),f=JSON.parse(e.facts),minor=participants.some(p=>p.age<18);
    if(minor&&['flirt','ask_date','express_affection','adult_private_intimacy'].includes(f.category))throw new Error('Import enthält eine Erwachsenen-Romantikkategorie mit Minderjährigen.');
    if(ROMANCE_POLICY.teen_categories.includes(f.category)&&(participants.length!==2||participants.some(p=>p.age<14||p.age>=18)||Math.abs(participants[0].age-participants[1].age)>1))throw new Error('Import enthält eine unzulässige Alterskombination für Jugendromantik.');
    assertMinorSafeText(participants,e.description);

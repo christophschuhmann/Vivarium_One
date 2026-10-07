@@ -1,0 +1,44 @@
+{
+  "at": "2026-10-07T15:44:29.938Z",
+  "cpu": "AMD Ryzen 7 3700X 8-Core Processor",
+  "cores": 16,
+  "mode": "Five minute procedural benchmark; no full-day throughput extrapolation",
+  "results": [
+    {
+      "population": 100,
+      "creationMs": 1001,
+      "fiveMinutesMs": 291,
+      "rssMiB": 166,
+      "locations": 400,
+      "under5": 4,
+      "under18": 18,
+      "over65": 25,
+      "events": 872,
+      "journals": 899
+    },
+    {
+      "population": 1000,
+      "creationMs": 5100,
+      "fiveMinutesMs": 3290,
+      "rssMiB": 478,
+      "locations": 2704,
+      "under5": 35,
+      "under18": 177,
+      "over65": 252,
+      "events": 8798,
+      "journals": 9179
+    },
+    {
+      "population": 2000,
+      "creationMs": 10000,
+      "fiveMinutesMs": 7982,
+      "rssMiB": 603,
+      "locations": 5327,
+      "under5": 70,
+      "under18": 354,
+      "over65": 504,
+      "events": 17695,
+      "journals": 18421
+    }
+  ]
+}
