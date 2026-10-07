@@ -5,6 +5,13 @@
   "savedPersonalJobExpectations": true,
   "declinedProfileLoanDoesNotMutateMoney": true,
   "mobileOverflow": false,
+  "desktopWheelAndKeyboardReachFooter": true,
+  "mobileTouchScrolling": true,
+  "stickyNavigationBelowTopbar": true,
+  "independentTabScrollPositions": true,
+  "keyboardTabs": true,
+  "socialContactFilter": true,
+  "socialContactProfileBondsAndSceneNavigation": true,
   "providerCalls": 0,
   "errors": []
 }

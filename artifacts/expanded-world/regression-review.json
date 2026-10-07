@@ -1,42 +1,47 @@
 {
-  "generatedAt": "2026-10-06T23:04:57.864Z",
+  "generatedAt": "2026-10-07T05:28:41.912Z",
   "node": "v22.17.1",
   "providerCalls": 0,
   "results": [
     {
       "suite": "test-expanded-world.mjs",
       "passed": true,
-      "durationMs": 1548
+      "durationMs": 1633
     },
     {
       "suite": "test-expanded-semantics.mjs",
       "passed": true,
-      "durationMs": 1906
+      "durationMs": 1946
+    },
+    {
+      "suite": "test-social-perspectives.mjs",
+      "passed": true,
+      "durationMs": 72
     },
     {
       "suite": "test-expanded-lifecycle.mjs",
       "passed": true,
-      "durationMs": 3048
+      "durationMs": 3116
     },
     {
       "suite": "test-living.mjs",
       "passed": true,
-      "durationMs": 8995
+      "durationMs": 9180
     },
     {
       "suite": "test-living-mind.mjs",
       "passed": true,
-      "durationMs": 595
+      "durationMs": 603
     },
     {
       "suite": "test-living-social.mjs",
       "passed": true,
-      "durationMs": 1172
+      "durationMs": 1187
     },
     {
       "suite": "test-living-romance.mjs",
       "passed": true,
-      "durationMs": 955
+      "durationMs": 956
     },
     {
       "suite": "test-living-wellbeing.mjs",
@@ -46,7 +51,7 @@
     {
       "suite": "test-living-biographies.mjs",
       "passed": true,
-      "durationMs": 533
+      "durationMs": 539
     },
     {
       "suite": "test-providers.mjs",
@@ -56,12 +61,12 @@
     {
       "suite": "test-storage.mjs",
       "passed": true,
-      "durationMs": 362
+      "durationMs": 359
     },
     {
       "suite": "test-music.mjs",
       "passed": true,
-      "durationMs": 345
+      "durationMs": 348
     }
   ]
 }

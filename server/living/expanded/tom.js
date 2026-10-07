@@ -1,5 +1,6 @@
 // Probabilistic FIRST-PERSON social models. Never read another Sim's private
 // thoughts, expectations, balances, health, goals or hidden affect as evidence.
+import { encounterMemory, socialPerspective, perspectiveThought, socialEvidenceLabel } from "./tom-language.js";
 import { rng } from "../random.js";
 import { relationshipLabels } from "../relationship-labels.js";
 import { SOCIAL_CATALOG } from "./catalog.js";
@@ -82,6 +83,9 @@ export function encounterContext(p, other, town, event = { facts: {} }) {
     trust: relation.trust ?? 0.4,
     tension: relation.tension || 0,
     knownAttraction: relation.attraction || 0,
+    isChild: p.profile.family.parent_ids?.includes(other.id) || false,
+    isParent: other.profile.family.parent_ids?.includes(p.id) || false,
+    partner: p.profile.family.partner_id === other.id,
     otherAge: other.age,
     ownAge: p.age,
     publicAudience: (event.witnesses || []).length,
@@ -89,95 +93,10 @@ export function encounterContext(p, other, town, event = { facts: {} }) {
     sourceEventId: event.id || null,
   };
 }
-function contextThought(p, other, context, probability, event) {
-  const ownChild = p.profile.family.parent_ids?.includes(other.id),
-    ownParent = other.profile.family.parent_ids?.includes(p.id),
-    school = context.topic === "school",
-    work = context.topic === "work",
-    partner = p.profile.family.partner_id === other.id,
-    needs = p.state.needs;
-  let variants = {
-    support:
-      "sucht einen freundlichen Kontakt oder möchte Unterstützung anbieten",
-    obligation: "möchte etwas im Alltag mit mir abstimmen",
-    criticism: "könnte mit einer konkreten Sache unzufrieden sein",
-    romance: "könnte freiwillige Nähe wünschen",
-    unknown: "hat einen anderen Anlass, den ich noch nicht kenne",
-  };
-  if (ownChild)
-    variants = {
-      ...variants,
-      support:
-        "möchte vielleicht mit mir spielen, zuhören oder mir bei einer Aufgabe helfen",
-      obligation:
-        "möchte vielleicht eine kleine Aufgabe oder unseren Tagesplan mit mir besprechen",
-      criticism:
-        "könnte eine offene Absprache ansprechen; ein Gespräch ist noch kein Ausschimpfen",
-    };
-  if (ownParent)
-    variants = {
-      ...variants,
-      support:
-        "möchte vielleicht gemeinsame Zeit oder Unterstützung bei einem eigenen Versuch",
-      obligation:
-        "möchte vielleicht eine eigene Entscheidung oder eine faire Absprache aushandeln",
-      criticism:
-        "könnte sich über einen zu schnellen Übergang oder zu wenig Freiraum ärgern",
-    };
-  if (school)
-    variants = {
-      ...variants,
-      support:
-        "möchte vielleicht eine Frage gemeinsam lösen oder nach der Schule etwas spielen",
-      obligation:
-        "möchte vielleicht die tatsächliche Lernaufgabe mit mir aufteilen",
-      criticism:
-        "könnte einen bestimmten Fehler oder eine schwierige Gruppenabsprache meinen",
-    };
-  if (work)
-    variants = {
-      ...variants,
-      support:
-        "möchte vielleicht meinen konkreten Beitrag anerkennen oder Unterstützung anbieten",
-      obligation: context.explicitManager
-        ? "möchte vielleicht einen neuen Auftrag oder eine Priorität klären"
-        : "möchte vielleicht einen gemeinsamen Arbeitsschritt abgleichen",
-      criticism:
-        "könnte zu einem beobachteten Arbeitsschritt Rückmeldung geben",
-    };
-  if (partner)
-    variants = {
-      ...variants,
-      support:
-        "möchte vielleicht einen ruhigen Moment zu zweit oder ein offenes Gespräch",
-      obligation:
-        "möchte vielleicht unsere Aufgaben, Termine oder gemeinsame Ausgaben abstimmen",
-      criticism:
-        "könnte einen unerfüllten Wunsch ansprechen; ich weiß noch nicht welchen",
-      romance:
-        "könnte freiwillige liebevolle Nähe wünschen, ohne dadurch weitere Zustimmung vorauszusetzen",
-    };
-  if (p.age >= 66)
-    variants.support =
-      "möchte vielleicht konkrete Hilfe anbieten oder meine Erfahrung hören; ich kann selbst sagen, was ich brauche";
-  const sorted = Object.entries(probability).sort((a, b) => b[1] - a[1]);
-  let text =
-    other.name +
-    " " +
-    variants[sorted[0][0]] +
-    ". Eine weitere Möglichkeit: " +
-    variants[sorted[1][0]] +
-    ". Ich kann nachfragen, statt meine Deutung als Tatsache zu behandeln.";
-  if (Math.max(needs.fatigue, needs.hunger) > 0.7)
-    text +=
-      " Meine eigene Müdigkeit oder mein Hunger könnte den Eindruck zusätzlich färben.";
-  if (context.publicAudience)
-    text +=
-      " Andere können nur den hörbaren Teil mitbekommen; Privates kann ich auf später vertagen.";
-  if (event.facts.outcome === "declined" && romantic.has(event.facts.category))
-    text =
-      "Die Grenze ist heute ausgesprochen. Ich respektiere sie; der Grund bleibt unbekannt und ist kein Anlass, weiter zu drängen.";
-  return text;
+function contextThought(p, other, context, probability, event, witness = false) {
+  const source = { observed: event.facts.category + " " + event.facts.outcome, at: event.end };
+  return perspectiveThought(socialPerspective(p, {name: other.name}, context, probability,
+    encounterMemory(event, context, witness), event.id ? [source] : []));
 }
 function priors(p, context) {
   const big = p.state.psychology.big_five,
@@ -204,7 +123,7 @@ function priors(p, context) {
   // Adult/teen romance has exactly the same age/kin constraints as actions.
   // Gender, ethnicity and a third person's private attraction are NOT priors.
   const familyRole = context.role.some((r) =>
-      /Mutter|Vater|Schwester|Bruder|Tochter|Sohn|Cous|Enkel|Tante|Onkel|Groß/.test(
+      /mutter|vater|schwester|bruder|tochter|sohn|cous|enkel|tante|onkel|groß|oma|opa/iu.test(
         r,
       ),
     ),
@@ -312,7 +231,7 @@ export function observeSocial(
     alpha.support += 1.6 * weight;
   } else if (negative.has(category)) {
     alpha.criticism += 1.6 * weight;
-  } else if (romantic.has(category) && alpha.romance > 0) {
+  } else if (!witness && romantic.has(category) && alpha.romance > 0) {
     alpha.romance += 1.5 * weight;
   } else if (
     [
@@ -342,6 +261,7 @@ export function observeSocial(
         0.85,
     observed: category + " " + outcome,
     publicAudience: (event.witnesses || []).length,
+    initiatorId: event.participants?.[0] || null,
   };
   const previous = c.contacts[other.id] || {
     subjectId: other.id,
@@ -356,6 +276,7 @@ export function observeSocial(
     alpha,
     probabilities: probabilities(alpha),
     updatedAt: event.end,
+    lastEncounter: encounterMemory(event, before.context, witness),
     sourceRefs: (previous.topics[before.topic]?.sourceRefs || [])
       .concat(source)
       .slice(-8),
@@ -365,6 +286,7 @@ export function observeSocial(
       before.context,
       probabilities(alpha),
       event,
+      witness,
     ),
   };
   c.contacts[other.id] = previous;
@@ -378,18 +300,8 @@ export function observeSocial(
         eventId: event.id,
         depth: 2,
         confidence: 0.45,
-        text:
-          "Vielleicht denkt " +
-          other.name +
-          ", ich möchte " +
-          (category === "ask_help"
-            ? "Unterstützung"
-            : romantic.has(category)
-              ? "freiwillige Nähe"
-              : negative.has(category)
-                ? "eine Grenze oder Unzufriedenheit ausdrücken"
-                : "einen Kontakt oder eine Abstimmung") +
-          ". Die tatsächliche Vorstellung kenne ich nicht.",
+        text: socialPerspective(p, {name:other.name}, before.context, probabilities(alpha),
+          encounterMemory(event, before.context, witness), [source]).metabelief,
       },
     };
   c.lastContext = {
@@ -663,15 +575,33 @@ export function decorateSocial(d, town, event) {
 export function socialMindContext(p) {
   const c = p.state.social_cognition;
   if (!c) return null;
-  return {
-    perspective:
-      "Own uncertain expectations; never private knowledge of the other Sim",
-    contacts: Object.values(c.contacts)
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, 8),
-    secondOrder: Object.values(c.metabeliefs || {}).slice(0, 1),
-    lastContext: c.lastContext,
-  };
+  // Refresh wording from my CURRENT needs, preserving evidence and probabilities.
+  // Legacy contacts get readable views without inventing encounters or mutating saves.
+  const contacts = Object.values(c.contacts || {}).sort((a,b)=>b.updatedAt-a.updatedAt).slice(0,8).map(contact => {
+    const topics = Object.fromEntries(Object.entries(contact.topics || {}).map(([key, topic]) => {
+      const source = topic.sourceRefs?.at(-1), [category, outcome] = (source?.observed || '').split(' ');
+      const context = topic.lastEncounter?.context || {
+        topic:key, role:contact.knownRoles || [], otherAge:null,
+        isChild:p.profile.family.parent_ids?.includes(contact.subjectId) || false,
+        isParent:(contact.knownRoles || []).some(r=>/Tochter|Sohn/.test(r)),
+        partner:p.profile.family.partner_id === contact.subjectId,
+        tension:p.relations[contact.subjectId]?.tension || 0,
+      };
+      const memory = topic.lastEncounter || {category, outcome, initiatorId:source?.initiatorId,
+        witness:source?.modality === 'nearby_observation', remote:source?.modality === 'telephone', audience:source?.publicAudience || 0};
+      const perspective = socialPerspective(p, {name:contact.subjectName}, context, topic.probabilities, memory, topic.sourceRefs || []);
+      return [key, {...topic, thought:perspectiveThought(perspective), perspective,
+        sourceRefs:(topic.sourceRefs || []).map(s=>({...s, description:socialEvidenceLabel(s)}))}];
+    }));
+    return {...contact, topics};
+  });
+  const secondOrder = Object.values(c.metabeliefs || {}).slice(0,1).map(meta => {
+    const contact = contacts.find(c => c.subjectId === meta.subjectId);
+    const matching = Object.values(contact?.topics || {}).find(t => t.sourceRefs?.at(-1)?.eventId === meta.eventId);
+    return {...meta, text:matching?.perspective.metabelief || 'Ich kenne den Eindruck meines Gegenübers nicht. Ich kann meinen eigenen Wunsch erklären, statt eine fremde Vorstellung vorauszusetzen.'};
+  });
+  return {perspective:'Eigene unsichere Erwartungen; kein Zugang zu fremden Gedanken', contacts,
+    secondOrder, lastContext:c.lastContext};
 }
 export function expectationBias(p, otherId, category) {
   const contact = p.state.social_cognition?.contacts?.[otherId];

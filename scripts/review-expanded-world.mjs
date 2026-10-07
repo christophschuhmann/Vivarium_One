@@ -53,6 +53,35 @@ try {
   await page.goto(base + "/#/city?w=" + world);
   await page.locator(".ex-stats").waitFor();
   assert.equal(await page.locator("[data-ex-tab]").count(), 6);
+  const clickTab = async id => {
+    const box = await page.locator(`[data-ex-tab="${id}"]`).boundingBox();
+    assert.ok(box && box.y >= 0 && box.y+box.height <= 1080, 'Tab remains in viewport');
+    // Use the real visible pointer position. Locator.click first calls
+    // scrollIntoView, which can move sticky tabs back to their layout position.
+    await page.mouse.click(box.x+box.width/2, box.y+box.height/2);
+  };
+  // A fullPage screenshot did not catch the old body-clipping bug. Exercise
+  // native scrolling in the actual viewport and verify the footer is reachable.
+  const scrollTop = () => page.locator('.ex-screen').evaluate(el=>el.scrollTop);
+  await page.mouse.move(900,600);
+  await page.mouse.wheel(0,650);
+  await page.waitForTimeout(300);
+  assert.ok(await scrollTop() > 400, 'Mouse wheel must scroll City');
+  assert.ok(await page.locator('#ex-sim-picker').isVisible());
+  const sticky = await page.locator('.ex-workspace').boundingBox();
+  assert.ok(sticky.y >= 70 && sticky.y < 100, 'Toolbar stays below global topbar');
+  await page.locator('.ex-screen').focus();
+  await page.keyboard.press('Control+End');
+  await page.waitForTimeout(250);
+  assert.ok(await page.locator('.ex-screen').evaluate(el=>el.scrollHeight-el.clientHeight-el.scrollTop < 3), 'Keyboard reaches actual end');
+  await page.locator('#ex-back-top').click();
+  await page.waitForTimeout(900);
+  assert.equal(await scrollTop(),0);
+  await page.locator('[data-ex-tab="overview"]').focus();
+  await page.keyboard.press('ArrowRight');
+  await page.locator('[data-ex-tab="jobs"][aria-selected="true"]').waitFor();
+  assert.equal(await page.locator('[data-ex-tab="jobs"]').evaluate(el=>el===document.activeElement),true);
+  await clickTab("overview");
   assert.equal(await page.locator('[data-nav="city"]').count(), 1);
   fs.mkdirSync("artifacts/expanded-world", { recursive: true });
   await page.screenshot({
@@ -67,7 +96,7 @@ try {
     "news",
     "overview",
   ]) {
-    await page.locator('[data-ex-tab="' + tab + '"]').click();
+    await clickTab(tab);
     await page.locator("#ex-content").waitFor();
     assert.ok(
       (await page.locator("#ex-content").textContent()).length > 80,
@@ -78,8 +107,15 @@ try {
       fullPage: true,
     });
   }
+  await clickTab("leisure");
+  await page.mouse.move(900,600); await page.mouse.wheel(0,700); await page.waitForTimeout(300);
+  const leisureScroll = await scrollTop();
+  await clickTab("jobs");
+  assert.equal(await scrollTop(),0);
+  await clickTab("leisure");
+  assert.ok(Math.abs(await scrollTop()-leisureScroll)<3, 'Each tab remembers its own scroll');
   // Exercise a real UI mutation, rather than checking only rendered forms.
-  await page.locator('[data-ex-tab="jobs"]').click();
+  await clickTab("jobs");
   await page.locator("#ex-expectations").click();
   await page.locator("#ex-net").fill("1200");
   await page.locator("#ex-commute").fill("45");
@@ -100,7 +136,7 @@ try {
   ).json();
   assert.equal(changed.person.expectations.minimumNetCents, 120000);
   assert.equal(changed.person.expectations.maxCommuteSeconds, 2700);
-  await page.locator('[data-ex-tab="overview"]').click();
+  await clickTab("overview");
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(
     await page.evaluate(
@@ -117,6 +153,47 @@ try {
     path: "artifacts/expanded-world/household-mobile.png",
     fullPage: true,
   });
+  // Mobile uses a native section selector; test actual touch panning on a
+  // touch-enabled viewport, rather than merely shrinking a desktop screenshot.
+  const mobile = await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  await mobile.addCookies(await context.cookies());
+  const mobilePage = await mobile.newPage();
+  mobilePage.on('pageerror',e=>errors.push(e.message));
+  await mobilePage.goto(base + '/#/city?w=' + world);
+  await mobilePage.locator('.ex-stats').waitFor();
+  await mobilePage.locator('#ex-section').selectOption('leisure');
+  const cdp = await mobile.newCDPSession(mobilePage);
+  const swipe = async () => {
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:200,y:600}]});
+    for(let y=570;y>=180;y-=30) {
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:200,y}]});
+      await mobilePage.waitForTimeout(20);
+    }
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await mobilePage.waitForTimeout(300);
+  };
+  await swipe();
+  assert.ok(await mobilePage.locator('.ex-screen').evaluate(el=>el.scrollTop)>200,'Touch swipe scrolls mobile City');
+  assert.ok(await mobilePage.locator('#ex-section').isVisible());
+  assert.ok(await mobilePage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  const dockBounds = await mobilePage.locator('#dock').boundingBox();
+  assert.ok(dockBounds.x >= 0 && dockBounds.x+dockBounds.width <= 390,'Mobile dock stays fully in view');
+  await mobilePage.locator('#ex-section').selectOption('views');
+  const contact = mobilePage.locator('[data-ex-contact]').first();
+  assert.ok(await contact.count(), 'Real procedural encounters create social cards');
+  if (await contact.count()) {
+    await mobilePage.locator('.ex-next-step').first().waitFor();
+    await mobilePage.locator('#ex-social-search').fill('does-not-exist-xyz');
+    assert.equal(await mobilePage.locator('[data-ex-contact]:visible').count(),0);
+    assert.ok(await mobilePage.locator('#ex-social-empty').isVisible());
+    await mobilePage.locator('#ex-social-search').fill('');
+    assert.ok(await mobilePage.locator('[data-ex-contact]:visible').count()>0);
+  }
+  await mobilePage.screenshot({path:'artifacts/expanded-world/social-view-mobile.png'});
+  await mobilePage.locator('#ex-section').selectOption('overview');
+  await swipe();
+  await mobilePage.screenshot({path:'artifacts/expanded-world/city-scrolled-mobile.png'});
+  await mobile.close();
   await page.setViewportSize({ width: 1440, height: 1080 });
   await page.locator("#ex-profile").click();
   await page.locator("#lw-profile-resources").click();
@@ -163,6 +240,21 @@ try {
   await page.locator("#lw-mind-social").waitFor();
   await page.locator("#lw-mind-social").click();
   await page.locator('[data-ex-tab="views"][aria-selected="true"]').waitFor();
+  const socialProfile = page.locator('[data-ex-social-profile]').first();
+  if (await socialProfile.count()) {
+    const target = await socialProfile.getAttribute('data-ex-social-profile');
+    await socialProfile.click();
+    await page.locator('#lw-close-profile').waitFor();
+    await page.locator('#lw-close-profile').click();
+    await page.locator('[data-ex-social-bonds]').first().click();
+    await page.locator('#lw-bond-center').waitFor();
+    assert.equal(await page.locator('#lw-bond-center').getAttribute('data-sim'),target);
+    await page.goto(base + '/#/city?w=' + world + '&s=' + snapshot.selectedSimId);
+    await page.locator('[data-ex-social-play]').first().waitFor();
+    await page.locator('[data-ex-social-play]').first().click();
+    await page.locator('.stage-char.pov').waitFor();
+    assert.equal(await page.locator('.stage-char.pov').getAttribute('data-id'),target);
+  }
   assert.deepEqual(errors, []);
   fs.writeFileSync(
     "artifacts/expanded-world/browser-review.json",
@@ -174,6 +266,13 @@ try {
         savedPersonalJobExpectations: true,
         declinedProfileLoanDoesNotMutateMoney: true,
         mobileOverflow: false,
+        desktopWheelAndKeyboardReachFooter: true,
+        mobileTouchScrolling: true,
+        stickyNavigationBelowTopbar: true,
+        independentTabScrollPositions: true,
+        keyboardTabs: true,
+        socialContactFilter: true,
+        socialContactProfileBondsAndSceneNavigation: true,
         providerCalls: 0,
         errors,
       },

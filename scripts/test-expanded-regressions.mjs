@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 const suites = [
   "test-expanded-world.mjs",
   "test-expanded-semantics.mjs",
+  "test-social-perspectives.mjs",
   "test-expanded-lifecycle.mjs",
   "test-living.mjs",
   "test-living-mind.mjs",
