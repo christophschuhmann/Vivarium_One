@@ -1287,23 +1287,28 @@ export default async function apiRoutes(app) {
     const u = requireVerified(req);
     const w = ownWorld(u, req.params.id);
     const b = req.body || {};
+    if(w.simulation_mode==='living'&&b.locationId&&!db.prepare("SELECT 1 FROM lw_places WHERE id=? AND world_id=? AND kind='room'").get(b.locationId,w.id))throw httpErr(404,'NOT_FOUND','Choose a location in this world.');
     if (!b.music?.url) throw httpErr(400, 'NO_TRACK', 'Pick a track.');
-    const cur = pj(w.current_music, {}) || {};
+    const locationScore=w.simulation_mode==='living'&&b.locationId?db.prepare('SELECT music FROM lw_place_music WHERE world_id=? AND location_id=?').get(w.id,b.locationId)?.music:null;
+    const cur = pj(locationScore || w.current_music, {}) || {};
     const music = {
       row_id: b.music.row_id ?? null, title: String(b.music.title || 'track').slice(0, 120),
       url: String(b.music.url).slice(0, 300),
-      query: cur.query || '', genre: cur.genre || '', emotion: cur.emotion || '',
+      query: typeof b.query==='string'?b.query.trim().slice(0,400):cur.query || '', genre: cur.genre || '', emotion: cur.emotion || '',
+      source:'manual',selected_at:new Date().toISOString(),
       candidates: Array.isArray(b.candidates) ? b.candidates.slice(0, 5) : (cur.candidates || []),
     };
-    db.prepare('UPDATE worlds SET current_music=?, updated_at=? WHERE id=?').run(j(music), now(), w.id);
-    if (b.locationId && db.prepare('SELECT 1 FROM locations WHERE id=? AND world_id=?').get(b.locationId, w.id))
-      db.prepare('UPDATE locations SET music=? WHERE id=?').run(j(music), b.locationId);
-    if(w.simulation_mode==='living'&&b.locationId&&db.prepare('SELECT 1 FROM lw_places WHERE id=? AND world_id=?').get(b.locationId,w.id))db.prepare('INSERT INTO lw_place_music VALUES (?,?,?) ON CONFLICT(location_id) DO UPDATE SET music=excluded.music').run(w.id,b.locationId,j(music));
-    // the tick that carries the currently-active score: explicit idx, else newest with music
-    const t = b.tickIdx != null
-      ? db.prepare('SELECT id FROM ticks WHERE world_id=? AND idx=?').get(w.id, +b.tickIdx)
-      : db.prepare('SELECT id FROM ticks WHERE world_id=? AND music IS NOT NULL ORDER BY idx DESC LIMIT 1').get(w.id);
-    if (t) db.prepare('UPDATE ticks SET music=? WHERE id=?').run(j(music), t.id);
+    db.transaction(()=>{
+      db.prepare('UPDATE worlds SET current_music=?, updated_at=? WHERE id=?').run(j(music), now(), w.id);
+      if (b.locationId && db.prepare('SELECT 1 FROM locations WHERE id=? AND world_id=?').get(b.locationId, w.id))
+        db.prepare('UPDATE locations SET music=? WHERE id=?').run(j(music), b.locationId);
+      if(w.simulation_mode==='living'&&b.locationId&&db.prepare('SELECT 1 FROM lw_places WHERE id=? AND world_id=?').get(b.locationId,w.id))db.prepare('INSERT INTO lw_place_music VALUES (?,?,?) ON CONFLICT(location_id) DO UPDATE SET music=excluded.music').run(w.id,b.locationId,j(music));
+      // the tick that carries the currently-active score: explicit idx, else newest with music
+      const t = b.tickIdx != null
+        ? db.prepare('SELECT id FROM ticks WHERE world_id=? AND idx=?').get(w.id, +b.tickIdx)
+        : db.prepare('SELECT id FROM ticks WHERE world_id=? AND music IS NOT NULL ORDER BY idx DESC LIMIT 1').get(w.id);
+      if (t) db.prepare('UPDATE ticks SET music=? WHERE id=?').run(j(music), t.id);
+    })();
     return { ok: true, music };
   });
 

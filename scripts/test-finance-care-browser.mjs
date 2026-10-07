@@ -88,6 +88,35 @@ try {
     0,
     "finances removed from daily overview",
   );
+  assert.equal(
+    await page.locator("#ex-content .lw-vitals .lw-need").count(),
+    9,
+  );
+  assert.equal(
+    await page
+      .locator("#ex-content .lw-vitals .lw-attributes-grid progress")
+      .count(),
+    7,
+  );
+  assert.ok(
+    await page
+      .locator("#ex-content .lw-need")
+      .filter({ hasText: "Soziale Wärme" })
+      .isVisible(),
+  );
+  await page.evaluate(() => exConceptDialog("anger"));
+  await page
+    .locator(".ex-insight-example")
+    .getByText("Ein Elternteil", { exact: false })
+    .waitFor();
+  assert.match(
+    await page.locator(".ex-insight-question").innerText(),
+    /Vereinbarung|Grenze/,
+  );
+  await page.keyboard.press("Escape");
+  await page.screenshot({
+    path: "artifacts/expanded-world/everyday-needs-desktop.png",
+  });
   async function tab(name) {
     const box = await page.locator("[data-ex-tab=" + name + "]").boundingBox();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
@@ -183,6 +212,26 @@ try {
   assert.match(await page.getByRole("dialog").innerText(), /Meaning/);
   await page.keyboard.press("Escape");
   await page.locator("#ex-profile").click();
+  assert.ok(
+    await page
+      .locator("#lw-profile-needs")
+      .evaluate((el) => el.getBoundingClientRect().top < innerHeight),
+  );
+  assert.equal(
+    await page.locator(".lw-profile-attributes progress").count(),
+    7,
+  );
+  await page.locator(".lw-profile").evaluate((el) =>
+    Promise.all(
+      el
+        .getAnimations({ subtree: true })
+        .filter((a) => a.effect.getTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => {})),
+    ),
+  );
+  await page.screenshot({
+    path: "artifacts/expanded-world/profile-needs-desktop.png",
+  });
   await page.locator("#lw-profile-resources").click();
   await page.locator("#ex-open-finances").click();
   await page.locator("#ex-finance-period").waitFor();
@@ -195,6 +244,21 @@ try {
   assert.ok((await page.locator("#ex-content [data-concept=tom]").count()) > 0);
   assert.ok(
     !(await page.locator("#ex-content").innerText()).includes("${exInfo"),
+  );
+  await page.locator("#ex-profile").click();
+  await page.locator("#lw-profile-mind").click();
+  await page.locator("#lw-mind-everyday").waitFor();
+  await page.locator("#lw-mind-everyday").click();
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector("[data-ex-tab=overview]")
+        ?.getAttribute("aria-selected") === "true",
+  );
+  assert.equal(
+    await page.locator("#ex-content .lw-vitals .lw-need").count(),
+    9,
+    "Mind returns to everyday even when the City URL is unchanged",
   );
   await tab("jobs");
   assert.match(
@@ -255,6 +319,28 @@ try {
   mp.on("response", requestError);
   await mp.goto(base + route);
   await mp.locator("#ex-section").waitFor();
+  assert.equal(await mp.locator(".lw-vitals .lw-need").count(), 9);
+  await mp.screenshot({
+    path: "artifacts/expanded-world/everyday-needs-mobile.png",
+  });
+  await mp.locator("#ex-profile").click();
+  await mp.locator(".lw-profile-attributes progress").first().waitFor();
+  assert.equal(await mp.locator(".lw-profile-attributes progress").count(), 7);
+  assert.ok(
+    await mp.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  );
+  await mp.locator(".lw-profile").evaluate((el) =>
+    Promise.all(
+      el
+        .getAnimations({ subtree: true })
+        .filter((a) => a.effect.getTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => {})),
+    ),
+  );
+  await mp.screenshot({
+    path: "artifacts/expanded-world/profile-needs-mobile.png",
+  });
+  await mp.locator("#lw-close-profile").click();
   await mp.locator("#ex-section").selectOption("finances");
   await mp.locator("#ex-finance-period").waitFor();
   assert.ok(
@@ -283,6 +369,10 @@ try {
         profileShortcutOnSameCityUrl: true,
         financialControlsAndOwnLedger: true,
         reserveIsPlanNotPayment: true,
+        needsAlwaysVisible: true,
+        sevenAttributesVisible: true,
+        reflectiveLearningCards: true,
+        sameCityEverydayNavigation: true,
         financialFeelingAndPermaEvidence: true,
         educationTimeline: true,
         careStatuses: true,

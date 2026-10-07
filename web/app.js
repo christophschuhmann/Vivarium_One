@@ -2256,8 +2256,10 @@ async function stageScreen() {
       <button class="btn btn-primary small" id="advance">${t('advance', '▶ Advance')}</button>
       <button class="btn btn-coral small" id="intervene">${t('intervene', '⚡ Intervene')}</button>
       <span style="width:1px;height:18px;background:rgba(255,255,255,.2)"></span>
-      <button class="tchip playbtn" id="tts-play" title="Listen to this moment — narrator & voices in order">▶</button>
-      <button class="tchip playbtn" id="tts-pause" title="Pause / resume" style="display:none">⏸</button>
+      <span class="scene-audio-controls"><button class="tchip playbtn" id="tts-play" aria-label="Szene vollständig vorlesen" title="Gesamte Szene vorlesen · Erzähler und Stimmen in Reihenfolge">▶</button>
+      <button class="tchip playbtn" id="tts-replay" title="Von Anfang an vorlesen" aria-label="Gesamte Szene erneut von Anfang an vorlesen">↻ Vorlesen</button>
+      <label class="tchip" title="Neue Zeitschritte automatisch vorlesen"><input type="checkbox" id="tts-auto" ${ttsPrefs().autoplay?'checked':''}> Auto</label>
+      <button class="tchip playbtn" id="tts-pause" title="Pause / resume" style="display:none">⏸</button></span>
     </div>
     <div class="storybox">
       <div class="storylines" id="storylines">
@@ -2661,7 +2663,7 @@ async function musicWidget() {
       try {
         previews.forEach(o => o.pause());
         const locId = (() => { try { const pov = stageState.pov; const chars = S.worldData?.characters || []; return pov.type === 'location' ? pov.id : chars.find(x => x.id === pov.id)?.state.location_id; } catch { return null; } })();
-        const { music: saved } = await api(`/api/worlds/${S.world}/music-choice`, { method: 'POST', body: { music: c, candidates: cands, locationId: locId } });
+        const { music: saved } = await api(`/api/worlds/${S.world}/music-choice`, { method: 'POST', body: { music: c, candidates: cands, locationId: locId, query: $('#mw-q',panel).value.trim() || meta?.query || '' } });
         music._muted = false; music._ducked = false;
         music.url = null;                                    // force the crossfade to the new pick
         playMusic(saved);
@@ -2674,8 +2676,9 @@ async function musicWidget() {
   // 🔍 free search: BM25 over the sound captions, reordered by aesthetics (top 5 of 10)
   const bar = document.createElement('div');
   bar.style.cssText = 'display:flex;gap:6px;margin:2px 0 8px';
-  bar.innerHTML = `<input id="mw-q" placeholder="search music… e.g. dark techno, warm piano" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:6px 10px;font-size:12px"><button class="btn btn-soft small" id="mw-go">🔍</button>`;
+  bar.innerHTML = `<input id="mw-q" value="${esc(meta?.query||'')}" placeholder="Musik suchen · z. B. warm piano, lively acoustic" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:6px 10px;font-size:12px"><button class="btn btn-soft small" id="mw-go">🔍</button>`;
   box.before(bar);
+  if(S.worldData?.world.simulation_mode==='living')bar.insertAdjacentHTML('afterend','<p style="font-size:12px;line-height:1.6;color:#887993">Dieser Ort behält seinen Titel. Suche eine neue Stimmung und wähle einen Treffer, um die Ortsmusik zu ändern.</p>');
   const doSearch = async () => {
     const q = $('#mw-q', panel).value.trim(); if (!q) return;
     box.innerHTML = '<div class="empty-hint" style="padding:10px"><span class="spinner dark"></span></div>';
@@ -2824,7 +2827,9 @@ function setupNarrationPlayer(sceneLines, characters) {
   const retriedLines = new Set();   // per-scene: each line gets ONE on-the-fly regeneration before being skipped
   const playBtn = $('#tts-play'), pauseBtn = $('#tts-pause');
   if (!playBtn) return;
-  if (!lines.length) { playBtn.disabled = true; return; }
+  const emptyAuto=$('#tts-auto'),emptyReplay=$('#tts-replay');
+  if(emptyAuto)emptyAuto.onchange=()=>saveTtsPrefs({autoplay:emptyAuto.checked});
+  if (!lines.length) { playBtn.disabled = true;if(emptyReplay)emptyReplay.disabled=true;stageState.justAdvanced=false;return; }
   const chOf = (spk) => spk === 'narrator' ? null : characters.find(c => c.id === spk);
   const prefetch = (i) => {
     if (i >= lines.length || player.cache[i]) return player.cache[i];
@@ -2929,6 +2934,9 @@ function setupNarrationPlayer(sceneLines, characters) {
     if (player.paused) { player.audio.play(); player.paused = false; pauseBtn.textContent = '⏸'; }
     else { player.audio.pause(); player.paused = true; pauseBtn.textContent = '▶'; }
   };
+  const replayBtn=$('#tts-replay'),autoBox=$('#tts-auto');
+  if(replayBtn){replayBtn.disabled=!lines.length;replayBtn.onclick=()=>{stopNarration();playBtn.click();};}
+  if(autoBox)autoBox.onchange=()=>saveTtsPrefs({autoplay:autoBox.checked});
   if (stageState.justAdvanced && ttsPrefs().autoplay) { stageState.justAdvanced = false; playBtn.click(); }
   stageState.justAdvanced = false;
 }

@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-10-07T08:31:52.686Z",
+  "isolatedDatabase": true,
+  "paidProviderCalls": 0,
+  "durableLocationSelection": true,
+  "concurrentSearchDeduplication": true,
+  "newerManualChoiceWins": true,
+  "storytellerScopeChecked": true,
+  "failedSearchKeepsTrack": true,
+  "worldClockPreserved": true,
+  "accessIsolation": true,
+  "exportAndCopyRemap": true
+}

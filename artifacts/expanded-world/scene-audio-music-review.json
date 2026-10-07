@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-10-07T08:33:13.661Z",
+  "isolatedDatabase": true,
+  "paidProviderCalls": 0,
+  "autoplayAfterTick": true,
+  "orderedReplay": true,
+  "pauseResume": true,
+  "autoOffSilent": true,
+  "needsAndAttributesVisibleInMind": true,
+  "perLocationMusicPersistence": true,
+  "manualQueryRetained": true,
+  "musicDoesNotAdvanceTime": true,
+  "errors": []
+}

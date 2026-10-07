@@ -30,3 +30,32 @@
 
 .lw-perma{border-top:1px solid #e6ddef;margin-top:14px;padding-top:12px}.lw-perma>summary{font-weight:700;color:#79519b;cursor:pointer}.lw-perma-row{display:grid;grid-template-columns:minmax(0,1fr) 90px 54px;font-size:11px}.lw-perma-row span{min-width:0;overflow-wrap:anywhere}.lw-perma-row b{text-align:right}.lw-perma-row progress{width:100%;min-width:0;accent-color:#6d9b83}.lw-perma>small,.lw-perma li{font-size:11px;line-height:1.5}.lw-perma ul{padding-left:17px}.lw-perma details{margin-top:10px}@media(max-width:600px){.lw-perma-row{grid-template-columns:minmax(0,1fr) 65px 48px;font-size:10px}}
 .lw-profile .profile-cols>div{min-width:0;overflow-wrap:anywhere}.lw-profile .lw-stat span{min-width:0}.lw-profile .lw-stat progress{min-width:0}.lw-profile .iv-panel{min-width:0}@media(max-width:800px){.lw-profile .profile-cols{grid-template-columns:minmax(0,1fr)}.lw-profile .lw-stat:not(.lw-perma-row) span{flex:1.3}.lw-profile .lw-stat:not(.lw-perma-row) progress{flex:1;width:auto}}
+
+/* The same visible state panel follows a Sim from the scene to profile and everyday life. */
+.lw-vitals { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:18px; margin:16px 0 24px; }
+.lw-vital-card { padding:18px 20px; border:1px solid #dfd5e7; border-radius:18px; background:#fcf9ff; min-width:0; }
+.lw-vital-card h3 { font:600 15px Poppins,sans-serif; color:#625070; margin:0 0 8px; }
+.lw-vital-card > small { display:block; font-size:11px; color:#85758e; line-height:1.6; margin-bottom:12px; }
+.lw-needs-grid,.lw-attributes-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:3px 22px; }
+.lw-needs-grid .lw-stat,.lw-attributes-grid .lw-stat { display:grid; grid-template-columns:minmax(0,1fr) 36px; gap:4px 8px; align-items:center; margin:7px 0; min-width:0; }
+.lw-needs-grid .lw-stat span,.lw-attributes-grid .lw-stat span { grid-column:1 / -1; min-width:0; overflow-wrap:anywhere; }
+.lw-needs-grid progress,.lw-attributes-grid progress { min-width:0; width:100%; height:8px; }
+.lw-needs-grid b,.lw-attributes-grid b { font-size:10px; text-align:right; color:#70627d; }
+.lw-need.rising progress { accent-color:#b68a46; }.lw-need.urgent progress { accent-color:#bc6862; }
+.lw-profile-quick { display:flex; flex-wrap:wrap; gap:8px; position:sticky; top:-1px; background:#fffdfb; z-index:3; padding:12px 0; border-bottom:1px solid #e9dfea; margin-bottom:18px; }
+.lw-profile-attributes { padding-top:12px; border-top:1px solid #e8e0ec; margin-top:18px; }
+.lw-profile #lw-profile-needs,.lw-profile #lw-profile-biography,.lw-profile #lw-profile-wellbeing,.lw-profile #lw-journal { scroll-margin-top:100px; }
+.lw-mind-vitals { margin:12px 22px; }.lw-mind-vitals .lw-vital-card { padding:12px; }
+@media(max-width:1000px){.lw-vitals{grid-template-columns:minmax(0,1fr);}.lw-mind-vitals{margin:12px;}}
+@media(max-width:420px){.lw-needs-grid,.lw-attributes-grid{gap:3px 12px;}.lw-vital-card{padding:15px;}.lw-profile-quick .btn{font-size:11px;padding:7px 9px;}}
+.lw-profile-quick { display:grid; gap:10px; }
+.lw-profile-links,.lw-profile-sections { display:flex; flex-wrap:wrap; gap:7px; }
+.lw-profile-sections .btn { font-size:11px; background:#f1eaf7; }
+.lw-profile #lw-profile-needs,.lw-profile #lw-profile-biography,.lw-profile #lw-profile-wellbeing,.lw-profile #lw-journal { scroll-margin-top:140px; }
+@media(max-width:600px){.lw-profile #lw-profile-needs,.lw-profile #lw-profile-biography,.lw-profile #lw-profile-wellbeing,.lw-profile #lw-journal{scroll-margin-top:230px;}}
+.lw-profile #lw-profile-attributes { scroll-margin-top:140px; }
+@media(max-width:600px){.lw-profile #lw-profile-attributes {scroll-margin-top:230px;}}
+.scene-audio-controls { display:inline-flex; align-items:center; gap:5px; }
+.scene-audio-controls label { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; cursor:pointer; }
+.scene-audio-controls input { margin:0; accent-color:#a088ff; }
+#tts-replay { white-space:nowrap; }

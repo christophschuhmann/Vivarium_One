@@ -8,6 +8,7 @@ const suites = [
   "test-social-perspectives.mjs",
   "test-expanded-lifecycle.mjs",
   "test-living.mjs",
+  "test-location-music.mjs",
   "test-living-mind.mjs",
   "test-living-social.mjs",
   "test-living-romance.mjs",

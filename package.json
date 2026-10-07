@@ -14,6 +14,7 @@
     "reset-demo": "node --env-file=.env scripts/reset_demo.js",
     "test:providers": "node scripts/test-providers.mjs",
     "test:music": "node scripts/test-music.mjs",
+    "test:location-music": "node scripts/test-location-music.mjs",
     "test:storage": "node scripts/test-storage.mjs",
     "test:e2e": "node e2e/io_features.cjs && node e2e/timetravel.cjs && node e2e/scene.cjs",
     "test:settings": "node scripts/test-settings-browser.mjs",

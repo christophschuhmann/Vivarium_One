@@ -1,3 +1,4 @@
+import {ensureLocationMusic} from '../living/music.js';
 import { activityStatus } from '../living/expanded/education.js';
 import {initializeNewPopulation} from '../living/expanded/population.js';
 import {projectWellbeing} from '../living/wellbeing.js';
@@ -25,6 +26,13 @@ function own(req,verified=false){const user=verified?requireVerified(req):requir
 function mutable(req){const result=own(req,true);if(busy.has(result.world.id))throw httpErr(409,'WORLD_BUSY','Wait for the current tick to finish.');return result;}
 const simView=p=>{const person={...p,profile:pj(p.profile,{}),state:pj(p.state,{})};normalizeRomance(person);projectWellbeing(person,person.state.wellbeing?.updated_at||0);if(person.profile.social)person.profile.social=socialPerspective(person);person.activityStatus=activityStatus(person);return person;};
 export default async function livingRoutes(app) {
+  app.post('/api/living/worlds/:worldId/places/:id/music',async req=>{
+    const {world}=own(req,true),place=db.prepare("SELECT id,purpose,name FROM lw_places WHERE world_id=? AND id=? AND kind='room'").get(world.id,req.params.id);
+    if(!place)throw httpErr(404,'NOT_FOUND','Choose a location in this world.');
+    const query=req.body?.query;
+    if(query!==undefined&&(typeof query!=='string'||!query.trim()||query.length>400))throw httpErr(400,'BAD_QUERY','Music query must be 1–400 characters.');
+    return {music:await ensureLocationMusic(world.id,place,query?.trim())};
+  });
   app.get('/api/living/worlds/:worldId/history',async req=>{const {world}=own(req);return {beats:db.prepare('SELECT version,start,end,story,metrics FROM lw_beats WHERE world_id=? ORDER BY version DESC LIMIT 40').all(world.id).map(b=>({...b,story:pj(b.story,[]),metrics:pj(b.metrics,{})}))};});
   app.get('/api/living/worlds/:worldId/view',async req=>stageView(own(req).world,req.query));
   app.get('/api/living/worlds/:worldId/graph',async req=>graphView(own(req).world.id,req.query));

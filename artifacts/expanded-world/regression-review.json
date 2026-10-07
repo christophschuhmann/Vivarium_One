@@ -1,57 +1,62 @@
 {
-  "generatedAt": "2026-10-07T07:29:52.490Z",
+  "generatedAt": "2026-10-07T08:23:36.751Z",
   "node": "v22.17.1",
   "providerCalls": 0,
   "results": [
     {
       "suite": "test-expanded-world.mjs",
       "passed": true,
-      "durationMs": 1488
+      "durationMs": 1467
     },
     {
       "suite": "test-finance-education-care.mjs",
       "passed": true,
-      "durationMs": 4755
+      "durationMs": 4594
     },
     {
       "suite": "test-expanded-semantics.mjs",
       "passed": true,
-      "durationMs": 2022
+      "durationMs": 1993
     },
     {
       "suite": "test-social-perspectives.mjs",
       "passed": true,
-      "durationMs": 73
+      "durationMs": 71
     },
     {
       "suite": "test-expanded-lifecycle.mjs",
       "passed": true,
-      "durationMs": 3265
+      "durationMs": 3314
     },
     {
       "suite": "test-living.mjs",
       "passed": true,
-      "durationMs": 9543
+      "durationMs": 9702
+    },
+    {
+      "suite": "test-location-music.mjs",
+      "passed": true,
+      "durationMs": 597
     },
     {
       "suite": "test-living-mind.mjs",
       "passed": true,
-      "durationMs": 629
+      "durationMs": 635
     },
     {
       "suite": "test-living-social.mjs",
       "passed": true,
-      "durationMs": 1201
+      "durationMs": 1208
     },
     {
       "suite": "test-living-romance.mjs",
       "passed": true,
-      "durationMs": 968
+      "durationMs": 963
     },
     {
       "suite": "test-living-wellbeing.mjs",
       "passed": true,
-      "durationMs": 681
+      "durationMs": 678
     },
     {
       "suite": "test-living-biographies.mjs",
@@ -61,17 +66,17 @@
     {
       "suite": "test-providers.mjs",
       "passed": true,
-      "durationMs": 363
+      "durationMs": 361
     },
     {
       "suite": "test-storage.mjs",
       "passed": true,
-      "durationMs": 358
+      "durationMs": 354
     },
     {
       "suite": "test-music.mjs",
       "passed": true,
-      "durationMs": 345
+      "durationMs": 341
     }
   ]
 }
