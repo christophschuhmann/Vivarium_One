@@ -1,3 +1,6 @@
+import { financialReport } from "./finances.js";
+import { educationView, activityStatus, JOB_LABELS } from "./education.js";
+import { careView } from "./care.js";
 import { db, pj } from "../../db.js";
 import { rows, balance } from "./store.js";
 import {
@@ -22,7 +25,7 @@ import { leisureAccess } from "./leisure.js";
 export function personResources(d, p) {
   const h = householdOf(d, p),
     contract = d.contracts.get(p.id),
-    forecast = householdForecast(d, h, d.town.world.seconds),
+    forecast = householdForecast(d, h, d.town.world.seconds, {observerId:p.id}),
     invoiceIds = new Set(
       d.invoices
         .filter(
@@ -42,11 +45,17 @@ export function personResources(d, p) {
     clock: d.town.world.seconds,
     date: calendarDate(d.town.world.seconds).toISOString(),
     cashCents: balance(d, ownAccount(d, p)),
+    activityStatus:activityStatus(p,d.town),
+    finances:financialReport(d,p,d.town.world.seconds),
+    education:{...educationView(p,d.town),employmentHistory:rows(d,'employment').filter(e=>e.payload.simId===p.id).map(e=>({id:e.id,...e.payload,firmName:d.firms.get(e.payload.firmId)?.payload.name}))},
+    care:careView(d,p),
+    applications:(p.state.economy.applications || []).slice().reverse().map(a=>({...a,targetName:a.kind==='job'?(d.entities.get(a.targetId)?.payload.title || 'Stelle'):(d.town.places.get(d.properties.get(a.targetId)?.payload.buildingId)?.name || 'Wohnung')})),
     pendingGrossCents: p.state.economy.pendingGrossCents,
     employment: contract
       ? {
           id: contract.id,
           ...contract.payload,
+          estimatedNetCents: estimatedNet(contract.payload.grossMonthlyCents),
           firmName: d.firms.get(contract.payload.firmId).payload.name,
         }
       : null,
@@ -55,7 +64,7 @@ export function personResources(d, p) {
       name:
         d.town.places.get(
           d.properties.get(h.payload.propertyId)?.payload.buildingId,
-        )?.name || "Haushalt in Wohnhilfe",
+        )?.name || (h.payload.housingStatus==='residential_care'?'Seniorenhaus Lindenblick · '+p.name:"Haushalt in Wohnhilfe"),
       members: h.payload.members.map((id) => {
         const q = d.people.get(id),
           c = d.contracts.get(id);
@@ -189,7 +198,7 @@ export function personResources(d, p) {
     flows: p.state.economy.monthlyFlows,
     ledger: db
       .prepare(
-        "SELECT DISTINCT t.id,t.at,t.kind,t.metadata,l.amount_cents FROM lw_money_transactions t JOIN lw_money_legs l ON l.transaction_id=t.id WHERE t.world_id=? AND l.account_id IN (?,?) ORDER BY t.at DESC,t.rowid DESC LIMIT 25",
+        "SELECT DISTINCT t.id,t.at,t.kind,t.metadata,sum(l.amount_cents) amount_cents FROM lw_money_transactions t JOIN lw_money_legs l ON l.transaction_id=t.id WHERE t.world_id=? AND l.account_id IN (?,?) GROUP BY t.id ORDER BY t.at DESC,t.rowid DESC LIMIT 25",
       )
       .all(d.worldId, ownAccount(d, p), h.payload.jointAccountId)
       .map((t) => ({ ...t, metadata: pj(t.metadata, {}) })),
@@ -244,6 +253,7 @@ export function townResources(d, { simId = null, search = "" } = {}) {
       .map((j) => ({
         id: j.id,
         ...j.payload,
+        title: JOB_LABELS[j.payload.title] || j.payload.title,
         firmName: d.firms.get(j.payload.firmId)?.payload.name,
         assessment: jobAssessment(d, p, j, time),
       })),

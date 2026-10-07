@@ -62,8 +62,13 @@ export async function generateTown(worldId,{population=10,seed=73,title='Lindens
     const seniors=count<=2&&index%7===5,baseAge=seniors?68+Math.floor(r()*15):26+Math.floor(r()*25),members=[];
     for(let k=0;k<count;k++) {
       const gender=k===0?'female':k===1?'male':r()<.5?'female':'male',age=k<2?(count===1&&index%5===3?18+Math.floor(r()*8):baseAge+(k===1?2:0)):Math.min(baseAge-20,index%4===1?1+Math.floor(r()*5):6+Math.floor(r()*12));
-      const job=age<6?'Kindergarten child':age<18?'Pupil':age>=66?'Retired':pick(jobs,r),ethnicity=pick(heritage,r);
-      const workplace=job==='Pupil'?civic.school:job==='Kindergarten child'?civic.daycare:job==='Teacher'?civic.school:job==='Researcher'?civic.campus:job==='Physician'?civic.clinic:job==='Carpenter'?civic.fire:job==='Civic planner'?civic.townhall:['Bookseller','Illustrator'].includes(job)?civic.library:['Baker','Gardener'].includes(job)?civic.cafe:job==='Retired'?null:civic.townhall;
+      const generatedJob=age<6?'Kindergarten child':age<18?'Pupil':age>=66?'Retired':pick(jobs,r);
+      // A separate deterministic draw preserves the existing world's identity
+      // stream. New young adults can be students; qualified careers requiring
+      // many years of study cannot start with a fictitious finished degree at 18.
+      const tooYoungForDegree=(generatedJob==='Physician' && age<25)||(['Teacher','Researcher'].includes(generatedJob)&&age<22);
+      const job=age>=18&&age<24&&(tooYoungForDegree || rng(seed+':study-phase:'+people.length)()<.4)?'Student':generatedJob,ethnicity=pick(heritage,r);
+      const workplace=job==='Pupil'?civic.school:job==='Kindergarten child'?civic.daycare:job==='Teacher'?civic.school:['Researcher','Student'].includes(job)?civic.campus:job==='Physician'?civic.clinic:job==='Carpenter'?civic.fire:job==='Civic planner'?civic.townhall:['Bookseller','Illustrator'].includes(job)?civic.library:['Baker','Gardener'].includes(job)?civic.cafe:job==='Retired'?null:civic.townhall;
       const asset=searchAssets(age+' '+gender,{kind:'character',age,gender,heritage:ethnicity})[Math.floor(r()*Math.min(2,5))] || searchAssets('',{kind:'character',age,gender})[0];
       const id=worldId+'_s_'+people.length,person={id,world_id:worldId,name:pick(names[gender],r)+' '+last,age,gender,household_id:home,asset_id:asset?.id || null,colour:`hsl(${Math.floor(r()*360)} 64% 46%)`,anchored:people.length<2?1:0,
         seed_key:'sim-'+people.length,profile:{job,interests:[pick(interests,r),pick(interests,r)]},family:{parent_ids:[],partner_id:null},workplace_id:workplace,
@@ -83,7 +88,7 @@ export async function generateTown(worldId,{population=10,seed=73,title='Lindens
   const groups=new Map();for(const p of initialized){if(!groups.has(p.household_id))groups.set(p.household_id,[]);groups.get(p.household_id).push(p);}
   for(const person of initialized) {
     const relatives=groups.get(person.household_id).filter(p=>p.id!==person.id).map(p=>p.name);
-    person.biography=`${person.name} ist ${person.age} Jahre alt und ${person.profile.job==='Retired'?'im Ruhestand':person.profile.job==='Pupil'?'geht zur Schule':person.profile.job==='Kindergarten child'?'besucht den Kindergarten':'arbeitet als '+person.profile.job}. ${relatives.length?'Lebt mit '+relatives.join(', ')+' im gemeinsamen Haushalt.':'Lebt allein und pflegt Kontakte in der Nachbarschaft.'} Zuhause ist ${person.profile.neighborhood?.name||'die Stadt'}. Interessiert sich für ${[...new Set(person.profile.interests)].map(interestLabel).join(' und ')}. ${socialBackground(person,byId)} Ziel: ${person.psychology.ambitions.map(a=>a.title).join('; ')}.`;
+    person.biography=`${person.name} ist ${person.age} Jahre alt und ${person.profile.job==='Retired'?'im Ruhestand':person.profile.job==='Student'?'studiert':person.profile.job==='Pupil'?'geht zur Schule':person.profile.job==='Kindergarten child'?'besucht den Kindergarten':'arbeitet als '+person.profile.job}. ${relatives.length?'Lebt mit '+relatives.join(', ')+' im gemeinsamen Haushalt.':'Lebt allein und pflegt Kontakte in der Nachbarschaft.'} Zuhause ist ${person.profile.neighborhood?.name||'die Stadt'}. Interessiert sich für ${[...new Set(person.profile.interests)].map(interestLabel).join(' und ')}. ${socialBackground(person,byId)} Ziel: ${person.psychology.ambitions.map(a=>a.title).join('; ')}.`;
     person.biography_mode=person.anchored?'written_pending':'procedural';
     person.location_id=person.home.kitchen;
     person.state={needs:person.needs,psychology:person.psychology,career:person.career,location_id:person.location_id,action:null,route:null,goal:null,mood:'zuversichtlich',thought:'Ein neuer Tag beginnt.',last_social:-99999};

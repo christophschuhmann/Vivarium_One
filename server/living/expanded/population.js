@@ -1,5 +1,6 @@
 // Extend the current town without reseeding existing accounts, contracts or
 // memories. New residents receive explicitly initialized current resources.
+import { initializeEducation } from "./education.js";
 import { db, j, uid } from "../../db.js";
 import { rng } from "../random.js";
 import { economicDraft } from "./economy.js";
@@ -11,6 +12,7 @@ export function initializeNewPopulation(town) {
   if (!newcomers.length) return;
   const d = economicDraft(town);
   if (!d) throw new Error("Economic town not initialized");
+  initializeEducation(town);
   const time = town.world.seconds,
     event = {
       id: uid("le_"),

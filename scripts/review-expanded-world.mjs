@@ -51,8 +51,8 @@ try {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(base + "/#/city?w=" + world);
-  await page.locator(".ex-stats").waitFor();
-  assert.equal(await page.locator("[data-ex-tab]").count(), 6);
+  await page.locator(".lw-perma").waitFor();
+  assert.equal(await page.locator("[data-ex-tab]").count(), 8);
   const clickTab = async id => {
     const box = await page.locator(`[data-ex-tab="${id}"]`).boundingBox();
     assert.ok(box && box.y >= 0 && box.y+box.height <= 1080, 'Tab remains in viewport');
@@ -79,8 +79,8 @@ try {
   assert.equal(await scrollTop(),0);
   await page.locator('[data-ex-tab="overview"]').focus();
   await page.keyboard.press('ArrowRight');
-  await page.locator('[data-ex-tab="jobs"][aria-selected="true"]').waitFor();
-  assert.equal(await page.locator('[data-ex-tab="jobs"]').evaluate(el=>el===document.activeElement),true);
+  await page.locator('[data-ex-tab="finances"][aria-selected="true"]').waitFor();
+  assert.equal(await page.locator('[data-ex-tab="finances"]').evaluate(el=>el===document.activeElement),true);
   await clickTab("overview");
   assert.equal(await page.locator('[data-nav="city"]').count(), 1);
   fs.mkdirSync("artifacts/expanded-world", { recursive: true });
@@ -89,6 +89,8 @@ try {
     fullPage: true,
   });
   for (const tab of [
+    "finances",
+    "education",
     "jobs",
     "housing",
     "leisure",
@@ -160,7 +162,7 @@ try {
   const mobilePage = await mobile.newPage();
   mobilePage.on('pageerror',e=>errors.push(e.message));
   await mobilePage.goto(base + '/#/city?w=' + world);
-  await mobilePage.locator('.ex-stats').waitFor();
+  await mobilePage.locator('.lw-perma').waitFor();
   await mobilePage.locator('#ex-section').selectOption('leisure');
   const cdp = await mobile.newCDPSession(mobilePage);
   const swipe = async () => {
@@ -260,7 +262,7 @@ try {
     "artifacts/expanded-world/browser-review.json",
     JSON.stringify(
       {
-        sixTownTabs: true,
+        eightTownTabs: true,
         classicPlayMindProfileNavigation: true,
         skillsAndAttributes: true,
         savedPersonalJobExpectations: true,

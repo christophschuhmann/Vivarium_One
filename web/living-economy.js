@@ -11,40 +11,84 @@ const exLabels = {
   experienced_crime: "Erlebter Sicherheitsvorfall",
 };
 function exMindHtml(r) {
-  return `<div class="ex-grid"><section class="ex-card">${livingWellbeingHtml(r.mind || {})}</section><section class="ex-card"><h3>Was ich brauche und mir wünsche</h3><p>${esc(r.mind?.thought || "")}</p><small>${esc(r.mind?.mood || "")} · ${esc(r.mind?.current_desire || "")}</small><details><summary>Bedürfnisse · höher heißt dringender</summary>${livingNeedsHtml(r.mind || {})}</details><h4>Eigene Ziele</h4>${(r.mind?.goals || []).map((g) => exMeter(g.title_de || g.title || g.kind, g.progress || 0)).join("")}</section></div>`;
+  return `<div class="ex-grid"><section class="ex-card">${livingWellbeingHtml(r.mind || {})}</section><section class="ex-card"><h3>Was ich brauche und mir wünsche</h3><p>${esc(r.mind?.thought || "")}</p><small>${esc(r.mind?.mood || "")} · ${esc(r.mind?.current_desire || "")}</small><details><summary>Bedürfnisse · höher heißt dringender</summary>${livingNeedsHtml(r.mind || {})}</details><h4>Eigene Ziele</h4>${(r.mind?.goals || []).map((g) => exMeter(g.title_de || g.title || g.kind, g.progress || 0, 1, "goal")).join("")}</section></div>`;
 }
 let expandedTab = "overview",
   expandedSim = null;
 function exButton(kind, id, label, disabled = false) {
   return `<button class="btn btn-soft small" data-econ-kind="${esc(kind)}" data-econ-id="${esc(id || "")}" ${disabled ? "disabled" : ""}>${esc(label)}</button>`;
 }
-function exMeter(name, value, max = 1) {
-  return `<div class="ex-meter"><span>${esc(name)}</span><progress max="${max}" value="${value}"></progress><b>${Math.round((value / max) * 100)}</b></div>`;
+function exMeter(name, value, max = 1, concept = "skill") {
+  return `<div class="ex-meter"><span>${exExplain(name, exConceptKey(name) || concept)}</span><progress max="${max}" value="${value}"></progress><b>${Math.round((value / max) * 100)}</b></div>`;
 }
 function exSocialTopicHtml(topic) {
   const v = topic.perspective;
-  if (!v) return `<p>${esc(topic.thought || "Diese ältere Notiz enthält noch keine genauere Deutung.")}</p>`;
-  return `<div class="ex-social-context">${esc(v.contextLabel)}</div><div class="ex-social-pair"><section><h4>Was ich tatsächlich mitbekommen habe</h4><p>${esc(v.observation)}</p></section><section class="ex-interpretation"><h4>Wie ich es gerade deute</h4><p>${esc(v.interpretation)}</p></section></div><div class="ex-social-wish"><b>Was mir selbst wichtig ist</b><p>${esc(v.myWish)}</p>${v.selfLens.length ? '<ul>' + v.selfLens.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>' : '<small>Meine Erwartung beruht auf meiner Persönlichkeit und der bekannten Beziehung; sie kann sich im Gespräch ändern.</small>'}</div><details class="ex-alternatives"><summary>Andere plausible Erklärungen</summary>${v.alternatives.filter(a=>a.text!==v.interpretation).map(a=>'<p>'+esc(a.text)+'</p>').join('') || '<p>Der Anlass könnte noch unbekannt sein. Ich sollte nicht aus einer einzigen Begegnung auf eine feste Absicht schließen.</p>'}</details>${v.metabelief ? `<div class="ex-note"><b>Welchen Eindruck könnte ich hinterlassen haben?</b><p>${esc(v.metabelief)}</p></div>` : ''}${v.audience ? '<p class="ex-audience">'+esc(v.audience)+'</p>' : ''}<div class="ex-next-step"><b>Ein möglicher nächster Schritt</b><p>${esc(v.nextStep)}</p><small>Ein Gedanke, keine automatisch ausgeführte Aktion.</small></div><details><summary>Was ich noch nicht weiß</summary><ul>${v.unknowns.map(t=>'<li>'+esc(t)+'</li>').join('')}</ul></details><details><summary>Eigene Quellen & Gewichtung der Vermutungen</summary><p class="ex-muted">Die Prozentwerte vergleichen mögliche Deutungen in meinem Modell. Sie messen weder die Gefühle meines Gegenübers noch dessen Zustimmung.</p><div class="ex-probs">${Object.entries(topic.probabilities || {}).filter(([k,n])=>n>.01 && (k!=='romance' || v.romanceAllowed)).map(([k,n])=>`<span>${esc({support:'Zuwendung',obligation:'Abstimmung',criticism:'Kritik',romance:'Freiwillige Nähe',unknown:'Unbekannter Anlass'}[k] || k)} ${Math.round(n*100)}%</span>`).join('')}</div>${(topic.sourceRefs || []).slice().reverse().map(s=>`<div class="ex-evidence"><b>${esc(s.description || 'Ältere Begegnung')}</b><small>${esc({direct:'Selbst am Gespräch beteiligt',nearby_observation:'In der Nähe mitbekommen',telephone:'Telefonisch gehört'}[s.modality] || 'Eigene Notiz')} · ${Number.isFinite(s.at) ? new Date(Date.UTC(2026,8,21)+s.at*1000).toLocaleString('de-DE') : 'Zeit unbekannt'} · Gewicht der Beobachtung ${Math.round((s.reliability || 0)*100)}%</small></div>`).join('') || '<p>Noch keine Begegnung als Quelle.</p>'}</details>`;
+  if (!v)
+    return `<p>${esc(topic.thought || "Diese ältere Notiz enthält noch keine genauere Deutung.")}</p>`;
+  return `<div class="ex-social-context">${esc(v.contextLabel)}</div><div class="ex-social-pair"><section><h4>Was ich tatsächlich mitbekommen habe</h4><p>${esc(v.observation)}</p></section><section class="ex-interpretation"><h4>Wie ich es gerade deute</h4><p>${esc(v.interpretation)}</p></section></div><div class="ex-social-wish"><b>Was mir selbst wichtig ist</b><p>${esc(v.myWish)}</p>${v.selfLens.length ? "<ul>" + v.selfLens.map((t) => "<li>" + esc(t) + "</li>").join("") + "</ul>" : "<small>Meine Erwartung beruht auf meiner Persönlichkeit und der bekannten Beziehung; sie kann sich im Gespräch ändern.</small>"}</div><details class="ex-alternatives"><summary>Andere plausible Erklärungen</summary>${
+    v.alternatives
+      .filter((a) => a.text !== v.interpretation)
+      .map((a) => "<p>" + esc(a.text) + "</p>")
+      .join("") ||
+    "<p>Der Anlass könnte noch unbekannt sein. Ich sollte nicht aus einer einzigen Begegnung auf eine feste Absicht schließen.</p>"
+  }</details>${v.metabelief ? `<div class="ex-note"><b>Welchen Eindruck könnte ich hinterlassen haben?</b><p>${esc(v.metabelief)}</p></div>` : ""}${v.audience ? '<p class="ex-audience">' + esc(v.audience) + "</p>" : ""}<div class="ex-next-step"><b>Ein möglicher nächster Schritt</b><p>${esc(v.nextStep)}</p><small>Ein Gedanke, keine automatisch ausgeführte Aktion.</small></div><details><summary>Was ich noch nicht weiß</summary><ul>${v.unknowns.map((t) => "<li>" + esc(t) + "</li>").join("")}</ul></details><details><summary>Eigene Quellen & Gewichtung der Vermutungen</summary><p class="ex-muted">Die Prozentwerte vergleichen mögliche Deutungen in meinem Modell. Sie messen weder die Gefühle meines Gegenübers noch dessen Zustimmung.</p><div class="ex-probs">${Object.entries(
+    topic.probabilities || {},
+  )
+    .filter(([k, n]) => n > 0.01 && (k !== "romance" || v.romanceAllowed))
+    .map(
+      ([k, n]) =>
+        `<span>${esc({ support: "Zuwendung", obligation: "Abstimmung", criticism: "Kritik", romance: "Freiwillige Nähe", unknown: "Unbekannter Anlass" }[k] || k)} ${Math.round(n * 100)}%</span>`,
+    )
+    .join("")}</div>${
+    (topic.sourceRefs || [])
+      .slice()
+      .reverse()
+      .map(
+        (s) =>
+          `<div class="ex-evidence"><b>${esc(s.description || "Ältere Begegnung")}</b><small>${esc({ direct: "Selbst am Gespräch beteiligt", nearby_observation: "In der Nähe mitbekommen", telephone: "Telefonisch gehört" }[s.modality] || "Eigene Notiz")} · ${Number.isFinite(s.at) ? new Date(Date.UTC(2026, 8, 21) + s.at * 1000).toLocaleString("de-DE") : "Zeit unbekannt"} · Gewicht der Beobachtung ${Math.round((s.reliability || 0) * 100)}%</small></div>`,
+      )
+      .join("") || "<p>Noch keine Begegnung als Quelle.</p>"
+  }</details>`;
 }
 function exSocialHtml(data) {
   const contacts = data?.contacts || [];
-  return `<div class="ex-social-intro"><p>Ich sehe die Welt aus meiner Perspektive. Meine Beobachtungen sind der Ausgangspunkt; meine Deutungen können sich irren.</p><p class="ex-muted">Hier findest du Notizen zu ${contacts.length} ${contacts.length === 1 ? "bekanntem Kontakt" : "bekannten Kontakten"}. Neue Erinnerungen entstehen durch echte Begegnungen. Das Innenleben anderer Sims bleibt ihnen vorbehalten.</p></div>${contacts.length ? '<label class="ex-social-search">Kontakt finden<input id="ex-social-search" type="search" placeholder="Name oder bekannte Beziehung …" autocomplete="off"></label><p id="ex-social-count" class="ex-muted" aria-live="polite">'+contacts.length+(contacts.length===1?' Kontakt':' Kontakte')+'</p>' : ''}<div class="ex-social-list">${contacts.map(c=>{
-    const topics = Object.values(c.topics || {}).sort((a,b)=>b.updatedAt-a.updatedAt);
-    return `<article class="ex-contact" data-ex-contact="${esc((c.subjectName+' '+(c.knownRoles || []).join(' ')).toLocaleLowerCase('de-DE'))}"><header class="ex-contact-heading"><div><h3>${esc(c.subjectName)}</h3><small>${esc((c.knownRoles || []).join(' · ') || 'Bekannter Kontakt')}</small></div><div class="ex-contact-actions"><button class="btn btn-soft small" data-ex-social-profile="${esc(c.subjectId)}">Profil</button><button class="btn btn-soft small" data-ex-social-bonds="${esc(c.subjectId)}">Beziehungen</button><button class="btn btn-teal small" data-ex-social-play="${esc(c.subjectId)}">▶ Szene</button></div></header>${topics[0] ? exSocialTopicHtml(topics[0]) : '<p>Noch keine genauere eigene Notiz.</p>'}${topics.length>1 ? '<details class="ex-older-topics"><summary>Weitere Begegnungskontexte ('+(topics.length-1)+')</summary>'+topics.slice(1).map(exSocialTopicHtml).join('')+'</details>' : ''}</article>`;
-  }).join('') || '<div class="ex-note"><b>Meine Begegnungen haben noch keine neuen Notizen hinterlassen.</b><p>Nach einem Gespräch entstehen mehrere mögliche Deutungen mit einer eigenen Quelle. Es werden keine Erlebnisse erfunden.</p></div>'}</div><p id="ex-social-empty" class="ex-note" hidden>Kein gespeicherter Kontakt passt zu dieser Suche. Im Sim-Explorer findest du auch Sims, denen ich noch nicht begegnet bin.</p>`;
+  return `<div class="ex-social-intro"><p>Ich sehe die Welt aus meiner Perspektive. Meine Beobachtungen sind der Ausgangspunkt; meine Deutungen können sich irren.</p><p class="ex-muted">Hier findest du Notizen zu ${contacts.length} ${contacts.length === 1 ? "bekanntem Kontakt" : "bekannten Kontakten"}. Neue Erinnerungen entstehen durch echte Begegnungen. Das Innenleben anderer Sims bleibt ihnen vorbehalten.</p></div>${contacts.length ? '<label class="ex-social-search">Kontakt finden<input id="ex-social-search" type="search" placeholder="Name oder bekannte Beziehung …" autocomplete="off"></label><p id="ex-social-count" class="ex-muted" aria-live="polite">' + contacts.length + (contacts.length === 1 ? " Kontakt" : " Kontakte") + "</p>" : ""}<div class="ex-social-list">${
+    contacts
+      .map((c) => {
+        const topics = Object.values(c.topics || {}).sort(
+          (a, b) => b.updatedAt - a.updatedAt,
+        );
+        return `<article class="ex-contact" data-ex-contact="${esc((c.subjectName + " " + (c.knownRoles || []).join(" ")).toLocaleLowerCase("de-DE"))}"><header class="ex-contact-heading"><div><h3>${esc(c.subjectName)}</h3><small>${esc((c.knownRoles || []).join(" · ") || "Bekannter Kontakt")}</small></div><div class="ex-contact-actions"><button class="btn btn-soft small" data-ex-social-profile="${esc(c.subjectId)}">Profil</button><button class="btn btn-soft small" data-ex-social-bonds="${esc(c.subjectId)}">Beziehungen</button><button class="btn btn-teal small" data-ex-social-play="${esc(c.subjectId)}">▶ Szene</button></div></header>${topics[0] ? exSocialTopicHtml(topics[0]) : "<p>Noch keine genauere eigene Notiz.</p>"}${topics.length > 1 ? '<details class="ex-older-topics"><summary>Weitere Begegnungskontexte (' + (topics.length - 1) + ")</summary>" + topics.slice(1).map(exSocialTopicHtml).join("") + "</details>" : ""}</article>`;
+      })
+      .join("") ||
+    '<div class="ex-note"><b>Meine Begegnungen haben noch keine neuen Notizen hinterlassen.</b><p>Nach einem Gespräch entstehen mehrere mögliche Deutungen mit einer eigenen Quelle. Es werden keine Erlebnisse erfunden.</p></div>'
+  }</div><p id="ex-social-empty" class="ex-note" hidden>Kein gespeicherter Kontakt passt zu dieser Suche. Im Sim-Explorer findest du auch Sims, denen ich noch nicht begegnet bin.</p>`;
 }
 function exBindSocial(root) {
   const input = $("#ex-social-search", root);
-  if (input) input.oninput = () => {
-    const query = input.value.trim().toLocaleLowerCase('de-DE');
-    let visible = 0;
-    $$("[data-ex-contact]", root).forEach(card => { card.hidden = !card.dataset.exContact.includes(query); if (!card.hidden) visible++; });
-    $("#ex-social-count", root).textContent = `${visible} von ${$$("[data-ex-contact]", root).length} ${$$("[data-ex-contact]", root).length === 1 ? "Kontakt" : "Kontakten"}`;
-    $("#ex-social-empty", root).hidden = visible > 0;
-  };
-  $$("[data-ex-social-profile]",root).forEach(b=>b.onclick=()=>livingProfileDrawer(b.dataset.exSocialProfile));
-  $$("[data-ex-social-bonds]",root).forEach(b=>b.onclick=()=>livingBondsJump(b.dataset.exSocialBonds));
-  $$("[data-ex-social-play]",root).forEach(b=>b.onclick=()=>livingJump({type:'character',id:b.dataset.exSocialPlay}));
+  if (input)
+    input.oninput = () => {
+      const query = input.value.trim().toLocaleLowerCase("de-DE");
+      let visible = 0;
+      $$("[data-ex-contact]", root).forEach((card) => {
+        card.hidden = !card.dataset.exContact.includes(query);
+        if (!card.hidden) visible++;
+      });
+      $("#ex-social-count", root).textContent =
+        `${visible} von ${$$("[data-ex-contact]", root).length} ${$$("[data-ex-contact]", root).length === 1 ? "Kontakt" : "Kontakten"}`;
+      $("#ex-social-empty", root).hidden = visible > 0;
+    };
+  $$("[data-ex-social-profile]", root).forEach(
+    (b) => (b.onclick = () => livingProfileDrawer(b.dataset.exSocialProfile)),
+  );
+  $$("[data-ex-social-bonds]", root).forEach(
+    (b) => (b.onclick = () => livingBondsJump(b.dataset.exSocialBonds)),
+  );
+  $$("[data-ex-social-play]", root).forEach(
+    (b) =>
+      (b.onclick = () =>
+        livingJump({ type: "character", id: b.dataset.exSocialPlay })),
+  );
 }
 function exHouseholdHtml(r) {
   const h = r.household,
@@ -79,15 +123,15 @@ function exHouseholdHtml(r) {
   }${exLedgerHtml(r)}${r.invoices.map((i) => `<div class="ex-line"><span>${esc({ rent: "Miete", utilities: "Nebenkosten", loan_payment: "Kreditrate", membership: "Mitgliedschaft", rental_income_tax: "Steuer auf Mietgewinn" }[i.kind] || i.kind)} · offen ${money(i.remainingCents)}</span>${exButton("pay_invoice", i.id, "Bezahlen", !i.remainingCents)}</div>`).join("")}`;
 }
 function exPersonHtml(r, { compact = false } = {}) {
-  return `${exHouseholdHtml(r)}${compact ? "" : `${exMindHtml(r)}<div class="ex-grid"><section class="ex-card"><h3>Fähigkeiten & Attribute</h3>${r.skills.map((s) => exMeter(s.name, s.value)).join("")}<details><summary>Persönliche Attribute</summary>${r.attributes.map((s) => exMeter(s.name, s.value, 100)).join("")}${r.socialSkills.map((s) => exMeter(s.name, s.value, 100)).join("")}</details>${r.lastCheck ? `<div class="ex-note"><b>Letzter W100-Versuch</b><p>${esc(r.lastCheck.skill)} · Wurf ${r.lastCheck.roll} / Zielwert ${r.lastCheck.threshold} · ${esc({ excellent: "besonders gelungen", success: "gelungen", mixed: "Teilergebnis", setback: "Rückschlag" }[r.lastCheck.grade])}</p><small>Fertigkeit ${r.lastCheck.skill_rating}, Attribut ${r.lastCheck.attribute_rating}, Belastung ${r.lastCheck.pressure}. Ein Würfelerfolg ersetzt keine Zustimmung.</small></div>` : ""}</section><section class="ex-card"><h3>Was mich gerade beschäftigt</h3>${r.threats.map((t) => `<div class="ex-note"><b>${esc(exLabels[t.kind] || t.kind)}</b><p>${Math.round(t.probability * 100)}% eingeschätzte Wahrscheinlichkeit · ${esc(t.source || "eigene Erfahrung")}</p></div>`).join("") || "<p>Zurzeit keine konkrete neue Bedrohung in meinem eigenen Protokoll.</p>"}<h4>Angenommene Aufgaben</h4>${r.obligations.map((o) => `<div class="ex-line"><span>${esc(o.title)}<small>${Math.round(o.progress * 100)}% · ${esc({ accepted: "angenommen", needs_reschedule: "neu abstimmen", needs_resources: "Mittel fehlen" }[o.status] || o.status)}</small></span>${["needs_reschedule", "needs_resources"].includes(o.status) ? exButton("reschedule_task", o.id, "Neu abstimmen") : ""}${exButton("decline_task", o.id, "Absagen")}</div>`).join("") || "<p>Keine offene angenommene Aufgabe.</p>"}${(r.cases || []).length ? "<h4>Eigene dokumentierte Fälle</h4>" : ""}${(r.cases || []).map((c) => `<div class="ex-line"><span>${esc({ theft: "Diebstahl", burglary: "Einbruch", fraud: "Betrugsverdacht", robbery: "Raub", violence: "Gewaltvorfall", illegal_trade: "Handelsverdacht", exploitation: "Ausbeutung" }[c.kind] || c.kind)}<small>${esc({ unreported: "Noch nicht gemeldet", reported: "Aussage aufgenommen", investigating: "Wird geprüft", resolved: "Belegtes fiktives Verfahren abgeschlossen", closed_inconclusive: "Ohne ausreichenden Schuldbeleg abgeschlossen" }[c.status] || c.status)} · tatsächlicher Verlust ${money(c.lossCents)}</small></span>${c.ownRole === "victim" && !c.reported ? exButton("report_case", c.id, "Vorfall melden") : ""}</div>`).join("")}<h4>Ansehen</h4>${exMeter("Hilfsbereitschaft", r.reputation.helpfulness)}${exMeter("Verlässlichkeit", r.reputation.reliability)}${exMeter("Öffentliche Anerkennung", r.reputation.recognition)}${exMeter("Sichtbarer Besitz", r.reputation.visibleStatus)}<small>${esc(r.reputation.note)}</small><details><summary>Bekannte Quellen</summary>${r.reputation.sources.map((s) => "<p>" + esc(s.statement) + (s.verified ? " · belegt" : " · unbestätigt") + "</p>").join("") || "<p>Noch keine neuen belegten Aussagen.</p>"}</details>${r.health ? "<h4>Unterstützung</h4><p>Beratung ist unabhängig von Luxus und Besitz erreichbar.</p>" + exButton("support", null, "Beratung vereinbaren") + `<details><summary>Optionale private Erwachsenenrolle</summary><p>Standardmäßig aus. Keine Einzelheiten werden erzählt; nur ein tatsächlicher privater Kontakt zweier unabhängig zustimmender Erwachsener kann abgerechnet werden. Geldmangel und Rollenwahl ersetzen keine konkrete Zustimmung.</p><button class="btn btn-soft small" id="ex-adult-role">Eigene Rollenwahl öffnen</button></details>` : ""}</section></div>`}`;
+  return `${compact ? exHouseholdHtml(r) : ""}${compact ? "" : `${exMindHtml(r)}<div class="ex-grid"><section class="ex-card"><h3>Fähigkeiten & Attribute</h3>${r.skills.map((s) => exMeter(s.name, s.value)).join("")}<details><summary>Persönliche Attribute</summary>${r.attributes.map((s) => exMeter(s.name, s.value, 100, "attribute")).join("")}${r.socialSkills.map((s) => exMeter(s.name, s.value, 100, "attribute")).join("")}</details>${r.lastCheck ? `<div class="ex-note"><b>Letzter W100-Versuch</b><p>${esc(r.lastCheck.skill)} · Wurf ${r.lastCheck.roll} / Zielwert ${r.lastCheck.threshold} · ${esc({ excellent: "besonders gelungen", success: "gelungen", mixed: "Teilergebnis", setback: "Rückschlag" }[r.lastCheck.grade])}</p><small>Fertigkeit ${r.lastCheck.skill_rating}, Attribut ${r.lastCheck.attribute_rating}, Belastung ${r.lastCheck.pressure}. Ein Würfelerfolg ersetzt keine Zustimmung.</small></div>` : ""}</section><section class="ex-card"><h3>Was mich gerade beschäftigt</h3>${r.threats.map((t) => `<div class="ex-note"><b>${esc(exLabels[t.kind] || t.kind)}</b><p>${Math.round(t.probability * 100)}% eingeschätzte Wahrscheinlichkeit · ${esc(t.source || "eigene Erfahrung")}</p></div>`).join("") || "<p>Zurzeit keine konkrete neue Bedrohung in meinem eigenen Protokoll.</p>"}<h4>Angenommene Aufgaben</h4>${r.obligations.map((o) => `<div class="ex-line"><span>${esc(o.title)}<small>${Math.round(o.progress * 100)}% · ${esc({ accepted: "angenommen", needs_reschedule: "neu abstimmen", needs_resources: "Mittel fehlen" }[o.status] || o.status)}</small></span>${["needs_reschedule", "needs_resources"].includes(o.status) ? exButton("reschedule_task", o.id, "Neu abstimmen") : ""}${exButton("decline_task", o.id, "Absagen")}</div>`).join("") || "<p>Keine offene angenommene Aufgabe.</p>"}${(r.cases || []).length ? "<h4>Eigene dokumentierte Fälle</h4>" : ""}${(r.cases || []).map((c) => `<div class="ex-line"><span>${esc({ theft: "Diebstahl", burglary: "Einbruch", fraud: "Betrugsverdacht", robbery: "Raub", violence: "Gewaltvorfall", illegal_trade: "Handelsverdacht", exploitation: "Ausbeutung" }[c.kind] || c.kind)}<small>${esc({ unreported: "Noch nicht gemeldet", reported: "Aussage aufgenommen", investigating: "Wird geprüft", resolved: "Belegtes fiktives Verfahren abgeschlossen", closed_inconclusive: "Ohne ausreichenden Schuldbeleg abgeschlossen" }[c.status] || c.status)} · tatsächlicher Verlust ${money(c.lossCents)}</small></span>${c.ownRole === "victim" && !c.reported ? exButton("report_case", c.id, "Vorfall melden") : ""}</div>`).join("")}<h4>Ansehen</h4>${exMeter("Hilfsbereitschaft", r.reputation.helpfulness)}${exMeter("Verlässlichkeit", r.reputation.reliability)}${exMeter("Öffentliche Anerkennung", r.reputation.recognition)}${exMeter("Sichtbarer Besitz", r.reputation.visibleStatus)}<small>${esc(r.reputation.note)}</small><details><summary>Bekannte Quellen</summary>${r.reputation.sources.map((s) => "<p>" + esc(s.statement) + (s.verified ? " · belegt" : " · unbestätigt") + "</p>").join("") || "<p>Noch keine neuen belegten Aussagen.</p>"}</details>${r.health ? "<h4>Unterstützung</h4><p>Beratung ist unabhängig von Luxus und Besitz erreichbar.</p>" + exButton("support", null, "Beratung vereinbaren") + `<details><summary>Optionale private Erwachsenenrolle</summary><p>Standardmäßig aus. Keine Einzelheiten werden erzählt; nur ein tatsächlicher privater Kontakt zweier unabhängig zustimmender Erwachsener kann abgerechnet werden. Geldmangel und Rollenwahl ersetzen keine konkrete Zustimmung.</p><button class="btn btn-soft small" id="ex-adult-role">Eigene Rollenwahl öffnen</button></details>` : ""}</section></div>`}`;
 }
 function exJobsHtml(data) {
-  return `<div class="ex-note"><b>Arbeit, die zu mir passt</b><p>Gewünschtes Mindestnetto: ${money(data.person.expectations.minimumNetCents)} · maximaler Arbeitsweg ${Math.round(data.person.expectations.maxCommuteSeconds / 60)} Minuten. Qualifikation, tatsächliches Können und belegte Erfahrungen dieser Firma zählen.</p><button class="btn btn-soft small" id="ex-expectations">Eigene Erwartungen anpassen</button></div><div class="ex-grid">${
+  return `${exApplicationHistory(data.person, "job")}<div class="ex-note"><b>Arbeit, die zu mir passt</b><p>Gewünschtes Mindestnetto: ${money(data.person.expectations.minimumNetCents)} · maximaler Arbeitsweg ${Math.round(data.person.expectations.maxCommuteSeconds / 60)} Minuten. Qualifikation, tatsächliches Können und belegte Erfahrungen dieser Firma zählen.</p><button class="btn btn-soft small" id="ex-expectations">Eigene Erwartungen anpassen</button></div><div class="ex-grid">${
     data.jobs
       .filter((j) => j.slots > 0)
       .map(
         (j) =>
-          `<article class="ex-card"><small>${esc(j.firmName)}</small><h3>${esc(j.title)}</h3><div class="ex-probs"><span>${money(j.grossMonthlyCents)} brutto</span><span>ca. ${money(j.estimatedNetCents)} netto</span><span>${j.slots} offene Stellen</span></div><p>${j.hoursPerDay} Stunden am Arbeitstag${j.holiday ? " · sicherer Ferienjob mit Zustimmung der Bezugsperson" : ""}</p>${exMeter("Eigenes Können / Anforderung " + Math.round(j.minimumSkill * 100), j.assessment.skill)}<p class="${j.assessment.eligible ? "ex-positive" : "ex-muted"}">${j.assessment.eligible ? "Passt zu den eigenen Erwartungen und Nachweisen." : esc(j.assessment.reasons.join(" · "))}</p>${exButton("apply_job", j.id, "Bewerben", !j.assessment.eligible)} ${exButton("leisure", "course", "Fertigkeit ausbauen")}</article>`,
+          `<article class="ex-card"><small>${esc(j.firmName)}</small><h3>${esc(j.title)}</h3><div class="ex-probs"><span>${money(j.grossMonthlyCents)} brutto</span><span>ca. ${money(j.estimatedNetCents)} netto</span><span>${j.slots} offene Stellen</span></div><p>${j.hoursPerDay} Stunden am Arbeitstag${j.holiday ? " · sicherer Ferienjob mit Zustimmung der Bezugsperson" : ""}</p>${exMeter("Eigenes Können / Anforderung " + Math.round(j.minimumSkill * 100), j.assessment.skill)}<p class="${j.assessment.eligible ? "ex-positive" : "ex-muted"}">${j.assessment.eligible ? `Voraussetzungen passen. Zusagechance: ${Math.floor(j.assessment.probability * 100)}%.` : esc(j.assessment.reasons.join(" · "))}</p>${exButton("apply_job", j.id, "Bewerben", !j.assessment.eligible)} ${exButton("leisure", "course", "Fertigkeit ausbauen")}</article>`,
       )
       .join("") ||
     "<p>Zurzeit keine freien Stellen. Bestehende Verträge und erreichbare Fortbildung bleiben erhalten.</p>"
@@ -102,7 +146,8 @@ async function livingEconomyScreen() {
     chrome("city", {
       worldTitle: world.title,
       sub: "Ein Alltag mit Möglichkeiten, Beziehungen und echten Entscheidungen",
-    }) + '<main class="screen ex-screen" tabindex="-1" aria-label="Stadtleben"><div class="ex-page"><p>Die Stadt wird geladen…</p></div></main>';
+    }) +
+    '<main class="screen ex-screen" tabindex="-1" aria-label="Stadtleben"><div class="ex-page"><p>Die Stadt wird geladen…</p></div></main>';
   bindChrome();
   let data = await api(
     lwPath() +
@@ -110,29 +155,45 @@ async function livingEconomyScreen() {
       (expandedSim ? "?simId=" + encodeURIComponent(expandedSim) : ""),
   );
   expandedSim = data.selectedSimId;
-  const screen = $(".ex-screen"), scrollPositions = new Map();
-  const tabs = [["overview", "Mein Alltag"], ["jobs", "Stellenbörse"], ["housing", "Wohnungsbörse"], ["leisure", "Freizeit & Besitz"], ["views", "Soziale Sicht"], ["news", "Rundblick & Rathaus"]];
+  exFinanceReport = null;
+  exFinanceScope = "combined";
+  exFinancePeriod = "previous";
+  const screen = $(".ex-screen"),
+    scrollPositions = new Map();
+  let financeRequestVersion = 0;
+  const tabs = [
+    ["overview", "Mein Alltag"],
+    ["finances", "Finanzen"],
+    ["education", "Arbeit & Bildung"],
+    ["jobs", "Stellenbörse"],
+    ["housing", "Wohnungsbörse"],
+    ["leisure", "Freizeit & Besitz"],
+    ["views", "Soziale Sicht"],
+    ["news", "Rundblick & Rathaus"],
+  ];
   const changeTab = (id, focus = false) => {
     if (!tabs.some(([key]) => key === id)) return;
     scrollPositions.set(expandedTab, screen.scrollTop);
     expandedTab = id;
     render();
     screen.scrollTop = scrollPositions.get(id) || 0;
-    if (focus) $("[data-ex-tab='" + id + "']").focus({preventScroll:true});
+    if (focus) $("[data-ex-tab='" + id + "']").focus({ preventScroll: true });
   };
   const render = () => {
     const savedScroll = screen.scrollTop;
     const r = data.person;
     $(".ex-page").innerHTML =
-      `<header class="ex-heading"><small>${esc(world.title)}</small><h1>Was heute möglich ist</h1><p>${new Date(r.date || data.clock * 1000 + Date.UTC(2026, 8, 21)).toLocaleString("de-DE")} · ${data.summary.population} Einwohner</p></header><div class="ex-workspace"><div class="ex-person">${r.sim.asset_id ? `<img class="ex-portrait" alt="" src="/api/living/library/${r.sim.asset_id}?variant=sprite">` : ""}<button class="btn btn-soft" id="ex-sim-picker" aria-label="Sim wechseln: ${esc(r.sim.name)}">${esc(r.sim.name)} · ${r.sim.age} ▾</button><div class="ex-shortcuts"><button class="btn btn-teal small" id="ex-play">▶ Szene</button><button class="btn btn-soft small" id="ex-profile">Profil</button><button class="btn btn-soft small" id="ex-world">Welt</button><button class="btn btn-soft small" id="ex-bonds">Beziehungen</button></div></div><nav class="ex-tabs" role="tablist" aria-label="Stadtleben">${tabs.map(([id, name]) => `<button id="ex-tab-${id}" role="tab" tabindex="${expandedTab === id ? 0 : -1}" aria-controls="ex-content" aria-selected="${expandedTab === id}" class="${expandedTab === id ? "active" : ""}" data-ex-tab="${id}">${name}</button>`).join("")}</nav><label class="ex-mobile-nav">Bereich<select id="ex-section">${tabs.map(([id,name])=>`<option value="${id}" ${expandedTab===id?'selected':''}>${name}</option>`).join("")}</select></label></div><section id="ex-content" role="tabpanel" aria-labelledby="ex-tab-${expandedTab}" tabindex="0"></section><footer class="ex-page-end"><span>Du bist am Ende von „${esc(tabs.find(([id])=>id===expandedTab)?.[1] || "Mein Alltag") }“.</span><button class="btn btn-soft small" id="ex-back-top">↑ Nach oben</button></footer>`;
+      `<header class="ex-heading"><small>${esc(world.title)}</small><h1>Was heute möglich ist</h1><p>${new Date(r.date || data.clock * 1000 + Date.UTC(2026, 8, 21)).toLocaleString("de-DE")} · ${data.summary.population} Einwohner</p></header><div class="ex-workspace"><div class="ex-person">${r.sim.asset_id ? `<img class="ex-portrait" alt="" src="/api/living/library/${r.sim.asset_id}?variant=sprite">` : ""}<button class="btn btn-soft" id="ex-sim-picker" aria-label="Sim wechseln: ${esc(r.sim.name)}">${esc(r.sim.name)} · ${r.sim.age} ▾</button><div class="ex-current-status">${esc(r.activityStatus.label)} ${exInfo("status")}${r.activityStatus.placeName ? `<small>${esc(r.activityStatus.placeName)}</small>` : ""}</div><div class="ex-shortcuts"><button class="btn btn-teal small" id="ex-play">▶ Szene</button><button class="btn btn-soft small" id="ex-profile">Profil</button><button class="btn btn-soft small" id="ex-world">Welt</button><button class="btn btn-soft small" id="ex-bonds">Beziehungen</button></div></div><nav class="ex-tabs" role="tablist" aria-label="Stadtleben">${tabs.map(([id, name]) => `<button id="ex-tab-${id}" role="tab" tabindex="${expandedTab === id ? 0 : -1}" aria-controls="ex-content" aria-selected="${expandedTab === id}" class="${expandedTab === id ? "active" : ""}" data-ex-tab="${id}">${name}</button>`).join("")}</nav><label class="ex-mobile-nav">Bereich<select id="ex-section">${tabs.map(([id, name]) => `<option value="${id}" ${expandedTab === id ? "selected" : ""}>${name}</option>`).join("")}</select></label></div><section id="ex-content" role="tabpanel" aria-labelledby="ex-tab-${expandedTab}" tabindex="0"></section><footer class="ex-page-end"><span>Du bist am Ende von „${esc(tabs.find(([id]) => id === expandedTab)?.[1] || "Mein Alltag")}“.</span><button class="btn btn-soft small" id="ex-back-top">↑ Nach oben</button></footer>`;
     const out = $("#ex-content");
     if (expandedTab === "overview") out.innerHTML = exPersonHtml(r);
+    else if (expandedTab === "finances") out.innerHTML = exFinanceHtml(r);
+    else if (expandedTab === "education") out.innerHTML = exEducationHtml(r);
     else if (expandedTab === "jobs") out.innerHTML = exJobsHtml(data);
     else if (expandedTab === "housing")
-      out.innerHTML = `<div class="ex-note"><h3>Ein passendes Zuhause</h3><p>Freie Wohnungen für ${r.household.members.length} Personen, passend zu bestätigtem Einkommen und gewähltem Budget. Ein Vertrag führt zu tatsächlichen Wegen und einem dokumentierten Umzug.</p></div><div class="ex-grid">${data.housing.map((h) => `<article class="ex-card"><h3>${esc(h.name)}</h3><p>${money(h.rentCents)} Miete · ${money(h.depositCents)} gebundene Kaution</p><p>Platz für ${h.capacity} Personen</p>${exMeter("Zustand", h.condition)}${exButton("move", h.id, "Mietvertrag annehmen", r.sim.age < 18)} <button class="btn btn-soft small" data-ex-property="${h.id}" data-price="${h.valueCents}" ${r.sim.age < 18 ? "disabled" : ""}>Kauf / Finanzierung prüfen</button> ${exButton("move_help", h.id, "Mit Wohnhilfe prüfen", r.sim.age < 18)}</article>`).join("") || "<p>Aktuell kein passendes freies Angebot. Wohnberatung und geschützte Unterkunft bleiben als Hilfe verfügbar.</p>"}</div><h3>Eigentum · getrennt vom Wohnort</h3>${r.propertyAssets.map((p) => `<div class="ex-card"><b>${esc(p.name)}</b><p>Geschätzter Objektwert ${money(p.valueCents)} · ${p.residents.length ? "bewohnt" : "frei"} · Mietangebot ${money(p.rentCents)}</p></div>`).join("") || "<p>Kein eigenes Immobilienobjekt.</p>"}`;
+      out.innerHTML = `<div class="ex-note"><h3>Ein passendes Zuhause</h3><p>Freie Wohnungen für ${r.household.members.length} Personen, passend zu bestätigtem Einkommen und gewähltem Budget. Ein Vertrag führt zu tatsächlichen Wegen und einem dokumentierten Umzug.</p></div><div class="ex-grid">${data.housing.map((h) => `<article class="ex-card"><h3>${esc(h.name)}</h3><p>${money(h.rentCents)} Miete · ${money(h.depositCents)} gebundene Kaution</p><p>Platz für ${h.capacity} Personen · ${exInfo("cold_rent")}${exInfo("deposit")}</p><p>${h.assessment.eligible ? `Geschätzte Zusagechance: ${Math.floor(h.assessment.probability * 100)}% ${exInfo("application")}` : esc(h.assessment.reasons.join(" · "))}</p><details><summary>Was bei dieser Bewerbung zählt</summary>${h.assessment.factors.map((f) => `<p>${esc(f.label)}: ${esc(f.value)}</p>`).join("")}</details>${exMeter("Zustand", h.condition)}${exButton("move", h.id, "Um Wohnung bewerben", r.sim.age < 18 || !h.assessment.eligible)} <button class="btn btn-soft small" data-ex-property="${h.id}" data-price="${h.valueCents}" ${r.sim.age < 18 ? "disabled" : ""}>Kauf / Finanzierung prüfen</button> ${exButton("move_help", h.id, "Mit Wohnhilfe prüfen", r.sim.age < 18)}</article>`).join("") || "<p>Aktuell kein passendes freies Angebot. Wohnberatung und geschützte Unterkunft bleiben als Hilfe verfügbar.</p>"}</div>${exApplicationHistory(r, "housing")}<h3>Eigentum · getrennt vom Wohnort</h3>${r.propertyAssets.map((p) => `<div class="ex-card"><b>${esc(p.name)}</b><p>Geschätzter Objektwert ${money(p.valueCents)} · ${p.residents.length ? "bewohnt" : "frei"} · Mietangebot ${money(p.rentCents)}</p></div>`).join("") || "<p>Kein eigenes Immobilienobjekt.</p>"}`;
     else if (expandedTab === "views")
       out.innerHTML =
-        '<section class="ex-social"><h2>Meine Sicht auf unsere Begegnungen</h2>' +
+        `<section class="ex-social"><h2>Meine Sicht auf unsere Begegnungen ${exInfo("tom")}</h2>` +
         exSocialHtml(r.socialViews) +
         "</section>";
     else if (expandedTab === "leisure")
@@ -168,23 +229,80 @@ async function livingEconomyScreen() {
           }
         }),
     );
-    $$("[data-ex-tab]").forEach(b => {
+    $$("[data-ex-tab]").forEach((b) => {
       // Chromium can scroll a focused sticky button to its original layout
       // position before onclick. Keep the viewport, then focus the new tab.
-      b.onmousedown = e => e.preventDefault();
+      b.onmousedown = (e) => e.preventDefault();
       b.onclick = () => changeTab(b.dataset.exTab, true);
     });
-    $("#ex-section").onchange = e => changeTab(e.target.value);
-    $(".ex-tabs").onkeydown = e => {
+    $("#ex-section").onchange = (e) => changeTab(e.target.value);
+    $(".ex-tabs").onkeydown = (e) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
       e.preventDefault();
       const index = tabs.findIndex(([id]) => id === expandedTab);
-      changeTab(tabs[e.key === "Home" ? 0 : e.key === "End" ? tabs.length-1 : (index + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length][0], true);
+      changeTab(
+        tabs[
+          e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? tabs.length - 1
+              : (index + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) %
+                tabs.length
+        ][0],
+        true,
+      );
     };
-    $("#ex-back-top").onclick = () => { screen.scrollTo({top:0,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth"}); $("#ex-sim-picker").focus({preventScroll:true}); };
+    $("#ex-back-top").onclick = () => {
+      screen.scrollTo({
+        top: 0,
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+      });
+      $("#ex-sim-picker").focus({ preventScroll: true });
+    };
     $("#ex-world").onclick = () => livingWorldJump(r.sim.id);
     $("#ex-bonds").onclick = () => livingBondsJump(r.sim.id);
     exBindSocial(out);
+    $$("[data-ex-open-tab]", out).forEach(
+      (b) => (b.onclick = () => changeTab(b.dataset.exOpenTab, true)),
+    );
+    const refreshFinance = async (offset = 0) => {
+      const request = ++financeRequestVersion,
+        open = $(".ex-transactions", out)?.open,
+        top = screen.scrollTop;
+      const report = await api(
+        lwPath() +
+          `/sims/${r.sim.id}/finances?scope=${exFinanceScope}&offset=${offset}`,
+      );
+      if (
+        request !== financeRequestVersion ||
+        expandedSim !== r.sim.id ||
+        expandedTab !== "finances"
+      )
+        return;
+      exFinanceReport = report;
+      render();
+      if (open || offset > 0) $(".ex-transactions").open = true;
+      screen.scrollTop = top;
+    };
+    const period = $("#ex-finance-period", out),
+      scope = $("#ex-finance-scope", out);
+    if (period)
+      period.onchange = () => {
+        exFinancePeriod = period.value;
+        refreshFinance().catch(fail);
+      };
+    if (scope)
+      scope.onchange = () => {
+        exFinanceScope = scope.value;
+        refreshFinance().catch(fail);
+      };
+    $$("[data-ex-ledger-page]", out).forEach(
+      (b) =>
+        (b.onclick = () =>
+          refreshFinance(Number(b.dataset.exLedgerPage)).catch(fail)),
+    );
     screen.scrollTop = savedScroll;
     $("#ex-sim-picker").onclick = () =>
       livingSimPicker((p) => {
@@ -197,7 +315,12 @@ async function livingEconomyScreen() {
     const act = async (kind, id, extra = {}) => {
       try {
         await exDecision(r, kind, id, extra);
+        exFinanceReport = null;
         data = await api(lwPath() + "/economy?simId=" + r.sim.id);
+        if (expandedTab === "finances" && exFinanceScope !== "combined")
+          exFinanceReport = await api(
+            lwPath() + `/sims/${r.sim.id}/finances?scope=${exFinanceScope}`,
+          );
         render();
       } catch (e) {
         fail(e);
@@ -234,6 +357,15 @@ async function livingEconomyScreen() {
           };
         }),
     );
+    const reserve = $("#ex-reserve-form", out);
+    if (reserve)
+      reserve.onsubmit = (e) => {
+        e.preventDefault();
+        if (reserve.reportValidity())
+          act("reserve", null, {
+            amountCents: Math.round(Number($("#ex-reserve", out).value) * 100),
+          });
+      };
     exBindPreferences($(".ex-page"), r, act);
     const loan = $("#ex-loan-plan");
     if (loan)
@@ -292,7 +424,7 @@ async function livingResourceModal(id) {
     m = lwModal(
       r.sim.name + " · Haushalt & Fähigkeiten",
       "Eigene Mittel, vereinbarte Haushaltsplanung und tatsächliche Erfahrungen",
-      `<div class="ex-profile">${exPersonHtml(r)}<button class="btn btn-teal" id="ex-open-city">Stellen, Wohnungen und soziale Sicht öffnen</button></div>`,
+      `<div class="ex-profile"><p><b>${esc(r.activityStatus.label)}</b> ${exInfo("status")}</p><div class="ex-shortcuts"><button class="btn btn-soft" id="ex-open-finances">Finanzen</button><button class="btn btn-soft" id="ex-open-education">Arbeit & Bildung</button></div>${exPersonHtml(r)}<button class="btn btn-teal" id="ex-open-city">Stellen, Wohnungen und soziale Sicht öffnen</button></div>`,
       1000,
     );
   const act = async (kind, entityId, extra = {}) => {
@@ -313,11 +445,21 @@ async function livingResourceModal(id) {
     loan.onclick = () => exLoanDialog((values) => act("loan", null, values));
   const join = $("#ex-household-join", m);
   if (join) join.onclick = () => exHouseholdDialog(r, act);
+  $("#ex-open-finances", m).onclick = () => {
+    expandedTab = "finances";
+    $("#ex-open-city", m).click();
+  };
+  $("#ex-open-education", m).onclick = () => {
+    expandedTab = "education";
+    $("#ex-open-city", m).click();
+  };
   $("#ex-open-city", m).onclick = () => {
     m.remove();
     $$(".lw-profile").forEach((el) => el.remove());
     expandedSim = id;
-    nav(`#/city?w=${S.world}&s=${id}`);
+    const target = `#/city?w=${S.world}&s=${id}`;
+    if (location.hash === target) livingEconomyScreen().catch(fail);
+    else nav(target);
   };
 }
 
@@ -340,7 +482,9 @@ async function exDecision(r, kind, id, extra = {}) {
       : result.reason ||
           result.reasons?.join("; ") ||
           "Dieser Schritt ist noch nicht möglich.",
-    result.ok ? "" : "err",
+    result.ok || result.status === "declined" || result.status === "cooldown"
+      ? ""
+      : "err",
   );
   S.worldData = null;
   return result;

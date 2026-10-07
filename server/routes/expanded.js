@@ -1,3 +1,4 @@
+import { financialReport, financialAppraisals } from "../living/expanded/finances.js";
 import { llmJson } from "../providers.js";
 import { withPrincipal } from "../byok.js";
 import { preflight, debitCall, EST } from "../credits.js";
@@ -25,7 +26,7 @@ import {
   assertEconomicIntegrity,
 } from "../living/expanded/store.js";
 import {
-  moveHousehold,
+  applyForHousing,
   buyProperty,
   financedPropertyPurchase,
 } from "../living/expanded/housing.js";
@@ -68,6 +69,14 @@ export default async function expandedRoutes(app, options = {}) {
     if (!d)
       throw httpErr(409, "NOT_READY", "Erweiterung noch nicht initialisiert");
     return townResources(d, req.query || {});
+  });
+  app.get("/api/living/worlds/:worldId/sims/:id/finances", async req => {
+    const {town}=own(req),p=town.byId.get(req.params.id);
+    if(!p)throw httpErr(404,'NOT_FOUND','Sim nicht gefunden');
+    const scope=req.query.scope || 'combined';
+    if(!['combined','personal','household'].includes(scope))throw httpErr(400,'BAD_SCOPE','Unbekannter Kontobereich');
+    const offset=Math.max(0,Math.min(100000,Math.floor(Number(req.query.offset)||0)));
+    return financialReport(economicDraft(town),p,town.world.seconds,{scope,offset,limit:60});
   });
   app.get("/api/living/worlds/:worldId/sims/:id/resources", async (req) => {
     const { town } = own(req),
@@ -285,9 +294,9 @@ export default async function expandedRoutes(app, options = {}) {
             "AGE_BOUNDARY",
             "Erwachsene Bezugsperson erforderlich",
           );
-        result = moveHousehold(
+        result = applyForHousing(
           d,
-          householdOf(d, p),
+          p,
           entity(body.id, "property"),
           time,
           emit,
@@ -454,6 +463,13 @@ export default async function expandedRoutes(app, options = {}) {
           throw httpErr(400, "AGE_BOUNDARY", "Erwachsene Planung erforderlich");
         result = civicFestival(d, time, emit, { costCents: body.amountCents });
         break;
+      case "reserve": {
+        if(p.age<18)throw httpErr(400,'AGE_BOUNDARY','Erwachsene Haushaltsplanung erforderlich');
+        if(!Number.isSafeInteger(body.amountCents) || body.amountCents<0 || body.amountCents>1000000)throw httpErr(400,'BAD_RESERVE','Rücklagenbudget zwischen 0 und 10.000 € erforderlich');
+        const h=householdOf(d,p);h.payload.budget.irregularReserve=body.amountCents;touch(d,h);
+        const e=emit('reserve_plan_changed',p,time,{amountCents:body.amountCents,private:true});e.description=p.name+' plant '+(body.amountCents/100).toFixed(2)+' € monatlich für Ungeplantes ein. Das ist keine Ausgabe oder Kontobuchung.';
+        result={ok:true};break;
+      }
       case "expectations": {
         const x = p.state.economy.expectations;
         if (
@@ -503,6 +519,7 @@ export default async function expandedRoutes(app, options = {}) {
         throw httpErr(409, "STALE", "Stadt wurde geändert");
       assertEconomicIntegrity(d);
       refreshOwnResources(d, time);
+      if(['reserve','apply_job','move'].includes(body.kind))financialAppraisals(d,time,emit,{force:true,householdId:p.state.economy.householdId});
       for (const q of town.people) {
         evaluateMind(q, time, catalog);
         db.prepare(

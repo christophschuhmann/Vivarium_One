@@ -1,5 +1,8 @@
 // Add current, explicitly initialized resources. Never invent past paid wages,
 // completed skills, witnessed crimes or secretly known financial information.
+import { initializeEducation } from "./education.js";
+import { initializeCare } from "./care.js";
+import { economicDraft } from "./economy.js";
 import { db, j, pj, uid } from "../../db.js";
 import { rng } from "../random.js";
 import { searchAssets } from "../library.js";
@@ -16,6 +19,7 @@ import {
 import { JOBS, estimatedNet, calendarDate } from "./catalog.js";
 import { prepareCapabilities } from "./percentile.js";
 const venues = {
+  carehome: ["Seniorenhaus Lindenblick", "nursing home senior care residential supportive", ["Wohnbereich", "Gemeinschaftsküche", "Pflegestützpunkt", "Bewohnerzimmer", "Garten"], ["sofa", "table", "desk", "bed", "fridge", "bookshelf", "sink"]],
   police: [
     "Polizeiwache",
     "police station civic safety",
@@ -192,7 +196,7 @@ export function addExpandedPlaces(town) {
       purpose,
       [],
       200,
-      ["police", "shelter", "employment"].includes(key) ? 1 : 0,
+      ["police", "shelter", "employment", "carehome"].includes(key) ? 1 : 0,
     );
     if (building.parent_id !== street.id) {
       building.parent_id = street.id;
@@ -352,6 +356,15 @@ export function initializeExpansion(town, { force = false } = {}) {
         );
       }
     }
+    commitEconomy(d);
+    initializeEducation(town);
+    const extended = economicDraft(town);
+    initializeCare(extended);
+    commitEconomy(extended);
+    for (const p of town.people) {
+      db.prepare("UPDATE lw_sims SET profile=?,state=?,household_id=? WHERE id=?").run(j(p.profile),j(p.state),p.household_id,p.id);
+      for(const [to,r] of Object.entries(p.relations)) db.prepare("INSERT INTO lw_relations VALUES (?,?,?,?) ON CONFLICT(world_id,from_id,to_id) DO UPDATE SET payload=excluded.payload").run(worldId,p.id,to,j(r));
+    }
     const description =
       "Die Erweiterungsregeln werden für den aktuellen Zeitpunkt ergänzt. Geschützte Wohnhilfe und bestätigte Betreuungspausen stehen zur Verfügung; Konten, bereits verdiente Löhne, Protokolle und Weltzeit bleiben erhalten.";
     db.prepare("INSERT INTO lw_events VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(
@@ -377,7 +390,7 @@ export function initializeExpansion(town, { force = false } = {}) {
         "Eine aktuelle Ergänzung; keine nachträglich erfundene Erfahrung.",
         1,
       );
-    commitEconomy(d);
+    // The updated care/education draft was committed above.
     db.prepare(
       "UPDATE lw_worlds SET rules=?,version=version+1 WHERE world_id=?",
     ).run(
@@ -1063,6 +1076,11 @@ export function initializeExpansion(town, { force = false } = {}) {
         privateBackground: true,
       };
   }
+  commitEconomy(d);
+  initializeEducation(town);
+  const extended = economicDraft(town);
+  initializeCare(extended);
+  commitEconomy(extended);
   openingEvent.participants = town.people.map((p) => p.id);
   db.prepare("INSERT INTO lw_events VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(
     openingEvent.id,
@@ -1087,13 +1105,10 @@ export function initializeExpansion(town, { force = false } = {}) {
       "Dies ist mein aktueller Ausgangszustand, keine nachträglich erfundene erlebte Geschichte.",
       1,
     );
-    db.prepare("UPDATE lw_sims SET profile=?,state=? WHERE id=?").run(
-      j(p.profile),
-      j(p.state),
-      p.id,
-    );
+    db.prepare("UPDATE lw_sims SET profile=?,state=?,household_id=? WHERE id=?").run(j(p.profile),j(p.state),p.household_id,p.id);
+    for (const [to,r] of Object.entries(p.relations)) db.prepare("INSERT INTO lw_relations VALUES (?,?,?,?) ON CONFLICT(world_id,from_id,to_id) DO UPDATE SET payload=excluded.payload").run(worldId,p.id,to,j(r));
   }
-  commitEconomy(d);
+  // Original and additive care drafts have already been committed.
   db.prepare(
     "UPDATE lw_worlds SET rules=?,version=version+1 WHERE world_id=?",
   ).run(

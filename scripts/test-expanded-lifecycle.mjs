@@ -1,3 +1,4 @@
+import { passingJobFixture } from "./application-fixture.mjs";
 // Calendar/financial lifecycle checks use isolated, explicitly declared fixtures.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -444,7 +445,7 @@ try {
   y.state.skills.retail = 0.8;
   y.state.economy.expectations.minimumNetCents = 15000;
   const listingYouth = td.jobs.find((x) => x.payload.holiday);
-  assert.ok(E.applyForJob(td, y, listingYouth, when, te).ok);
+  assert.ok(E.applyForJob(td, y, passingJobFixture(td, y, listingYouth, when, E, S), when, te).ok);
   for (const q of tt.people)
     db.prepare("UPDATE lw_sims SET state=?,profile=? WHERE id=?").run(
       j(q.state),

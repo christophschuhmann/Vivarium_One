@@ -1,3 +1,4 @@
+import { activityStatus } from '../living/expanded/education.js';
 import {initializeNewPopulation} from '../living/expanded/population.js';
 import {projectWellbeing} from '../living/wellbeing.js';
 import {normalizeRomance,romanticCap} from '../living/romance.js';
@@ -22,7 +23,7 @@ import {stageView,graphView,character,converse,chatHistory,clearChat} from '../l
 const limit=(value,max=50)=>Math.max(1,Math.min(max,Number(value)||20));
 function own(req,verified=false){const user=verified?requireVerified(req):requireUser(req);const world=db.prepare('SELECT * FROM worlds WHERE id=? AND user_id=? AND simulation_mode=\'living\'').get(req.params.worldId,user.id);if(!world)throw httpErr(404,'NOT_FOUND','Living world not found.');return {user,world};}
 function mutable(req){const result=own(req,true);if(busy.has(result.world.id))throw httpErr(409,'WORLD_BUSY','Wait for the current tick to finish.');return result;}
-const simView=p=>{const person={...p,profile:pj(p.profile,{}),state:pj(p.state,{})};normalizeRomance(person);projectWellbeing(person,person.state.wellbeing?.updated_at||0);if(person.profile.social)person.profile.social=socialPerspective(person);return person;};
+const simView=p=>{const person={...p,profile:pj(p.profile,{}),state:pj(p.state,{})};normalizeRomance(person);projectWellbeing(person,person.state.wellbeing?.updated_at||0);if(person.profile.social)person.profile.social=socialPerspective(person);person.activityStatus=activityStatus(person);return person;};
 export default async function livingRoutes(app) {
   app.get('/api/living/worlds/:worldId/history',async req=>{const {world}=own(req);return {beats:db.prepare('SELECT version,start,end,story,metrics FROM lw_beats WHERE world_id=? ORDER BY version DESC LIMIT 40').all(world.id).map(b=>({...b,story:pj(b.story,[]),metrics:pj(b.metrics,{})}))};});
   app.get('/api/living/worlds/:worldId/view',async req=>stageView(own(req).world,req.query));
@@ -75,11 +76,11 @@ export default async function livingRoutes(app) {
     if(query.familyName){where.push("substr(s.name,instr(s.name,' ')+1) LIKE ?");args.push('%'+String(query.familyName).slice(0,80)+'%');}
     if(query.neighborhood){
       if(!db.prepare("SELECT 1 FROM lw_places WHERE world_id=? AND id=? AND kind='neighborhood'").get(world.id,query.neighborhood))throw httpErr(404,'BAD_NEIGHBORHOOD','Neighborhood not found.');
-      where.push('s.household_id IN (WITH RECURSIVE home_places(id) AS (SELECT id FROM lw_places WHERE world_id=? AND id=? UNION SELECT p.id FROM lw_places p JOIN home_places h ON p.parent_id=h.id WHERE p.world_id=?) SELECT id FROM home_places)');args.push(world.id,query.neighborhood,world.id);
+      where.push("coalesce(json_extract(s.profile,'$.home.living'),s.household_id) IN (WITH RECURSIVE home_places(id) AS (SELECT id FROM lw_places WHERE world_id=? AND id=? UNION SELECT p.id FROM lw_places p JOIN home_places h ON p.parent_id=h.id WHERE p.world_id=?) SELECT id FROM home_places)");args.push(world.id,query.neighborhood,world.id);
     }
     if(query.anchored==='1')where.push('s.anchored=1');
-    const sql=where.join(' AND '),rows=db.prepare(`SELECT s.id,s.name,s.age,s.gender,s.asset_id,s.colour,s.anchored,s.location_id,s.household_id,json_extract(s.state,'$.route') route,json_extract(s.state,'$.action.kind') activity,json_extract(s.state,'$.thought') thought,p.name location FROM lw_sims s LEFT JOIN lw_places p ON p.id=s.location_id WHERE ${sql} ORDER BY s.name LIMIT ? OFFSET ?`).all(...args,n,offset);
-    const catalog=await openSimsCatalog(),locate=positionIndex(world.id);return {sims:rows.map(s=>{const {route,...visible}=s;return {...visible,...locate(s),activityText:activity(s.activity,catalog)};}),total:db.prepare('SELECT count(*) n FROM lw_sims s WHERE '+sql).get(...args).n,offset,limit:n};
+    const sql=where.join(' AND '),rows=db.prepare(`SELECT s.id,s.name,s.age,s.gender,s.asset_id,s.colour,s.anchored,s.location_id,s.household_id,s.profile,s.state,json_extract(s.state,'$.route') route,json_extract(s.state,'$.action.kind') activity,json_extract(s.state,'$.thought') thought,p.name location FROM lw_sims s LEFT JOIN lw_places p ON p.id=s.location_id WHERE ${sql} ORDER BY s.name LIMIT ? OFFSET ?`).all(...args,n,offset);
+    const catalog=await openSimsCatalog(),locate=positionIndex(world.id);return {sims:rows.map(s=>{const {route,profile,state,...visible}=s;const p={...s,profile:pj(profile,{}),state:pj(state,{})};return {...visible,...locate(s),activityStatus:activityStatus(p),activityText:activity(s.activity,catalog)};}),total:db.prepare('SELECT count(*) n FROM lw_sims s WHERE '+sql).get(...args).n,offset,limit:n};
   });
   app.get('/api/living/worlds/:worldId/sims/:id/position',async req=>simPosition(own(req).world.id,req.params.id));
   app.get('/api/living/worlds/:worldId/sims/:id/relations',async req=>relationsView(own(req).world.id,req.params.id,req.query));

@@ -1,3 +1,4 @@
+import { passingJobFixture } from "./application-fixture.mjs";
 // Semantic invariants across money, perception, physical actions and snapshots.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -226,7 +227,7 @@ try {
   rumor.payload.verified = true;
   ok(!E.jobAssessment(d, adult, job, time).eligible);
   rumor.payload.verified = false;
-  const hired = E.applyForJob(d, adult, job, time, emit);
+  const hired = E.applyForJob(d, adult, passingJobFixture(d, adult, job, time, E, S), time, emit);
   ok(hired.ok);
   ok(adult.profile.workplace_id === job.payload.workplaceId);
   assert.equal(sum(), 0);

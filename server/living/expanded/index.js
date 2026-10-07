@@ -1,3 +1,6 @@
+import { financialAppraisals } from "./finances.js";
+import { educationDaily, currentEducation, completeStudy } from "./education.js";
+import { careMinute, careDestination, careAction, completeFamilyCare } from "./care.js";
 import { adultServicesMinute } from "./adult-services.js";
 import { DUTIES } from "./catalog.js";
 import path from "node:path";
@@ -70,7 +73,7 @@ export const installActions = (c) =>
 export function actionAllowed(d, p, kind, placeId, time) {
   return !d
     ? !/^leisure_(expanded|market)_/.test(kind)
-    : expandedActionAllowed(d, p, kind) &&
+    : expandedActionAllowed(d, p, kind, time) &&
         !(kind === "eat" && !canEat(d, p, placeId, time)) &&
         marketActionAllowed(d, p, kind, time, placeId) &&
         nativeAccess(d, p, kind, time, placeId) &&
@@ -92,6 +95,9 @@ export function expandedMinute(d, time, emit) {
   d.emit = emit;
   communityDaily(d, time, emit);
   economicMinute(d, time, emit);
+  financialAppraisals(d, time, emit);
+  educationDaily(d, time, emit);
+  careMinute(d, time, emit);
   laborAndSupplyEvents(d, time, emit);
   lifeDaily(d, time, emit);
   housingDaily(d, time, emit);
@@ -116,6 +122,8 @@ export function expandedMinute(d, time, emit) {
 }
 export function expandedDestination(d, p, time) {
   if (!d) return null;
+  const careAt = careDestination(d,p,time);
+  if(careAt) return careAt;
   const hour = (time / 3600) % 24;
   const children = householdOf(d, p)
     .payload.members.map((id) => d.people.get(id))
@@ -214,6 +222,10 @@ export function expandedDestination(d, p, time) {
 }
 export function chooseExpandedAction(d, p, time) {
   if (!d) return null;
+  const care = careAction(d,p,time);
+  if(care) return care;
+  const study=currentEducation(p);
+  if(study && p.age>=18 && Math.floor(time/86400)%7<5 && time/3600%24>=8 && time/3600%24<15 && p.state.location_id===p.profile.workplace_id) return 'leisure_expanded_study';
   const plan = d.entities.get(p.state.economy.health.supportPlanId);
   if (
     plan?.payload.status === "active" &&
@@ -234,6 +246,9 @@ export function expandedDuration(d, p, kind, defaultDuration) {
 export function completeExpanded(d, p, event, duration) {
   if (!d) return { ok: true };
   const kind = event.facts.action;
+  if (kind === 'leisure_expanded_elder_care') return {ok:completeFamilyCare(d,p,event,duration)};
+  if (kind === 'leisure_expanded_study') return {ok:completeStudy(p,event,duration)};
+  if (kind === 'school_day' || kind === 'kindergarten_day') completeStudy(p,event,duration);
   if (kind === "leisure_expanded_infant_care") {
     const child = d.people.get(p.state.economy.infantCareTargetId);
     if (

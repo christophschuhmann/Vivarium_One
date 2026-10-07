@@ -1,3 +1,4 @@
+import { decideApplication, latestApplication, APPLICATION_COOLDOWN } from "./applications.js";
 import { rows, put, touch, balance, transfer, ownerAccount } from "./store.js";
 import {
   householdOf,
@@ -11,9 +12,39 @@ import {
 } from "./economy.js";
 import { addFeeling } from "../cognition.js";
 import { rng } from "../random.js";
+export function housingAssessment(d,p,property,time,{support=false}={}) {
+  const h=householdOf(d,p),f=householdForecast(d,h,time,{observerId:p.id}),x=property.payload,reasons=[];
+  if(p.age<18)reasons.push('Erwachsene Bezugsperson erforderlich');
+  if(!x.listed || x.residents.length)reasons.push('Objekt ist nicht mehr frei');
+  if(x.capacity<h.payload.members.length)reasons.push('Zu wenig Platz für diesen Haushalt');
+  if(p.state.careSupport?.mode==='residential')reasons.push('Ein Wechsel aus der stationären Pflege muss mit einer geeigneten Betreuung vereinbart werden');
+  const deposit=x.rentCents*2,available=householdCash(d,h);
+  if(!support && available<deposit)reasons.push('Kaution aus offengelegten gemeinsamen Mitteln nicht gedeckt');
+  if(support && balance(d,fundsOf(d).social)<deposit)reasons.push('Wohnhilfe-Kaution derzeit nicht finanziert');
+  const ratio=f.incomeCents?x.rentCents/f.incomeCents:1;
+  if(!support && ratio>.5)reasons.push('Kaltmiete übersteigt den tragbaren bestätigten Einkommensrahmen');
+  const owner=d.people.get(x.ownerId),known=owner?.relations[p.id];
+  const facts=rows(d,'claim').filter(c=>c.payload.subjectId===p.id&&c.payload.verified&&c.payload.public&&c.payload.dimension==='reliability'&&c.payload.expiresAt>time);
+  const negative=facts.some(c=>c.payload.value<-.5 && c.payload.confidence>=.8);
+  const arrears=f.arrearsCents>0;
+  const last=latestApplication(p,'housing',property.id);
+  if(last && time-last.at<APPLICATION_COOLDOWN)reasons.push('Erneute Bewerbung frühestens nach sieben Tagen');
+  const reserveFactor=Math.min(.15,Math.max(0,available-deposit)/Math.max(1,x.rentCents*24));
+  const probability=Math.max(.15,Math.min(.92,.68+(ratio<.3?.1:ratio<.4?.03:-.08)+reserveFactor+(known?.trust>.7?.04:0)-(negative?.18:0)-(arrears?.08:0)));
+  return {eligible:!reasons.length,reasons,probability,factors:[{label:'Offengelegtes bestätigtes Einkommen / Kaltmiete',value:Math.round(ratio*100)+'%'},{label:'Nachweisbare Kaution und Puffer',value:available>=deposit?'gedeckt':'Wohnhilfe erforderlich'},{label:'Belegte Zuverlässigkeit',value:negative?'belasteter Nachweis':'kein belasteter Nachweis'},{label:'Offene eigene Haushaltsforderungen',value:arrears?'vorhanden':'keine'}]};
+}
+export function applyForHousing(d,p,property,time,emit,{support=false}={}) {
+  const assessment=housingAssessment(d,p,property,time,{support});
+  const decision=decideApplication(d,p,'housing',property.id,time,assessment,emit);
+  if(!decision.ok)return {...assessment,...decision};
+  const result=moveHousehold(d,householdOf(d,p),property,time,emit,{support});
+  if(!result.ok)throw new Error('Accepted housing prerequisites changed: '+result.reason);
+  decision.event.facts.contractId=result.leaseId;
+  return {...result,application:decision.application};
+}
 export function housingOffers(d, p, { search = "", maxRentCents = null } = {}) {
   const h = householdOf(d, p),
-    f = householdForecast(d, h, d.calendar.payload.lastMinute),
+    f = householdForecast(d, h, d.calendar.payload.lastMinute,{observerId:p.id}),
     budget = maxRentCents ?? Math.max(25000, Math.floor(f.incomeCents * 0.35)),
     terms = search.toLowerCase().split(/\s+/).filter(Boolean);
   return [...d.properties.values()]
@@ -41,6 +72,7 @@ export function housingOffers(d, p, { search = "", maxRentCents = null } = {}) {
         capacity: e.payload.capacity,
         condition: e.payload.condition,
         score,
+        assessment:housingAssessment(d,p,e,d.town.world.seconds),
       };
     })
     .sort((a, b) => b.score - a.score)
@@ -232,7 +264,7 @@ export function housingDaily(d, time, emit) {
     for (const previous of rows(d, "lease"))
       if (
         previous.payload.householdId === h.id &&
-        ["ended", "ended_by_civil_case"].includes(previous.payload.status) &&
+        ["ended", "ended_by_civil_case", "ended_for_care_move"].includes(previous.payload.status) &&
         previous.payload.depositHeldCents > 0 &&
         !h.payload.members.some((id) =>
           Object.values(
@@ -286,7 +318,7 @@ export function housingDaily(d, time, emit) {
       const x = oldLease.payload;
       if (
         x.householdId !== h.id ||
-        !["ended", "ended_by_civil_case"].includes(x.status) ||
+        !["ended", "ended_by_civil_case", "ended_for_care_move"].includes(x.status) ||
         x.rentCreditProcessed ||
         h.payload.members.some((id) =>
           Object.values(
@@ -437,7 +469,7 @@ export function housingDaily(d, time, emit) {
     });
     if (cheaper.length) {
       const candidate = d.properties.get(cheaper[0].id),
-        moved = moveHousehold(d, h, candidate, time, emit, {
+        moved = applyForHousing(d, p, candidate, time, emit, {
           support: householdCash(d, h) < candidate.payload.rentCents * 2,
         });
       if (moved.ok) continue;

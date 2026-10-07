@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { spawn } from "node:child_process";
 const suites = [
   "test-expanded-world.mjs",
+  "test-finance-education-care.mjs",
   "test-expanded-semantics.mjs",
   "test-social-perspectives.mjs",
   "test-expanded-lifecycle.mjs",

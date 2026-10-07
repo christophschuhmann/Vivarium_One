@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-10-07T07:29:32.414Z",
+  "providerCalls": 0,
+  "checks": [
+    "calendar-month ledger and pagination",
+    "gross/net without double deductions",
+    "internal transfers/loans/deposits separated",
+    "reserve affects emotion and PERMA, no payment",
+    "care costs, actual presence and vacancy release",
+    "dated and observed education",
+    "probabilistic employment refusal, cooldown, preserved contract",
+    "housing refusal preserves cash and lease",
+    "idempotent reload",
+    "500 residents actual ten-minute tick"
+  ],
+  "largeTickMs": 2575
+}

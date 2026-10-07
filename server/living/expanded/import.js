@@ -101,10 +101,14 @@ export function validateExpandedImport(town) {
       )
         throw new Error("Foreign economic reference " + key);
       if (
-        ["members", "sharedBy", "residents", "audience"].includes(key) &&
+        ["members", "sharedBy", "residents", "audience", "caregiverIds"].includes(key) &&
         (!Array.isArray(value) || value.some((id) => !ids.has(id)))
       )
         throw new Error("Foreign group member");
+    }
+    if(e.kind==='care_plan') {
+      if(!['moderate','high'].includes(e.payload.level) || !['home_family','residential'].includes(e.payload.mode))throw new Error('Invalid care agreement');
+      if((e.payload.caregiverIds || []).some(id=>town.byId.get(id)?.age<18))throw new Error('Underage primary elder carer');
     }
     if (e.payload.rooms)
       for (const id of Object.values(e.payload.rooms))

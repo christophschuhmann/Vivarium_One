@@ -482,18 +482,20 @@ On first opening an older Living World save, the expansion backs up the database
 
 ### City / Stadtleben
 
-The new dock item opens six connected sections for the selected resident:
+The new dock item opens eight connected sections for the selected resident:
 
 | Section | Usage |
 |---|---|
-| **Mein Alltag** | Inspect personal money, joint household budget, actual transactions, open bills, pending earned wages and the 30/90-day forecast. Pay invoices, inspect skills/attributes/W100, review needs/goals/PERMA, decline or reschedule duties, and report a personally experienced case. |
+| **Mein Alltag** | Inspect skills, attributes and W100, needs, goals and PERMA; manage agreed duties and personally experienced cases. Money has its own dedicated tab. |
+| **Finanzen** | View the previous calendar month or current month so far, choose personal/joint/combined accounts, inspect categorized actual income and spending and paginated individual postings. See gross-to-net deductions without double counting, separate transfers/deposits/loans, next-month costs, expected income and a monthly reserve plan. Pay open invoices and inspect financing. |
+| **Arbeit & Bildung** | Immediately see work, school, study, unemployment, retirement or agreed care; inspect the current employer, hours and expected gross/net salary, career ambitions, education institutions, dates, fields, completed qualifications and results. See family care, professional support and holiday-work permissions. |
 | **Stellenbörse** | Change the selected Sim's minimum expected monthly net income and commute limit. Inspect why a vacancy is eligible or blocked, then apply. Actual unemployed Sims also search during simulated daytime. |
-| **Wohnungsbörse** | Compare a maximum of five suitable vacant homes. Renting requires the real deposit; buying requires real funds or an affordable funded mortgage and explicit consent. A move creates a contract and then actual movement, rather than teleporting. |
+| **Wohnungsbörse** | Compare a maximum of five suitable vacant homes. Renting requires an application with an uncertain, documented W100 decision and the real deposit after acceptance; buying requires real funds or an affordable funded mortgage and explicit consent. A move creates a contract and then actual movement, rather than teleporting. |
 | **Freizeit & Besitz** | Plan reachable free or paid activities, purchase special items, inspect actual possession and show it publicly. Memberships incur real renewed costs and can be cancelled. Owning an item does not claim you have already used it. |
 | **Soziale Sicht** | Search recent contacts by name or known relationship. Each card separates an actual observed encounter, a tentative interpretation, alternative explanations, the Sim's own wishes and current needs, possible impressions on the other person, unknowns, and a suggested respectful next step. Own sources and hypothesis weights are expandable; Profile, Bonds and Scene links open that contact. |
 | **Rundblick & Rathaus** | Read canonical local news, inspect separately funded institutions, contribute voluntarily and request a funded public festival. Optional AI commentary is labelled separately and does not replace the source facts. |
 
-Stadtleben has its own scrollable screen: use the mouse wheel, touch swipes or Page Up/Down; Ctrl+End reaches the bottom and **↑ Nach oben** returns to the beginning. The Sim picker and six section tabs stay visible below the global toolbar. On small screens, select a section with **Bereich**. Each section remembers its scroll position while the screen is open; Left/Right/Home/End navigate the desktop tabs. **Welt** and **Beziehungen** go directly to the selected resident.
+Stadtleben has its own scrollable screen: use the mouse wheel, touch swipes or Page Up/Down; Ctrl+End reaches the bottom and **↑ Nach oben** returns to the beginning. The Sim picker and eight section tabs stay visible below the global toolbar. On small screens, select a section with **Bereich**. Each section remembers its scroll position while the screen is open; Left/Right/Home/End navigate the desktop tabs. **Welt** and **Beziehungen** go directly to the selected resident.
 
 The selected Sim picker includes unanchored residents. **▶ Szene** jumps to their actual Play location. **Profil → Ressourcen** opens the same household/capability view; the Mind action bar also links to **Soziale Sicht**. The circular World viewer adds a named public quarter, **Marktbogen**, connected through its actual street and rooms.
 
@@ -503,11 +505,27 @@ Social explanations distinguish who initiated a bid, an accepted conversation fr
 
 Vacancies require adequate practical skill, a required existing credential, suitable expected income and a reachable commute. A current negative impression held by that specific employer or strong publicly verified negative reliability can block hiring. Another Sim's secret opinion or unverified gossip does not. Only work actually completed at the workplace creates earned wages; payment additionally needs the employer's funds. Unpaid wages remain claims. Training develops ability, without magically issuing professional certificates.
 
-For ages 15–17, a parent can enable safe holiday work in **Mein Alltag**. It is limited to the game's holiday calendar, weekdays, four hours daily and 20 days annually. The birthday transition ends that youth contract without deleting earned wage claims. Parents caring for children under three can receive a separately approved, funded care benefit instead of a fictitious simultaneous full-time wage.
+For ages 15–17, a parent can enable safe holiday work in **Arbeit & Bildung**. It is limited to the game's holiday calendar, weekdays, four hours daily and 20 days annually. The birthday transition ends that youth contract without deleting earned wage claims. Parents caring for children under three can receive a separately approved, funded care benefit instead of a fictitious simultaneous full-time wage.
 
 Each child has their own savings/pocket money. Households show agreed shared resources and projected obligations, while individual savings remain separate. A voluntary household merger needs all adults' consent, reciprocal trust and enough space. Food is stocked, carried or purchased with actual money; if unaffordable, a reachable and funded community kitchen remains available. A poor Sim no longer waits endlessly at an empty public refrigerator.
 
 Rent, utilities, subscriptions and loan installments fall due on actual simulation dates. Monthly membership renewal is based on 30 elapsed days. Partial payments pay interest only once. Restricted deposits are separate from spendable cash. Former homes become available only after actual vacancy; paid unused rent can create a funded prorated refund or an outstanding refund claim.
+
+### Monthly finances, education and care
+
+**Finanzen → Monatsrückblick** defaults to the previous calendar month. If the simulation started after that month, the view explicitly reports no saved history; it does not invent earlier wages or expenses. Account legs are summed once per transaction. A transfer from personal to joint funds cancels in the combined view. Loans, initial wealth and restricted deposits remain separate from earned income and consumption. Up to 60 individual entries are loaded per page; category totals cover the entire recorded month. Gross, tax and employee insurance explain the net salary already counted as income, rather than deducting it again.
+
+**Nächster Monat** lists rent, estimated utilities/heating, food, agreed loan payments, memberships and care copayments. Expected wages depend on actual work and funded payroll. The forecast includes existing unpaid obligations and a configurable monthly reserve plan. Planning a reserve does not debit money or create a duplicate savings account. The target buffer is a fictional game rule: two months of costs, at least €500. Personal budget reviews generate sourced worry, doubt or relief and small PERMA changes; money alone creates neither meaning nor a person's worth. Private account balances and undisclosed income of other household members stay excluded from the selected Sim's perspective.
+
+**Arbeit & Bildung** separates procedural starting biography from subsequently observed education. Each stage records institution, town, subject, dates, enrollment/completion, qualification and result. Kindergarten has no school grade. Newly simulated school completion requires recorded learning; higher education/training additionally needs 200 observed hours and 60 attendance days. Passing time alone awards no diploma. A degree does not automatically issue a medical or public-service license. New towns include young adult university students; an ongoing later course is distinguished from an already completed first degree. Current activity status is also visible in the Sim Explorer, profile and City toolbar.
+
+Some procedural older residents receive an individualized, agreed support plan; age alone does not declare everybody dependent. **Seniorenhaus Lindenblick** has connected real rooms on the existing World graph. Other older residents receive home care from adult family members. A family visit needs actual shared presence and time, trains care skills, supplies only available food, affects fatigue and gives both Sims sourced relationship/PERMA experiences. Professional care is explicitly a funded external service outside the active Sim population, with a real delivered meal, an insurance payment and a separate copayment invoice. Calendar-month accrual does not overcharge a 31-day month. Residential care uses a separate one-person economic household, preserving the home and funds of the remaining family; personal food extras have their own budget. The simulation does not fabricate unseen staff-Sim wages. Support levels and monthly amounts are fictional, not official German Pflegegrade. Vacated homes and deposits are released only after actual departure; a partner remaining in the family home retains that home.
+
+### Applications and explanations
+
+A fulfilled minimum requirement is a chance to apply, not guaranteed acceptance. Job selection considers practical skill above the minimum, a matching completed educational stage, documented employer-specific experience and available slots. Employers never read private bank balances, secret opinions or ethnicity. Housing selection considers disclosed income, actual deposit resources, a buffer, known reliability and existing obligations. Both decisions record their factors, estimated chance, W100 result and reason; an unsuccessful application leaves the current contract, home and cash unchanged. Reapplying to the same offer is locked for seven simulated days, preventing repeated-click rerolls. Protected emergency housing remains an assistance process. Cash purchases and mortgages keep their separate funding/consent checks.
+
+Small **i** buttons explain PERMA's five dimensions, feelings and intensity, needs, self-efficacy, skills/attributes, goals, social interpretations, gross/net pay, social and health insurance, cold/warm rent, deposits, credit, liquidity, forecasts, care and applications. Explanations open in a keyboard-accessible overlay; Escape closes it and returns focus. Real-world explanations link to primary sources, including [Penn's PERMA theory](https://ppc.sas.upenn.edu/node/708), [APA on self-efficacy](https://dictionary.apa.org/self-efficacy), [BMG on health insurance](https://www.bundesgesundheitsministerium.de/gkv/seite), [BMG on care insurance](https://www.bundesgesundheitsministerium.de/themen/pflege/online-ratgeber-pflege/die-pflegeversicherung), and [bpb on rental costs](https://www.bpb.de/kurz-knapp/zahlen-und-fakten/sozialbericht-2024/553255/mieten-und-wohnkosten/). The game distinguishes those definitions from its simplified fictional policy.
 
 ### Happiness, expectations and sources
 
@@ -525,6 +543,8 @@ Theory of Mind tracks at most 24 contacts, three topics per contact and eight ev
 npm run test:expanded-regressions          # all isolated suites; optional music if MUSIC_DATA_DIR exists
 npm run test:expanded
 npm run test:expanded-semantics
+npm run test:finance-care                  # isolated ledger, applications, education, care and 500-Sim tick
+node scripts/test-finance-care-browser.mjs # isolated real browser, desktop + mobile, no provider calls
 npm run test:expanded-lifecycle
 npm run test:living
 npm run test:living-mind

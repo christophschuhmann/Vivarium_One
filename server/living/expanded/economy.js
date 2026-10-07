@@ -1,3 +1,5 @@
+import { jobChance, decideApplication, latestApplication, APPLICATION_COOLDOWN } from "./applications.js";
+import { currentEducation } from "./education.js";
 import { db } from "../../db.js";
 import { rng } from "../random.js";
 import { addFeeling } from "../cognition.js";
@@ -126,11 +128,11 @@ export function flow(p, time, kind, amount) {
   const keys = Object.keys(p.state.economy.monthlyFlows).sort();
   while (keys.length > 18) delete p.state.economy.monthlyFlows[keys.shift()];
 }
-export function householdForecast(d, h, time) {
+export function householdForecast(d, h, time, {observerId=null} = {}) {
   const members = h.payload.members
       .map((id) => d.people.get(id))
       .filter(Boolean),
-    adults = members.filter((p) => p.age >= 18),
+    adults = members.filter((p) => p.age >= 18 && (!observerId || p.id===observerId || p.state.economy.privacy.shareIncomeWithHousehold)),
     income = adults.reduce(
       (n, p) =>
         n +
@@ -171,13 +173,17 @@ export function householdForecast(d, h, time) {
         (i) => i.payload.householdId === h.id && i.payload.status !== "paid",
       )
       .reduce((n, i) => n + i.payload.remainingCents, 0),
-    margin = income - cost;
+    reserve = Math.max(0, h.payload.budget.irregularReserve || 0),
+    careCosts = members.reduce((n,p)=>n+(p.state.careSupport?.monthlyCopayCents || 0),0),
+    margin = income - cost - reserve - careCosts;
   return {
     at: time,
     incomeCents: income,
     fixedCents: rent + h.payload.budget.utilities + loans + subscriptions,
     foodCents: h.payload.budget.foodTarget,
-    costCents: cost,
+    costCents: cost + careCosts,
+    reserveCents: reserve,
+    plannedCostCents: cost + careCosts + reserve,
     marginCents: margin,
     availableCents: available,
     arrearsCents: arrears,
@@ -258,11 +264,16 @@ export function jobAssessment(d, p, listing, time) {
   const route = commuteSeconds(d.town, p.profile.home.living, x.workplaceId);
   if (route === null || route > p.state.economy.expectations.maxCommuteSeconds)
     reasons.push("Arbeitsweg entspricht nicht der eigenen Erwartung");
+  const lastBid = latestApplication(p, 'job', listing.id);
+  if (lastBid && time-lastBid.at < APPLICATION_COOLDOWN) reasons.push('Erneute Bewerbung frühestens nach sieben Tagen');
+  if (currentEducation(p) && p.age>=18 && !x.holiday) reasons.push('Aktuelle Vollzeitbildung hat Vorrang');
+  if (p.state.careSupport || p.state.economy.parentalCare) reasons.push('Aktuelle Betreuungssituation passt nicht zu dieser Vollzeitstelle');
   const previous = d.contracts.get(p.id);
   if (previous?.payload.job === x.title)
     reasons.push("Bereits in dieser Stelle beschäftigt");
   return {
     eligible: !reasons.length,
+    ...jobChance(p,x,firm,time),
     reasons,
     skill,
     requiredSkill: x.minimumSkill,
@@ -274,22 +285,11 @@ export function jobAssessment(d, p, listing, time) {
   };
 }
 export function applyForJob(d, p, listing, time, emit) {
-  const assessment = jobAssessment(d, p, listing, time),
-    e = emit("job_application", p, time, {
-      listingId: listing.id,
-      firmId: listing.payload.firmId,
-      assessment,
-      private: true,
-    });
-  p.state.economy.lastApplicationEventId = e.id;
-  if (!assessment.eligible) {
-    e.description =
-      p.name +
-      " erhält auf die Bewerbung eine begründete Absage: " +
-      assessment.reasons.join("; ") +
-      ".";
-    return { ok: false, ...assessment, eventId: e.id };
-  }
+  const assessment = jobAssessment(d,p,listing,time);
+  const decision = decideApplication(d,p,'job',listing.id,time,assessment,emit);
+  if (!decision.ok) return {...assessment,...decision};
+  const e = decision.event;
+  p.state.economy.lastApplicationEventId=e.id;
   const x = listing.payload,
     old = d.contracts.get(p.id),
     firm = d.firms.get(x.firmId);
@@ -360,7 +360,7 @@ export function applyForJob(d, p, listing, time, emit) {
     ": " +
     (x.grossMonthlyCents / 100).toFixed(0) +
     " € vereinbarter Monatsbruttolohn. Das Geld wird erst durch tatsächliche Arbeit verdient.";
-  return { ok: true, contractId: contract.id, eventId: e.id };
+  return { ok: true, contractId: contract.id, eventId: e.id, application:decision.application };
 }
 export function accrueWork(d, p, event, seconds) {
   const contract = d.contracts.get(p.id);
@@ -1343,6 +1343,7 @@ export function refreshOwnResources(d, time) {
         d,
         householdOf(d, p),
         time,
+        {observerId:p.id},
       );
   }
 }
@@ -1476,6 +1477,8 @@ export function economicMinute(d, time, emit) {
     for (const p of d.people.values()) {
       if (
         p.state.economy.parentalCare ||
+        p.state.careSupport ||
+        (p.age>=18 && currentEducation(p)) ||
         p.age < 15 ||
         p.age >= 66 ||
         p.state.economy.lastJobSearch === day ||
@@ -1527,6 +1530,11 @@ export function economicContext(p) {
         householdForecast:
           p.age >= 18 ? p.state.economy.householdForecast : undefined,
         ownThreats: p.state.economy.threats,
+        ownBudgetReview: p.state.economy.financialAppraisal || null,
+        ownApplications: (p.state.economy.applications || []).slice(-5),
+        ownEducation: p.profile.education ? {current:currentEducation(p),history:p.profile.education.history.slice(-8)} : null,
+        ownCareAgreement: p.state.careSupport || null,
+        ownFamilyCareTargets: p.state.economy.elderCareTargets || [],
         ownReadPublicNews: p.state.economy.knownNews || [],
         jobExpectations: p.state.economy.expectations,
         disclaimer:

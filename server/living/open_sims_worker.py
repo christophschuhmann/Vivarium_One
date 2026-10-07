@@ -15,7 +15,7 @@ def handle(request):
     op = request['op']
     if op == 'catalog':
         return {'actions': registry.actions, 'rates': registry.rates,
-                'manifest': registry.manifest(), 'social': {**psychology.social_category_definitions(), **romance_policy.DEFINITIONS}, 'jobStations': JOB_STATIONS}
+                'manifest': registry.manifest(), 'social': {**psychology.social_category_definitions(), **romance_policy.DEFINITIONS}, 'jobStations': {**JOB_STATIONS, 'Student': ['desk']}}
     if op == 'initialize':
         people = request['people']
         for person in people:

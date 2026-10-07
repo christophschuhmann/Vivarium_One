@@ -1,0 +1,15 @@
+{
+  "eightTownTabs": true,
+  "profileShortcutOnSameCityUrl": true,
+  "financialControlsAndOwnLedger": true,
+  "reserveIsPlanNotPayment": true,
+  "financialFeelingAndPermaEvidence": true,
+  "educationTimeline": true,
+  "careStatuses": true,
+  "contextHelpKeyboardAndFocus": true,
+  "desktopScrollStickyNavigation": true,
+  "mobileOverflow": false,
+  "providerCalls": 0,
+  "errors": [],
+  "failures": []
+}

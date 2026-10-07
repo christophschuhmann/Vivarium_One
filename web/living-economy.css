@@ -386,3 +386,33 @@
 @media(max-width:760px) {
   #dock:has([data-nav="city"]) { max-width: calc(100vw - 16px); }
 }
+/* Learning cards are available in Mind, profiles and town life alike. */
+.ex-info { display:inline-flex; align-items:center; justify-content:center; width:21px; height:21px; min-width:21px; padding:0; margin-left:3px; border:1px solid #b8a6c8; border-radius:50%; background:#f6f0fa; color:#675076; cursor:pointer; font:600 12px Georgia,serif; vertical-align:middle; }
+.ex-info:hover { background:#e9dcf2; border-color:#826897; }
+.ex-info:focus-visible { outline:3px solid #9679b9; outline-offset:3px; }
+.ex-learning { z-index:10000; padding:20px; }
+.ex-learning-card { width:min(600px,100%); max-height:calc(100dvh - 40px); overflow:auto; background:#fffcfa; border-radius:24px; padding:28px; color:var(--ink); box-shadow:0 20px 80px #29163245; }
+.ex-learning-top { display:flex; justify-content:space-between; align-items:center; color:#7f688c; letter-spacing:1px; }
+.ex-learning h2 { font:28px Lora,serif; color:#51445e; }
+.ex-learning p { font-size:15px; line-height:1.8; }
+.ex-learning a { color:#68517e; font-size:13px; }
+.ex-learning-note { display:block; margin-top:22px; color:#85748a; line-height:1.6; }
+.ex-current-status { color:#625574; font-size:12px; padding:5px 8px; }
+.ex-current-status small { display:block; color:#827488; font-size:11px; margin-top:3px; max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ex-filter-row { display:flex; flex-wrap:wrap; gap:16px; margin:18px 0 24px; }
+.ex-filter-row label, #ex-reserve-form label { display:flex; flex-direction:column; gap:8px; color:#71617d; font-size:12px; }
+.ex-filter-row select, #ex-reserve { padding:12px; border:1px solid #d8cce1; border-radius:12px; background:#fff; font:inherit; color:#51445e; min-width:0; }
+#ex-reserve-form { display:flex; flex-wrap:wrap; align-items:end; gap:12px; padding:18px 0; border-bottom:1px solid #e6ddea; }
+.ex-section-heading h2 { font:30px Lora,serif; color:#51445e; }
+.ex-section-heading > small { color:#927d9d; font-size:11px; letter-spacing:1px; }
+.ex-timeline { list-style:none; padding:0 0 0 18px; border-left:2px solid #cfbfdc; margin:25px 0 10px 8px; }
+.ex-timeline > li { position:relative; padding:0 0 20px 14px; margin-bottom:15px; border-bottom:1px solid #eee7f0; }
+.ex-timeline > li::before { content:''; position:absolute; left:-26px; top:4px; width:12px; height:12px; border:3px solid #fffcfa; background:#9c83b3; border-radius:50%; }
+.ex-timeline p { margin:7px 0; }
+.ex-timeline-top { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; }
+.ex-chip { color:#6a5379; background:#eee6f4; border-radius:20px; padding:5px 9px; font-size:11px; }
+.ex-transactions > small { display:block; margin-top:15px; }
+.lw-resident-status { color:#625574; font-weight:500; font-size:12px; }
+@media(max-width:760px){ .ex-learning-card{padding:22px 18px;} .ex-current-status{order:3;width:100%;padding:0;} .ex-workspace .ex-shortcuts{order:4;} .ex-current-status small{display:inline; margin-left:6px;} .ex-filter-row label{width:100%;} .ex-filter-row select{width:100%;} }
+
+@media(min-width:761px){.ex-workspace .ex-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));}.ex-workspace .ex-tabs button{padding:10px 8px;text-align:center;line-height:1.3;}}

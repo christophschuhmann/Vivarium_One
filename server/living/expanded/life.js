@@ -1,3 +1,5 @@
+import { currentEducation } from './education.js';
+import { careAction } from './care.js';
 import { rng } from "../random.js";
 import { addFeeling } from "../cognition.js";
 import { rows, put, touch, balance, transfer, post } from "./store.js";
@@ -17,6 +19,8 @@ export function installExpandedActions(catalog) {
   // Existing public/private action checks remain in availableActions. New
   // actions are admitted only by the typed eligibility functions below.
   for (const [key, label, objects, duration] of [
+    ['elder_care','unterstützt ein Familienmitglied im Alltag',['sofa','bed','desk','table','fridge'],900],
+    ['study','lernt im aktuellen Studium oder in der Ausbildung',['desk','bookshelf','table','lab_station'],1800],
     [
       "obligation",
       "führt eine angenommene Alltagsaufgabe aus",
@@ -65,6 +69,7 @@ export function dutyEligibility(d, p, row, time) {
     family = row.operator,
     title = row.title.toLowerCase();
   if (p.age < row.execution.age || p.state.needs.fatigue > 0.9) return false;
+  if (p.state.careSupport?.level==='high' && ['work','care','household'].includes(family)) return false;
   if (
     family === "learning" &&
     !((p.age >= 6 && p.age < 18) || p.profile.job === "Student")
@@ -525,9 +530,11 @@ export function selectExpandedAction(d, p, time) {
   }
   return null;
 }
-export function expandedActionAllowed(d, p, kind) {
+export function expandedActionAllowed(d, p, kind, time=d?.town.world.seconds) {
   if (!kind.startsWith("leisure_expanded_")) return true;
   if (!d) return false;
+  if (kind === "leisure_expanded_elder_care") return !!careAction(d,p,time);
+  if (kind === "leisure_expanded_study") return p.age>=18 && !!currentEducation(p) && p.state.location_id===p.profile.workplace_id && Math.floor(time/86400)%7<5 && time/3600%24>=8 && time/3600%24<15;
   if (kind === "leisure_expanded_holiday_work")
     return (
       p.age >= 15 &&

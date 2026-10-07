@@ -2,7 +2,7 @@
 // balanced, and an expansion draft commits INSIDE the ordinary atomic tick.
 import { db, j, pj, uid } from "../../db.js";
 import "../schema.js";
-export const EXPANDED_VERSION = 3;
+export const EXPANDED_VERSION = 5;
 export const EXPANDED_TABLES = [
   "lw_economy_accounts",
   "lw_economy_entities",
@@ -39,6 +39,8 @@ export const knownKinds = new Set([
   "market",
   "calendar",
   "health_plan",
+  "care_plan",
+  "application",
 ]);
 const existingKey = db.prepare(
   "SELECT id FROM lw_money_transactions WHERE world_id=? AND idempotency_key=?",
