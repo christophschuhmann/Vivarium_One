@@ -79,7 +79,7 @@ try {
   answer='What would help this person?';const sent=[];
   for(const suffix of ['/dr-well','/sims/'+sim.id+'/inner','/sims/'+sim.id+'/talk'])await ctx.route('**'+prefix+suffix,async route=>{
     if(route.request().method()!=='POST')return route.continue();sent.push({suffix,body:route.request().postDataJSON()});
-    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({reply:'Voice message received.',references:[],state:sim.state,changed:false})});
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({reply:'Voice message received.',references:[],state:sim.state,changed:suffix.endsWith('/inner')})});
   });
   await ctx.route('**/api/worlds/'+worldId+'/gm-chat',async route=>{if(route.request().method()!=='POST')return route.continue();sent.push({suffix:'/gm-chat',body:route.request().postDataJSON()});await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({reply:'Voice message received.',actions:[]})});});
   await page.evaluate(id=>livingDrWell(id),sim.id);await page.locator('#well-field .micbtn').waitFor();
@@ -91,6 +91,23 @@ try {
   await page.locator('[data-well-close]').click();await page.setViewportSize({width:1280,height:900});
   await page.evaluate(id=>livingJump({type:"character",id}),sim.id);await page.evaluate(id=>mindModal(id),sim.id);await page.locator('#iv-field .micbtn').waitFor();await start(page.locator('#iv-field'));await page.locator('#iv-field [data-mic-action="send"]').click();await page.waitForFunction(()=>[...document.querySelectorAll('#iv-log .assistant')].some(e=>e.textContent.includes('Voice message received.')));assert.equal(sent.length,2);assert.equal(sent[1].suffix,'/sims/'+sim.id+'/inner');
   await page.evaluate(()=>document.querySelectorAll('.modal-bg').forEach(e=>e.remove()));
+  // Inner Voice invalidates the scene cache. The real Intervene → advance path
+  // must load a fresh version before posting, while retaining the hour and target.
+  assert.equal(await page.evaluate(()=>S.worldData),null);
+  assert.equal((await ctx.request.put(base+prefix+'/anchors',{data:{kind:'sim',id:sim.id,enabled:true}})).status(),200);
+  const snapshot=await(await ctx.request.get(base+prefix)).json(),tickRequests=[];
+  await ctx.route('**'+prefix+'/ticks',async route=>{
+    tickRequests.push(route.request().postDataJSON());
+    await route.fulfill({status:200,contentType:'text/event-stream',body:'event: done\ndata: {"metrics":{"warnings":[]}}\n\n'});
+  });
+  await page.locator('[data-delta="+1h"]').click();await page.locator('#intervene').click();
+  await page.locator('#targets [data-t="'+sim.id+'"]').click();await page.locator('#iv-text').fill('A visitor interrupts this person with important news.');
+  await page.locator('#iv-go').click();
+  await page.waitForFunction(()=>!stageState.advanceAbort&&!!document.querySelector('#advance'),{},{timeout:15000});
+  assert.equal(tickRequests.length,1,'Intervention after Inner Voice must reach the ticks endpoint');
+  assert.equal(tickRequests[0].minutes,60);assert.equal(tickRequests[0].expectedVersion,snapshot.simulation.version);
+  assert.equal(tickRequests[0].intervention.targetId,sim.id);assert.equal(tickRequests[0].intervention.text,'A visitor interrupts this person with important news.');
+  console.log('PASS real one-hour intervention after Inner Voice cache invalidation: fresh version, duration and target retained');
   await page.evaluate(c=>livingTalkModal(c),{id:sim.id,name:sim.name,state:sim.state});await start(page.locator('#lw-talk-input').locator('..'));await page.locator('[data-mic-action="send"]').click();await page.locator('#lw-talk-log').filter({hasText:'Voice message received.'}).waitFor();assert.equal(sent.length,3);assert.equal(sent[2].suffix,'/sims/'+sim.id+'/talk');
   await page.evaluate(()=>document.querySelectorAll('.modal-bg').forEach(e=>e.remove()));
   await page.evaluate(()=>gmChatOverlay());await page.locator('#gmc-field .micbtn').waitFor();await start(page.locator('#gmc-field'));await page.locator('#gmc-field [data-mic-action="send"]').click();await page.waitForFunction(()=>document.querySelector('#gmc-log')?.textContent.includes('Voice message received.'));assert.equal(sent.length,4);assert.equal(sent[3].suffix,'/gm-chat');

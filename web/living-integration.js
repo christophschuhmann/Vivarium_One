@@ -24,20 +24,30 @@ async function livingStageExtras(loc,present){
   }).catch(()=>{});
 }
 async function livingAdvance(intervention){
+  if(stageState.advanceAbort)return;
   const match=/^\+(\d+)([smhdw])$/.exec(stageState.delta||'+5m');const minutes=match?Number(match[1])*({s:1/60,m:1,h:60,d:1440,w:10080}[match[2]]):5;
   if(!Number.isInteger(minutes)||minutes<1||minutes>1440){toast('Living World: choose 1 minute to 1 day. Longer advances run as a sequence of minute ticks.','err');return;}
   stopNarration();if(ttsPrefs().autoplay)waCtx();
-  const advancingWorld=S.world;const button=$('#advance');button.disabled=true;const controller=new AbortController();stageState.advanceAbort=controller;
-  $('#veil').innerHTML='<div class="thinking-veil"><div class="pageturn"></div><div id="lw-progress">Die Stadt lebt weiter…</div><small id="lw-elapsed">0 s</small><button class="btn btn-soft small" id="lw-cancel">Abbrechen</button></div>';
+  const advancingWorld=S.world,advancePath=`/api/living/worlds/${advancingWorld}`;const button=$('#advance');if(button)button.disabled=true;const controller=new AbortController();stageState.advanceAbort=controller;
+  $('#veil').innerHTML='<div class="thinking-veil"><div class="pageturn"></div><div id="lw-progress">Reading the current world state…</div><small id="lw-elapsed">0 s</small><button class="btn btn-soft small" id="lw-cancel">Cancel</button></div>';
   let lastByte=Date.now();const watchdog=setInterval(()=>{if(Date.now()-lastByte>75000)controller.abort();},5000);
   const start=Date.now(),clock=setInterval(()=>{const el=$('#lw-elapsed');if(el)el.textContent=Math.floor((Date.now()-start)/1000)+' s';},1000);$('#lw-cancel').onclick=()=>controller.abort();
   try{
-    const response=await fetch(lwPath()+'/ticks',{method:'POST',credentials:'same-origin',signal:controller.signal,headers:{'Content-Type':'application/json',Accept:'text/event-stream'},body:JSON.stringify({minutes,story:localStorage.getItem('viv_lw_story')!=='off',expectedVersion:S.worldData.simulation.version,intervention})});
+    // Inner Voice and other editors deliberately invalidate S.worldData. Read the
+    // authoritative revision without replacing that shared cache: another screen
+    // may already be loading it. Pin the world, duration and intervention to this
+    // request, and retain the server's optimistic concurrency check.
+    const snapshot=await api(advancePath,{signal:controller.signal});
+    if(controller.signal.aborted||S.world!==advancingWorld||!location.hash.includes('/stage'))throw new DOMException('Advance cancelled','AbortError');
+    const expectedVersion=snapshot.simulation?.version;
+    if(!Number.isInteger(expectedVersion))throw new Error('Could not read the current simulation version. Reload the scene and try again.');
+    if(snapshot.busy)throw new Error('This world is already advancing. Wait for the current step to finish.');
+    const response=await fetch(advancePath+'/ticks',{method:'POST',credentials:'same-origin',signal:controller.signal,headers:{'Content-Type':'application/json',Accept:'text/event-stream'},body:JSON.stringify({minutes,story:localStorage.getItem('viv_lw_story')!=='off',expectedVersion,intervention})});
     if(!response.ok){const error=await response.json();throw new Error(error.error?.message||response.statusText);}
     const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',result=null;
-    for(;;){const {value,done}=await reader.read();if(done)break;lastByte=Date.now();buffer+=decoder.decode(value,{stream:true});let index;while((index=buffer.indexOf('\n\n'))!==-1){const raw=buffer.slice(0,index);buffer=buffer.slice(index+2);const event=/event: (\w+)/.exec(raw)?.[1],line=/data: (.*)/.exec(raw)?.[1];if(!line)continue;const data=JSON.parse(line);if(event==='error')throw new Error(data.message);if(event==='done')result=data;if(event==='status'){const el=$('#lw-progress');if(el)el.textContent=(data.totalMinutes?`${data.completedMinutes+(data.completed||0)} / ${data.totalMinutes} min · `:'')+(data.phase==='biography'?'Persönliche Hintergründe werden ausgearbeitet…':data.phase==='biography_deferred'?data.message:data.phase==='storyteller'?'Der Storyteller erzählt die verankerten Begegnungen…':'Daily life, journeys and encounters are being simulated…');}}}
-    if(!result)throw new Error('Der Schritt wurde nicht abgeschlossen.');if(S.world===advancingWorld&&location.hash.includes('/stage')){S.worldData=null;stageState.justAdvanced=true;await stageScreen();}refreshMe();for(const warning of result.metrics?.warnings||[])toast(warning.message,'err');
-  }catch(error){if(S.world===advancingWorld&&location.hash.includes('/stage')){S.worldData=null;stageState.justAdvanced=false;await stageScreen();}if(error.name!=='AbortError')fail(error);else toast('Advance stopped. The scene shows the last saved minute; completed sections are retained.');}finally{clearInterval(clock);clearInterval(watchdog);stageState.advanceAbort=null;const veil=$('#veil');if(veil)veil.innerHTML='';const b=$('#advance');if(b)b.disabled=false;}
+    for(;;){const {value,done}=await reader.read();if(done)break;lastByte=Date.now();buffer+=decoder.decode(value,{stream:true});let index;while((index=buffer.indexOf('\n\n'))!==-1){const raw=buffer.slice(0,index);buffer=buffer.slice(index+2);const event=/event: (\w+)/.exec(raw)?.[1],line=/data: (.*)/.exec(raw)?.[1];if(!line)continue;const data=JSON.parse(line);if(event==='error')throw new Error(data.message);if(event==='done')result=data;if(event==='status'&&data.phase!=='thinking'){const el=$('#lw-progress');if(el)el.textContent=data.phase==='storyteller'?`${minutes} min simulated · Writing the whole interval as one episode per anchor scene…`:data.phase==='procedural'?`${minutes} min simulated · Preparing the anchor scenes…`:data.phase==='advance'?`${data.completedMinutes} / ${data.totalMinutes} min saved`:data.phase==='biography_deferred'?data.message:`${data.completedMinutes+(data.completed||0)} / ${data.totalMinutes||minutes} min · Simulating daily life and encounters…`;}}}
+    if(!result)throw new Error('The advance did not finish.');if(S.world===advancingWorld&&location.hash.includes('/stage')){S.worldData=null;stageState.justAdvanced=true;await stageScreen();}refreshMe();for(const warning of result.metrics?.warnings||[])toast(warning.message,'err');
+  }catch(error){if(S.world===advancingWorld&&location.hash.includes('/stage')){S.worldData=null;stageState.justAdvanced=false;await stageScreen();}if(error.name!=='AbortError')fail(error);else toast('Advance stopped. The scene shows the last confirmed save. Narrated intervals are saved only after the whole episode succeeds.');}finally{clearInterval(clock);clearInterval(watchdog);stageState.advanceAbort=null;const veil=$('#veil');if(veil)veil.innerHTML='';const b=$('#advance');if(b)b.disabled=false;}
 }
 function livingCityJump(id,tab='overview'){
   expandedSim=id;expandedTab=tab;const target=`#/city?w=${S.world}&s=${id}`;

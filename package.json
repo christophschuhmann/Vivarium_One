@@ -51,7 +51,8 @@
     "test:crowds-browser": "node scripts/test-crowds-advisors-browser.mjs",
     "test:microphone-browser": "node scripts/test-microphone-browser.mjs",
     "test:llm-response": "node scripts/test-llm-response.mjs",
-    "test:story-context": "node scripts/test-story-context.mjs && node scripts/test-story-coverage.mjs"
+    "test:story-context": "node scripts/test-story-context.mjs && node scripts/test-story-coverage.mjs",
+    "test:story-episode": "node scripts/test-story-episode.mjs"
   },
   "license": "MIT",
   "dependencies": {
