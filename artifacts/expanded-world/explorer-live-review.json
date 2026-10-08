@@ -1,0 +1,60 @@
+{
+  "testedAt": "2026-10-08T05:28:01.517Z",
+  "population": 1000,
+  "readOnly": true,
+  "clockPreserved": true,
+  "versionPreserved": true,
+  "timings": [
+    {
+      "rules": [
+        {
+          "category": "emotion",
+          "field": "distress",
+          "min": 20,
+          "max": 100
+        }
+      ],
+      "total": 98,
+      "ms": 112
+    },
+    {
+      "rules": [
+        {
+          "category": "attribute",
+          "field": "reputation",
+          "min": 0,
+          "max": 100
+        },
+        {
+          "category": "skill",
+          "field": "empathy",
+          "min": 40,
+          "max": 100
+        }
+      ],
+      "total": 974,
+      "ms": 143
+    },
+    {
+      "rules": [
+        {
+          "category": "ambition",
+          "field": "career",
+          "text": "",
+          "min": 0,
+          "max": 50
+        },
+        {
+          "category": "relationship",
+          "field": "married"
+        }
+      ],
+      "total": 521,
+      "ms": 130
+    }
+  ],
+  "visibleCards": 18,
+  "loadedPortraits": 18,
+  "mobileWidth": 390,
+  "browserErrors": []
+}

@@ -44,7 +44,9 @@
     "test:progression": "node scripts/test-progression.mjs",
     "audit:life": "node scripts/audit-bennington-life.mjs",
     "test:portraits-map": "node scripts/test-portraits-outlooks-map.mjs",
-    "test:portraits-map-browser": "node scripts/test-portrait-map-browser.mjs"
+    "test:portraits-map-browser": "node scripts/test-portrait-map-browser.mjs",
+    "test:explorer": "node scripts/test-explorer-filters.mjs",
+    "test:explorer-browser": "node scripts/test-explorer-filters.mjs --browser"
   },
   "license": "MIT",
   "dependencies": {
