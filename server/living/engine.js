@@ -115,6 +115,7 @@ function availableActions(place,catalog,p,d=null,time=0) {
     if(!actionAllowed(d,p,kind,place.id,time))return false;
     if(kind==='work'&&(p.age<18||p.profile.job==='Retired'))return false;
     if(kind==='school_day'&&(p.age<6||p.age>=18)||kind==='kindergarten_day'&&(p.age<3||p.age>=6))return false;
+    if(p.age>=3&&p.age<6&&!['eat','drink','toilet','shower','sleep','relax','wait','creative_hobby','kindergarten_day','leisure_board_games','leisure_paint'].includes(kind))return false;
     if(p.age<3 && !['eat','drink','toilet','shower','sleep','relax','wait'].includes(kind))return false;
     if(p.age<18&&/party|date|karaoke|live_music|shop_for_fun/.test(kind))return false;
     const objects=catalog.actions[kind].object_kinds;return kind!=='wait'&&(!objects.length||objects.some(k=>place.affordances.includes(k)));
@@ -125,7 +126,7 @@ function scheduledDestination(town,p,time) {
   const extra=expandedDestination(town.expansion,p,time);if(extra)return extra;
   const hour=time/3600%24,weekday=Math.floor(time/86400)%7<5,home=p.profile.home;
   if(p.age<3)return hour>=20||hour<7?home.bed:home.living;
-  if(hour>=22||hour<7)return home.bed;
+  if(hour>=(p.age<6?20:p.age<12?21:22)||hour<7)return home.bed;
   if(weekday&&hour>=8&&hour< (p.age<18?14:16)&&p.profile.workplace_id)return dutyDestination(p,time);
   const social=socialDestination(town,p,time);if(social)return social;
   if(weekday&&hour>=16&&hour<18 || !weekday&&hour>=10&&hour<12){const familyPlan=p.age<12?town.byId.get(p.profile.family.parent_ids[0]) || p:p,draw=rng(`${town.world.seed}:outing:${familyPlan.profile.seed_key}:${Math.floor(time/86400)}`);if(draw()>(weekday?.45:.65))return home.living;const interests=familyPlan.profile.interests,purpose=interests.includes('reading')?'public library':interests.some(k=>['walking','gardening'].includes(k))?'town park':interests.some(k=>['socializing','music'].includes(k))?'shopping street cafe':null;return purpose?[...town.places.values()].find(l=>l.kind==='room'&&l.purpose.includes(purpose))?.id || home.living:home.living;}
@@ -133,6 +134,7 @@ function scheduledDestination(town,p,time) {
 }
 function interpretation(p,event) {
   if(event.type==='social')return event.facts.socialViews?.[p.id]?.thought||socialInterpretation(p,event);
+  if(event.type==='action_failed')return event.description+' I need to reconsider this plan before trying again.';
   if(event.type==='arrival')return 'I have arrived and can take in my surroundings.';
   if(event.type==='action_completed')return 'I have completed a real step in my daily life and goals.';
   return p.state.thought || 'I am noticing what is happening around me.';
@@ -229,11 +231,11 @@ async function advanceSlice(user,worldId,{minutes=5,story=true,expectedVersion,i
         if(state.goal&&commitment===p.profile.workplace_id&&state.goal.destination!==commitment&&!['eat','drink','toilet','shower','sleep'].includes(state.goal.kind)&&!(p.age>=18&&state.goal.kind==='work')){const e=event('goal_deferred',p,time,{reason:'scheduled_commitment',destination:state.goal.destination});e.description=`${p.name} defers a leisure plan to meet a school or work commitment.`;state.goal=null;}
         if(state.action){
           if(state.action.kind==='sleep'&&time/3600%24>=7&&time/3600%24<10&&state.needs.fatigue<.3)state.action.until=Math.min(state.action.until,time);
-          const caregiving=p.id===youngByHouse.get(p.household_id)?.[0]?.profile.family.parent_ids[0],duty=caregiving?p.profile.home.living:scheduledDestination(town,p,time),interrupt=Math.max(state.needs.bladder,state.needs.hunger,state.needs.thirst)>.92&&!['eat','drink','toilet'].includes(state.action.kind)||escort.has(p.id)&&!['sleep','toilet','shower','eat','drink'].includes(state.action.kind)||!state.goal&&duty===p.profile.workplace_id&&state.location_id!==duty&&!['sleep','toilet','shower','eat','drink'].includes(state.action.kind)&&!((catalog.actions[state.action.kind]?.relief.fun>0&&state.needs.fun>.6)||(catalog.actions[state.action.kind]?.relief.comfort>0&&state.needs.comfort>.6));
+          const caregiving=p.id===youngByHouse.get(p.household_id)?.[0]?.profile.family.parent_ids[0],duty=caregiving?p.profile.home.living:scheduledDestination(town,p,time),interrupt=Math.max(state.needs.bladder,state.needs.hunger,state.needs.thirst)>.92&&!['eat','drink','toilet'].includes(state.action.kind)||escort.has(p.id)&&!['sleep','toilet','shower','eat','drink'].includes(state.action.kind)||p.age<12&&state.location_id!==p.profile.home.bed&&time/3600%24>=(p.age<6?20:21)&&!['sleep','toilet','shower','eat','drink'].includes(state.action.kind)||!state.goal&&duty===p.profile.workplace_id&&state.location_id!==duty&&!['sleep','toilet','shower','eat','drink'].includes(state.action.kind)&&!(((catalog.actions[state.action.kind]?.relief.fun>0||state.action.kind==='leisure_expanded_item_use')&&state.needs.fun>.6)||(catalog.actions[state.action.kind]?.relief.comfort>0&&state.needs.comfort>.6));
           if(state.action.until>time&&!interrupt)continue;
           if(state.action.until<=time){const duration=state.action.progressSeconds??(state.action.until-state.action.started),e=event('action_completed',p,time,{action:state.action.kind,durationSeconds:duration,taskId:state.action.taskId,plannedSeconds:state.action.plannedSeconds}),result=completeExpanded(expansion,p,e,duration),relief={};
             if(result.ok){for(const [need,value] of Object.entries(catalog.actions[state.action.kind]?.relief || {})){const beforeNeed=state.needs[need];state.needs[need]=clamp(beforeNeed-value*(state.action.kind==='sleep'?Math.min(1,duration/catalog.actions.sleep.duration):1));relief[need]=beforeNeed-state.needs[need];}completedActivity(p,e,duration,relief,time);}
-            else{e.type='action_failed';e.facts.completed=false;e.description=p.name+' kann '+activity(state.action.kind,catalog)+' nicht abschließen: '+(e.facts.failure||'die tatsächlichen Voraussetzungen oder Ressourcen fehlen')+'.';}
+            else{e.type='action_failed';e.facts.completed=false;e.description=p.name+' could not finish the activity ('+activity(state.action.kind,catalog)+'): '+(e.facts.failure||'the required person, resources or conditions were no longer available')+'.';}
           }else{const resource=state.action.resource;pauseTask(p,time,event,{reason:Math.max(state.needs.bladder,state.needs.hunger,state.needs.thirst)>.92?'an urgent physical need':'a scheduled commitment'});reservations.delete(resource);}
           if(state.action)reservations.delete(state.action.resource);state.action=null;
         }
@@ -242,12 +244,14 @@ async function advanceSlice(user,worldId,{minutes=5,story=true,expectedVersion,i
         // A locally available fun activity must not mask hunger or a full bladder
         // and repeatedly restart after the resulting urgent interruption.
         const primary={eat:'hunger',drink:'thirst',toilet:'bladder',shower:'hygiene',sleep:'fatigue'};
-        const strongest=Object.keys(primary).filter(k=>state.needs[primary[k]]>.8).sort((a,b)=>state.needs[primary[b]]-state.needs[primary[a]])[0];
+        const thresholds={eat:.65,drink:.7,toilet:.7,shower:.7,sleep:.8};
+        const strongest=Object.keys(primary).filter(k=>state.needs[primary[k]]>thresholds[k]).sort((a,b)=>state.needs[primary[b]]-state.needs[primary[a]])[0];
         let urgent=actions.includes(strongest)?strongest:null;
         if(state.goal?.expires<=time)state.goal=null;
         let destination=escort.get(p.id) || state.goal?.destination || scheduledDestination(town,p,time);
         const young=youngByHouse.get(p.household_id)||[];
         if(p.id===young[0]?.profile.family.parent_ids[0])destination=town.byId.get(p.state.economy?.infantCareTargetId)?.state.location_id || p.profile.home.living; // parental care instead of leaving small children alone
+        if(p.age<12&&time/3600%24>=(p.age<6?20:21)){destination=p.profile.home.bed;if(state.goal){const e=event('goal_deferred',p,time,{reason:'bedtime',destination:state.goal.destination});e.description=p.name+' puts aside an optional plan to get ready for bed.';state.goal=null;}}
         if(p.age<12&&destination!==state.location_id&&!escort.has(p.id)&&!Object.values(p.profile.home).includes(destination)&&!contains(town,destination,p.household_id)&&destination!==p.profile.workplace_id&&!Object.values(p.profile.facility?.rooms||{}).includes(destination))destination=state.location_id;
         if(!urgent){
           if(strongest)destination=strongest==='eat'?foodDestination(expansion,p,time,serviceDestination(town,p,'kitchen')):strongest==='drink'?serviceDestination(town,p,'water'):strongest==='toilet'?serviceDestination(town,p,'bath'):strongest==='sleep'?p.profile.home.bed:p.profile.home.bath;
@@ -255,7 +259,7 @@ async function advanceSlice(user,worldId,{minutes=5,story=true,expectedVersion,i
           else if(state.needs.hunger>.65||state.needs.thirst>.7)destination=state.needs.hunger>.65?foodDestination(expansion,p,time,serviceDestination(town,p,'kitchen')):serviceDestination(town,p,'water');
           else if(state.needs.fatigue>.8)destination=p.profile.home.bed;
           else if(state.needs.hygiene>.7)destination=p.profile.home.bath;
-          else if(state.needs.fun>.85||state.needs.comfort>.85)destination=serviceDestination(town,p,'living');
+          else if((state.needs.fun>.85||state.needs.comfort>.85)&&!(p.age<12&&time/3600%24>=(p.age<6?20:21)))destination=serviceDestination(town,p,'living');
         }
         if(!urgent&&destination!==state.location_id){
           const path=findRoute(town,state.location_id,destination);
@@ -269,13 +273,13 @@ async function advanceSlice(user,worldId,{minutes=5,story=true,expectedVersion,i
         }
         if(state.blockedNeed){const e=event('need_plan_resumed',p,time,{need:primary[state.blockedNeed.kind],private:true});e.description=`${p.name} can resume a concrete plan for their physical needs.`;delete state.blockedNeed;}
         const expandedKind=chooseExpandedAction(expansion,p,time);
-        let kind=urgent || (state.goal?.destination===state.location_id?state.goal.kind:null) || (state.location_id===p.profile.workplace_id?(p.age<6?'kindergarten_day':p.age<18?'school_day':expandedKind==='leisure_expanded_study'?expandedKind:expandedKind&&expansion.entities.get(p.state.economy.activeObligationId)?.payload.operator==='work'?expandedKind:'work'):time/3600%24>=22||time/3600%24<7?'sleep':expandedKind);
+        let kind=urgent || (state.goal?.destination===state.location_id?state.goal.kind:null) || (state.location_id===p.profile.workplace_id?(p.age<6?'kindergarten_day':p.age<18?'school_day':expandedKind==='leisure_expanded_study'?expandedKind:expandedKind&&expansion.entities.get(p.state.economy.activeObligationId)?.payload.operator==='work'?expandedKind:'work'):time/3600%24>=(p.age<6?20:p.age<12?21:22)||time/3600%24<7?'sleep':expandedKind);
         if(kind&&!actions.includes(kind))kind=null;
         if(!kind){const scored=actions.map(kind=>({kind,score:Object.entries(catalog.actions[kind].relief).reduce((n,[need,relief])=>n+state.needs[need]*relief,0)+actionBias(p,kind,time)*.3+motivationBias(p,kind)+draw()*.22})).sort((a,b)=>b.score-a.score);kind=scored[0]?.kind || 'wait';}
         if(resumeTask(p,kind,time,event))continue;
         let resource=null;if(['toilet','shower'].includes(kind)){const slots=Math.max(1,Math.min(8,at.capacity)),candidate=Array.from({length:slots},(_,i)=>state.location_id+':bath:'+i).find(key=>!reservations.has(key));if(!candidate)kind='wait';else{resource=candidate;reservations.add(resource);}}
         if(at?.purpose.includes('bathroom')&&!['toilet','shower','drink','wait'].includes(kind))kind='wait';
-        state.action={kind,started:time,until:time+(kind==='sleep'&&time/3600%24>=7&&time/3600%24<21?1800:taskDuration(p,kind,expandedDuration(expansion,p,kind,catalog.actions[kind].duration),time,town.world.seed)),resource:kind==='wait'?null:resource,source:'procedural'};proceduralThought(p,actionThought(kind,catalog),time);
+        state.action={kind,started:time,until:time+(kind==='sleep'&&time/3600%24>=7&&time/3600%24<(p.age<6?20:p.age<12?21:22)?1800:taskDuration(p,kind,expandedDuration(expansion,p,kind,catalog.actions[kind].duration),time,town.world.seed)),resource:kind==='wait'?null:resource,source:'procedural'};proceduralThought(p,actionThought(kind,catalog),time);
         state.action.taskId=p.profile.seed_key+':'+kind+':'+time;state.action.plannedSeconds=state.action.until-time;state.action.progressSeconds=0;state.action.lastProgressAt=time;
         if(state.goal?.destination===state.location_id&&state.goal.kind===kind){state.action.source='storyteller';state.thought=state.goal.reason;state.thought_source='storyteller';state.thought_at=time;state.goal=null;}
         const object=catalog.actions[kind].object_kinds.find(o=>at?.affordances.includes(o)) || null;
@@ -313,7 +317,7 @@ async function advanceSlice(user,worldId,{minutes=5,story=true,expectedVersion,i
       // Finalize within this minute: the next decision sees the actual outcome.
       const acceptedEvents=events.slice(minuteEventStart).filter(e=>e.socialResult);
       if(acceptedEvents.length){const ids=[...new Set(acceptedEvents.flatMap(e=>e.participants))];const changes=await openSims('replay_social',{now:time,people:ids.map(id=>actor(town.byId.get(id))),events:acceptedEvents.map(e=>({id:e.id,participants:e.participants,category:e.facts.category,outcome:e.facts.outcome,time:e.end}))});for(const [id,change] of Object.entries(changes)){const p=town.byId.get(id);p.relations=change.relations;p.state.psychology=change.psychology;p.state.affect=change.affect;}}
-      for(const e of acceptedEvents){if(e.facts.outcome==='accepted')for(const id of e.participants){const p=town.byId.get(id);p.state.needs.social=clamp(p.state.needs.social-.18);}finalizedSocial(expansion,town,e);applySocialDynamics(town,e);for(const id of e.participants)completedSocial(town.byId.get(id),e,time);}
+      for(const e of acceptedEvents){applySocialDynamics(town,e);finalizedSocial(expansion,town,e);for(const id of e.participants)completedSocial(town.byId.get(id),e,time);}
       const work=events.slice(minuteEventStart).filter(e=>e.type==='action_completed'&&(e.facts.action==='work'||e.facts.professionalWork||e.facts.action==='leisure_expanded_holiday_work'));
       if(work.length){const updates=await openSims('careers',{people:work.map(e=>({...actor(town.byId.get(e.participants[0])),duration:e.facts.durationSeconds,now:time,eventId:e.id}))});for(let i=0;i<updates.length;i++){const p=town.byId.get(work[i].participants[0]);p.state.career=updates[i].career;p.state.skills=updates[i].skills;}}
       for(const e of events.slice(minuteEventStart)){if(pj(town.world.rules,{}).currency==='USD')e.description=e.description.replaceAll(' €',' USD');e.personalExperiences={};for(const id of [...e.participants,...e.witnesses||[]]){const p=town.byId.get(id);if(!p)continue;const direct=e.participants.includes(id);e.personalExperiences[id]={interpretation:direct?interpretation(p,e):'I noticed this exchange nearby. I do not know their private intentions.',thought:p.state.thought,needs:{...p.state.needs},emotions:(p.state.affect?.states||[]).slice(0,3).map(x=>({id:x.id,intensity:x.intensity})),confidence:direct?.65:.5};}}

@@ -2,7 +2,7 @@
 // diagnoses, doubts and unproven suspects never become a newspaper headline.
 import { rng } from "../random.js";
 import { addFeeling } from "../cognition.js";
-import { rows, put, touch, balance, transfer, post } from "./store.js";
+import { rows, rowsFor, put, touch, balance, transfer, post } from "./store.js";
 import {
   fundsOf,
   ownAccount,
@@ -193,7 +193,7 @@ export function reputationFor(
   viewerId = null,
   time = d.calendar.payload.lastMinute,
 ) {
-  const claims = rows(d, "claim").filter(
+  const claims = rowsFor(d, "claim", "subjectId", p.id).filter(
       (c) =>
         c.payload.subjectId === p.id &&
         c.payload.expiresAt > time &&

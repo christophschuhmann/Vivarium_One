@@ -38,6 +38,13 @@ def handle(request):
             category = pair.get('category')
             rng = random.Random(str(pair['seed']))
             possible = [c for c in candidates if c['allowed'] and (c['category'] != 'phone_call' or pair.get('remote')) and (not category or c['category'] == category)]
+            # A shared school is not an adult workplace. Preschool interactions
+            # use concrete play/care bids, not abstract negotiation or rivalry.
+            if min(a.get('age', 0), b.get('age', 0)) < 18:
+                possible = [c for c in possible if c['category'] != 'coordinate_work']
+            if min(a.get('age', 0), b.get('age', 0)) < 6:
+                simple = {'greet','small_talk','play_together','share_interest','offer_help','ask_help','comfort','check_in','tell_story','tell_joke','compliment','set_boundary','apologize','reconcile','celebrate','invite_activity'}
+                possible = [c for c in possible if c['category'] in simple]
             # Adult partner preferences gate romance; friendship is unaffected.
             # All original age, kinship, privacy and consent checks still apply.
             def preference_allows(x, y):
@@ -80,6 +87,13 @@ def handle(request):
                     score += float(drives.get('recognition', 0))*.2
                 if candidate['category'] in {'ask_advice', 'small_talk'}:
                     score += float(drives.get('recognition', 0))*float(motivation.get('otherRecognition', 0))*.16
+                # Remembered hurt can invite repair, a boundary, or conflict;
+                # disposition and strain determine the direction, not a drama coin.
+                unresolved = float(motivation.get('unresolvedStrain', 0))
+                if candidate['category'] in {'argue', 'provoke', 'undermine'}:
+                    score += unresolved * (1-float(motivation.get('prosociality', .5))) * .7
+                if candidate['category'] in {'reconcile','apologize','set_boundary'}:
+                    score += unresolved * (.15+float(motivation.get('prosociality', .5))*.4)
                 if tension > .035 and candidate['category'] in {'apologize', 'reconcile', 'set_boundary'}:
                     score += min(.35, tension * 1.5)
                 return max(.01, score) ** 2

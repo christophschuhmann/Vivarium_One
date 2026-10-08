@@ -69,7 +69,7 @@ function livingRefreshMind(root,c){
   if(vitals)vitals.innerHTML=livingVitalsHtml(st,{emotions:false});
   const face=$('.lw-mind-heading-face>div',root),sprite=$(`.stage-char[data-id="${c.id}"] img`);
   const portrait=assetUrl(cutoutFor(c));if(face)face.style.backgroundImage=`url("${portrait}")`;if(sprite)sprite.src=portrait;
-  const feelings=$('.lw-mind-feelings',root);if(feelings)feelings.innerHTML=livingEmotionsHtml(st);
+  const feelings=$('.lw-mind-feelings',root);if(feelings)feelings.innerHTML=livingEmotionsHtml(st,{compact:true});
   if(mood)mood.textContent=st.mood||'';
   if(thought)thought.textContent=st.thought?'“'+st.thought+'”':'';
   if(emotions)emotions.style.display='none'; // The shared, accessible emotion meters are above the columns.
@@ -88,15 +88,15 @@ function livingAttributesHtml(st){
 }
 function livingCharacterShortcuts(id){return `<nav class="lw-character-sections" aria-label="Character sections">${[['overview','Needs & attributes'],['views','Personality & reputation'],['finances','Finances'],['education','Work & education']].map(([tab,label])=>`<button class="btn btn-soft small" data-character-section="${tab}" data-character-id="${esc(id)}">${label}</button>`).join('')}</nav>`;}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-character-section]');if(!b)return;$$('.modal-bg,.drawer-bg').forEach(el=>el.remove());livingCityJump(b.dataset.characterId,b.dataset.characterSection);});
-function livingEmotionsHtml(st){
+function livingEmotionsHtml(st,{compact=false}={}){
   const source=st.affect?.states||st.emotions?.states||(Array.isArray(st.emotions)?st.emotions:[]),en=getLang()==='en';
   const states=source.filter(e=>Number.isFinite(Number(e.intensity))&&Number(e.intensity)>0).slice().sort((a,b)=>b.intensity-a.intensity);
   const facade=st.presentation?.until>(st.affect?.updated_at??Infinity)?st.presentation:null;
-  return `<section class="lw-vital-card lw-emotions"><h3>${en?'Emotions · now':'Gefühle · jetzt'} ${exInfo('emotion')}</h3>${facade?`<p class="lw-public-manner"><b>${en?'Outwardly composed · privately unsettled':'Nach außen gelassen · innerlich bewegt'}</b><br>${esc(en?facade.reason:'Möchte gefasst wirken, bis ein offenes Gespräch möglich scheint.')}</p>`:''}<small>${en?'Each bar shows intensity, not a need to fill. Different feelings can coexist; these percentages do not add up to 100%.':'Jeder Balken zeigt Intensität, kein aufzufüllendes Bedürfnis. Gefühle können gleichzeitig bestehen; die Prozente ergeben zusammen nicht 100 %.'}</small><div class="lw-emotion-grid">${states.map(e=>{
+  return `<section class="lw-vital-card lw-emotions"><h3>${en?'Emotions · now':'Gefühle · jetzt'} ${exInfo('emotion')}</h3>${facade?`<p class="lw-public-manner"><b>${en?'Outwardly composed · privately unsettled':'Nach außen gelassen · innerlich bewegt'}</b><br>${esc(en?facade.reason:'Möchte gefasst wirken, bis ein offenes Gespräch möglich scheint.')}</p>`:''}<small>${en?'Each bar shows intensity, not a need to fill. Different feelings can coexist; these percentages do not add up to 100%.':'Jeder Balken zeigt Intensität, kein aufzufüllendes Bedürfnis. Gefühle können gleichzeitig bestehen; die Prozente ergeben zusammen nicht 100 %.'}</small><div class="lw-emotion-grid">${states.map((e,i)=>{
     const label=(en?e.label:e.label_de)||e.name||e.label||String(e.id||'Feeling').replaceAll('_',' '),v=Math.max(0,Math.min(1,Number(e.intensity))),negative=/anger|fear|distress|grief|sad|doubt|pain|exhaustion|annoy|shame|guilt/.test(e.id||'');
     const causes=(e.causes||[]).map(c=>c.text||c.description||'').filter(Boolean);
-    return `<div class="lw-emotion ${negative?'strained':'supported'}"><div class="lw-stat"><span>${esc(label)} ${exInfo(e.id)||exInfo('emotion')}</span><progress max="1" value="${v}" aria-label="${esc(label)} · intensity"></progress><b>${Math.round(v*100)}%</b></div>${causes.length?`<details><summary>${en?'Why this feeling?':'Warum dieses Gefühl?'}</summary>${causes.map(c=>'<p>'+esc(c)+'</p>').join('')}</details>`:''}</div>`;
-  }).join('')||'<p>'+ (en?'No active feeling is recorded at this moment. This does not mean zero wellbeing.':'Im Moment ist kein aktives Gefühl protokolliert. Das bedeutet nicht null Wohlbefinden.')+'</p>'}</div></section>`;
+    return `${compact&&i===4?'<details class="lw-more-feelings"><summary>More feelings ('+(states.length-4)+')</summary><div class="lw-emotion-grid">':''}<div class="lw-emotion ${negative?'strained':'supported'}"><div class="lw-stat"><span>${esc(label)} ${exInfo(e.id)||exInfo('emotion')}</span><progress max="1" value="${v}" aria-label="${esc(label)} · intensity"></progress><b>${Math.round(v*100)}%</b></div>${causes.length?`<details><summary>${en?'Why this feeling?':'Warum dieses Gefühl?'}</summary>${causes.map(c=>'<p>'+esc(c)+'</p>').join('')}</details>`:''}</div>`;
+  }).join('')+(compact&&states.length>4?'</div></details>':'')||'<p>'+ (en?'No active feeling is recorded at this moment. This does not mean zero wellbeing.':'Im Moment ist kein aktives Gefühl protokolliert. Das bedeutet nicht null Wohlbefinden.')+'</p>'}</div></section>`;
 }
 function livingVitalsHtml(st,{emotions=true}={}){
   return `<section class="lw-vital-card"><h3>Bedürfnisse · jetzt ${exInfo('need')}</h3><small>0 % = versorgt · 100 % = dringend. Warme Farben markieren ab 65 % Handlungsbedarf.</small><div class="lw-needs-grid">${livingNeedsHtml(st)}</div></section><section class="lw-vital-card"><h3>Attribute ${exInfo('attribute')}</h3><small>Voraussetzungen · aktuelle Belastung und Übung beeinflussen, was gelingt.</small><div class="lw-attributes-grid">${livingAttributesHtml(st)}</div></section>${emotions?livingEmotionsHtml(st):''}`;

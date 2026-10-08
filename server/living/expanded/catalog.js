@@ -285,9 +285,11 @@ export function dutyFamily(r) {
                   ? "neighborhood"
                   : "community";
 }
+const dutyTitles=JSON.parse(fs.readFileSync(new URL('config/living-social-topics.en.json',root)));
 export const DUTIES = SOCIAL_CATALOG.filter((r) => r.catalog === "duties").map(
   (r) => ({
     ...r,
+    displayTitle: dutyTitles[r.id]||r.title,
     operator: dutyFamily(r),
     execution: FAMILY_ACTIONS[dutyFamily(r)],
   }),

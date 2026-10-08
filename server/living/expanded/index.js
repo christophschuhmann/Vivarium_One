@@ -164,9 +164,9 @@ export function expandedDestination(d, p, time) {
   const contract = d.contracts.get(p.id);
   if (
     p.age >= 18 &&
-    contract &&
+    (contract || currentEducation(p)) &&
     !p.state.economy.parentalCare &&
-    !contract.payload.holiday &&
+    !contract?.payload.holiday &&
     Math.floor(time / 86400) % 7 < 5 &&
     hour >= 8 &&
     hour < 16

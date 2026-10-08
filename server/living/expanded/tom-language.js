@@ -26,6 +26,8 @@ export function encounterMemory(event, context, witness = false) {
     category: event.facts?.category, outcome: event.facts?.outcome,
     initiatorId: event.participants?.[0] || null, witness,
     remote: !!event.facts?.remote, audience: context.publicAudience || 0,
+    topicTitle: event.facts?.catalog?.title || null,
+    responseStyle: event.facts?.responseStyle?.style || null,
     context: { ...context },
   };
 }
@@ -38,9 +40,11 @@ export function socialPerspective(p, subject, context, probability, memory = {},
   const witness = !!memory.witness, ownBid = memory.initiatorId === p.id;
   const hasDirection = !!memory.initiatorId;
   const latest = sources.at(-1);
-  const observation = sources.length
+  let observation = sources.length
     ? `${socialEvidenceLabel(latest)}. ${witness ? 'I only witnessed part of this encounter; I was not one of the people involved.' : hasDirection ? ownBid ? 'I initiated the contact.' : `${name} initiated the contact.` : 'This older note does not record who initiated the contact.'}${memory.remote ? ' We spoke by phone, so I could not see facial expressions or what was happening in the room.' : ''}`
     : 'There is no personal encounter recorded as evidence yet. These expectations are based on the relationship I know and the situation.';
+  if(memory.topicTitle)observation+=' '+(declined?'The proposed topic was ':'We discussed ')+memory.topicTitle+'.';
+  if(!witness&&ownBid&&memory.responseStyle)observation+=' '+({active_constructive:'They asked an interested follow-up about what mattered to me.',passive_constructive:'They acknowledged what I shared, but briefly.',active_destructive:'They responded with problems and comparisons; I felt deflated.',passive_destructive:'They changed the subject to their own concerns; I felt overlooked.'}[memory.responseStyle]||'');
   let variants = {
     support: `${name} may be seeking connection or offering support; a friendly exchange could be a clue, but it is not proof.`,
     obligation: `${name} may want to clarify an appointment, a task, or how responsibilities are shared.`,
@@ -136,6 +140,10 @@ export function socialPerspective(p, subject, context, probability, memory = {},
   const alternatives = Object.entries(probability || {}).filter(([key,n]) => n > .01 && (key !== 'romance' || (agePair && !kin && !witness))).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([kind,n])=>({kind,probability:n,text:variants[kind] || variants.unknown}));
   let interpretation = alternatives[0]?.text || variants.unknown;
   const needs = p.state.needs || {}, selfLens = [];
+  const dynamics=p.state.socialDynamics||{},five=p.state.psychology?.big_five||{};
+  if(dynamics.ambition>.65&&dynamics.prosociality<.45)selfLens.push('I want my contribution to be noticed. I may be tempted to compete for credit or steer the conversation back to myself, especially if I feel overlooked.');
+  else if(five.agreeableness>.7)selfLens.push('Keeping the peace matters to me. I may agree too quickly before checking whether I have the time or energy to help.');
+  if(five.extraversion<.3)selfLens.push('I prefer a little space to think before responding. A quiet reaction from me does not mean I am uninterested.');
   if (needs.hunger > .7) selfLens.push('Hunger makes it harder for me to be patient. I may need a short break before I read a remark as an attack.');
   if (needs.fatigue > .7) selfLens.push('Tiredness can make neutral words sound harsher to me. My impression is not evidence of bad intentions.');
   const affect = p.state.affect?.states || [];

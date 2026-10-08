@@ -1,0 +1,1496 @@
+{
+  "testedAt": "2026-10-08T02:58:06.849364+00:00",
+  "fixture": {
+    "seed": 73,
+    "hours": 72,
+    "before": {
+      "population": 100,
+      "romanticNeedAverageAdults": 0.9973,
+      "romanticNeedMaximumAdults": 1,
+      "primaryEmotions": {
+        "fatigue_exhaustion": 2,
+        "sexual_lust": 79,
+        "amusement": 1,
+        "interest": 6,
+        "disappointment": 2,
+        "distress": 4,
+        "affection": 1,
+        "relief": 1,
+        "pride": 3,
+        "longing": 1
+      },
+      "blockedResidents": 1,
+      "openRelationshipThreads": 0,
+      "eventCounts": {
+        "initialization_resources": 1,
+        "initialization_identity": 100,
+        "initialization_family": 100,
+        "initialization_goal": 100,
+        "initialization_outlook": 100,
+        "public_day": 4,
+        "support_payment": 27,
+        "parental_care_support": 1,
+        "invoice_issued": 98,
+        "pocket_money": 13,
+        "bill_payment": 96,
+        "household_contribution": 58,
+        "bill_payment_deferred": 13,
+        "financial_review": 328,
+        "obligation_offer": 419,
+        "property_maintenance": 50,
+        "departure": 5807,
+        "arrival": 15223,
+        "action_started": 10393,
+        "social": 2250,
+        "action_interrupted": 2618,
+        "conversation_ended": 2362,
+        "action_resumed": 999,
+        "action_completed": 8673,
+        "grocery_purchase": 46,
+        "packed_meal": 467,
+        "goal_deferred": 29,
+        "job_application": 6,
+        "professional_care_visit": 15,
+        "action_failed": 13,
+        "adult_health_risk": 8,
+        "obligation_overdue": 101,
+        "obligation_rescheduled": 99,
+        "need_blocked": 29,
+        "need_plan_resumed": 28,
+        "birthday": 1
+      },
+      "databaseMiB": 240.8,
+      "sampledResidents": [
+        {
+          "name": "Liam Morgan",
+          "age": 2,
+          "job": "Kindergarten child",
+          "completedActivityMinutesDay2": {
+            "sleep": 655,
+            "relax": 775,
+            "drink": 3
+          },
+          "examples": []
+        },
+        {
+          "name": "Katherine Morgan",
+          "age": 0,
+          "job": "Kindergarten child",
+          "completedActivityMinutesDay2": {
+            "sleep": 655,
+            "relax": 800
+          },
+          "examples": []
+        },
+        {
+          "name": "Abigail Kelly",
+          "age": 4,
+          "job": "Kindergarten child",
+          "completedActivityMinutesDay2": {
+            "sleep": 509,
+            "read": 150,
+            "drink": 12,
+            "eat": 54,
+            "toilet": 12,
+            "kindergarten_day": 369,
+            "shower": 10,
+            "relax": 75,
+            "leisure_board_games": 90
+          },
+          "examples": [
+            {
+              "at": 111900,
+              "text": "Abigail Kelly and Sophie Kelly discuss an offer of support. Both take part in the exchange. Conversation topic: Shared recreation area."
+            },
+            {
+              "at": 111900,
+              "text": "Abigail Kelly pauses read: a conversation with Sophie Kelly. 3 minutes of progress are retained."
+            },
+            {
+              "at": 112140,
+              "text": "Abigail Kelly resumes read with 3 minutes of retained progress."
+            },
+            {
+              "at": 115800,
+              "text": "Abigail Kelly resumes kindergarten day with 51 minutes of retained progress."
+            },
+            {
+              "at": 116280,
+              "text": "Abigail Kelly and Eli Clark coordinate at work. The invitation is declined, and the boundary is respected. Conversation topic: A friend\u2019s success."
+            },
+            {
+              "at": 120000,
+              "text": "Abigail Kelly and Charles Miller tease each other playfully. The invitation is declined, and the boundary is respected. Conversation topic: Storytelling circle."
+            },
+            {
+              "at": 122520,
+              "text": "Abigail Kelly and Eli Clark share news. Both take part in the exchange. Conversation topic: Protecting time for a hobby. Eli Clark asks an interested follow-up and helps Abigail Kelly savor what matters about the news."
+            },
+            {
+              "at": 122520,
+              "text": "Abigail Kelly pauses kindergarten day: a conversation with Eli Clark. 40 minutes of progress are retained."
+            }
+          ]
+        },
+        {
+          "name": "Charles Miller",
+          "age": 5,
+          "job": "Kindergarten child",
+          "completedActivityMinutesDay2": {
+            "sleep": 477,
+            "drink": 12,
+            "toilet": 12,
+            "eat": 54,
+            "kindergarten_day": 368,
+            "creative_hobby": 40,
+            "shower": 10,
+            "leisure_read_for_fun": 180,
+            "relax": 50,
+            "read": 91
+          },
+          "examples": [
+            {
+              "at": 115200,
+              "text": "Charles Miller pauses leisure read for fun: a scheduled commitment. 58 minutes of progress were spent."
+            },
+            {
+              "at": 117540,
+              "text": "Charles Miller resumes kindergarten day with 22 minutes of retained progress."
+            },
+            {
+              "at": 118320,
+              "text": "Charles Miller and Eli Clark greet one another. The invitation is declined, and the boundary is respected. Conversation topic: Help after a mistake."
+            },
+            {
+              "at": 129420,
+              "text": "Charles Miller and Eli Clark greet one another. The invitation is declined, and the boundary is respected. Conversation topic: Helping in public."
+            },
+            {
+              "at": 133920,
+              "text": "Charles Miller and Abigail Kelly challenge each other to a friendly contest. The invitation is declined, and the boundary is respected. Conversation topic: Shared hobby."
+            },
+            {
+              "at": 138420,
+              "text": "Charles Miller and Eli Clark discuss an invitation to dinner. The invitation is declined, and the boundary is respected. Conversation topic: A private worry."
+            },
+            {
+              "at": 156660,
+              "text": "Charles Miller and Oliver Miller ask for advice. The invitation is declined, and the boundary is respected. Conversation topic: A recipe passed down."
+            },
+            {
+              "at": 159000,
+              "text": "Charles Miller and Oliver Miller greet one another. Both take part in the exchange. Conversation topic: Asking about someone\u2019s withdrawal."
+            }
+          ]
+        },
+        {
+          "name": "Nora Davis",
+          "age": 12,
+          "job": "Pupil",
+          "completedActivityMinutesDay2": {
+            "sleep": 440,
+            "leisure_expanded_obligation": 40,
+            "school_day": 315,
+            "drink": 9,
+            "toilet": 12,
+            "shower": 10,
+            "eat": 36,
+            "read": 31,
+            "relax": 50,
+            "leisure_board_games": 180
+          },
+          "examples": [
+            {
+              "at": 111720,
+              "text": "Nora Davis pauses read: a conversation with Leo Davis. 0 minutes of progress are retained."
+            },
+            {
+              "at": 115200,
+              "text": "Nora Davis pauses leisure write story: a scheduled commitment. 35 minutes of progress were spent."
+            },
+            {
+              "at": 116520,
+              "text": "Nora Davis pauses school day: a conversation with Violet King. 16 minutes of progress are retained."
+            },
+            {
+              "at": 116700,
+              "text": "Nora Davis resumes school day with 16 minutes of retained progress."
+            },
+            {
+              "at": 122400,
+              "text": "Nora Davis pauses school day: a conversation with Emma King. 52 minutes of progress are retained."
+            },
+            {
+              "at": 124320,
+              "text": "Nora Davis resumes school day with 52 minutes of retained progress."
+            },
+            {
+              "at": 125100,
+              "text": "Nora Davis pauses school day: a conversation with Violet King. 1 minutes of progress are retained."
+            },
+            {
+              "at": 125580,
+              "text": "Nora Davis resumes school day with 1 minutes of retained progress."
+            }
+          ]
+        },
+        {
+          "name": "Olivia Harris",
+          "age": 9,
+          "job": "Pupil",
+          "completedActivityMinutesDay2": {
+            "sleep": 513,
+            "toilet": 12,
+            "read": 154,
+            "eat": 54,
+            "drink": 12,
+            "school_day": 365,
+            "shower": 10,
+            "leisure_expanded_obligation": 20,
+            "relax": 100,
+            "leisure_board_games": 90,
+            "creative_hobby": 21
+          },
+          "examples": [
+            {
+              "at": 115740,
+              "text": "Olivia Harris resumes school day with 51 minutes of retained progress."
+            },
+            {
+              "at": 118860,
+              "text": "Olivia Harris pauses school day: a conversation with Audrey Harris. 44 minutes of progress are retained."
+            },
+            {
+              "at": 119160,
+              "text": "Olivia Harris resumes school day with 44 minutes of retained progress."
+            },
+            {
+              "at": 120720,
+              "text": "Olivia Harris and Sarah Harris try to win each other over to an idea. Both take part in the exchange. Conversation topic: Ending an agreement."
+            },
+            {
+              "at": 120720,
+              "text": "Olivia Harris pauses school day: a conversation with Sarah Harris. 12 minutes of progress are retained."
+            },
+            {
+              "at": 120960,
+              "text": "Olivia Harris resumes school day with 12 minutes of retained progress."
+            },
+            {
+              "at": 122040,
+              "text": "Olivia Harris and Audrey Harris coordinate at work. Both take part in the exchange. Conversation topic: Choosing a partner in class."
+            },
+            {
+              "at": 122040,
+              "text": "Olivia Harris pauses school day: a conversation with Audrey Harris. 30 minutes of progress are retained."
+            }
+          ]
+        },
+        {
+          "name": "Julian Allen",
+          "age": 15,
+          "job": "Pupil",
+          "completedActivityMinutesDay2": {
+            "sleep": 520,
+            "toilet": 12,
+            "eat": 54,
+            "relax": 225,
+            "drink": 12,
+            "school_day": 260,
+            "shower": 10,
+            "leisure_read_for_fun": 90,
+            "read": 33,
+            "leisure_expanded_training": 30
+          },
+          "examples": [
+            {
+              "at": 115200,
+              "text": "Julian Allen pauses leisure expanded obligation: a scheduled commitment. 5 minutes of progress were spent."
+            },
+            {
+              "at": 115620,
+              "text": "Julian Allen and Emma King try to make each other laugh. The invitation is declined, and the boundary is respected. Conversation topic: Announcing a visit."
+            },
+            {
+              "at": 117180,
+              "text": "Julian Allen and Abigail Carter tell a story. Both take part in the exchange. Conversation topic: Courtesy on the bus. Abigail Carter acknowledges the news warmly but briefly; Julian Allen is unsure whether there is room to say more."
+            },
+            {
+              "at": 117180,
+              "text": "Julian Allen pauses school day: a conversation with Abigail Carter. 27 minutes of progress are retained."
+            },
+            {
+              "at": 117420,
+              "text": "Julian Allen resumes school day with 27 minutes of retained progress."
+            },
+            {
+              "at": 118920,
+              "text": "Julian Allen and Grace Walker exchange rumors whose accuracy is unknown. Both take part in the exchange. Conversation topic: Starting a community project."
+            },
+            {
+              "at": 118920,
+              "text": "Julian Allen pauses school day: a conversation with Grace Walker. 52 minutes of progress are retained."
+            },
+            {
+              "at": 119520,
+              "text": "Julian Allen resumes school day with 52 minutes of retained progress."
+            }
+          ]
+        },
+        {
+          "name": "Violet King",
+          "age": 15,
+          "job": "Pupil",
+          "completedActivityMinutesDay2": {
+            "sleep": 420,
+            "eat": 54,
+            "read": 63,
+            "school_day": 319,
+            "drink": 15,
+            "toilet": 8,
+            "shower": 10,
+            "leisure_expanded_obligation": 20,
+            "relax": 25,
+            "leisure_expanded_training": 30,
+            "leisure_meditate": 90,
+            "leisure_board_games": 90
+          },
+          "examples": [
+            {
+              "at": 115200,
+              "text": "Violet King pauses leisure expanded obligation: a scheduled commitment. 10 minutes of progress were spent."
+            },
+            {
+              "at": 116520,
+              "text": "Violet King and Nora Davis discuss an invitation to dinner. Both take part in the exchange. Conversation topic: Shared recreation area."
+            },
+            {
+              "at": 116520,
+              "text": "Violet King pauses school day: a conversation with Nora Davis. 16 minutes of progress are retained."
+            },
+            {
+              "at": 116700,
+              "text": "Violet King resumes school day with 16 minutes of retained progress."
+            },
+            {
+              "at": 117720,
+              "text": "Violet King and Grace Walker discuss an invitation to dinner. The invitation is declined, and the boundary is respected. Conversation topic: New retirement."
+            },
+            {
+              "at": 120300,
+              "text": "Violet King and Emma King discuss an offer of support. The invitation is declined, and the boundary is respected. Conversation topic: Ending an agreement."
+            },
+            {
+              "at": 121560,
+              "text": "Violet King pauses school day: a conversation with Katherine Moore. 36 minutes of progress are retained."
+            },
+            {
+              "at": 122220,
+              "text": "Violet King resumes school day with 36 minutes of retained progress."
+            }
+          ]
+        },
+        {
+          "name": "Eleanor Hill",
+          "age": 20,
+          "job": "Student",
+          "completedActivityMinutesDay2": {
+            "sleep": 505,
+            "toilet": 12,
+            "eat": 54,
+            "leisure_expanded_obligation": 20,
+            "drink": 12,
+            "leisure_expanded_study": 372,
+            "shower": 10,
+            "read": 59,
+            "relax": 125,
+            "leisure_expanded_training": 60
+          },
+          "examples": [
+            {
+              "at": 111900,
+              "text": "Eleanor Hill and Leo Hill have a private conversation. The invitation is declined, and the boundary is respected. Conversation topic: Cutting remark."
+            },
+            {
+              "at": 113100,
+              "text": "Eleanor Hill pauses leisure board games: a conversation with Leo Hill. 23 minutes of progress were spent."
+            },
+            {
+              "at": 115200,
+              "text": "Eleanor Hill pauses leisure board games: a scheduled commitment. 6 minutes of progress were spent."
+            },
+            {
+              "at": 115500,
+              "text": "Eleanor Hill resumes leisure expanded study with 18 minutes of retained progress."
+            },
+            {
+              "at": 116520,
+              "text": "Eleanor Hill and Elizabeth Lee talk about a request for help. Both take part in the exchange. Conversation topic: Speaking role."
+            },
+            {
+              "at": 116520,
+              "text": "Eleanor Hill pauses leisure expanded study: a conversation with Elizabeth Lee. 3 minutes of progress are retained."
+            },
+            {
+              "at": 116760,
+              "text": "Eleanor Hill resumes leisure expanded study with 3 minutes of retained progress."
+            },
+            {
+              "at": 122100,
+              "text": "Eleanor Hill pauses leisure expanded study: a conversation with Owen Harris. 1 minutes of progress are retained."
+            }
+          ]
+        },
+        {
+          "name": "Leo Hill",
+          "age": 24,
+          "job": "Hotel receptionist",
+          "completedActivityMinutesDay2": {
+            "sleep": 529,
+            "toilet": 12,
+            "leisure_expanded_obligation": 15,
+            "drink": 9,
+            "work": 407,
+            "eat": 36,
+            "shower": 10,
+            "creative_hobby": 180,
+            "read": 28
+          },
+          "examples": [
+            {
+              "at": 113100,
+              "text": "Leo Hill and Eleanor Hill try to make each other laugh. Both take part in the exchange. Conversation topic: Helping each other learn."
+            },
+            {
+              "at": 113100,
+              "text": "Leo Hill pauses read: a conversation with Eleanor Hill. 23 minutes of progress are retained."
+            },
+            {
+              "at": 114300,
+              "text": "Leo Hill and Eleanor Hill discuss doing something together. The invitation is declined, and the boundary is respected. Conversation topic: Announcing a visit."
+            },
+            {
+              "at": 115020,
+              "text": "Leo Hill resumes read with 23 minutes of retained progress."
+            },
+            {
+              "at": 115200,
+              "text": "Leo Hill pauses read: a scheduled commitment. 26 minutes of progress are retained."
+            },
+            {
+              "at": 127080,
+              "text": "Leo Hill and Henry Walker tease each other playfully. The invitation is declined, and the boundary is respected. Conversation topic: Help after a mistake."
+            },
+            {
+              "at": 132900,
+              "text": "Leo Hill and Henry Walker coordinate at work. The invitation is declined, and the boundary is respected. Conversation topic: Setting limits on helping."
+            },
+            {
+              "at": 135180,
+              "text": "Leo Hill and Eli Green tell a story. The invitation is declined, and the boundary is respected. Conversation topic: Volunteer responsibility."
+            }
+          ]
+        },
+        {
+          "name": "Eli Adams",
+          "age": 60,
+          "job": "Lifeguard",
+          "completedActivityMinutesDay2": {
+            "sleep": 428,
+            "creative_hobby": 106,
+            "leisure_expanded_obligation": 20,
+            "work": 414,
+            "drink": 12,
+            "toilet": 8,
+            "eat": 36,
+            "shower": 10,
+            "relax": 50
+          },
+          "examples": [
+            {
+              "at": 115200,
+              "text": "Eli Adams pauses leisure board games: a scheduled commitment. 16 minutes of progress were spent."
+            },
+            {
+              "at": 136740,
+              "text": "Eli Adams and Sophie Allen call to see how the other is doing. Both take part in the exchange. Conversation topic: New retirement."
+            },
+            {
+              "at": 136740,
+              "text": "Eli Adams pauses work: a conversation with Sophie Allen. 17 minutes of progress are retained."
+            },
+            {
+              "at": 137400,
+              "text": "Eli Adams resumes work with 17 minutes of retained progress."
+            },
+            {
+              "at": 146940,
+              "text": "Eli Adams and Evelyn Adams talk about Socializing. Both take part in the exchange. Conversation topic: Choosing an outing destination. Evelyn Adams asks an interested follow-up and helps Eli Adams savor what matters about the news."
+            },
+            {
+              "at": 146940,
+              "text": "Eli Adams pauses leisure host party: a conversation with Evelyn Adams. 12 minutes of progress were spent."
+            },
+            {
+              "at": 150780,
+              "text": "Eli Adams pauses leisure board games: a conversation with Eleanor Hill. 59 minutes of progress were spent."
+            },
+            {
+              "at": 155280,
+              "text": "Eli Adams and Eleanor Hill talk about Socializing. The invitation is declined, and the boundary is respected. Conversation topic: Making the case for a project idea."
+            }
+          ]
+        },
+        {
+          "name": "Evelyn Adams",
+          "age": 61,
+          "job": "Cashier",
+          "completedActivityMinutesDay2": {
+            "sleep": 505,
+            "toilet": 12,
+            "drink": 12,
+            "eat": 54,
+            "read": 129,
+            "work": 436,
+            "shower": 10,
+            "relax": 175
+          },
+          "examples": [
+            {
+              "at": 115200,
+              "text": "Evelyn Adams pauses leisure expanded obligation: a scheduled commitment. 4 minutes of progress were spent."
+            },
+            {
+              "at": 120300,
+              "text": "Evelyn Adams and Thomas Brown catch up on everyday news. The invitation is declined, and the boundary is respected. Conversation topic: A third friend joins the conversation."
+            },
+            {
+              "at": 124080,
+              "text": "Evelyn Adams and James Moore ask how the other is doing. Both take part in the exchange. Conversation topic: Standards for tidiness."
+            },
+            {
+              "at": 124080,
+              "text": "Evelyn Adams pauses work: a conversation with James Moore. 45 minutes of progress are retained."
+            },
+            {
+              "at": 125760,
+              "text": "Evelyn Adams resumes work with 45 minutes of retained progress."
+            },
+            {
+              "at": 128160,
+              "text": "Evelyn Adams pauses work: a conversation with Olivia King. 34 minutes of progress are retained."
+            },
+            {
+              "at": 128400,
+              "text": "Evelyn Adams resumes work with 34 minutes of retained progress."
+            },
+            {
+              "at": 129780,
+              "text": "Evelyn Adams and Thomas Brown talk about a request for help. The invitation is declined, and the boundary is respected. Conversation topic: Starting a community project."
+            }
+          ]
+        },
+        {
+          "name": "Charlotte Edwards",
+          "age": 81,
+          "job": "Retired",
+          "completedActivityMinutesDay2": {
+            "sleep": 646,
+            "drink": 81,
+            "toilet": 116,
+            "creative_hobby": 22,
+            "eat": 18
+          },
+          "examples": [
+            {
+              "at": 115260,
+              "text": "Charlotte Edwards pauses leisure read for fun: a conversation with Miles Edwards. 59 minutes of progress were spent."
+            },
+            {
+              "at": 135660,
+              "text": "Charlotte Edwards and Fiona Watson discuss an offer of support. Both take part in the exchange. Conversation topic: Different leisure preferences."
+            },
+            {
+              "at": 135660,
+              "text": "Charlotte Edwards pauses read: a conversation with Fiona Watson. 9 minutes of progress are retained."
+            }
+          ]
+        },
+        {
+          "name": "Fiona Watson",
+          "age": 86,
+          "job": "Retired",
+          "completedActivityMinutesDay2": {
+            "sleep": 613,
+            "drink": 54,
+            "leisure_expanded_obligation": 15,
+            "read": 31,
+            "eat": 36,
+            "leisure_board_games": 90,
+            "toilet": 40,
+            "creative_hobby": 21,
+            "leisure_expanded_training": 30,
+            "leisure_paint": 90
+          },
+          "examples": [
+            {
+              "at": 113100,
+              "text": "Fiona Watson and Charlotte Edwards catch up on everyday news. The invitation is declined, and the boundary is respected. Conversation topic: Thanking someone for help."
+            },
+            {
+              "at": 135660,
+              "text": "Fiona Watson pauses read: a conversation with Charlotte Edwards. 9 minutes of progress are retained."
+            }
+          ]
+        }
+      ],
+      "consequenceExamples": []
+    },
+    "after": {
+      "population": 100,
+      "romanticNeedAverageAdults": 0.2761,
+      "romanticNeedMaximumAdults": 0.6384,
+      "primaryEmotions": {
+        "interest": 17,
+        "longing": 47,
+        "distress": 11,
+        "relief": 5,
+        "disappointment": 16,
+        "pride": 4
+      },
+      "blockedResidents": 0,
+      "openRelationshipThreads": 103,
+      "eventCounts": {
+        "initialization_resources": 1,
+        "initialization_identity": 100,
+        "initialization_family": 100,
+        "initialization_goal": 100,
+        "initialization_outlook": 100,
+        "public_day": 4,
+        "support_payment": 28,
+        "parental_care_support": 1,
+        "invoice_issued": 97,
+        "pocket_money": 12,
+        "bill_payment": 95,
+        "household_contribution": 60,
+        "bill_payment_deferred": 8,
+        "financial_review": 328,
+        "obligation_offer": 418,
+        "property_maintenance": 50,
+        "departure": 5914,
+        "arrival": 15505,
+        "action_started": 10300,
+        "social": 2450,
+        "action_interrupted": 2812,
+        "conversation_ended": 2552,
+        "action_completed": 8396,
+        "action_resumed": 1016,
+        "packed_meal": 475,
+        "action_failed": 16,
+        "grocery_purchase": 48,
+        "goal_deferred": 29,
+        "job_application": 6,
+        "professional_care_visit": 15,
+        "adult_health_risk": 8,
+        "obligation_overdue": 79,
+        "obligation_rescheduled": 79,
+        "birthday": 1
+      },
+      "databaseMiB": 245.0,
+      "sampledResidents": [
+        {
+          "name": "Liam Morgan",
+          "age": 2,
+          "job": "Kindergarten child",
+          "completedActivityMinutesDay2": {
+            "sleep": 658,
+            "relax": 775
+          },
+          "examples": [
+            {
+              "at": 158400,
+              "text": "Liam Morgan pauses relax: a scheduled commitment. 3 minutes of progress were spent."
+            }
+          ]
+        },
+        {
+          "name": "Katherine Morgan",
+          "age": 0,
+          "job": "Kindergarten child",
+          "completedActivityMinutesDay2": {
+            "sleep": 658,
+            "relax": 775
+          },
+          "examples": [
+            {
+              "at": 158400,
+              "text": "Katherine Morgan pauses relax: a scheduled commitment. 3 minutes of progress were spent."
+            }
+          ]
+        },
+        {
+          "name": "Abigail Kelly",
+          "age": 4,
+          "job": "Kindergarten child",
+          "completedActivityMinutesDay2": {
+            "sleep": 653,
+            "kindergarten_day": 295,
+            "drink": 9,
+            "toilet": 8,
+            "eat": 36,
+            "shower": 10,
+            "relax": 100
+          },
+          "examples": [
+            {
+              "at": 115200,
+              "text": "Abigail Kelly pauses leisure board games: a scheduled commitment. 58 minutes of progress were spent."
+            },
+            {
+              "at": 116280,
+              "text": "Abigail Kelly and Charles Miller catch up on everyday news. The invitation is declined, and the boundary is respected. Proposed topic: Losing a game together."
+            },
+            {
+              "at": 120480,
+              "text": "Abigail Kelly and Eli Clark exchange a compliment. The invitation is declined, and the boundary is respected. Proposed topic: Losing a game together."
+            },
+            {
+              "at": 122520,
+              "text": "Abigail Kelly and Eli Clark offer an apology. Both take part in the exchange. Conversation topic: Losing a game together."
+            },
+            {
+              "at": 122520,
+              "text": "Abigail Kelly pauses kindergarten day: a conversation with Eli Clark. 56 minutes of progress are retained."
+            },
+            {
+              "at": 124380,
+              "text": "Abigail Kelly resumes kindergarten day with 56 minutes of retained progress."
+            },
+            {
+              "at": 130080,
+              "text": "Abigail Kelly and Charles Miller tell a story. The invitation is declined, and the boundary is respected. Proposed topic: Losing a game together."
+            },
+            {
+              "at": 135960,
+              "text": "Abigail Kelly pauses kindergarten day: a conversation with Charles Miller. 9 minutes of progress are retained."
+            }
+          ]
+        },
+        {
+          "name": "Charles Miller",
+          "age": 5,
+          "job": "Kindergarten child",
+          "completedActivityMinutesDay2": {
+            "sleep": 658,
+            "creative_hobby": 167,
+            "relax": 75,
+            "drink": 9,
+            "kindergarten_day": 374,
+            "eat": 36,
+            "toilet": 8,
+            "shower": 10
+          },
+          "examples": [
+            {
+              "at": 111720,
+              "text": "Charles Miller resumes creative hobby with 12 minutes of retained progress."
+            },
+            {
+              "at": 115200,
+              "text": "Charles Miller pauses creative hobby: a scheduled commitment. 3 minutes of progress are retained."
+            },
+            {
+              "at": 124140,
+              "text": "Charles Miller and Eli Clark greet one another. Both take part in the exchange. Conversation topic: Losing a game together."
+            },
+            {
+              "at": 124140,
+              "text": "Charles Miller pauses kindergarten day: a conversation with Eli Clark. 51 minutes of progress are retained."
+            },
+            {
+              "at": 124680,
+              "text": "Charles Miller resumes kindergarten day with 51 minutes of retained progress."
+            },
+            {
+              "at": 133320,
+              "text": "Charles Miller and Eli Clark talk about Reading. The invitation is declined, and the boundary is respected. Proposed topic: Losing a game together."
+            },
+            {
+              "at": 135960,
+              "text": "Charles Miller and Abigail Kelly play a game together. Both take part in the exchange. Conversation topic: Losing a game together."
+            },
+            {
+              "at": 135960,
+              "text": "Charles Miller pauses kindergarten day: a conversation with Abigail Kelly. 54 minutes of progress are retained."
+            }
+          ]
+        },
+        {
+          "name": "Nora Davis",
+          "age": 12,
+          "job": "Pupil",
+          "completedActivityMinutesDay2": {
+            "sleep": 484,
+            "eat": 54,
+            "leisure_expanded_obligation": 40,
+            "school_day": 379,
+            "drink": 12,
+            "shower": 10,
+            "toilet": 8,
+            "read": 34,
+            "relax": 125,
+            "leisure_board_games": 180
+          },
+          "examples": [
+            {
+              "at": 111720,
+              "text": "Nora Davis resumes read with 2 minutes of retained progress."
+            },
+            {
+              "at": 111840,
+              "text": "Nora Davis and Claire Davis discuss an invitation to dinner. Both take part in the exchange. Conversation topic: Exam pressure."
+            },
+            {
+              "at": 111840,
+              "text": "Nora Davis pauses read: a conversation with Claire Davis. 4 minutes of progress are retained."
+            },
+            {
+              "at": 114780,
+              "text": "Nora Davis and Claire Davis talk about a request for help. The invitation is declined, and the boundary is respected. Proposed topic: Speaking role."
+            },
+            {
+              "at": 115200,
+              "text": "Nora Davis pauses leisure board games: a scheduled commitment. 33 minutes of progress were spent."
+            },
+            {
+              "at": 115560,
+              "text": "Nora Davis resumes school day with 46 minutes of retained progress."
+            },
+            {
+              "at": 117300,
+              "text": "Nora Davis and Violet King try to win each other over to an idea. The invitation is declined, and the boundary is respected. Proposed topic: Courtesy on the bus."
+            },
+            {
+              "at": 119220,
+              "text": "Nora Davis pauses school day: a conversation with Claire Davis. 41 minutes of progress are retained."
+            }
+          ]
+        },
+        {
+          "name": "Olivia Harris",
+          "age": 9,
+          "job": "Pupil",
+          "completedActivityMinutesDay2": {
+            "sleep": 626,
+            "leisure_expanded_obligation": 40,
+            "drink": 12,
+            "toilet": 8,
+            "school_day": 250,
+            "eat": 54,
+            "shower": 10,
+            "read": 154,
+            "leisure_make_friends": 90
+          },
+          "examples": [
+            {
+              "at": 111780,
+              "text": "Olivia Harris pauses creative hobby: a conversation with Audrey Harris. 1 minutes of progress are retained."
+            },
+            {
+              "at": 114660,
+              "text": "Olivia Harris pauses read: a conversation with Owen Harris. 24 minutes of progress are retained."
+            },
+            {
+              "at": 117420,
+              "text": "Olivia Harris pauses school day: a conversation with Sarah Harris. 31 minutes of progress are retained."
+            },
+            {
+              "at": 117720,
+              "text": "Olivia Harris resumes school day with 31 minutes of retained progress."
+            },
+            {
+              "at": 118680,
+              "text": "Olivia Harris pauses school day: a conversation with Sarah Harris. 47 minutes of progress are retained."
+            },
+            {
+              "at": 119280,
+              "text": "Olivia Harris resumes school day with 47 minutes of retained progress."
+            },
+            {
+              "at": 122040,
+              "text": "Olivia Harris pauses school day: a conversation with Sarah Harris. 10 minutes of progress are retained."
+            },
+            {
+              "at": 122280,
+              "text": "Olivia Harris resumes school day with 10 minutes of retained progress."
+            }
+          ]
+        },
+        {
+          "name": "Julian Allen",
+          "age": 15,
+          "job": "Pupil",
+          "completedActivityMinutesDay2": {
+            "sleep": 469,
+            "drink": 12,
+            "relax": 250,
+            "toilet": 12,
+            "eat": 54,
+            "school_day": 390,
+            "shower": 10,
+            "read": 34
+          },
+          "examples": [
+            {
+              "at": 115200,
+              "text": "Julian Allen pauses leisure expanded obligation: a scheduled commitment. 5 minutes of progress were spent."
+            },
+            {
+              "at": 115560,
+              "text": "Julian Allen resumes school day with 67 minutes of retained progress."
+            },
+            {
+              "at": 115620,
+              "text": "Julian Allen and Emma King ask for advice. The invitation is declined, and the boundary is respected. Proposed topic: Consequences of saying yes."
+            },
+            {
+              "at": 117180,
+              "text": "Julian Allen and Abigail Carter make plans together. Both take part in the exchange. Conversation topic: Rules for a playground game."
+            },
+            {
+              "at": 117180,
+              "text": "Julian Allen pauses school day: a conversation with Abigail Carter. 26 minutes of progress are retained."
+            },
+            {
+              "at": 117420,
+              "text": "Julian Allen resumes school day with 26 minutes of retained progress."
+            },
+            {
+              "at": 118920,
+              "text": "Julian Allen and Grace Walker challenge each other to a friendly contest. Both take part in the exchange. Conversation topic: Community garden."
+            },
+            {
+              "at": 118920,
+              "text": "Julian Allen pauses school day: a conversation with Grace Walker. 51 minutes of progress are retained."
+            }
+          ]
+        },
+        {
+          "name": "Violet King",
+          "age": 15,
+          "job": "Pupil",
+          "completedActivityMinutesDay2": {
+            "sleep": 473,
+            "drink": 12,
+            "toilet": 12,
+            "eat": 54,
+            "school_day": 323,
+            "shower": 10,
+            "read": 62,
+            "leisure_expanded_obligation": 20,
+            "relax": 25,
+            "leisure_board_games": 90
+          },
+          "examples": [
+            {
+              "at": 112140,
+              "text": "Violet King and Olivia King play a game together. The invitation is declined, and the boundary is respected. Proposed topic: Courtesy on the bus."
+            },
+            {
+              "at": 115200,
+              "text": "Violet King pauses leisure board games: a scheduled commitment. 58 minutes of progress were spent."
+            },
+            {
+              "at": 117240,
+              "text": "Violet King resumes school day with 46 minutes of retained progress."
+            },
+            {
+              "at": 119220,
+              "text": "Violet King pauses school day: a conversation with Abigail Carter. 14 minutes of progress are retained."
+            },
+            {
+              "at": 119520,
+              "text": "Violet King resumes school day with 14 minutes of retained progress."
+            },
+            {
+              "at": 121740,
+              "text": "Violet King pauses school day: a conversation with Julian Allen. 51 minutes of progress are retained."
+            },
+            {
+              "at": 122040,
+              "text": "Violet King resumes school day with 51 minutes of retained progress."
+            },
+            {
+              "at": 123300,
+              "text": "Violet King pauses relax: a scheduled commitment. 6 minutes of progress were spent."
+            }
+          ]
+        },
+        {
+          "name": "Eleanor Hill",
+          "age": 20,
+          "job": "Student",
+          "completedActivityMinutesDay2": {
+            "sleep": 510,
+            "eat": 54,
+            "toilet": 12,
+            "leisure_expanded_obligation": 20,
+            "drink": 12,
+            "leisure_expanded_study": 362,
+            "shower": 10,
+            "read": 32,
+            "leisure_play_instrument": 90,
+            "relax": 75
+          },
+          "examples": [
+            {
+              "at": 113040,
+              "text": "Eleanor Hill and Sophie Hayes call to see how the other is doing. Both take part in the exchange. Conversation topic: Standards for tidiness."
+            },
+            {
+              "at": 113040,
+              "text": "Eleanor Hill pauses leisure board games: a conversation with Sophie Hayes. 22 minutes of progress were spent."
+            },
+            {
+              "at": 115200,
+              "text": "Eleanor Hill pauses leisure watch movie: a scheduled commitment. 12 minutes of progress were spent."
+            },
+            {
+              "at": 115800,
+              "text": "Eleanor Hill resumes leisure expanded study with 26 minutes of retained progress."
+            },
+            {
+              "at": 117000,
+              "text": "Eleanor Hill and Owen Harris discuss an offer of support. The invitation is declined, and the boundary is respected. Proposed topic: Community garden."
+            },
+            {
+              "at": 118980,
+              "text": "Eleanor Hill and Elizabeth Lee share their excitement. Both take part in the exchange. Elizabeth Lee asks an interested follow-up and helps Eleanor Hill savor what matters about the news. Conversation topic: Celebration together."
+            },
+            {
+              "at": 118980,
+              "text": "Eleanor Hill pauses leisure expanded study: a conversation with Elizabeth Lee. 17 minutes of progress are retained."
+            },
+            {
+              "at": 119220,
+              "text": "Eleanor Hill resumes leisure expanded study with 17 minutes of retained progress."
+            }
+          ]
+        },
+        {
+          "name": "Leo Hill",
+          "age": 24,
+          "job": "Hotel receptionist",
+          "completedActivityMinutesDay2": {
+            "sleep": 551,
+            "toilet": 12,
+            "drink": 12,
+            "creative_hobby": 184,
+            "leisure_expanded_obligation": 20,
+            "work": 371,
+            "eat": 36,
+            "shower": 10,
+            "read": 120
+          },
+          "examples": [
+            {
+              "at": 114300,
+              "text": "Leo Hill and Eleanor Hill share news. The invitation is declined, and the boundary is respected. Proposed topic: Safety rule."
+            },
+            {
+              "at": 115200,
+              "text": "Leo Hill pauses leisure write story: a scheduled commitment. 11 minutes of progress were spent."
+            },
+            {
+              "at": 122640,
+              "text": "Leo Hill and Henry Walker talk about a request for help. The invitation is declined, and the boundary is respected. Proposed topic: Explaining a rule."
+            },
+            {
+              "at": 124800,
+              "text": "Leo Hill and Avery Hughes call to see how the other is doing. Both take part in the exchange. Conversation topic: Overestimating one\u2019s expertise."
+            },
+            {
+              "at": 124800,
+              "text": "Leo Hill pauses work: a conversation with Avery Hughes. 34 minutes of progress are retained."
+            },
+            {
+              "at": 125040,
+              "text": "Leo Hill resumes work with 34 minutes of retained progress."
+            },
+            {
+              "at": 135540,
+              "text": "Leo Hill pauses work: a conversation with Eli Green. 9 minutes of progress are retained."
+            },
+            {
+              "at": 135780,
+              "text": "Leo Hill resumes work with 9 minutes of retained progress."
+            }
+          ]
+        },
+        {
+          "name": "Eli Adams",
+          "age": 60,
+          "job": "Lifeguard",
+          "completedActivityMinutesDay2": {
+            "sleep": 530,
+            "creative_hobby": 42,
+            "leisure_expanded_obligation": 20,
+            "drink": 12,
+            "eat": 54,
+            "toilet": 12,
+            "work": 413,
+            "shower": 10,
+            "relax": 50,
+            "read": 29,
+            "leisure_board_games": 90
+          },
+          "examples": [
+            {
+              "at": 113700,
+              "text": "Eli Adams and Evelyn Adams flirt gently. The invitation is declined, and the boundary is respected. Proposed topic: Majority decision."
+            },
+            {
+              "at": 121500,
+              "text": "Eli Adams and Eleanor Hill call to see how the other is doing. The invitation is declined, and the boundary is respected. Proposed topic: Repeated refusal."
+            },
+            {
+              "at": 126000,
+              "text": "Eli Adams pauses work: a conversation with Henry Walker. 24 minutes of progress are retained."
+            },
+            {
+              "at": 126240,
+              "text": "Eli Adams resumes work with 24 minutes of retained progress."
+            },
+            {
+              "at": 129180,
+              "text": "Eli Adams and Penelope Walker call to see how the other is doing. Both take part in the exchange. Conversation topic: Band rehearsal."
+            },
+            {
+              "at": 129180,
+              "text": "Eli Adams pauses work: a conversation with Penelope Walker. 30 minutes of progress are retained."
+            },
+            {
+              "at": 129840,
+              "text": "Eli Adams resumes work with 30 minutes of retained progress."
+            },
+            {
+              "at": 140280,
+              "text": "Eli Adams pauses work: a conversation with Evelyn Adams. 8 minutes of progress are retained."
+            }
+          ]
+        },
+        {
+          "name": "Evelyn Adams",
+          "age": 61,
+          "job": "Cashier",
+          "completedActivityMinutesDay2": {
+            "sleep": 487,
+            "toilet": 12,
+            "eat": 54,
+            "drink": 12,
+            "read": 63,
+            "work": 429,
+            "shower": 10,
+            "relax": 150
+          },
+          "examples": [
+            {
+              "at": 115200,
+              "text": "Evelyn Adams pauses leisure watch movie: a scheduled commitment. 26 minutes of progress were spent."
+            },
+            {
+              "at": 120300,
+              "text": "Evelyn Adams and Thomas Brown discuss an offer of support. The invitation is declined, and the boundary is respected. Proposed topic: Setting limits on helping."
+            },
+            {
+              "at": 122400,
+              "text": "Evelyn Adams and Olivia King talk about Reading. Both take part in the exchange. Olivia King changes the subject to their own concerns; Evelyn Adams feels overlooked without knowing why. Conversation topic: Repeated refusal."
+            },
+            {
+              "at": 122400,
+              "text": "Evelyn Adams pauses work: a conversation with Olivia King. 17 minutes of progress are retained."
+            },
+            {
+              "at": 122700,
+              "text": "Evelyn Adams resumes work with 17 minutes of retained progress."
+            },
+            {
+              "at": 124080,
+              "text": "Evelyn Adams and James Moore discuss an offer of support. Both take part in the exchange. Conversation topic: Neighborhood festival."
+            },
+            {
+              "at": 124080,
+              "text": "Evelyn Adams pauses work: a conversation with James Moore. 40 minutes of progress are retained."
+            },
+            {
+              "at": 126060,
+              "text": "Evelyn Adams resumes work with 40 minutes of retained progress."
+            }
+          ]
+        },
+        {
+          "name": "Charlotte Edwards",
+          "age": 81,
+          "job": "Retired",
+          "completedActivityMinutesDay2": {
+            "sleep": 653,
+            "drink": 18,
+            "eat": 90,
+            "shower": 10,
+            "leisure_board_games": 360,
+            "toilet": 8,
+            "leisure_craft_project": 90,
+            "creative_hobby": 22,
+            "leisure_read_for_fun": 90,
+            "leisure_write_story": 90
+          },
+          "examples": [
+            {
+              "at": 122700,
+              "text": "Charlotte Edwards and Fiona Watson make plans together. The invitation is declined, and the boundary is respected. Proposed topic: A new shared rule."
+            },
+            {
+              "at": 143340,
+              "text": "Charlotte Edwards and Fiona Watson share news. The invitation is declined, and the boundary is respected. Proposed topic: Sharing garden tools."
+            },
+            {
+              "at": 145560,
+              "text": "Charlotte Edwards and Fiona Watson talk about Socializing. The invitation is declined, and the boundary is respected. Proposed topic: Standing up for one\u2019s needs."
+            },
+            {
+              "at": 148080,
+              "text": "Charlotte Edwards and Fiona Watson talk about Socializing. The invitation is declined, and the boundary is respected. Proposed topic: Shared kitchen."
+            },
+            {
+              "at": 156660,
+              "text": "Charlotte Edwards pauses leisure craft project: a conversation with Henry Evans. 69 minutes of progress were spent."
+            },
+            {
+              "at": 161160,
+              "text": "Charlotte Edwards and Fiona Watson tell a story. The invitation is declined, and the boundary is respected. Proposed topic: Different leisure preferences."
+            }
+          ]
+        },
+        {
+          "name": "Fiona Watson",
+          "age": 86,
+          "job": "Retired",
+          "completedActivityMinutesDay2": {
+            "sleep": 656,
+            "drink": 18,
+            "leisure_expanded_obligation": 15,
+            "read": 95,
+            "eat": 90,
+            "leisure_board_games": 360,
+            "shower": 10,
+            "toilet": 8,
+            "leisure_expanded_training": 30,
+            "leisure_paint": 90
+          },
+          "examples": [
+            {
+              "at": 112800,
+              "text": "Fiona Watson resumes read with 19 minutes of retained progress."
+            },
+            {
+              "at": 115440,
+              "text": "Fiona Watson and Charlotte Edwards greet one another. The invitation is declined, and the boundary is respected. Proposed topic: Speaking role."
+            },
+            {
+              "at": 119340,
+              "text": "Fiona Watson and Harper Ward call to see how the other is doing. The invitation is declined, and the boundary is respected. Proposed topic: Difference in values."
+            },
+            {
+              "at": 129000,
+              "text": "Fiona Watson and Jane Stone call to see how the other is doing. Both take part in the exchange. Conversation topic: Ending an agreement."
+            },
+            {
+              "at": 129000,
+              "text": "Fiona Watson pauses leisure board games: a conversation with Jane Stone. 40 minutes of progress were spent."
+            },
+            {
+              "at": 131160,
+              "text": "Fiona Watson and Elizabeth Lee call to see how the other is doing. Both take part in the exchange. Conversation topic: Helping each other learn."
+            },
+            {
+              "at": 131160,
+              "text": "Fiona Watson pauses leisure board games: a conversation with Elizabeth Lee. 32 minutes of progress were spent."
+            },
+            {
+              "at": 133020,
+              "text": "Fiona Watson and Charlotte Edwards talk about Socializing. The invitation is declined, and the boundary is respected. Proposed topic: Help after a mistake."
+            }
+          ]
+        }
+      ],
+      "consequenceExamples": [
+        {
+          "at": 80160,
+          "description": "James Reed and Theo Reed offer an apology. Both take part in the exchange. Conversation topic: Consequences of saying yes.",
+          "effects": {
+            "w_mqzehCapDtD0_s_76": {
+              "otherId": "w_mqzehCapDtD0_s_77",
+              "otherName": "James Reed",
+              "severity": 0.015000000000000013,
+              "startedAt": 27600,
+              "updatedAt": 80160,
+              "sourceEventId": "w_mqzehCapDtD0_e_27600_social_sim-76_0",
+              "category": "celebrate",
+              "reason": "I felt dismissed when I tried to share something that mattered to me.",
+              "status": "easing",
+              "lastRepairEventId": "w_mqzehCapDtD0_e_80160_social_sim-77_0"
+            }
+          }
+        },
+        {
+          "at": 142560,
+          "description": "Olivia Hayes and Sophie Hayes ask how the other is doing. Both take part in the exchange. Conversation topic: A third friend joins the conversation.",
+          "effects": {
+            "w_mqzehCapDtD0_s_39": {
+              "otherId": "w_mqzehCapDtD0_s_40",
+              "otherName": "Sophie Hayes",
+              "severity": 0.015000000000000013,
+              "startedAt": 70800,
+              "updatedAt": 142560,
+              "sourceEventId": "w_mqzehCapDtD0_e_70800_social_sim-39_0",
+              "category": "celebrate",
+              "reason": "I felt dismissed when I tried to share something that mattered to me.",
+              "status": "easing",
+              "lastRepairEventId": "w_mqzehCapDtD0_e_142560_social_sim-39_0"
+            }
+          }
+        },
+        {
+          "at": 148560,
+          "description": "Eleanor Nelson and Finn Nelson try to work through a strain. Both take part in the exchange. Conversation topic: Neighborhood festival.",
+          "effects": {
+            "w_mqzehCapDtD0_s_72": {
+              "otherId": "w_mqzehCapDtD0_s_73",
+              "otherName": "Eleanor Nelson",
+              "severity": 0.015000000000000013,
+              "startedAt": 27600,
+              "updatedAt": 148560,
+              "sourceEventId": "w_mqzehCapDtD0_e_27600_social_sim-72_0",
+              "category": "share_interest",
+              "reason": "I felt dismissed when I tried to share something that mattered to me.",
+              "status": "easing",
+              "lastRepairEventId": "w_mqzehCapDtD0_e_148560_social_sim-73_0"
+            }
+          }
+        },
+        {
+          "at": 157440,
+          "description": "Caleb Williams and Owen Williams offer an apology. Both take part in the exchange. Conversation topic: Neighborhood festival.",
+          "effects": {
+            "w_mqzehCapDtD0_s_98": {
+              "otherId": "w_mqzehCapDtD0_s_99",
+              "otherName": "Owen Williams",
+              "severity": 0.05000000000000002,
+              "startedAt": 129960,
+              "updatedAt": 157440,
+              "sourceEventId": "w_mqzehCapDtD0_e_129960_social_sim-98_0",
+              "category": "share_interest",
+              "reason": "I felt dismissed when I tried to share something that mattered to me.",
+              "status": "unresolved",
+              "lastRepairEventId": "w_mqzehCapDtD0_e_157440_social_sim-98_0"
+            },
+            "w_mqzehCapDtD0_s_99": {
+              "otherId": "w_mqzehCapDtD0_s_98",
+              "otherName": "Caleb Williams",
+              "severity": 0,
+              "startedAt": 74580,
+              "updatedAt": 157440,
+              "sourceEventId": "w_mqzehCapDtD0_e_74580_social_sim-99_0",
+              "category": "tell_story",
+              "reason": "I felt dismissed when I tried to share something that mattered to me.",
+              "status": "easing",
+              "lastRepairEventId": "w_mqzehCapDtD0_e_157440_social_sim-98_0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "existingTownCopy": {
+    "population": 1000,
+    "romanticNeedAverageAdults": 0.2297,
+    "romanticNeedMaximumAdults": 0.4734,
+    "primaryEmotions": {
+      "disappointment": 49,
+      "interest": 96,
+      "relief": 110,
+      "distress": 250,
+      "longing": 366,
+      "concentration": 38,
+      "fatigue_exhaustion": 2,
+      "contentment": 50,
+      "pride": 7,
+      "affection": 27,
+      "infatuation": 1,
+      "contemplation": 2,
+      "amusement": 2
+    },
+    "blockedResidents": 0,
+    "openRelationshipThreads": 368,
+    "eventCounts": {
+      "initialization_resources": 1,
+      "initialization_identity": 1000,
+      "initialization_family": 1000,
+      "initialization_goal": 1000,
+      "accepted_plan": 3,
+      "conversation": 4,
+      "initialization_outlook": 998,
+      "support_plan_accepted": 1,
+      "job_application": 48,
+      "financial_review": 1646,
+      "public_day": 2,
+      "support_payment": 278,
+      "parental_care_support": 16,
+      "invoice_issued": 899,
+      "pocket_money": 129,
+      "bill_payment": 878,
+      "household_contribution": 448,
+      "bill_payment_deferred": 48,
+      "obligation_offer": 2043,
+      "property_maintenance": 506,
+      "departure": 21002,
+      "packed_meal": 2088,
+      "arrival": 84722,
+      "action_started": 35076,
+      "social": 6589,
+      "action_interrupted": 8508,
+      "conversation_ended": 7042,
+      "initialization_authored_background": 1,
+      "action_resumed": 2434,
+      "action_completed": 28416,
+      "action_failed": 83,
+      "grocery_purchase": 265,
+      "goal_deferred": 100,
+      "status": 5,
+      "job_search": 12,
+      "professional_care_visit": 53,
+      "adult_health_risk": 18,
+      "obligation_overdue": 144,
+      "birthday": 3,
+      "obligation_rescheduled": 138
+    },
+    "databaseMiB": 896.8,
+    "elapsedMs": 220127,
+    "simulatedHours": 24,
+    "interruptionLoops": []
+  },
+  "validation": {
+    "regressionSuites": 15,
+    "paidModelCalls": 0,
+    "minuteChunkEquivalence": true,
+    "browser": "Desktop and mobile; real assets; 500 and 1000 resident fixtures; Play/World/Bonds/Explorer, TTS fixture and music fixture, conversations and intervention with model stubs"
+  },
+  "limitations": [
+    "Game heuristics, not a validated psychological or demographic model.",
+    "No new paid LLM narration quality evaluation in this audit; hybrid integration uses controlled model responses.",
+    "Multi-day sample review does not prove year-long plausibility.",
+    "Detailed history storage is still large; approximately 850 MiB growth in the copied 1000-resident database over a day, including every event, personal journal and reversible state differences.",
+    "600 taxonomy examples are contextual variants, not 600 independently implemented actions.",
+    "Many occupations share base activities and schedules. More shift and travel diversity remains useful."
+  ]
+}

@@ -1,77 +1,82 @@
 {
-  "generatedAt": "2026-10-07T20:16:18.043Z",
+  "generatedAt": "2026-10-08T02:55:51.019Z",
   "node": "v22.17.1",
   "providerCalls": 0,
   "results": [
     {
       "suite": "test-expanded-world.mjs",
       "passed": true,
-      "durationMs": 1403
+      "durationMs": 1346
     },
     {
       "suite": "test-finance-education-care.mjs",
       "passed": true,
-      "durationMs": 4210
+      "durationMs": 4141
     },
     {
       "suite": "test-expanded-semantics.mjs",
       "passed": true,
-      "durationMs": 2733
+      "durationMs": 2630
     },
     {
       "suite": "test-social-perspectives.mjs",
       "passed": true,
-      "durationMs": 74
+      "durationMs": 75
+    },
+    {
+      "suite": "test-social-causality.mjs",
+      "passed": true,
+      "durationMs": 1135
     },
     {
       "suite": "test-expanded-lifecycle.mjs",
       "passed": true,
-      "durationMs": 2710
+      "durationMs": 2775
     },
     {
       "suite": "test-living.mjs",
       "passed": true,
-      "durationMs": 9778
+      "durationMs": 9807
     },
     {
       "suite": "test-location-music.mjs",
       "passed": true,
-      "durationMs": 626
+      "durationMs": 634
     },
     {
       "suite": "test-living-mind.mjs",
       "passed": true,
-      "durationMs": 606
+      "durationMs": 599
     },
     {
       "suite": "test-living-social.mjs",
       "passed": true,
-      "durationMs": 1247
+      "durationMs": 1249
     },
     {
       "suite": "test-living-romance.mjs",
       "passed": true,
-      "durationMs": 1061
+      "durationMs": 1056
     },
     {
       "suite": "test-living-wellbeing.mjs",
       "passed": true,
-      "durationMs": 690
+      "durationMs": 689
     },
     {
       "suite": "test-living-biographies.mjs",
       "passed": true,
-      "durationMs": 539
+      "durationMs": 540
     },
     {
       "suite": "test-providers.mjs",
       "passed": true,
-      "durationMs": 362
+      "durationMs": 363
     },
     {
       "suite": "test-storage.mjs",
       "passed": true,
-      "durationMs": 357
+      "durationMs": 367
     }
   ]
 }

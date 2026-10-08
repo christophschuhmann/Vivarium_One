@@ -27,5 +27,17 @@ try{
  assert.ok(store);worker.profile.workplace_id=store.id;worker.state.location_id=store.id;worker.state.route=null;worker.state.goal=null;worker.state.needs.thirst=.98;worker.state.needs.hunger=.83;worker.state.needs.bladder=.1;worker.state.needs.fun=.1;worker.state.needs.comfort=.1;worker.state.action={kind:'work',started:t.world.seconds,until:t.world.seconds+3600};
  db.prepare('UPDATE lw_sims SET state=?,profile=?,location_id=? WHERE id=?').run(JSON.stringify(worker.state),JSON.stringify(worker.profile),store.id,p.id);
  await advanceTown(user,worldId,{minutes:10,story:false});assert.ok(loadTown(worldId).byId.get(p.id).state.needs.thirst<.3,'Drink actual water before resuming work');
+ // Arrival for an ordinary meal must use the SAME threshold as routing.
+ // Previously .65 routed to the kitchen but .80 was needed to select food,
+ // so a scheduled class/work shift could interrupt a restarted chore each minute.
+ const mealTown=loadTown(worldId),hungry=mealTown.byId.get(p.id),mealAt=mealTown.world.seconds;
+ for(const key of Object.keys(hungry.state.needs))hungry.state.needs[key]=.1;
+ hungry.state.needs.hunger=.69;hungry.state.location_id=hungry.profile.home.kitchen;hungry.state.route=null;hungry.state.goal=null;hungry.state.socialUntil=null;hungry.state.conversation=null;hungry.state.last_social=mealAt;
+ hungry.state.action={kind:'work',started:mealAt,until:mealAt+3600};
+ db.prepare('UPDATE lw_sims SET state=?,location_id=? WHERE id=?').run(JSON.stringify(hungry.state),hungry.state.location_id,p.id);
+ await advanceTown(user,worldId,{minutes:10,story:false});
+ const mealEvents=db.prepare("SELECT type,facts FROM lw_events WHERE world_id=? AND start>? AND participants LIKE ?").all(worldId,mealAt,'%'+p.id+'%');
+ assert.ok(mealEvents.some(e=>e.type==='action_started'&&JSON.parse(e.facts).action==='eat'),'Moderate hunger selects a real meal on arrival');
+ assert.ok(mealEvents.filter(e=>e.type==='action_interrupted').length<=1,'No work/meal restart loop');
  const stats={events:events.length,journals:db.prepare('SELECT count(*) n FROM lw_journal').get().n,verified:['urgent physical need routes to the matching object','retained progress','interruption cause','resumption','OpenSims bias parity','minute event memories','no empty status spam','partial advance cancellation']};fs.mkdirSync('artifacts/expanded-world',{recursive:true});fs.writeFileSync('artifacts/expanded-world/minute-engine-review.json',JSON.stringify(stats,null,2));console.log('PASS',stats);
 }finally{closeOpenSims();db.close();fs.rmSync(process.env.VIV_DATA_DIR,{recursive:true,force:true});}

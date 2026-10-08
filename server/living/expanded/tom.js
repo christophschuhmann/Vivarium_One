@@ -49,7 +49,7 @@ export function encounterContext(p, other, town, event = { facts: {} }) {
       (p.profile.family.parent_ids || []).includes(other.id) ||
       (other.profile.family?.parent_ids || []).includes(p.id) ||
       role.some((s) =>
-        /Familie|Mutter|Vater|Schwester|Bruder|Oma|Groß|Enkel|Ehe|Tochter|Sohn|Tante|Onkel|Cousin/.test(
+        /Familie|Mutter|Vater|Schwester|Bruder|Oma|Groß|Enkel|Ehe|Tochter|Sohn|Tante|Onkel|Cousin|mother|father|sister|brother|grand|daughter|son|aunt|uncle|cousin|husband|wife|spouse/i.test(
           s,
         ),
       );
@@ -80,6 +80,7 @@ export function encounterContext(p, other, town, event = { facts: {} }) {
     relation = p.relations[other.id] || {};
   return {
     topic,
+    family,
     role,
     explicitManager,
     trust: relation.trust ?? 0.4,
@@ -98,7 +99,7 @@ export function encounterContext(p, other, town, event = { facts: {} }) {
 function contextThought(p, other, context, probability, event, witness = false) {
   const source = { observed: event.facts.category + " " + event.facts.outcome, at: event.end };
   return perspectiveThought(socialPerspective(p, {name: other.name}, context, probability,
-    encounterMemory(event, context, witness), event.id ? [source] : []));
+    encounterMemory(event, context, witness), event.id ? [source] : [])) + (!witness&&p.state.socialDynamics?.unresolved?.[other.id] ? " An earlier exchange still matters to me: "+p.state.socialDynamics.unresolved[other.id].reason+" I do not know whether the other person sees it the same way." : "");
 }
 function priors(p, context) {
   const big = p.state.psychology.big_five,
@@ -125,7 +126,7 @@ function priors(p, context) {
   // Adult/teen romance has exactly the same age/kin constraints as actions.
   // Gender, ethnicity and a third person's private attraction are NOT priors.
   const familyRole = context.role.some((r) =>
-      /mutter|vater|schwester|bruder|tochter|sohn|cous|enkel|tante|onkel|groß|oma|opa/iu.test(
+      /mutter|vater|schwester|bruder|tochter|sohn|cous|enkel|tante|onkel|groß|oma|opa|mother|father|sister|brother|daughter|son|grand|aunt|uncle|niece|nephew/iu.test(
         r,
       ),
     ),
@@ -229,6 +230,8 @@ export function observeSocial(
   if (outcome === "declined") {
     alpha.unknown += weight;
     alpha.obligation += 0.25 * weight;
+  } else if (event.facts.responseStyle?.style.endsWith('destructive')&&event.participants[0]===p.id) {
+    alpha.criticism += weight;
   } else if (positive.has(category)) {
     alpha.support += 1.6 * weight;
   } else if (negative.has(category)) {
@@ -325,7 +328,7 @@ export function observeSocial(
     d &&
     !witness &&
     event.facts.outcome === "accepted" &&
-    positive.has(category)
+    positive.has(category) && !event.facts.responseStyle?.style.endsWith('destructive')
   ) {
     const helper = town.byId.get(
       event.participants[category === "ask_help" ? 1 : 0],
@@ -381,6 +384,21 @@ export function socialEpisodeEligible(row, p, other, town, event, d) {
     place = town.places.get(event.location_id),
     category = event.facts.category;
   if (row.catalog === "duties" || row.catalog === "expectations") return false;
+  // The catalog is written in German, relationship labels can be English.
+  // Explicit age/role/context gates prevent schoolchildren discussing retirement
+  // or strangers being assigned a fictional family dispute by random selection.
+  const group=row.context.toLowerCase(),minAge=Math.min(p.age,other.age),maxAge=Math.max(p.age,other.age);
+  if(group==='eltern ↔ kinder'&&(!(context.isChild||context.isParent)||minAge<3||minAge>=12))return false;
+  if(group==='eltern ↔ teenies'&&(!(context.isChild||context.isParent)||minAge<12||minAge>=18))return false;
+  if(group.startsWith('erwachsene kinder')&&(!(context.isChild||context.isParent)||minAge<18))return false;
+  if(group.startsWith('geschwister,')&&!context.family)return false;
+  if(group.startsWith('senioren,')&&maxAge<65)return false;
+  if(group.startsWith('arbeit:')&&context.topic!=='work')return false;
+  if(group.startsWith('schule:')&&context.topic!=='school')return false;
+  if(minAge<6&&!(group==='eltern ↔ kinder'||['C025','C026','C047','C048'].includes(row.id)))return false;
+  if(minAge<18&&/rente|ruhestand|pension|retirement|senioren/.test(words))return false;
+  if(row.catalog==='romance'&&!romantic.has(category))return false;
+  if(/jahrestag|todestag|trauer|verlust|absage|abgesagt|vertraulichkeit|demütigung/.test(words)&&!event.facts.relationshipDecision)return false;
   // Economic/legal adult negotiations are not children's conversation topics.
   if ((p.age<18||other.age<18)&&/parkplatz|mietvertrag|kredit|hypothek|gehalt|beförder|scheidung|ehevertrag|sexual|prostitution|droge/.test(words))return false;
   if ((p.age<6||other.age<6)&&!['family','friendship','school'].includes(context.topic))return false;
@@ -523,13 +541,12 @@ export function socialEpisodeEligible(row, p, other, town, event, d) {
   if (/trennung/.test(words) && !event.facts.relationshipDecision) return false;
   if (
     /positive/.test(row.tone.toLowerCase()) &&
-    (negative.has(category) || event.facts.outcome !== "accepted")
+    negative.has(category)
   )
     return false;
   if (
     row.tone === "Konflikt" &&
-    !negative.has(category) &&
-    event.facts.outcome !== "declined"
+    !negative.has(category)
   )
     return false;
   return true;
@@ -568,7 +585,7 @@ export function decorateSocial(d, town, event) {
     actualOutcome: event.facts.outcome,
   };
   event.description +=
-    " Conversation topic: " +
+    (event.facts.outcome==='declined'?" Proposed topic: ":" Conversation topic: ") +
     (englishTopics[row.id]||row.title).replace(/ · (Cooperation|Conflict|Kooperation|Konflikt)$/, "") +
     ".";
   a.state.social_cognition.recentCatalogIds = history.concat(row.id).slice(-12);

@@ -5,6 +5,7 @@ import {reputationFor} from './expanded/community.js';
 import {addFeeling} from './cognition.js';
 import {recordExperience} from './wellbeing.js';
 import {socialAttributes} from './social-attributes.js';
+import {socialImpact} from './social-effects.js';
 const clamp=n=>Math.max(0,Math.min(1,n));
 export function preparePartnerPreferences(p,town){
  if(p.age<18||p.profile.romanticPreferences)return;
@@ -55,7 +56,7 @@ export function driveLevels(p){
 export function socialMotivations(a,b,economy=null){
  const shared=sharedGoals(a,b),d=a.state.socialDynamics||{},strain=Math.max(a.state.needs.fatigue||0,a.state.needs.hunger||0),five=a.state.psychology.big_five||{},r=a.relations[b.id]||{};
  const publicView=economy?reputationFor(economy,b,a.id):null;
- return {sharedGoals:shared.map(g=>g.kind),ambition:d.ambition??.5,prosociality:d.prosociality??.5,strain,drives:driveLevels(a),attraction:adultAttraction(a,b,economy),otherReputation:publicView?clamp((publicView.helpfulness+publicView.reliability)/2):.5,otherRecognition:publicView?.recognition||0,rivalry:clamp((d.ambition??.5)*(1-(d.prosociality??.5))*(shared.some(g=>g.kind==='work')?.6:.1)+(r.tension||0)*.4),extraversion:five.extraversion??.5};
+ return {unresolvedStrain:d.unresolved?.[b.id]?.severity||0,sharedGoals:shared.map(g=>g.kind),ambition:d.ambition??.5,prosociality:d.prosociality??.5,strain,drives:driveLevels(a),attraction:adultAttraction(a,b,economy),otherReputation:publicView?clamp((publicView.helpfulness+publicView.reliability)/2):.5,otherRecognition:publicView?.recognition||0,rivalry:clamp((d.ambition??.5)*(1-(d.prosociality??.5))*(shared.some(g=>g.kind==='work')?.6:.1)+(r.tension||0)*.4),extraversion:five.extraversion??.5};
 }
 export function responseProbabilities(p,other){
  const b=p.state.psychology.big_five||{},d=p.state.socialDynamics||{},n=p.state.needs,rel=p.relations[other.id]||{},strain=Math.max(n.hunger||0,n.fatigue||0,1-(p.state.wellbeing?.scores?.P??.5)),practice=Math.min(.2,d.communicationPractice||0);
@@ -73,15 +74,33 @@ export function applySocialDynamics(town,e){
   const goal=goals.find(g=>g.kind==='hobby'),room=[...town.places.values()].find(p=>p.kind==='room'&&p.purpose.includes(goal.activity==='read'?'public library':'town park'));
   if(room&&a.age>=12&&b.age>=12)for(const p of [a,b]){p.state.goal={kind:goal.activity,destination:room.id,expires:e.end+7200,reason:'We agreed to pursue our shared interest: '+goal.title,source:'accepted_shared_goal'};p.state.socialDynamics.sharedPlan={withId:p.id===a.id?b.id:a.id,goal:goal.title,locationId:room.id,expires:e.end+7200,eventId:e.id};}
  }
- if(!['celebrate','share_news','share_interest','confide','tell_story'].includes(category))return;
+ if(!['celebrate','share_news','share_interest','confide','tell_story'].includes(category)){rememberSocialConsequences(town,e);return;}
  const probabilities=responseProbabilities(b,a),draw=rng(town.world.seed+':response:'+a.profile.seed_key+':'+b.profile.seed_key+':'+e.end)();let c=0,style='passive_destructive';for(const [k,v] of Object.entries(probabilities)){c+=v;if(draw<c){style=k;break;}}
  const responses={active_constructive:`${b.name} asks an interested follow-up and helps ${a.name} savor what matters about the news.`,passive_constructive:`${b.name} acknowledges the news warmly but briefly; ${a.name} is unsure whether there is room to say more.`,active_destructive:`${b.name} immediately raises problems and comparisons; ${a.name} experiences the response as deflating, though the intention is uncertain.`,passive_destructive:`${b.name} changes the subject to their own concerns; ${a.name} feels overlooked without knowing why.`};
  e.facts.responseStyle={responderId:b.id,style,probabilities};e.description+=' '+responses[style];
- const positive=style.endsWith('constructive'),strong=style.startsWith('active');const delta=positive?(strong?.018:.006):(strong?-.018:-.01);
+ const positive=style.endsWith('constructive'),strong=style.startsWith('active');const delta=positive?(strong?.018:.006):(strong?-.065:-.045);
  for(const [p,other] of [[a,b],[b,a]]){const rel=p.relations[other.id];if(rel){rel.closeness=clamp((rel.closeness||0)+delta);rel.trust=clamp((rel.trust||0)+delta*.5);}recordExperience(p,e,e.end,'response_style',{P:delta*.4,R:delta*.5},responses[style]);}
  addFeeling(a,positive?'gratitude':'disappointment',positive?.22:.2,e.end,{kind:'received_response',text:responses[style],evidence_id:e.id});
  b.state.socialDynamics.responses.push({style,otherId:a.id,at:e.end,eventId:e.id});b.state.socialDynamics.responses=b.state.socialDynamics.responses.slice(-12);
  if(style==='active_constructive')b.state.socialDynamics.communicationPractice=Math.min(.2,b.state.socialDynamics.communicationPractice+.0005);
+ rememberSocialConsequences(town,e);
+}
+// Only actually experienced exchanges create a thread. A refusal alone is not
+// misconduct, and a friendly greeting never erases a specific unresolved hurt.
+// Bounded per-Sim memory keeps follow-up motives local and independent of world size.
+function rememberSocialConsequences(town,e){
+ for(const id of e.participants){const p=town.byId.get(id),otherId=e.participants.find(x=>x!==id),impact=socialImpact(e,id),d=p.state.socialDynamics;
+  d.unresolved||={};let thread=d.unresolved[otherId];
+  if(['hurt','conflict'].includes(impact.quality)){
+   thread=d.unresolved[otherId]={otherId,otherName:town.byId.get(otherId).name,severity:clamp((thread?.severity||0)+.14),startedAt:thread?.startedAt??e.end,updatedAt:e.end,sourceEventId:e.id,category:e.facts.category,reason:impact.quality==='hurt'?'I felt dismissed when I tried to share something that mattered to me.':'Our exchange left a disagreement unresolved.',status:'unresolved'};
+   const rel=p.relations[otherId];if(rel)rel.tension=clamp((rel.tension||0)+.045);
+  }else if(thread&&['repair','warm'].includes(impact.quality)){
+   const repair=impact.quality==='repair'||['offer_help','comfort','check_in'].includes(e.facts.category);
+   if(repair){thread.severity=Math.max(0,thread.severity-(impact.quality==='repair'?.09:.035));thread.updatedAt=e.end;thread.lastRepairEventId=e.id;thread.status=thread.severity<.035?'easing':'unresolved';if(thread.status==='easing')delete d.unresolved[otherId];}
+  }
+  if(thread)(e.facts.relationshipThreads||={})[id]={...thread};
+  const keys=Object.keys(d.unresolved).sort((a,b)=>d.unresolved[b].updatedAt-d.unresolved[a].updatedAt);for(const key of keys.slice(12))delete d.unresolved[key];
+ }
 }
 export function dynamicsView(p,town,economy=null){
  prepareSocialDynamics(p,town.world.seed);

@@ -75,3 +75,6 @@
 .lw-bond-anchor-person small{color:#695d70}.lw-bond-sidebar .eyebrow{color:#6e5e74}
 
 .lw-bond-node{pointer-events:bounding-box}
+
+/* Keep feelings readable without pushing needs and attributes below a long wall. */
+.lw-mind-top .lw-emotion-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.lw-more-feelings{grid-column:1/-1;font-size:12px}.lw-more-feelings>summary{cursor:pointer;padding:8px 0;color:var(--soft)}.lw-more-feelings .lw-emotion-grid{margin-top:8px}@media(max-width:600px){.lw-mind-top .lw-emotion-grid{grid-template-columns:minmax(0,1fr)}}

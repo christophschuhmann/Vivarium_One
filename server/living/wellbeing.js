@@ -1,3 +1,4 @@
+import {socialImpact} from './social-effects.js';
 // PERMA-inspired fictional wellbeing, NOT the validated PERMA-Profiler.
 // Scores never authorize actions/consent and are not money, morality or diagnosis.
 // Every experience contribution belongs to this Sim and references a real event.
@@ -60,8 +61,8 @@ export function activityWellbeing(p,event,duration,goalGain,time){
  return recordExperience(p,event,time,'activity',{P:liked?.004*scale:0,E:active?.008*scale*(liked?1.4:1):0,M:gain>0?.004*scale:0,A:gain>0?Math.min(.02,.003+gain*.8):learning?.003*scale:0},liked?'Eine tatsächlich ausgeübte passende Tätigkeit verbindet Interesse und Engagement.':gain>0?'Ein tatsächlicher eigener Zielschritt stärkt Sinn und erlebtes Gelingen.':'Eine tatsächlich ausgeübte Tätigkeit bietet Engagement; sie behauptet keinen erfundenen Erfolg.');
 }
 export function socialWellbeing(p,event,time){
- const category=event.facts.category,accepted=event.facts.outcome==='accepted',hostile=['argue','provoke','undermine','gossip'].includes(category),care=['offer_help','comfort','check_in','reconcile','apologize'].includes(category);
- return recordExperience(p,event,time,'social',!accepted?{P:-.003}:hostile?{P:-.009,R:-.012}:{P:.006,R:category==='greet'?.003:.012,M:care?.007:0,E:['play_together','share_interest','collaborate_project'].includes(category)?.008:0},!accepted?'Eine abgelehnte Begegnung kann enttäuschen; sie beweist keine schlechte Beziehung.':hostile?'Ein selbst erlebter konflikthafter Austausch belastet Gefühle und Beziehungserleben.':care?'Eine tatsächlich erlebte zugewandte Begegnung stärkt Verbundenheit und das Gefühl, füreinander da zu sein.':'Ein tatsächlich erlebter freiwilliger Kontakt stärkt Beziehungserleben.');
+ const category=event.facts.category,impact=socialImpact(event,p.id),accepted=event.facts.outcome==='accepted',hostile=['conflict','hurt'].includes(impact.quality),care=['offer_help','comfort','check_in','reconcile','apologize'].includes(category);
+ return recordExperience(p,event,time,'social',!accepted?(event.participants?.[0]===p.id?{P:-.003}:{}):hostile?{P:-.009,R:-.012}:impact.quality==='mixed'?{E:.002}:{P:.006,R:category==='greet'?.003:.012,M:care?.007:0,E:['play_together','share_interest','collaborate_project'].includes(category)?.008:0},!accepted?'Eine abgelehnte Begegnung kann enttäuschen; sie beweist keine schlechte Beziehung.':hostile?'Ein selbst erlebter konflikthafter Austausch belastet Gefühle und Beziehungserleben.':care?'Eine tatsächlich erlebte zugewandte Begegnung stärkt Verbundenheit und das Gefühl, füreinander da zu sein.':'Ein tatsächlich erlebter freiwilliger Kontakt stärkt Beziehungserleben.');
 }
 export function reflectionWellbeing(p,effects,event,time){
  const feelings=effects.emotions||[],value=feelings.reduce((n,e)=>n+(positive.has(e.id)?1:distress.has(e.id)?-1:0)*e.intensity,0)/Math.max(1,feelings.length);

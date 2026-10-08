@@ -26,3 +26,8 @@ CREATE TRIGGER IF NOT EXISTS lw_memory_insert AFTER INSERT ON lw_journal BEGIN I
 CREATE TRIGGER IF NOT EXISTS lw_memory_delete AFTER DELETE ON lw_journal BEGIN INSERT INTO lw_memory(lw_memory,rowid,sim_id,event_id,perception,interpretation) VALUES('delete',old.rowid,old.sim_id,old.event_id,old.perception,old.interpretation); END;
 CREATE TRIGGER IF NOT EXISTS lw_memory_update AFTER UPDATE ON lw_journal BEGIN INSERT INTO lw_memory(lw_memory,rowid,sim_id,event_id,perception,interpretation) VALUES('delete',old.rowid,old.sim_id,old.event_id,old.perception,old.interpretation); INSERT INTO lw_memory(rowid,sim_id,event_id,perception,interpretation) VALUES(new.rowid,new.sim_id,new.event_id,new.perception,new.interpretation); END;`);
 if(!db.prepare('SELECT 1 FROM lw_memory_docsize LIMIT 1').get()&&db.prepare('SELECT 1 FROM lw_journal LIMIT 1').get())db.exec("INSERT INTO lw_memory(lw_memory) VALUES ('rebuild')");
+// Idempotent repair for existing residential facilities: residents must be able
+// to wash at their actual home. No time, biography, journal or account is changed.
+db.exec(`UPDATE lw_places SET affordances=json_insert(affordances,'$[#]','shower')
+ WHERE (id GLOB '*_expanded_carehome_bath' OR id GLOB '*_expanded_shelter_bath')
+ AND NOT EXISTS(SELECT 1 FROM json_each(lw_places.affordances) WHERE value='shower')`);

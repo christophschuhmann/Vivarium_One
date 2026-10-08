@@ -228,7 +228,7 @@ export function addExpandedPlaces(town) {
       name + " · Toiletten",
       "room",
       "public bathroom restroom toilet",
-      ["toilet", "sink"],
+      ["carehome", "shelter"].includes(key)?["toilet", "sink", "shower"]:["toilet", "sink"],
       4,
     );
     edge(building.id, bath.id);

@@ -196,7 +196,7 @@ export function assignObligation(
       time,
       {
         catalogId: row.id,
-        title: row.title,
+        title: row.displayTitle||row.title,
         issuerId,
         targetId,
         status: accept ? "accepted" : "declined",
@@ -209,7 +209,7 @@ export function assignObligation(
     (accept
       ? " takes on a manageable task: "
       : " asks to reschedule: ") +
-    row.title +
+    (row.displayTitle||row.title) +
     ".";
   if (!accept) return { ok: false, declined: true, eventId: e.id };
   const h = householdOf(d, p),
@@ -230,7 +230,7 @@ export function assignObligation(
     "obligation",
     {
       catalogId: row.id,
-      title: row.title,
+      title: row.displayTitle||row.title,
       operator: row.operator,
       assigneeId: p.id,
       issuerId,
@@ -504,11 +504,12 @@ export function selectExpandedAction(d, p, time) {
       o.payload.assigneeId === p.id &&
       o.payload.status === "accepted" &&
       !(o.payload.nextAttemptAt > time) &&
+      dutyById.has(o.payload.catalogId) && dutyEligibility(d,p,dutyById.get(o.payload.catalogId),time) &&
       o.payload.destinationId === p.state.location_id,
   );
   // Personal chores wait outside school/work commitments. Otherwise selecting a
   // chore during a rest break could start and interrupt it every single minute.
-  const onDuty = Math.floor(time / 86400)%7<5 && hour>=8 && hour<(p.age<18?14:16) && (p.age<18 || contract);
+  const onDuty = Math.floor(time / 86400)%7<5 && hour>=8 && hour<(p.age<18?14:16) && (p.age<18 || contract || currentEducation(p));
   if (task && hour >= 7 && hour < 21 && (!onDuty || (task.payload.operator === "work" && p.state.location_id === p.profile.workplace_id))) {
     p.state.economy.activeObligationId = task.id;
     return "leisure_expanded_obligation";
@@ -553,6 +554,9 @@ export function expandedActionAllowed(d, p, kind, time=d?.town.world.seconds) {
     return (
       task?.payload.status === "accepted" &&
       task.payload.assigneeId === p.id &&
+      !(task.payload.nextAttemptAt > time) &&
+      task.payload.destinationId === p.state.location_id &&
+      dutyById.has(task.payload.catalogId) && dutyEligibility(d,p,dutyById.get(task.payload.catalogId),time) &&
       (!task.payload.targetId ||
         task.payload.operator !== "care" ||
         d.people.get(task.payload.targetId)?.state.location_id ===
@@ -636,8 +640,12 @@ export function completedExpandedAction(d, p, event, duration, time) {
       task.payload.status !== "accepted" ||
       task.payload.destinationId !== p.state.location_id ||
       !dutyEligibility(d, p, row, time)
-    )
+    ) {
+      if(task){task.payload.status='needs_resources';task.payload.nextAttemptAt=time+7200;task.payload.lastEventId=event.id;touch(d,task);}
+      delete p.state.economy.activeObligationId;
+      event.facts.failure='The original task conditions have changed; the plan needs review before another attempt.';
       return { failed: true };
+    }
     const x = task.payload,
       h = householdOf(d, p),
       uncertain =
@@ -664,7 +672,7 @@ export function completedExpandedAction(d, p, event, duration, time) {
     event.facts.obligation = {
       id: task.id,
       catalogId: row.id,
-      title: row.title,
+      title: row.displayTitle||row.title,
       result: result.grade,
       progress: x.progress,
     };
@@ -764,7 +772,7 @@ export function completedExpandedAction(d, p, event, duration, time) {
         ? "completed"
         : "is making documented progress on") +
       ": " +
-      row.title +
+      (row.displayTitle||row.title) +
       ". " +
       (x.status === "completed"
         ? "The specific task record is complete."

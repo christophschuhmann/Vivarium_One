@@ -1,3 +1,4 @@
+import {socialImpact} from './social-effects.js';
 import {economicContext} from './expanded/economy.js';
 import {socialMindContext} from './expanded/tom.js';
 import {projectWellbeing,activityWellbeing,socialWellbeing,reflectionWellbeing,wellbeingContext} from './wellbeing.js';
@@ -118,10 +119,13 @@ export function completedSocial(p,event,time){
   normalizeRomance(p);
   const romantic=['flirt','ask_date','express_affection','teen_romantic_talk','teen_date','adult_private_intimacy'].includes(event.facts.category);
   if(romantic){p.state.needs.romantic_affection=Math.max(0,p.state.needs.romantic_affection-(event.facts.category==='adult_private_intimacy'?.18:.045));addFeeling(p,'infatuation',p.age<18?.25:.4,time,{kind:'social_complete',category:event.facts.category,evidence_id:event.id,text:event.description});}
-  const hostile=['argue','provoke','undermine','gossip'].includes(event.facts.category);
+  const impact=socialImpact(event,p.id),hostile=['conflict','hurt'].includes(impact.quality);
+  const before=p.state.needs.social;p.state.needs.social=clamp(before-impact.warmth);
+  (event.facts.socialWarmthEffects||={})[p.id]=p.state.needs.social-before;
+  if(impact.quality==='warm'&&p.profile.family?.partner_id&&p.profile.family.partner_id===event.participants?.find(id=>id!==p.id))p.state.needs.romantic_affection=Math.max(0,p.state.needs.romantic_affection-.025);
   for(const a of p.state.psychology.ambitions)if(!hostile&&(a.kind==='community'||a.kind==='care'&&['check_in','offer_help','comfort','ask_help','ask_advice'].includes(event.facts.category)))advanceAmbition(p,a,300,time,event);
   const g=dailyGoals(p,time).find(g=>g.kind==='connection');if(!hostile){g.value=Math.min(g.target,g.value+1);g.last_evidence_id=event.id;}
-  addFeeling(p,hostile?'anger':['reconcile','apologize','set_boundary'].includes(event.facts.category)?'relief':'affection',.3,time,{kind:'social_complete',category:event.facts.category,outcome:'accepted',text:event.description,evidence_id:event.id});
+  addFeeling(p,impact.feeling,.3,time,{kind:'social_complete',category:event.facts.category,outcome:'accepted',text:event.description,evidence_id:event.id});
 }
 export function romanticWitness(p,event,people,time){
   // Adult jealousy is a subjective response to an actually witnessed public

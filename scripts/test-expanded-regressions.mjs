@@ -6,6 +6,7 @@ const suites = [
   "test-finance-education-care.mjs",
   "test-expanded-semantics.mjs",
   "test-social-perspectives.mjs",
+  "test-social-causality.mjs",
   "test-expanded-lifecycle.mjs",
   "test-living.mjs",
   "test-location-music.mjs",

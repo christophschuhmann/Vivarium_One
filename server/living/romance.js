@@ -18,7 +18,19 @@ export function normalizeRomance(p,{seed=73}={}){
  }
  return needs.romantic_affection;
 }
-export function growRomanticNeed(p){normalizeRomance(p);p.state.needs.romantic_affection=Math.min(romanticCap(p.age),p.state.needs.romantic_affection+(p.age>=18?.00045:p.age>=14?.0001:0));}
+export function growRomanticNeed(p){
+ normalizeRomance(p);const cap=romanticCap(p.age);if(!cap)return;
+ // A wish for closeness is not a bladder: it must not inevitably fill to 100%.
+ // Stable individual variation and slow mean reversion preserve both low and
+ // high desire. Sleep does not accumulate unmet romantic contact. These are
+ // game timescales, not clinical estimates. All age/consent gates remain separate.
+ const disposition=rng('romantic-rhythm:'+(p.profile?.seed_key||p.id))();
+ const resting=p.state.action?.kind==='sleep';
+ const target=p.age<18?.08+disposition*.22:.2+disposition*.68;
+ const current=p.state.needs.romantic_affection;
+ const toward=resting?Math.min(target,current):target;
+ p.state.needs.romantic_affection=Math.max(0,Math.min(cap,current+(toward-current)/(36*60)));
+}
 export function romanticContext(p){return {ageBand:p.age<14?'child':p.age<18?'teen':'adult',needCap:romanticCap(p.age),sexualInteractionsAllowed:p.age>=18,teenRomance:p.age>=14&&p.age<18?{allowedCategories:ROMANCE_POLICY.teen_categories,maxAgeGap:1,nonsexualOnly:true}:null,adultDesireThreshold:policy.adult_desire_threshold,adultIntimacyThreshold:policy.adult_intimacy_threshold};}
 export const ROMANCE_INSTRUCTIONS='Social warmth and romantic affection are separate. Under 14 romantic affection is always zero and no romance is allowed. Ages 14–17 may ONLY have innocent teen dates or romantic conversation with another 14–17-year-old no more than one year apart. NEVER depict, suggest, or simulate sexual acts, erotic thoughts, desire or sexualized descriptions involving anyone under 18; NEVER pair a minor romantically with an adult. Adult desire and private intimacy are 18+ only, unrelated, explicitly consensual, without minor witnesses; describe private adult intimacy non-explicitly. A need, attraction or successful check never grants consent.';
 // Defense in depth for generated prose. Structural age/consent gates in the
