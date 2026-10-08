@@ -14,9 +14,16 @@ function promptEvent(e){
   // dominate a long episode. Keep causes, outcomes, privacy, consent and ages;
   // the read-only tools expose the complete original event when needed.
   const {catalog,anticipatedViews,socialViews,personalExperiences,mentalEffects,wellbeingEffects,path,...facts}=e.facts||{};
+  // A taxonomy topic is not evidence that its triggering event took place.
+  // Keeping this small boundary prevents "ending an agreement" from turning a
+  // recorded compliment into an invented contract termination or divorce.
+  const suggested=catalog?.selectedAs==='introduced_conversation_topic_not_proof_of_catalog_trigger';
+  if(catalog?.title)facts.conversationTopic={...(suggested?{}:{title:catalog.title}),role:'suggested theme, not proof that the named situation or outcome occurred',actualInteraction:catalog.primitive,actualOutcome:catalog.actualOutcome};
   return {id:e.id,start:e.start,end:e.end,type:e.type,location_id:e.location_id,
     participants:e.participants,witnesses:e.witnesses,source:e.source,
-    description:cut(e.description,2000),facts};
+    // Do not expose an unverified scenario title as if it were a past event.
+    // Complete taxonomy metadata remains retrievable in the original ledger.
+    description:cut(suggested?e.description?.replace(/ Conversation topic:.*$/s,''):e.description,2000),facts};
 }
 export function storyEpisode(field,town,events,{start,end,targetId}={}){
   const owned=new Set(field.members),anchors=new Set(field.members.filter(id=>town.byId.get(id)?.anchored||id===targetId));
@@ -40,10 +47,11 @@ export function storyEpisode(field,town,events,{start,end,targetId}={}){
     if(!focus.has(id))continue;
     personal.filter(e=>e.type==='intervention').forEach(keep);
     // Cover the whole requested interval, not merely its final few minutes.
-    for(let bin=0;bin<6;bin++){
-      const from=start+(end-start)*bin/6,to=start+(end-start)*(bin+1)/6;
-      const section=personal.filter(e=>e.end>=from&&(bin===5?e.end<=to:e.end<to));
-      section.sort((a,b)=>importance(b,anchors)-importance(a,anchors)||a.end-b.end).slice(0,3).forEach(keep);
+    const bins=anchors.has(id)?6:3,perWindow=anchors.has(id)?3:1;
+    for(let bin=0;bin<bins;bin++){
+      const from=start+(end-start)*bin/bins,to=start+(end-start)*(bin+1)/bins;
+      const section=personal.filter(e=>e.end>=from&&(bin===bins-1?e.end<=to:e.end<to));
+      section.sort((a,b)=>importance(b,anchors)-importance(a,anchors)||a.end-b.end).slice(0,perWindow).forEach(keep);
     }
     direct.slice(0,1).forEach(keep);direct.slice(-2).forEach(keep);
   }
@@ -63,5 +71,5 @@ export function storyEpisode(field,town,events,{start,end,targetId}={}){
   return {focusIds,events:[...chosen.values()].sort((a,b)=>a.end-b.end||a.id.localeCompare(b.id)).map(promptEvent),
     supportingSims:summaries.filter(p=>!focus.has(p.id)),
     chronology:summaries.filter(p=>focus.has(p.id)),
-    coverage:{committedAfterValidation:relevant.length,provided:chosen.size,policy:'One episode for the entire requested interval. Detailed profiles for all character anchors and the most involved contacts; supporting residents remain visible as brief cards. Events are sampled across six chronological windows, with all anchor interventions and non-routine anchor events retained. Complete minute events and personal memories remain available through tools and are saved independently of narration. Only focusSimIds require model-written thoughts; supporting Sims keep their procedural perspectives unless explicitly narrated.'}};
+    coverage:{committedAfterValidation:relevant.length,provided:chosen.size,policy:'One episode for the entire requested interval. Detailed profiles for all character anchors and the most involved contacts; supporting residents remain visible as brief cards. Anchor events are sampled across six chronological windows; supporting focal profiles use three. All anchor interventions and non-routine anchor events are retained. Complete minute events and personal memories remain available through tools and are saved independently of narration. Detailed profiles do not impose mandatory monologues; requiredThoughtSimIds supplied separately identify anchors and direct social contacts. Other Sims keep their procedural perspectives unless explicitly narrated.'}};
 }

@@ -2250,7 +2250,7 @@ async function stageScreen() {
   const { world, characters, locations } = await loadWorld(true);
   if (world.status !== 'live') return nav(`#/genesis?w=${S.world}`);
   const living=world.simulation_mode==='living';
-  const playFlashbacks=living&&stageState.pendingFlashbacks&&S.worldData.flashbacks?.length;
+  const playFlashbacks=living&&stageState.pendingFlashbacks&&(S.worldData.sceneManifest?.length||S.worldData.flashbacks?.length);
   stageState.pendingFlashbacks=false;if(playFlashbacks)stageState.justAdvanced=false;
   const [{ ticks }, branchInfo] = living?[{ticks:[S.worldData.lastTick]},{canUndo:false,canRedo:false}]:await Promise.all([
     api(`/api/worlds/${S.world}/ticks?after=${Math.max(-1, world.tick_index - 2)}`),
@@ -2320,13 +2320,14 @@ async function stageScreen() {
       <button class="btn btn-primary small" id="advance">${t('advance', '▶ Advance')}</button>
       <button class="btn btn-coral small" id="intervene">${t('intervene', '⚡ Intervene')}</button>
       <span style="width:1px;height:18px;background:rgba(255,255,255,.2)"></span>
-      ${living&&S.worldData.flashbacks?.length?'<button class="tchip" id="lw-recap" title="Replay highlights from the last time advance without changing the clock">Earlier…</button>':''}
+      ${living&&(S.worldData.sceneManifest?.length||S.worldData.flashbacks?.length)?'<button class="tchip" id="lw-recap" title="Replay all recorded scenes from the last step">▶ Replay step</button>':''}${living?'<button class="tchip" id="lw-scenes">▤ Scenes & history</button>':''}
       <span class="scene-audio-controls"><button class="tchip playbtn" id="tts-play" aria-label="Szene vollständig vorlesen" title="Gesamte Szene vorlesen · Erzähler und Stimmen in Reihenfolge">▶</button>
       <button class="tchip playbtn" id="tts-replay" title="Von Anfang an vorlesen" aria-label="Gesamte Szene erneut von Anfang an vorlesen">↻ Vorlesen</button>
       <label class="tchip" title="Neue Zeitschritte automatisch vorlesen"><input type="checkbox" id="tts-auto" ${ttsPrefs().autoplay?'checked':''}> Auto</label>
       <button class="tchip playbtn" id="tts-pause" title="Pause / resume" style="display:none">⏸</button></span>
     </div>
     <div class="storybox">
+      ${living&&S.worldData.episode?`<div class="lw-episode-note">Step ${S.worldData.episode.version} · ${S.worldData.sceneManifest?.length||S.worldData.flashbacks?.length||0} saved scenes · use <b>Scenes & history</b> to browse the full interval.</div>`:''}
       <div class="storylines" id="storylines">
         ${scene.lines.length ? renderNarration(scene.lines, characters) : `<p class="sline serif" style="color:#9d95c9;font-style:italic">${t('first_page', 'Advance time to turn the first page…')}</p>`}
       </div>
@@ -2395,6 +2396,7 @@ async function stageScreen() {
 
   $('#advance').onclick = () => advanceTick(null);
   $('#intervene').onclick = () => interventionModal(characters, (payload) => advanceTick(payload));
+  const monitor=$('#lw-scenes');if(monitor)monitor.onclick=()=>livingTimeline().catch(fail);
   const recap=$('#lw-recap');if(recap)recap.onclick=()=>livingPlayFlashbacks().catch(fail);
   if(playFlashbacks)queueMicrotask(()=>livingPlayFlashbacks().catch(fail));
   $('#undobtn').onclick = async () => {
@@ -3592,7 +3594,10 @@ function renderCineScene(tick, data) {
   // lab scene): consistency between the script and what's on screen.
   const narr = localizeNarr(tick.narration);
   const speakerIds = new Set(narr.map(n => n.speaker).filter(s => s && s !== 'narrator'));
-  const present = (tick.states || []).filter(st => characters.find(c => c.id === st.character_id) && (st.location_id === loc?.id || speakerIds.has(st.character_id)));
+  let present = (tick.states || []).filter(st => characters.find(c => c.id === st.character_id) && (st.location_id === loc?.id || speakerIds.has(st.character_id)));
+  // Living recordings retain all voice/name metadata, but a busy location must
+  // not stack dozens of sprites. The screenplay still contains every speaker.
+  if(data.visibleCastLimit)present=present.sort((a,b)=>Number(speakerIds.has(b.character_id))-Number(speakerIds.has(a.character_id))).slice(0,data.visibleCastLimit);
   const cast = $('#stage-cast');
   if (cast) cast.innerHTML = present.map((st, i) => {
     const c = characters.find(x => x.id === st.character_id);

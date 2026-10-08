@@ -1,3 +1,4 @@
+import {sceneManifest} from './scene-history.js';
 import {INNER_VOICE_INSTRUCTIONS,INNER_VOICE_TURN_DIRECTION,innerVoiceContext,integrateInnerVoice} from './inner-voice.js';
 import {storyNotes} from './memory-tiers.js';
 import {prepareSocialDynamics} from './social-dynamics.js';
@@ -42,11 +43,16 @@ export async function stageView(world,query={}){
   if(selected&&!cast.some(p=>p.id===selected.id)){if(selected.location_id===place.id&&cast.length===16)cast.pop();cast.unshift(selected);}
   const beat=db.prepare('SELECT * FROM lw_beats WHERE world_id=? ORDER BY version DESC LIMIT 1').get(world.id);
   const events=beat?db.prepare('SELECT * FROM lw_events WHERE world_id=? AND beat_id=? AND location_id=? ORDER BY end DESC,rowid DESC LIMIT 20').all(world.id,beat.id,place.id).reverse():[];
-  const authored=beat?db.prepare('SELECT speaker,text,mode,emotion FROM lw_scene_lines WHERE world_id=? AND beat_id=? AND location_id=? ORDER BY rowid LIMIT 40').all(world.id,beat.id,place.id):[];
+  const authored=beat?db.prepare('SELECT speaker,text,mode,emotion FROM lw_scene_lines WHERE world_id=? AND beat_id=? AND location_id=? ORDER BY rowid LIMIT 48').all(world.id,beat.id,place.id):[];
+  // Keep voice/name metadata for every recorded speaker, including people who
+  // left since the scene or fell outside the crowd preview limit.
+  for(const id of new Set(authored.map(n=>n.speaker).filter(id=>id!=='narrator'))){
+    if(!cast.some(c=>c.id===id)){const speaker=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,id);if(speaker)cast.push(speaker);}
+  }
   const narration=authored.length?authored:events.map(e=>({speaker:'narrator',text:e.description,mode:'speech'}));
   if(!narration.length)for(const p of cast.slice(0,12))narration.push({speaker:'narrator',text:p.name+': '+sceneActivity(pj(p.state,{}),catalog)+'.'});
   const flashbacks=beat?db.prepare('SELECT beat_id,sim_id,ordinal,seconds,title FROM lw_flashbacks WHERE world_id=? AND beat_id=? ORDER BY seconds,sim_id,ordinal').all(world.id,beat.id):[];
-  return {flashbacks,journey:journey?{simId:selected.id,destination:db.prepare('SELECT name FROM lw_places WHERE world_id=? AND id=?').get(world.id,journey.destination)?.name}:null,world:{...world,status:'live',tick_index:clock.version,sim_time:new Date(Date.UTC(2026,8,21)+clock.seconds*1000).toISOString()},simulation:clock,characters:cast.map(p=>character(p,catalog)),locations:[{...place,type:place.kind,description:place.purpose,music:db.prepare('SELECT music FROM lw_place_music WHERE world_id=? AND location_id=?').get(world.id,place.id)?.music,background_asset_id:media(place.asset_id,'full')}],paths:[],relationships:[],population:db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=?').get(world.id).n,occupants:db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=? AND location_id=?').get(world.id,place.id).n,lastTick:{idx:beat?.version||clock.version,pov_location_id:place.id,narration,mood_tag:world.mood,time_delta:beat?'+'+Math.round((beat.end-beat.start)/60)+'m':'now'}};
+  return {sceneManifest:beat?sceneManifest(world.id,beat.id):[],episode:beat?{id:beat.id,version:beat.version,start:beat.start,end:beat.end,story:pj(beat.story,[]),metrics:pj(beat.metrics,{})}:null,flashbacks,journey:journey?{simId:selected.id,destination:db.prepare('SELECT name FROM lw_places WHERE world_id=? AND id=?').get(world.id,journey.destination)?.name}:null,world:{...world,status:'live',tick_index:clock.version,sim_time:new Date(Date.UTC(2026,8,21)+clock.seconds*1000).toISOString()},simulation:clock,characters:cast.map(p=>character(p,catalog)),locations:[{...place,type:place.kind,description:place.purpose,music:db.prepare('SELECT music FROM lw_place_music WHERE world_id=? AND location_id=?').get(world.id,place.id)?.music,background_asset_id:media(place.asset_id,'full')}],paths:[],relationships:[],population:db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=?').get(world.id).n,occupants:db.prepare('SELECT count(*) n FROM lw_sims WHERE world_id=? AND location_id=?').get(world.id,place.id).n,lastTick:{idx:beat?.version||clock.version,pov_location_id:place.id,narration,mood_tag:world.mood,time_delta:beat?'+'+Math.round((beat.end-beat.start)/60)+'m':'now'}};
 }
 // One detailed branch, coarse distant branches. The response itself has a hard bound.
 export function graphView(worldId,{focus,depth=0}={}){

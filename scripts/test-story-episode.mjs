@@ -11,7 +11,7 @@ const stamp=new Date().toISOString();
 db.prepare('INSERT INTO users(id,email,display_name,email_verified_at,created_at,hypr_key,or_enabled) VALUES (?,?,?,?,?,?,1)').run('episode','episode@test.local','Episode',stamp,stamp,encryptSecret('test-fixture'));
 const user=db.prepare('SELECT * FROM users WHERE id=?').get('episode');
 const tick=(id,opts)=>withPrincipal(user,()=>advanceTown(user,id,opts));
-const answer=ctx=>({content:JSON.stringify({story:'The hour unfolds through real changes and encounters.',thoughts:ctx.focusSimIds.map(id=>({simId:id,eventId:ctx.events.find(e=>e.participants.includes(id)).id,text:'I consider the things I actually experienced during this interval.',confidence:.6})),reflections:[],narration:[],revisions:[],intentions:[]})});
+const answer=ctx=>({content:JSON.stringify({story:'The hour unfolds through real changes and encounters.',thoughts:ctx.requiredThoughtSimIds.map(id=>({simId:id,eventId:ctx.events.find(e=>e.participants.includes(id)).id,text:'I consider the things I actually experienced during this interval.',confidence:.6})),reflections:[],narration:[],revisions:[],intentions:[]})});
 try{
  const {worldId}=await createTown(user,{population:50,seed:73}),initial=loadTown(worldId),anchor=initial.people[0];
  db.prepare('UPDATE lw_sims SET anchored=0 WHERE world_id=?').run(worldId);db.prepare('UPDATE lw_sims SET anchored=1 WHERE id=?').run(anchor.id);
@@ -43,5 +43,6 @@ try{
  const source=Array.from({length:60},(_,i)=>({id:'e'+i,start:i*60,end:i*60,type:i===30?'action_interrupted':'action_completed',participants:['a'],description:'Recorded activity '+i,facts:{action:'research',private:true,participantAges:{a:40},causeEventId:i===30?'visitor':undefined,personalExperiences:{a:{interpretation:'private'}}}}));
  const original=JSON.stringify(source),episode=storyEpisode(field,town,source,{start:0,end:3600});
  assert.equal(JSON.stringify(source),original);assert(episode.events.some(e=>e.end<600));assert(episode.events.some(e=>e.end>3000));assert.equal(episode.events.find(e=>e.id==='e30').facts.causeEventId,'visitor');assert(episode.events.every(e=>e.facts.private&&e.facts.participantAges.a===40));
+ const topic=storyEpisode(field,town,[{...source[0],type:'social',description:'A and B exchange a compliment. Conversation topic: Ending an agreement.',facts:{category:'compliment',outcome:'accepted',catalog:{title:'Ending an agreement',primitive:'compliment',actualOutcome:'accepted',selectedAs:'introduced_conversation_topic_not_proof_of_catalog_trigger'}}}],{start:0,end:3600}).events[0];assert.equal(topic.facts.category,'compliment');assert(!JSON.stringify(topic).includes('Ending an agreement'));assert.match(topic.facts.conversationTopic.role,/not proof/);assert.equal(topic.facts.conversationTopic.actualInteraction,'compliment');
  console.log('PASS chronological prompt coverage, interruption causes, privacy and source immutability');
 }finally{closeOpenSims();db.close();fs.rmSync(scratch,{recursive:true,force:true});}

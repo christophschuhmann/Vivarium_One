@@ -33,7 +33,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { db, uid, now, j, pj, ASSET_DIR } from './db.js';
 
-const LIVING_TABLES=['lw_worlds','lw_places','lw_edges','lw_sims','lw_relations','lw_beats','lw_events','lw_journal','lw_anchor_audit','lw_scene_lines','lw_flashbacks','lw_place_music',...EXPANDED_TABLES];
+const LIVING_TABLES=['lw_worlds','lw_places','lw_edges','lw_sims','lw_relations','lw_beats','lw_events','lw_journal','lw_anchor_audit','lw_scene_lines','lw_flashbacks','lw_scene_frames','lw_place_music',...EXPANDED_TABLES];
 export const BUNDLE_FORMAT = 'vivarium-world-zip';
 export const BUNDLE_VERSION = 1;
 
@@ -70,7 +70,7 @@ export function buildWorldManifest(worldId) {
     const libraryIds=new Set([...manifest.living.lw_sims,...manifest.living.lw_places].map(p=>p.asset_id).filter(Boolean));
     // A historical expression/background may no longer be anyone's current skin.
     // Bundle those immutable snapshots too, so a ZIP is portable to another host.
-    for(const row of manifest.living.lw_flashbacks){
+    for(const row of [...manifest.living.lw_flashbacks,...manifest.living.lw_scene_frames]){
       const scene=pj(row.payload,{}),urls=[...(scene.locations||[]).map(l=>l.background_asset_id),...(scene.characters||[]).flatMap(c=>(c.state?.outfits||[]).map(o=>o.cutout_asset_id))];
       for(const url of urls){const id=typeof url==='string'&&url.match(/^\/api\/living\/library\/([^?]+)/)?.[1];if(id)libraryIds.add(decodeURIComponent(id));}
     }

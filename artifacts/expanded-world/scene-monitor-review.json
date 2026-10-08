@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-08",
+  "scope": "Scene playback, present-scene grounding and narrative pacing",
+  "isolation": "Real model calls ran on copies; deployed world clock and version preserved.",
+  "fiveMinuteTest": {
+    "population": 1000,
+    "modelCalls": 1,
+    "cpuMs": 1363,
+    "modelMs": 23315,
+    "totalMs": 25699,
+    "promptTokens": 142383,
+    "completionTokens": 2133,
+    "rejections": [],
+    "scenes": [
+      {
+        "kind": "present",
+        "words": 202,
+        "lines": 9
+      }
+    ]
+  },
+  "hourTest": {
+    "population": 1000,
+    "modelCalls": 1,
+    "cpuMs": 9025,
+    "modelMs": 25043,
+    "totalMs": 36749,
+    "promptTokens": 144130,
+    "completionTokens": 2686,
+    "savedFlashbacks": 2,
+    "savedClosingScenes": 1,
+    "invalidSceneLines": 0,
+    "rejectedUnreachableIntention": 1
+  },
+  "originalQuotedStep": {
+    "minutes": 5,
+    "version": 40,
+    "totalMs": 237136,
+    "modelCalls": 6,
+    "biographyCalls": 1
+  },
+  "checks": [
+    "End-state evidence while tasks remain ongoing",
+    "Only required perspectives mandatory; full background journals retained",
+    "Speaker names preserved outside visible cast",
+    "Immutable closing snapshots and world ZIP remapping",
+    "Owned history routes and cross-world isolation",
+    "Filmstrip, script, previous/next, rapid seeking, return to live",
+    "Mobile viewport and narration contrast",
+    "Replay does not advance world time",
+    "One narrative episode per field per requested interval"
+  ],
+  "limitations": [
+    "Word count is a writing target, not a forced minimum.",
+    "Earlier scenes can only show what was saved; missing narration is not regenerated.",
+    "Narrative wording remains model-generated; procedural event facts remain authoritative.",
+    "Timings are individual provider samples, not latency guarantees."
+  ]
+}

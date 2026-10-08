@@ -57,6 +57,8 @@
     "test:flashbacks-inner-voice": "node scripts/test-flashbacks-inner-voice.mjs",
     "test:conversation-effects": "node scripts/test-conversation-effects.mjs",
     "test:conversation-effects-browser": "node scripts/test-conversation-effects.mjs --browser",
+    "test:scene-monitor": "node scripts/test-scene-monitor.mjs",
+    "test:scene-monitor-browser": "node scripts/test-scene-monitor.mjs --browser",
     "test:narration-browser": "node scripts/test-narration-browser.mjs"
   },
   "license": "MIT",

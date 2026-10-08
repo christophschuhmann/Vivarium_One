@@ -1,3 +1,4 @@
+import {sceneManifest,historyScene} from '../living/scene-history.js';
 import {advisorChat,advisorHistory} from '../living/advisor.js';
 import {worldMonitor,worldTools} from '../living/agent-tools.js';
 import {refreshMemorySummaries} from '../living/memory-tiers.js';
@@ -51,7 +52,13 @@ export default async function livingRoutes(app) {
     if(query!==undefined&&(typeof query!=='string'||!query.trim()||query.length>400))throw httpErr(400,'BAD_QUERY','Music query must be 1–400 characters.');
     return {music:await ensureLocationMusic(world.id,place,query?.trim())};
   });
-  app.get('/api/living/worlds/:worldId/history',async req=>{const {world}=own(req);return {beats:db.prepare('SELECT version,start,end,story,metrics FROM lw_beats WHERE world_id=? ORDER BY version DESC LIMIT 40').all(world.id).map(b=>({...b,story:pj(b.story,[]),metrics:pj(b.metrics,{})}))};});
+  app.get('/api/living/worlds/:worldId/history',async req=>{
+    const {world}=own(req),count=limit(req.query.limit,30),before=Number(req.query.before)||Number.MAX_SAFE_INTEGER;
+    const rows=db.prepare('SELECT id,version,start,end,source,story,metrics FROM lw_beats WHERE world_id=? AND version<? ORDER BY version DESC LIMIT ?').all(world.id,before,count+1);
+    return {beats:rows.slice(0,count).map(b=>({...b,story:pj(b.story,[]),metrics:pj(b.metrics,{})})),nextBefore:rows.length>count?rows[count-1].version:null};
+  });
+  app.get('/api/living/worlds/:worldId/history/:beatId/scenes',async req=>{const {world}=own(req);if(!db.prepare('SELECT 1 FROM lw_beats WHERE world_id=? AND id=?').get(world.id,req.params.beatId))throw httpErr(404,'NOT_FOUND','Episode not found.');return {scenes:sceneManifest(world.id,req.params.beatId)};});
+  app.get('/api/living/worlds/:worldId/history/:beatId/scenes/:key',async req=>{const {world}=own(req),frame=historyScene(world.id,req.params.beatId,req.params.key);if(!frame)throw httpErr(404,'NOT_FOUND','Recorded scene not found.');return frame;});
   app.get('/api/living/worlds/:worldId/view',async req=>stageView(own(req).world,req.query));
   app.get('/api/living/worlds/:worldId/graph',async req=>graphView(own(req).world.id,req.query));
   app.get('/api/living/worlds/:worldId/map',async req=>circleMap(own(req).world.id,req.query));
