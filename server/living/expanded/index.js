@@ -1,3 +1,4 @@
+import {lifeMinute,lifeDestination,lifeSocial} from '../drama/engine.js';
 import {progressionDaily} from "./progression.js";
 import {rowsFor} from "./store.js";
 import { financialAppraisals } from "./finances.js";
@@ -107,6 +108,7 @@ export function expandedMinute(d, time, emit) {
   propertyMaintenance(d, time, emit);
   communityMinute(d, time, emit);
   adultServicesMinute(d, time, emit);
+  lifeMinute(d,time,emit);
   for (const p of d.people.values()) {
     normalizeRomance(p);
     const threat = p.state.economy.threats.find(
@@ -209,6 +211,7 @@ export function expandedDestination(d, p, time) {
     )
       ? p.profile.home.kitchen
       : d.calendar.payload.venues.shelter.rooms[1];
+  const communityAt=lifeDestination(d,p,time);if(communityAt)return communityAt;
   if (socialDestination(d.town, p, time)) return null;
   const task = rowsFor(d, "obligation", "assigneeId", p.id).find(
     (o) =>
@@ -236,6 +239,7 @@ export function chooseExpandedAction(d, p, time) {
     p.state.location_id === plan.payload.locationId
   )
     return "leisure_expanded_supported_care";
+  const group=p.state.life?.communityPlan;if(group&&time<group.until&&p.state.location_id===group.locationId&&Math.max(p.state.needs.hunger,p.state.needs.bladder,p.state.needs.fatigue)<.7)return 'relax';
   return selectExpandedAction(d, p, time);
 }
 export function expandedDuration(d, p, kind, defaultDuration) {
@@ -322,6 +326,7 @@ export function completeExpanded(d, p, event, duration) {
     return { ok: true, ...result };
   }
   if (!completeNative(d, p, event, duration)) return { ok: false };
+
   readPublicNews(d, p, event);
   if (
     kind === "school_day" &&
@@ -356,6 +361,7 @@ export function completeExpanded(d, p, event, duration) {
 export function finalizedSocial(d, town, event) {
   if (!d) return;
   decorateSocial(d, town, event);
+  for(const id of event.participants){const p=town.byId.get(id);if(p)lifeSocial(p,event);}
   const [a, b] = event.participants.map((id) => town.byId.get(id));
   if (!a || !b) return;
   for (const [p, o] of [

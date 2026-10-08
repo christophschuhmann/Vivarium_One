@@ -41,6 +41,8 @@ export const knownKinds = new Set([
   "health_plan",
   "care_plan",
   "application",
+  "memory_summary",
+  "story_note",
 ]);
 const existingKey = db.prepare(
   "SELECT id FROM lw_money_transactions WHERE world_id=? AND idempotency_key=?",

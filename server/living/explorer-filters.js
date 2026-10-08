@@ -1,3 +1,4 @@
+import {INCOME_BANDS} from './drama/catalog.js';
 // Read-only, world-scoped filtering. Every predicate runs before pagination.
 // Paths and SQL expressions come only from this catalog; input values are bound.
 import fs from 'node:fs';
@@ -9,6 +10,8 @@ const excluded = new Set(['intoxication_altered_states_of_consciousness','pleasu
 export const explorerCatalog = {
   maxRules:12,
   categories:[
+    {id:'income',label:'Income class',hint:'Equivalent household net income. Wealth, cash reserves and financial strain are separate.',fields:INCOME_BANDS.map(([,id,label])=>({id,label}))},
+    {id:'interaction',label:'Interacting now',hint:'Only accepted, ongoing encounters at the current paused time; past encounters are in journals.',fields:['any','small_talk','phone_call','argue','provoke','gossip','offer_help','comfort','collaborate_project','reconcile','flirt','ask_date','express_affection','play_together','deep_talk','share_interest'].map(id=>({id,label:id==='any'?'Any ongoing encounter':id.replaceAll('_',' ')}))},
     {id:'emotion',label:'Feelings',hint:'Intensity now, including secondary feelings. 0 means this feeling is absent.',fields:emotions.filter(e=>!excluded.has(e.id)).map(e=>({id:e.id,label:e.label}))},
     {id:'need',label:'Needs',hint:'Unmet need: 0 = satisfied, 100 = urgent. Social warmth and romantic affection are separate.',fields:entries({hunger:'Hunger',thirst:'Thirst',bladder:'Bladder',fatigue:'Rest',hygiene:'Hygiene',social:'Social warmth',fun:'Fun',comfort:'Comfort',romantic_affection:'Romantic affection'})},
     {id:'attribute',label:'Attributes',hint:'Current values, 0–100. Reputation reflects known evidence; popularity reflects warm, trusting contacts. Appearance applies to adults only.',fields:entries({appearance:'Attractiveness · adults',reputation:'Reputation',recognition:'Public recognition',popularity:'Popularity',ambition:'Ambition drive',prosociality:'Prosocial tendency',reasoning:'Reasoning',coordination:'Coordination',presence:'Presence',resolve:'Resolve',perception:'Perception',stamina:'Stamina',strength:'Strength',openness:'Openness',conscientiousness:'Conscientiousness',extraversion:'Extraversion',agreeableness:'Agreeableness',neuroticism:'Emotional sensitivity'})},
@@ -26,7 +29,7 @@ export function parseExplorerFilters(raw){
   if(!Array.isArray(rules)||rules.length>explorerCatalog.maxRules)bad('Use up to 12 search filters.');
   return rules.map(r=>{
     if(!r||typeof r!=='object'||!catalog.get(r.category)?.has(r.field))bad('Choose a supported filter and field.');
-    if(r.category==='relationship')return {category:r.category,field:r.field};
+    if(['relationship','income','interaction'].includes(r.category))return {category:r.category,field:r.field};
     const {min=0,max=100,text=''}=r;
     if(typeof min!=='number'||typeof max!=='number'||!Number.isFinite(min)||!Number.isFinite(max)||min<0||max>100||min>max)bad('Each range must run from a lower to a higher value between 0 and 100.');
     if(typeof text!=='string'||text.length>100)bad('Ambition search text must be at most 100 characters.');
@@ -80,6 +83,8 @@ export function compileExplorerFilters(raw,worldId){
       if(r.field==='appearance')where.push('s.age>=18');
     }else if(r.category==='skill')expr=socialSkills.has(r.field)?`round(${json('aptitudes.social_skills.'+r.field)})`:score('skills.'+r.field);
     else if(r.category==='relationship')expr=relationship[r.field];
+    else if(r.category==='income'){expr="json_extract(s.state,'$.economy.incomeClass.id')=?";params=[r.field];}
+    else if(r.category==='interaction'){expr="json_extract(s.state,'$.socialUntil')>(SELECT seconds FROM lw_worlds WHERE world_id=s.world_id) AND json_extract(s.state,'$.conversation.eventId') IS NOT NULL";if(r.field!=='any'){expr+=" AND json_extract(s.state,'$.conversation.category')=?";params=[r.field];}}
     else {
       const conditions=[],goalArgs=[];
       if(r.field!=='any'){conditions.push("json_extract(a.value,'$.kind')=?");goalArgs.push(r.field);}
@@ -89,8 +94,8 @@ export function compileExplorerFilters(raw,worldId){
       // ambition that happens to have the requested progress.
       expr=`(SELECT json_object('title',coalesce(json_extract(a.value,'$.title_de'),json_extract(a.value,'$.title'),json_extract(a.value,'$.kind')),'value',round(100*json_extract(a.value,'$.progress'))) FROM json_each(s.state,'$.psychology.ambitions') a WHERE ${conditions.join(' AND ')} ORDER BY json_extract(a.value,'$.progress') DESC LIMIT 1)`;params=goalArgs;
     }
-    where.push(r.category==='relationship'?`(${expr})`:r.category==='ambition'?`${expr} IS NOT NULL`:`${expr} BETWEEN ? AND ?`);
-    args.push(...params,...(['relationship','ambition'].includes(r.category)?[]:[r.min,r.max]));
+    where.push(['relationship','income','interaction'].includes(r.category)?`(${expr})`:r.category==='ambition'?`${expr} IS NOT NULL`:`${expr} BETWEEN ? AND ?`);
+    args.push(...params,...(['relationship','ambition','income','interaction'].includes(r.category)?[]:[r.min,r.max]));
     selections.push(`${expr} AS explorer_${i}`);selectionArgs.push(...params);
   }
   return {rules,where,args,cte,joins,prefixArgs,selections,selectionArgs};
@@ -99,6 +104,6 @@ export function explorerMatches(row,rules){
   return rules.map((r,i)=>{
     const raw=row['explorer_'+i];delete row['explorer_'+i];
     const goal=r.category==='ambition'&&raw?JSON.parse(raw):null;
-    return {category:r.category,field:r.field,label:catalog.get(r.category).get(r.field).label,value:r.category==='relationship'?null:goal?goal.value:raw,...(goal?{title:goal.title}:{}),unit:r.category==='need'?'urgency':r.category==='emotion'?'intensity':r.category==='ambition'?'progress':'score'};
+    return {category:r.category,field:r.field,label:catalog.get(r.category).get(r.field).label,value:['relationship','income','interaction'].includes(r.category)?null:goal?goal.value:raw,...(goal?{title:goal.title}:{}),unit:r.category==='need'?'urgency':r.category==='emotion'?'intensity':r.category==='ambition'?'progress':'score'};
   });
 }

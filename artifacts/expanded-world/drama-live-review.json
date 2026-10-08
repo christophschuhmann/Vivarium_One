@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-08T06:43:06.479Z",
+  "population": 1000,
+  "readOnly": true,
+  "clockPreserved": true,
+  "versionPreserved": true,
+  "monitorMs": 214,
+  "classes": [
+    {
+      "id": "middle_low",
+      "label": "Middle low-income",
+      "sims": 338,
+      "households": 194
+    },
+    {
+      "id": "upper_middle",
+      "label": "Upper middle-income",
+      "sims": 51,
+      "households": 25
+    },
+    {
+      "id": "lower_middle",
+      "label": "Lower middle-income",
+      "sims": 220,
+      "households": 90
+    },
+    {
+      "id": "upper_low",
+      "label": "Upper low-income",
+      "sims": 223,
+      "households": 86
+    },
+    {
+      "id": "middle",
+      "label": "Middle-income",
+      "sims": 117,
+      "households": 56
+    },
+    {
+      "id": "lower_low",
+      "label": "Lower low-income",
+      "sims": 44,
+      "households": 20
+    },
+    {
+      "id": "lower_high",
+      "label": "Lower high-income",
+      "sims": 7,
+      "households": 4
+    }
+  ],
+  "wellbeing": {
+    "low": 94,
+    "mixed": 844,
+    "high": 62
+  },
+  "errors": []
+}

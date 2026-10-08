@@ -1,82 +1,82 @@
 {
-  "generatedAt": "2026-10-08T02:55:51.019Z",
+  "generatedAt": "2026-10-08T06:24:09.164Z",
   "node": "v22.17.1",
   "providerCalls": 0,
   "results": [
     {
       "suite": "test-expanded-world.mjs",
       "passed": true,
-      "durationMs": 1346
+      "durationMs": 1498
     },
     {
       "suite": "test-finance-education-care.mjs",
       "passed": true,
-      "durationMs": 4141
+      "durationMs": 4921
     },
     {
       "suite": "test-expanded-semantics.mjs",
       "passed": true,
-      "durationMs": 2630
+      "durationMs": 2988
     },
     {
       "suite": "test-social-perspectives.mjs",
       "passed": true,
-      "durationMs": 75
+      "durationMs": 79
     },
     {
       "suite": "test-social-causality.mjs",
       "passed": true,
-      "durationMs": 1135
+      "durationMs": 1291
     },
     {
       "suite": "test-expanded-lifecycle.mjs",
       "passed": true,
-      "durationMs": 2775
+      "durationMs": 3029
     },
     {
       "suite": "test-living.mjs",
       "passed": true,
-      "durationMs": 9807
+      "durationMs": 12124
     },
     {
       "suite": "test-location-music.mjs",
       "passed": true,
-      "durationMs": 634
+      "durationMs": 664
     },
     {
       "suite": "test-living-mind.mjs",
       "passed": true,
-      "durationMs": 599
+      "durationMs": 656
     },
     {
       "suite": "test-living-social.mjs",
       "passed": true,
-      "durationMs": 1249
+      "durationMs": 1302
     },
     {
       "suite": "test-living-romance.mjs",
       "passed": true,
-      "durationMs": 1056
+      "durationMs": 1079
     },
     {
       "suite": "test-living-wellbeing.mjs",
       "passed": true,
-      "durationMs": 689
+      "durationMs": 747
     },
     {
       "suite": "test-living-biographies.mjs",
       "passed": true,
-      "durationMs": 540
+      "durationMs": 566
     },
     {
       "suite": "test-providers.mjs",
       "passed": true,
-      "durationMs": 363
+      "durationMs": 358
     },
     {
       "suite": "test-storage.mjs",
       "passed": true,
-      "durationMs": 367
+      "durationMs": 362
     }
   ]
 }

@@ -3,11 +3,17 @@
 // housemate's private account merely because they share a kitchen.
 import { db, pj } from "../../db.js";
 import { balance, rows } from "./store.js";
-import { householdOf, householdForecast, ownAccount } from "./economy.js";
+import { householdOf, householdForecast, ownAccount, rentalForecast } from "./economy.js";
 import { calendarDate, estimatedNet } from "./catalog.js";
 import { addFeeling } from "../cognition.js";
 import { recordExperience } from "../wellbeing.js";
 export const MONEY_LABELS = {
+  transport_budget: "Transport budget",
+  health_out_of_pocket: "Health costs paid out of pocket",
+  communication: "Phone & internet",
+  essential_repair: "Unexpected essential repair",
+  community_activity: "Community activity",
+  director_adjustment: "Authorial cash adjustment",
   payroll: "Net pay",
   salary: "Net pay",
   rent: "Base rent",
@@ -272,6 +278,7 @@ export function financialOutlook(d, p, time) {
       certainty: "plan",
     },
   ];
+  for(const [kind,label] of [["transport","Essential transport"],["healthOutOfPocket","Health copayments and out-of-pocket care"],["communication","Phone and internet"]])if(h.payload.budget[kind])rowsOut.push({kind,label,amountCents:h.payload.budget[kind],certainty:"estimate"});
   const costs = rowsOut.reduce((n, r) => n + r.amountCents, 0),
     liquid =
       balance(d, ownAccount(d, p)) + balance(d, h.payload.jointAccountId);
@@ -307,6 +314,7 @@ export function financialOutlook(d, p, time) {
       };
     })
     .filter(Boolean);
+  for(const id of members){const member=d.people.get(id);if(member.age<18||id!==p.id&&!member.state.economy.privacy.shareIncomeWithHousehold)continue;const rent=rentalForecast(d,member);if(rent.grossCents)incomes.push({simId:id,name:member.name,grossCents:rent.grossCents,deductionsCents:rent.taxCents,label:'Expected rent after estimated tax',amountCents:rent.netCents,certainty:rent.certainty});}
   const expectedIncome = incomes.reduce((n, r) => n + r.amountCents, 0),
     projected = liquid + expectedIncome - costs - f.arrearsCents - reserve;
   return {
@@ -324,9 +332,9 @@ export function financialOutlook(d, p, time) {
     reserveCoveredCents: Math.min(target, Math.max(0, liquid)),
     marginCents: expectedIncome - costs - reserve,
     security:
-      projected < 0
+      projected < 0 || (expectedIncome < costs + reserve && liquid < costs * 2)
         ? "shortfall"
-        : liquid < reserve || projected < 50000
+        : liquid < reserve || projected < 50000 || expectedIncome < costs + reserve
           ? "tight"
           : "buffered",
     scopeNote:
@@ -373,7 +381,7 @@ export function financialAppraisals(
       outlook.security === "shortfall"
         ? "My current plan shows a funding gap. I want to look into support, suitable work, or lower costs."
         : outlook.security === "tight"
-          ? "My plan is just about covered. I want to build a buffer for unexpected costs, step by step."
+          ? (outlook.marginCents<0?"Savings cover the immediate bills, but the monthly plan spends more than it earns. I need to reduce the gap before the buffer runs out.":"My plan is just about covered. I want to build a buffer for unexpected costs, step by step.")
           : "My current plan has a buffer. That gives me some peace of mind, even though future income remains uncertain.";
     review.description = p.name + " reviews their financial situation. " + text;
     p.state.economy.financialAppraisal = {
@@ -412,11 +420,11 @@ export function financialAppraisals(
       {
         P:
           outlook.security === "shortfall"
-            ? -0.009
+            ? -0.035
             : outlook.security === "tight"
-              ? -0.003
+              ? -0.008
               : 0.005,
-        E: outlook.security === "shortfall" ? -0.002 : 0,
+        E: outlook.security === "shortfall" ? -0.012 : 0,
       },
       text,
     );

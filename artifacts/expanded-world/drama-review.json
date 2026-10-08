@@ -1,0 +1,466 @@
+{
+  "population": 100,
+  "hours": 72,
+  "monitor": {
+    "time": 286200,
+    "classes": [
+      {
+        "id": "middle_low",
+        "label": "Middle low-income",
+        "sims": 35,
+        "households": 21
+      },
+      {
+        "id": "upper_low",
+        "label": "Upper low-income",
+        "sims": 27,
+        "households": 11
+      },
+      {
+        "id": "middle",
+        "label": "Middle-income",
+        "sims": 10,
+        "households": 5
+      },
+      {
+        "id": "lower_middle",
+        "label": "Lower middle-income",
+        "sims": 20,
+        "households": 10
+      },
+      {
+        "id": "lower_low",
+        "label": "Lower low-income",
+        "sims": 8,
+        "households": 4
+      }
+    ],
+    "wellbeing": {
+      "low": 0,
+      "mixed": 63,
+      "high": 37
+    },
+    "modeledSymptoms": 29,
+    "interactions": [
+      {
+        "eventId": "w_3nT8Tb2awtp-_e_286020_social_sim-52_0",
+        "withId": "w_3nT8Tb2awtp-_s_52",
+        "category": "ask_advice",
+        "started": 286020,
+        "until": 286320,
+        "locationId": "w_3nT8Tb2awtp-_l_home27living",
+        "sims": [
+          {
+            "id": "w_3nT8Tb2awtp-_s_51",
+            "name": "Thomas Miller",
+            "age": 17,
+            "job": "Pupil"
+          },
+          {
+            "id": "w_3nT8Tb2awtp-_s_52",
+            "name": "Olivia Miller",
+            "age": 17,
+            "job": "Pupil"
+          }
+        ]
+      },
+      {
+        "eventId": "w_3nT8Tb2awtp-_e_286140_social_sim-71_0",
+        "withId": "w_3nT8Tb2awtp-_s_72",
+        "category": "reconcile",
+        "started": 286140,
+        "until": 286440,
+        "locationId": "w_3nT8Tb2awtp-_l_home37living",
+        "sims": [
+          {
+            "id": "w_3nT8Tb2awtp-_s_71",
+            "name": "Katherine Smith",
+            "age": 42,
+            "job": "Electrician"
+          },
+          {
+            "id": "w_3nT8Tb2awtp-_s_72",
+            "name": "Finn Smith",
+            "age": 44,
+            "job": "Civic planner"
+          }
+        ]
+      },
+      {
+        "eventId": "w_3nT8Tb2awtp-_e_286020_social_sim-80_0",
+        "withId": "w_3nT8Tb2awtp-_s_80",
+        "category": "phone_call",
+        "started": 286020,
+        "until": 286260,
+        "locationId": "w_3nT8Tb2awtp-_l_home41living",
+        "sims": [
+          {
+            "id": "w_3nT8Tb2awtp-_s_79",
+            "name": "Sarah Turner",
+            "age": 45,
+            "job": "Unemployed"
+          },
+          {
+            "id": "w_3nT8Tb2awtp-_s_80",
+            "name": "Evelyn Walker",
+            "age": 86,
+            "job": "Retired"
+          }
+        ]
+      },
+      {
+        "eventId": "w_3nT8Tb2awtp-_e_286080_social_sim-93_0",
+        "withId": "w_3nT8Tb2awtp-_s_94",
+        "category": "comfort",
+        "started": 286080,
+        "until": 286320,
+        "locationId": "w_3nT8Tb2awtp-_l_home48living",
+        "sims": [
+          {
+            "id": "w_3nT8Tb2awtp-_s_93",
+            "name": "Grace Wood",
+            "age": 63,
+            "job": "Library assistant"
+          },
+          {
+            "id": "w_3nT8Tb2awtp-_s_94",
+            "name": "Isaac Wood",
+            "age": 63,
+            "job": "Delivery coordinator"
+          }
+        ]
+      }
+    ],
+    "definitions": {
+      "class": "Projected monthly household take-home income divided by the square root of household size, relative to a fictional reference income; assets and financial strain are separate.",
+      "wellbeing": "Five dimensions: low <40, mixed 40–65, high >65. Descriptive game bands, not clinical cutoffs.",
+      "interactions": "An accepted encounter remains current only until its scheduled finish. Past encounters are in personal journals."
+    }
+  },
+  "range": {
+    "low": 0.41214158874673557,
+    "high": 0.8245760204695621
+  },
+  "representative": [
+    {
+      "name": "Thomas Roberts",
+      "age": 85,
+      "job": "Retired",
+      "style": "guarded_survivor",
+      "perma": {
+        "P": 0.35642662741086567,
+        "E": 0.3166903208292636,
+        "R": 0.4385952905007845,
+        "M": 0.5150722349016967,
+        "A": 0.43392347009106713
+      },
+      "stress": 0.33693602407298895,
+      "monthlyMargin": -80035,
+      "conditions": [
+        "specific_phobia",
+        "generalized_anxiety"
+      ],
+      "socialEvidence": {
+        "support": 14,
+        "criticism": 2,
+        "positive": 14,
+        "negative": 5
+      }
+    },
+    {
+      "name": "Violet Ward",
+      "age": 23,
+      "job": "Programmer",
+      "style": "status_chaser",
+      "perma": {
+        "P": 0.35867543417998526,
+        "E": 0.3783215175807812,
+        "R": 0.435815655987864,
+        "M": 0.43716100198370655,
+        "A": 0.6256243096374747
+      },
+      "stress": 0.2729845279470434,
+      "monthlyMargin": 197334,
+      "conditions": [
+        "depression",
+        "ocd"
+      ],
+      "socialEvidence": {
+        "support": 8,
+        "criticism": 3,
+        "positive": 9,
+        "negative": 3
+      }
+    },
+    {
+      "name": "Oliver Nelson",
+      "age": 46,
+      "job": "Retail assistant",
+      "style": "guarded_survivor",
+      "perma": {
+        "P": 0.22037905460994292,
+        "E": 0.25516221280623924,
+        "R": 0.4212131544296903,
+        "M": 0.8240880611688737,
+        "A": 0.5543788359210824
+      },
+      "stress": 0.311601135104154,
+      "monthlyMargin": 194500,
+      "conditions": [
+        "borderline"
+      ],
+      "socialEvidence": {
+        "support": 6,
+        "criticism": 3,
+        "positive": 6,
+        "negative": 5
+      }
+    },
+    {
+      "name": "Julian Bennett",
+      "age": 31,
+      "job": "Mayor",
+      "style": "secure_haven",
+      "perma": {
+        "P": 0.7421472733101715,
+        "E": 0.9245347258330157,
+        "R": 0.8918121045684877,
+        "M": 0.8086710452988201,
+        "A": 0.6209134404029372
+      },
+      "stress": 0.10729789498848841,
+      "monthlyMargin": 186395,
+      "conditions": [],
+      "socialEvidence": {
+        "support": 4,
+        "criticism": 1,
+        "positive": 5,
+        "negative": 1
+      }
+    },
+    {
+      "name": "Sarah Bennett",
+      "age": 34,
+      "job": "Firefighter",
+      "style": "secure_haven",
+      "perma": {
+        "P": 0.7061524773275801,
+        "E": 0.9008901200778814,
+        "R": 0.8353092178019492,
+        "M": 0.6704043976932088,
+        "A": 0.8954177500717058
+      },
+      "stress": 0.1221248921639286,
+      "monthlyMargin": 186395,
+      "conditions": [],
+      "socialEvidence": {
+        "support": 3,
+        "criticism": 1,
+        "positive": 3,
+        "negative": 1
+      }
+    },
+    {
+      "name": "Liam White",
+      "age": 52,
+      "job": "Groundskeeper",
+      "style": "secure_haven",
+      "perma": {
+        "P": 0.7953464145383886,
+        "E": 0.8183977410252076,
+        "R": 0.9523320405562756,
+        "M": 0.7738971198497369,
+        "A": 0.782906786378201
+      },
+      "stress": 0.20155245226004176,
+      "monthlyMargin": 77244,
+      "conditions": [
+        "insomnia"
+      ],
+      "socialEvidence": {
+        "support": 3,
+        "criticism": 1,
+        "positive": 3,
+        "negative": 2
+      }
+    }
+  ],
+  "groups": 53,
+  "conditions": 46,
+  "negativeMonthlyFlow": 30,
+  "eventKinds": [
+    {
+      "type": "action_completed",
+      "n": 8480
+    },
+    {
+      "type": "action_failed",
+      "n": 77
+    },
+    {
+      "type": "action_interrupted",
+      "n": 2747
+    },
+    {
+      "type": "action_resumed",
+      "n": 941
+    },
+    {
+      "type": "action_started",
+      "n": 10453
+    },
+    {
+      "type": "adult_health_risk",
+      "n": 12
+    },
+    {
+      "type": "arrival",
+      "n": 15712
+    },
+    {
+      "type": "bill_payment",
+      "n": 251
+    },
+    {
+      "type": "bill_payment_deferred",
+      "n": 43
+    },
+    {
+      "type": "birthday",
+      "n": 1
+    },
+    {
+      "type": "community_session_attended",
+      "n": 19
+    },
+    {
+      "type": "community_session_missed",
+      "n": 5
+    },
+    {
+      "type": "conversation_ended",
+      "n": 2454
+    },
+    {
+      "type": "coping_with_pressure",
+      "n": 51
+    },
+    {
+      "type": "departure",
+      "n": 5903
+    },
+    {
+      "type": "financial_review",
+      "n": 328
+    },
+    {
+      "type": "goal_deferred",
+      "n": 39
+    },
+    {
+      "type": "grocery_purchase",
+      "n": 52
+    },
+    {
+      "type": "health_symptoms_notice",
+      "n": 32
+    },
+    {
+      "type": "household_contribution",
+      "n": 150
+    },
+    {
+      "type": "initialization_family",
+      "n": 100
+    },
+    {
+      "type": "initialization_goal",
+      "n": 100
+    },
+    {
+      "type": "initialization_identity",
+      "n": 100
+    },
+    {
+      "type": "initialization_outlook",
+      "n": 100
+    },
+    {
+      "type": "initialization_resources",
+      "n": 1
+    },
+    {
+      "type": "invoice_issued",
+      "n": 260
+    },
+    {
+      "type": "job_application",
+      "n": 10
+    },
+    {
+      "type": "job_search",
+      "n": 2
+    },
+    {
+      "type": "need_blocked",
+      "n": 1
+    },
+    {
+      "type": "obligation_offer",
+      "n": 419
+    },
+    {
+      "type": "obligation_overdue",
+      "n": 93
+    },
+    {
+      "type": "obligation_rescheduled",
+      "n": 91
+    },
+    {
+      "type": "packed_meal",
+      "n": 492
+    },
+    {
+      "type": "parental_care_support",
+      "n": 2
+    },
+    {
+      "type": "pocket_money",
+      "n": 13
+    },
+    {
+      "type": "professional_care_visit",
+      "n": 15
+    },
+    {
+      "type": "property_maintenance",
+      "n": 55
+    },
+    {
+      "type": "public_day",
+      "n": 4
+    },
+    {
+      "type": "savoring_moment",
+      "n": 105
+    },
+    {
+      "type": "social",
+      "n": 2340
+    },
+    {
+      "type": "support_payment",
+      "n": 27
+    },
+    {
+      "type": "support_plan_accepted",
+      "n": 4
+    },
+    {
+      "type": "unexpected_household_cost",
+      "n": 4
+    }
+  ],
+  "note": "Fictional seeded audit, no provider calls; representative review, not proof for every future trajectory."
+}

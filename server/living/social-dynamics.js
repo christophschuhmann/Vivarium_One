@@ -56,7 +56,7 @@ export function driveLevels(p){
 export function socialMotivations(a,b,economy=null){
  const shared=sharedGoals(a,b),d=a.state.socialDynamics||{},strain=Math.max(a.state.needs.fatigue||0,a.state.needs.hunger||0),five=a.state.psychology.big_five||{},r=a.relations[b.id]||{};
  const publicView=economy?reputationFor(economy,b,a.id):null;
- return {unresolvedStrain:d.unresolved?.[b.id]?.severity||0,sharedGoals:shared.map(g=>g.kind),ambition:d.ambition??.5,prosociality:d.prosociality??.5,strain,drives:driveLevels(a),attraction:adultAttraction(a,b,economy),otherReputation:publicView?clamp((publicView.helpfulness+publicView.reliability)/2):.5,otherRecognition:publicView?.recognition||0,rivalry:clamp((d.ambition??.5)*(1-(d.prosociality??.5))*(shared.some(g=>g.kind==='work')?.6:.1)+(r.tension||0)*.4),extraversion:five.extraversion??.5};
+ return {unresolvedStrain:d.unresolved?.[b.id]?.severity||0,sharedGoals:shared.map(g=>g.kind),ambition:d.ambition??.5,prosociality:d.prosociality??.5,strain:Math.max(strain,a.state.life?.stress||0),drives:driveLevels(a),attraction:adultAttraction(a,b,economy),otherReputation:publicView?clamp((publicView.helpfulness+publicView.reliability)/2):.5,otherRecognition:publicView?.recognition||0,rivalry:clamp((d.ambition??.5)*(1-(d.prosociality??.5))*(shared.some(g=>g.kind==='work')?.6:.1)+(a.state.life?.statusDrive||0)*(a.state.life?.stress||0)*.16+(r.tension||0)*.4),extraversion:five.extraversion??.5};
 }
 export function responseProbabilities(p,other){
  const b=p.state.psychology.big_five||{},d=p.state.socialDynamics||{},n=p.state.needs,rel=p.relations[other.id]||{},strain=Math.max(n.hunger||0,n.fatigue||0,1-(p.state.wellbeing?.scores?.P??.5)),practice=Math.min(.2,d.communicationPractice||0);

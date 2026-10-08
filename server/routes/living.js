@@ -1,3 +1,6 @@
+import {advisorChat,advisorHistory} from '../living/advisor.js';
+import {worldMonitor,worldTools} from '../living/agent-tools.js';
+import {refreshMemorySummaries} from '../living/memory-tiers.js';
 import {prepareSocialDynamics} from '../living/social-dynamics.js';
 import {explorerCatalog,compileExplorerFilters,explorerMatches} from '../living/explorer-filters.js';
 import {refreshBiographyPronouns} from '../living/occupations.js';
@@ -32,6 +35,10 @@ function own(req,verified=false){const user=verified?requireVerified(req):requir
 function mutable(req){const result=own(req,true);if(busy.has(result.world.id))throw httpErr(409,'WORLD_BUSY','Wait for the current tick to finish.');return result;}
 const simView=p=>{const person={...p,profile:pj(p.profile,{}),state:pj(p.state,{})};normalizeRomance(person);projectWellbeing(person,person.state.wellbeing?.updated_at||0);if(person.profile.social)person.profile.social=socialPerspective(person);prepareSocialDynamics(person,db.prepare('SELECT seed FROM lw_worlds WHERE world_id=?').get(p.world_id)?.seed||73);if(person.profile.locale==='en'&&person.biography_mode!=='written')person.biography=refreshBiographyPronouns(person);person.activityStatus=activityStatus(person);person.state.socialAttributes=socialAttributes(person);return person;};
 export default async function livingRoutes(app) {
+  app.get('/api/living/worlds/:worldId/monitor',async req=>worldMonitor(own(req).world.id));
+  app.get('/api/living/worlds/:worldId/monitor/residents',async req=>worldTools(own(req).world.id)('search_sims',{incomeClass:req.query.incomeClass,limit:20,offset:Number(req.query.offset)||0}));
+  app.get('/api/living/worlds/:worldId/dr-well',async req=>({history:advisorHistory(own(req).world.id)}));
+  app.post('/api/living/worlds/:worldId/dr-well',async req=>{const {user,world}=own(req,true);return advisorChat(user,world,req.body||{});});
   app.addHook('onClose',async()=>stopTurboWorkers());
   app.get('/api/living/worlds/:worldId/turbo',async req=>{const {world}=own(req);return {job:turboStatus(world.id)};});
   app.post('/api/living/worlds/:worldId/turbo',async req=>{const {user,world}=own(req,true);return {job:startTurbo(user,world.id,Number(req.body?.minutes))};});
@@ -120,7 +127,7 @@ export default async function livingRoutes(app) {
   app.put('/api/living/worlds/:worldId/anchors',async req=>{
     const {world}=mutable(req),b=req.body || {},kind=b.kind;if(!['sim','place'].includes(kind)||typeof b.enabled!=='boolean')throw httpErr(400,'BAD_ANCHOR','Choose a Sim or location anchor.');
     const table=kind==='sim'?'lw_sims':'lw_places';if(!db.prepare(`SELECT 1 FROM ${table} WHERE world_id=? AND id=?`).get(world.id,b.id))throw httpErr(404,'NOT_FOUND','Anchor entity not found.');
-    db.transaction(()=>{db.prepare(`UPDATE ${table} SET anchored=? WHERE id=?`).run(+b.enabled,b.id);if(kind==='sim'&&b.enabled)db.prepare("UPDATE lw_sims SET biography_mode='written_pending' WHERE id=? AND biography_mode='procedural'").run(b.id);db.prepare('UPDATE lw_worlds SET version=version+1 WHERE world_id=?').run(world.id);const version=db.prepare('SELECT version FROM lw_worlds WHERE world_id=?').get(world.id).version;db.prepare('INSERT INTO lw_anchor_audit(world_id,entity_id,kind,enabled,version) VALUES (?,?,?,?,?)').run(world.id,b.id,kind,+b.enabled,version);})();return {ok:true};
+    db.transaction(()=>{db.prepare(`UPDATE ${table} SET anchored=? WHERE id=?`).run(+b.enabled,b.id);if(kind==='sim'&&b.enabled)db.prepare("UPDATE lw_sims SET biography_mode='written_pending' WHERE id=? AND biography_mode='procedural'").run(b.id);db.prepare('UPDATE lw_worlds SET version=version+1 WHERE world_id=?').run(world.id);const version=db.prepare('SELECT version FROM lw_worlds WHERE world_id=?').get(world.id).version;db.prepare('INSERT INTO lw_anchor_audit(world_id,entity_id,kind,enabled,version) VALUES (?,?,?,?,?)').run(world.id,b.id,kind,+b.enabled,version);if(kind==='sim'&&b.enabled)refreshMemorySummaries(world.id,db.prepare('SELECT seconds FROM lw_worlds WHERE world_id=?').get(world.id).seconds,b.id);})();return {ok:true};
   });
   app.post('/api/living/worlds/:worldId/ticks',async(req,reply)=>{
     const {user,world}=own(req,true);

@@ -92,6 +92,9 @@ def handle(request):
                 unresolved = float(motivation.get('unresolvedStrain', 0))
                 if candidate['category'] in {'argue', 'provoke', 'undermine'}:
                     score += unresolved * (1-float(motivation.get('prosociality', .5))) * .7
+                    # Strain interacts with disposition and an actual relationship;
+                    # a diagnosis or poverty alone never selects hostility.
+                    score += max(0.,float(motivation.get('strain',0))-.3) * (1-float(motivation.get('prosociality',.5))) * (.8+min(1.,tension))
                 if candidate['category'] in {'reconcile','apologize','set_boundary'}:
                     score += unresolved * (.15+float(motivation.get('prosociality', .5))*.4)
                 if tension > .035 and candidate['category'] in {'apologize', 'reconcile', 'set_boundary'}:

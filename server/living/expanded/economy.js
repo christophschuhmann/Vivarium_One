@@ -1,3 +1,4 @@
+import {incomeBand} from '../drama/catalog.js';
 import { jobChance, decideApplication, latestApplication, APPLICATION_COOLDOWN } from "./applications.js";
 import { currentEducation } from "./education.js";
 import { db } from "../../db.js";
@@ -6,6 +7,7 @@ import { addFeeling } from "../cognition.js";
 import {
   loadEconomy,
   rows,
+  rowsFor,
   put,
   touch,
   balance,
@@ -130,6 +132,10 @@ export function flow(p, time, kind, amount) {
   const keys = Object.keys(p.state.economy.monthlyFlows).sort();
   while (keys.length > 18) delete p.state.economy.monthlyFlows[keys.shift()];
 }
+export function rentalForecast(d,p){
+  const grossCents=rowsFor(d,'lease','landlordId',p.id).filter(l=>l.payload.status==='active').reduce((n,l)=>n+l.payload.rentCents,0),salary=d.contracts.get(p.id)?.payload.grossMonthlyCents||0,taxCents=Math.max(0,incomeTax(salary+grossCents)-incomeTax(salary));
+  return {grossCents,taxCents,netCents:grossCents-taxCents,certainty:'requires tenant payment; simplified tax estimate; future repairs remain uncertain'};
+}
 export function householdForecast(d, h, time, {observerId=null} = {}) {
   const members = h.payload.members
       .map((id) => d.people.get(id))
@@ -137,7 +143,7 @@ export function householdForecast(d, h, time, {observerId=null} = {}) {
     adults = members.filter((p) => p.age >= 18 && (!observerId || p.id===observerId || p.state.economy.privacy.shareIncomeWithHousehold)),
     income = adults.reduce(
       (n, p) =>
-        n +
+        n + rentalForecast(d,p).netCents +
         (p.state.economy.parentalCare
           ? p.state.economy.parentalCare.benefitCents
           : d.contracts.get(p.id)
@@ -167,6 +173,7 @@ export function householdForecast(d, h, time, {observerId=null} = {}) {
       rent +
       h.payload.budget.utilities +
       h.payload.budget.foodTarget +
+      (h.payload.budget.transport||0)+(h.payload.budget.healthOutOfPocket||0)+(h.payload.budget.communication||0)+
       loans +
       subscriptions,
     available = balance(d, h.payload.jointAccountId),
@@ -181,7 +188,7 @@ export function householdForecast(d, h, time, {observerId=null} = {}) {
   return {
     at: time,
     incomeCents: income,
-    fixedCents: rent + h.payload.budget.utilities + loans + subscriptions,
+    fixedCents: rent + h.payload.budget.utilities + loans + subscriptions + (h.payload.budget.transport||0)+(h.payload.budget.healthOutOfPocket||0)+(h.payload.budget.communication||0),
     foodCents: h.payload.budget.foodTarget,
     costCents: cost + careCosts,
     reserveCents: reserve,
@@ -1227,6 +1234,7 @@ export function monthlyEconomy(d, time, emit) {
       emit,
       { period: key },
     );
+    for(const kind of ["transport","healthOutOfPocket","communication"])if(h.payload.budget[kind])newInvoice(d,p,h,kind,cents(h.payload.budget[kind]*fraction),fundsOf(d).external,time,emit,{period:key,scope:"prospective essential household costs"});
     for (const child of h.payload.members
       .map((id) => d.people.get(id))
       .filter((p) => p.age >= 6 && p.age < 18)) {
@@ -1340,16 +1348,13 @@ export function refreshOwnResources(d, time) {
       c.payload.simId,
       (pending.get(c.payload.simId) || 0) + (c.payload.pendingGrossCents || 0),
     );
+  const forecasts=new Map();for(const h of d.households.values())forecasts.set(h.id,householdForecast(d,h,time));
   for (const p of d.people.values()) {
     p.state.economy.cashCents = balance(d, ownAccount(d, p));
     p.state.economy.pendingGrossCents = pending.get(p.id) || 0;
-    if (p.age >= 18)
-      p.state.economy.householdForecast = householdForecast(
-        d,
-        householdOf(d, p),
-        time,
-        {observerId:p.id},
-      );
+    const h=householdOf(d,p),f=forecasts.get(h.id);
+    p.state.economy.incomeClass=incomeBand(f.incomeCents,h.payload.members.length,JSON.parse(d.town.world.rules||'{}').currency||'EUR');
+    if(p.age>=18)p.state.economy.householdForecast=h.payload.members.some(id=>d.people.get(id)?.age>=18&&!d.people.get(id).state.economy.privacy.shareIncomeWithHousehold)?householdForecast(d,h,time,{observerId:p.id}):f;
   }
 }
 export function economicMinute(d, time, emit) {

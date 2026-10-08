@@ -2204,14 +2204,15 @@ async function stageScreen() {
   // not-yet-introduced characters (rewound below their intro tick) don't exist in this era
   const present = characters.filter(c => (c.state.location_id === loc?.id || living && S.worldData.journey?.simId === c.id) && (c.intro_tick_idx || 0) <= world.tick_index);
   const scene = buildScene(lastTick, loc, present, povChar);
+  const stagePeople=living&&present.length>8?[...present.filter(c=>c.id!==povChar?.id).slice(0,7),...(povChar&&present.some(c=>c.id===povChar.id)?[povChar]:present.filter(c=>c.id!==povChar?.id).slice(7,8))]:present;
 
   app.innerHTML = `
   <div id="stage-root">
     <div class="stage-bg" style="background-image:url(${assetUrl(loc?.background_asset_id)})"></div>
     <div class="stage-vignette"></div>
     <div class="stage-cast" id="stage-cast">
-      ${present.map((c, i) => {
-        const n = present.length, x = n === 1 ? 50 : 24 + (52 / Math.max(n - 1, 1)) * i;
+      ${stagePeople.map((c, i) => {
+        const n = stagePeople.length, x = n === 1 ? 50 : 24 + (52 / Math.max(n - 1, 1)) * i;
         const isPov = c.id === povChar?.id;
         return `<div class="stage-char ${isPov ? 'pov' : ''}" data-id="${c.id}" style="left:${x}%;height:${isPov ? 76 : 71}%">
           <img src="${assetUrl(cutoutFor(c))}" alt="${esc(c.name)}">
@@ -2244,7 +2245,7 @@ async function stageScreen() {
     ${present.map(c => `<div class="rail-face ${c.id === povChar?.id ? 'active' : ''}" data-pov="${c.id}" style="background-image:url(${assetUrl(cutoutFor(c))})" title="See through ${esc(c.name)}'s eyes"><span>${esc(c.name)}</span></div>`).join('')}
     <div class="rail-face places" data-places title="Watch a place instead">🗺</div>
   </div>
-  <div class="stage-bottom${(localStorage.getItem('viv_panel') ?? (innerWidth <= 760 ? 'collapsed' : 'open')) === 'collapsed' ? ' collapsed' : ''}" id="stage-bottom">
+  <div class="stage-bottom${(localStorage.getItem('viv_panel') ?? (innerWidth <= 760 || living&&present.length>8 ? 'collapsed' : 'open')) === 'collapsed' ? ' collapsed' : ''}" id="stage-bottom">
     <!-- mobile-only handle: collapses the controls+storybook so sprites own the small screen -->
     <button class="panel-toggle" id="panel-toggle">📖</button>
     <div class="stage-controls">
@@ -2324,6 +2325,7 @@ async function stageScreen() {
   });
   $$('.bubble').forEach(b => b.onclick = (e) => { e.stopPropagation(); speak(b.dataset.say, characters.find(c => c.id === b.dataset.c), b); });
   $$('.stage-char').forEach(el => el.onclick = () => mindModal(el.dataset.id));
+  if(living)livingBindSceneSelection();
   bindStoryLines(characters);
   setupNarrationPlayer(scene.lines, characters);
 
@@ -3255,6 +3257,13 @@ async function playIntroSequence() {
    approved changes reach the story as ordinary world state. History persists
    per world (the model itself only remembers the newest ~20k tokens).        */
 const GM_ACTION_LABELS = {
+  edit_sim:a=>'Revise '+(a.name||a.id)+': '+JSON.stringify({needs:a.needs,skills:a.skills,attributes:a.attributes,thought:a.thought}),
+  move_sim:a=>'Relocate '+(a.name||a.id)+' to '+a.locationId,
+  adjust_cash:a=>'Adjust '+(a.name||a.id)+' by '+(a.amountCents/100).toFixed(2)+' currency units: '+a.reason,
+  edit_relationship:a=>'Revise '+(a.name||a.id)+' → '+a.otherId+': '+JSON.stringify({closeness:a.closeness,trust:a.trust,tension:a.tension}),
+  rename_place:a=>'Rename '+(a.id)+' to '+a.name,
+  story_note:a=>'Author note for '+(a.name||a.id)+': '+a.text,
+
   set_anchor:a=>'⚓ '+(a.name||a.id)+' · '+(a.enabled?'Anker setzen':'Anker lösen'),
   write_biography:a=>'✍ '+(a.name||a.id)+' · '+(a.instruction||'Biografie ausarbeiten'),
   create_character: (a) => `🎭 Create character “${a.draft?.name}”${a.bonds?.length ? ` with ${a.bonds.length} bonds` : ' (bonds auto-drafted)'} — paints a portrait (~30s)`,
@@ -3334,7 +3343,7 @@ async function gmChatOverlay() {
     addMsg('user', text);
     const status = addMsg('status', '🎭 the Game Master is thinking…');
     try {
-      const out = await api(`/api/worlds/${S.world}/gm-chat`, { method: 'POST', body: { message: text, lang: getLang(), perspective:stageState.pov } });
+      const out = await api(`/api/worlds/${S.world}/gm-chat`, { method: 'POST', body: { message: text, lang: getLang(), perspective:typeof livingAdvisorContext==='function'&&livingAdvisorContext()?{type:'character',id:livingAdvisorContext()}:stageState.pov } });
       status.remove();
       addAssistant(out.reply, out.actions);
       refreshMe();

@@ -1,0 +1,71 @@
+{
+  "reviewed": "2026-10-08",
+  "scope": "Synthetic Bennington town; not a medical or epidemiological model. US surveys use different ages and recall windows; rates below guide variety, not individual diagnosis. Narrative intensity is a separate design choice.",
+  "sources": [
+    {
+      "id": "census",
+      "url": "https://www.census.gov/quickfacts/fact/table/benningtontownbenningtoncountyvermont/BZA010223",
+      "note": "ACS 2020\u20132024: 6,358 households, 2.25 persons per household, median household income $59,446, poverty 13.2%, median gross rent $1,133; town, not county or CDP."
+    },
+    {
+      "id": "households",
+      "url": "https://www2.census.gov/prod2/cen2010/cph-1-47.pdf",
+      "note": "Historical household composition is a calibration reference, not a current exact count. New synthetic towns target about one third one-person households, with single-parent and shared homes."
+    },
+    {
+      "id": "nimh",
+      "url": "https://www.nimh.nih.gov/health/statistics",
+      "note": "US population estimates include differing survey years; conditions overlap. Anxiety, depression, PTSD, OCD, bipolar disorder, personality conditions, ADHD and eating disorders have separate pages."
+    },
+    {
+      "id": "bpd",
+      "url": "https://www.nimh.nih.gov/health/topics/borderline-personality-disorder",
+      "note": "Emotion-regulation difficulties and treatment; the label does not imply abusive behavior or criminality."
+    },
+    {
+      "id": "nsduh",
+      "url": "https://www.samhsa.gov/newsroom/press-announcements/20250728/samhsa-releases-annual-national-survey-on-drug-use-and-health",
+      "note": "2024 NSDUH, ages 12+: 16.8% past-year substance-use disorder, 9.7% alcohol-use disorder. These are overlapping conditions, not rates of daily use. Treatment receipt is much lower than need."
+    },
+    {
+      "id": "college_clubs",
+      "url": "https://www.bennington.edu/office-of-student-life/clubs-organizations/clubs-organizations-bennington",
+      "note": "Sports, arts, cultural/affinity, volunteer/academic and special-interest organizations inspire fictional game schedules."
+    },
+    {
+      "id": "senior_programs",
+      "url": "https://www.benningtonvt.org/Projects/BennHi/BennHigh_HIA_FinalReport_6-14-2023.pdf",
+      "note": "Local senior programming includes walking, painting, games and social support, often free or low-cost."
+    },
+    {
+      "id": "perma",
+      "url": "https://ppc.sas.upenn.edu/sites/default/files/permawellbeing.pdf",
+      "note": "PERMA as separable building blocks, not a diagnostic happiness score."
+    },
+    {
+      "id": "sdt",
+      "url": "https://selfdeterminationtheory.org/SDT/documents/2000_RyanDeci_SDT.pdf",
+      "note": "Autonomy, competence and relatedness; distinguish intrinsic aims from externally controlled status pursuits."
+    },
+    {
+      "id": "bids",
+      "url": "https://www.gottman.com/blog/an-introduction-to-emotional-bids-and-trust/",
+      "note": "Turning toward, away and against bids for connection; describe observable behavior, not deterministic divorce forecasts."
+    },
+    {
+      "id": "ratio_caution",
+      "url": "https://arxiv.org/abs/1307.7006",
+      "note": "Brown, Sokal and Friedman: the proposed universal critical positivity ratio is unfounded. Counts are descriptive, never a magic flourishing threshold."
+    },
+    {
+      "id": "responses",
+      "url": "https://www.sas.rochester.edu/psy/people/faculty/reis_harry/assets/pdf/GableReisImpettAsher_2004.pdf",
+      "note": "Capitalization and active constructive responding: evidence concerns response patterns, not fixed personality types or guaranteed outcomes."
+    },
+    {
+      "id": "psychotherapy",
+      "url": "https://www.nimh.nih.gov/health/topics/psychotherapies",
+      "note": "Treatment depends on individual difficulties and evidence; CBT is one approach, and care does not equal instant cure."
+    }
+  ]
+}

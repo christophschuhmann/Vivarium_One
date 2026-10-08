@@ -43,6 +43,9 @@ export function projectWellbeing(p,time){
   cached={byDay,latest};if(w.evidence.every(e=>e.at<=time))dayCache.set(w.evidence,cached);
  }
  const scores={...w.baseline};for(const [at,day] of cached.byDay)for(const k of PERMA_KEYS){const decay=Math.pow(.5,(time-at*86400)/(86400*halfDays[k]));scores[k]+=decay*((day[k].plusRaw?Math.min(.08,day[k].plusRaw)*day[k].plus/day[k].plusRaw:0)+(day[k].minusRaw?Math.min(.10,day[k].minusRaw)*day[k].minus/day[k].minusRaw:0));}
+ // Experiences saturate instead of repeated routine chores inevitably filling
+ // every pillar to 100. This preserves individual baselines and room for setbacks.
+ if(p.state.life)for(const k of PERMA_KEYS){const change=scores[k]-w.baseline[k],linear=change>=0?.08:.10,tail=change>=0?.12:.20,absolute=Math.abs(change);scores[k]=w.baseline[k]+Math.sign(change)*(absolute<=linear?absolute:linear+tail*Math.tanh((absolute-linear)/tail));}
  // Short-term affect belongs in P, not a global overwrite of all five pillars.
  const feelings=p.state.affect?.states||[],joy=Math.max(0,...feelings.filter(e=>positive.has(e.id)).map(e=>clamp(Number(e.intensity)||0))),strain=Math.max(0,...feelings.filter(e=>distress.has(e.id)).map(e=>clamp(Number(e.intensity)||0)));
  const needs=p.state.needs||{},bodily=Math.max(...['hunger','thirst','bladder','fatigue','hygiene','comfort'].map(k=>Number(needs[k])||0));scores.P+=joy*.04-strain*.06-Math.max(0,bodily-.55)*.08;

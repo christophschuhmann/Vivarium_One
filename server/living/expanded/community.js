@@ -30,7 +30,11 @@ export const CRIME_TYPES = {
 export const SUBSTANCE_TYPES = {
   alcohol: { label: "Alkohol", cost: 450, hazard: 0.025 },
   tobacco: { label: "Tabak", cost: 650, hazard: 0.04 },
-  other: { label: "Andere riskante Substanz", cost: 1200, hazard: 0.075 },
+  other: { label: "other risky substance", cost: 1200, hazard: 0.075 },
+  cannabis: {label:"cannabis-related risk",cost:1400,hazard:.04},
+  opioids: {label:"opioid-related risk, including illicit fentanyl exposure",cost:3500,hazard:.13},
+  cocaine: {label:"cocaine-related risk",cost:4500,hazard:.095},
+  sedatives: {label:"sedative misuse",cost:1800,hazard:.08},
 };
 const clamp = (n) => Math.max(0, Math.min(1, n));
 const actor = (d) =>
@@ -337,7 +341,7 @@ export function supportedCare(d, p, event, duration) {
   )
     return false;
   const staffed = [...d.contracts.values()].some((c) =>
-      ["Nurse", "Physician"].includes(c.payload.job),
+      /nurse|physician|counsel|psycholog|therapist|doctor/i.test(c.payload.job),
     ),
     cost = plan.payload.costPerSessionCents;
   const payer=plan.payload.payer==="personal"?ownAccount(d,p):fundsOf(d).health;
@@ -375,6 +379,7 @@ export function supportedCare(d, p, event, duration) {
     instantCure: false,
     kind:plan.payload.kind,payer:plan.payload.payer||"health_fund",communicationPracticeGain:p.state.socialDynamics?.communicationPractice!=null?.008:0,
   };
+  if(p.state.life){for(const c of p.state.life.conditions){c.managed=true;c.severity=Math.max(.04,c.severity-.025);}p.state.life.agency=Math.min(1,p.state.life.agency+.02);}
   return true;
 }
 // Adult-only, non-graphic abstract risk episodes. No drug doses, procurement

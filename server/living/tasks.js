@@ -7,7 +7,8 @@ export function taskDuration(p,kind,seconds,time,seed){
   if(!RESUMABLE.has(kind))return seconds;
   const focus=p.state.psychology?.big_five?.conscientiousness??.5;
   const draw=rng(`${seed}:task-duration:${p.profile.seed_key}:${kind}:${time}`)();
-  return Math.max(60,Math.round(seconds*(1.12-focus*.14+(draw-.5)*.16)/60)*60);
+  const symptom=p.state.life?.symptoms,burden=symptom&&symptom.until>time&&['attention','sleep','pain'].includes(symptom.pattern)?symptom.intensity*.18:0;
+  return Math.max(60,Math.round(seconds*(1.12-focus*.14+(draw-.5)*.16+burden)/60)*60);
 }
 export function advanceTask(p,time){
   const a=p.state.action;if(!a)return;

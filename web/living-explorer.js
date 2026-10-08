@@ -29,7 +29,7 @@ async function livingCastScreen(){
   let offset=0,token=0,timer,nextRule=0;const rules=[],grid=$('#lw-explore-grid'),basic=$('.lw-explorer-filters'),category=id=>filters.categories.find(c=>c.id===id);
   const ruleLabel=rule=>{
     const c=category(rule.category),field=c.fields.find(f=>f.id===rule.field);
-    return field.label+(rule.category==='relationship'?'':` · ${rule.min}–${rule.max}`)+(rule.text?` · “${rule.text}”`:'');
+    return field.label+(['relationship','income','interaction'].includes(rule.category)?'':` · ${rule.min}–${rule.max}`)+(rule.text?` · “${rule.text}”`:'');
   };
   function renderChips(){
     $('#lw-rule-count').textContent=rules.length?rules.length+' active':'Add filters';
@@ -42,15 +42,15 @@ async function livingCastScreen(){
     $('#lw-explore-rules').innerHTML=rules.map(rule=>{
       const c=category(rule.category),id='lw-rule-'+rule.key;
       return `<fieldset class="lw-filter-rule" data-rule="${rule.key}"><legend>${esc(c.label)}</legend><div class="lw-filter-rule-controls">
-        <label class="lw-filter-field" for="${id}-field">${rule.category==='relationship'?'Status or social tie':rule.category==='ambition'?'Goal theme':'Measure'}<select id="${id}-field" data-filter-prop="field">${c.fields.map(f=>`<option value="${esc(f.id)}"${f.id===rule.field?' selected':''}>${esc(f.label)}</option>`).join('')}</select></label>
+        <label class="lw-filter-field" for="${id}-field">${['relationship','income','interaction'].includes(rule.category)?'Status or social tie':rule.category==='ambition'?'Goal theme':'Measure'}<select id="${id}-field" data-filter-prop="field">${c.fields.map(f=>`<option value="${esc(f.id)}"${f.id===rule.field?' selected':''}>${esc(f.label)}</option>`).join('')}</select></label>
         ${rule.category==='ambition'?`<label class="lw-filter-text" for="${id}-text">Words in the goal<input id="${id}-text" data-filter-prop="text" value="${esc(rule.text||'')}" maxlength="100" placeholder="Optional, e.g. learn"></label>`:''}
-        ${rule.category!=='relationship'?`<div class="lw-filter-range"><label for="${id}-min">${rule.category==='ambition'?'Progress from':'From'}<input id="${id}-min" data-filter-prop="min" type="number" min="0" max="100" step="1" value="${rule.min}"></label><span aria-hidden="true">–</span><label for="${id}-max">To / 100<input id="${id}-max" data-filter-prop="max" type="number" min="0" max="100" step="1" value="${rule.max}"></label></div>`:''}
+        ${!['relationship','income','interaction'].includes(rule.category)?`<div class="lw-filter-range"><label for="${id}-min">${rule.category==='ambition'?'Progress from':'From'}<input id="${id}-min" data-filter-prop="min" type="number" min="0" max="100" step="1" value="${rule.min}"></label><span aria-hidden="true">–</span><label for="${id}-max">To / 100<input id="${id}-max" data-filter-prop="max" type="number" min="0" max="100" step="1" value="${rule.max}"></label></div>`:''}
         <button type="button" class="lw-filter-remove" data-remove-filter="${rule.key}" aria-label="Remove ${esc(c.label)} filter">×</button>
         </div><p>${esc(c.hint)}</p></fieldset>`;
     }).join('');renderChips();
   }
   function validate(){
-    const invalid=rules.find(rule=>rule.category!=='relationship'&&(!Number.isFinite(rule.min)||!Number.isFinite(rule.max)||rule.min<0||rule.max>100||rule.min>rule.max));
+    const invalid=rules.find(rule=>!['relationship','income','interaction'].includes(rule.category)&&(!Number.isFinite(rule.min)||!Number.isFinite(rule.max)||rule.min<0||rule.max>100||rule.min>rule.max));
     $$('.lw-filter-rule').forEach(el=>el.classList.toggle('invalid',Number(el.dataset.rule)===invalid?.key));
     return invalid?'Choose a range from 0 to 100, with the lower value first. Your previous results are hidden until the range is valid.':'';
   }
@@ -82,7 +82,7 @@ async function livingCastScreen(){
   basic.oninput=el=>schedule(el.target.tagName==='INPUT'?220:0);
   $('.lw-explorer-search').onclick=e=>{
     const add=e.target.closest('[data-add-filter]'),remove=e.target.closest('[data-remove-filter]'),clear=e.target.closest('[data-clear-basic]');
-    if(add&&rules.length<filters.maxRules){const c=category(add.dataset.addFilter),defaults={emotion:'distress',need:'social',attribute:'reputation',skill:'empathy',relationship:'single',ambition:'any'},key=++nextRule;rules.push({key,category:c.id,field:defaults[c.id],...(c.id==='relationship'?{}:{min:c.id==='ambition'?0:c.id==='emotion'?20:50,max:100}),...(c.id==='ambition'?{text:''}:{})});renderRules();schedule();$('#lw-rule-'+key+'-field').focus();}
+    if(add&&rules.length<filters.maxRules){const c=category(add.dataset.addFilter),defaults={income:'middle',interaction:'any',emotion:'distress',need:'social',attribute:'reputation',skill:'empathy',relationship:'single',ambition:'any'},key=++nextRule;rules.push({key,category:c.id,field:defaults[c.id],...(['relationship','income','interaction'].includes(c.id)?{}:{min:c.id==='ambition'?0:c.id==='emotion'?20:50,max:100}),...(c.id==='ambition'?{text:''}:{})});renderRules();schedule();$('#lw-rule-'+key+'-field').focus();}
     if(remove){const index=rules.findIndex(r=>r.key===Number(remove.dataset.removeFilter));if(index>=0)rules.splice(index,1);renderRules();schedule();}
     if(clear){$('#'+clear.dataset.clearBasic).value='';schedule();}
   };

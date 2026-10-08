@@ -83,7 +83,7 @@ export async function generateTown(worldId,{population=10,seed=73,title='Lindens
       members.push(person);people.push(person);
     }
     const parentCount=cohorts?.[index]?.parents??Math.min(2,members.length);
-    if(parentCount>=2){members[0].family.partner_id=members[1].id;members[1].family.partner_id=members[0].id;members[0].family.relationship_status=members[1].family.relationship_status='married';}
+    if(parentCount>=2&&cohorts?.[index]?.partners!==false){members[0].family.partner_id=members[1].id;members[1].family.partner_id=members[0].id;members[0].family.relationship_status=members[1].family.relationship_status='married';}
     for(const person of members.slice(parentCount))person.family.parent_ids=members.slice(0,parentCount).map(p=>p.id);
     households.push({id:home,members:members.map(p=>p.id),rooms});index++;
   }

@@ -46,7 +46,9 @@
     "test:portraits-map": "node scripts/test-portraits-outlooks-map.mjs",
     "test:portraits-map-browser": "node scripts/test-portrait-map-browser.mjs",
     "test:explorer": "node scripts/test-explorer-filters.mjs",
-    "test:explorer-browser": "node scripts/test-explorer-filters.mjs --browser"
+    "test:explorer-browser": "node scripts/test-explorer-filters.mjs --browser",
+    "test:drama": "node scripts/test-drama-advisors.mjs",
+    "test:crowds-browser": "node scripts/test-crowds-advisors-browser.mjs"
   },
   "license": "MIT",
   "dependencies": {
