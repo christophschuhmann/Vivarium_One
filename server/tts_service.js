@@ -51,18 +51,23 @@ const httpErr = (statusCode, code, message) => Object.assign(new Error(message),
 // The candidate set is built from the speaker's CURRENT voice, so deliberately
 // recasting a character still regenerates (candidates change with the voice),
 // while provider flips and style-template evolution reuse the stored audio.
+export function completeAudio(asset, text) {
+  return !!asset && fs.existsSync(assetPath(asset)) && (String(text).length <= 600 || pj(asset.meta, {}).spokenCharacters === String(text).length);
+}
+
 export function findReusableAudio({ text, voice, characterId = null }) {
   // Attached clips remain playable, but new requests obey the selected model and user.
   const p = currentPrincipal();
   if (!p?.id || getTtsProvider() === 'laionbox') return null;
   const token = hostedTtsCacheVoice(voice);
-  return db.prepare("SELECT * FROM assets WHERE user_id=? AND kind='audio' AND json_extract(meta,'$.text')=? AND json_extract(meta,'$.voice')=? ORDER BY created_at DESC LIMIT 1").get(p.id, String(text), token) || null;
+  return db.prepare("SELECT * FROM assets WHERE user_id=? AND kind='audio' AND json_extract(meta,'$.text')=? AND json_extract(meta,'$.voice')=? ORDER BY created_at DESC LIMIT 10").all(p.id, String(text), token).find(a=>completeAudio(a,text)) || null;
 }
 
 // Synthesise (or fetch from cache) one line of speech for `user`.
 // Returns { assetId, cached, genMs, seconds }.
-export async function synthesizeLine(user, { text, voice = 'Sulafat', style = '', characterId = null, lang = 'en', surface = 'tts' }) {
-  if (!text) throw httpErr(400, 'NO_TEXT', 'Nothing to say.');
+export async function synthesizeLine(user, { text, voice = 'Sulafat', style = '', characterId = null, lang = 'en', surface = 'tts', regenerate = false }) {
+  if (typeof text !== 'string' || !text.trim()) throw httpErr(400, 'NO_TEXT', 'Nothing to say.');
+  if (text.length > 12000) throw httpErr(400, 'TEXT_TOO_LONG', 'Split speech into passages of at most 12,000 characters. No text was truncated.');
   const provider = getTtsProvider();
   // BYOK: the player's own OpenRouter key + chosen TTS model/voice (server/byok.js).
   // No reference clips are involved — the voice is the model's, mapped deterministically
@@ -110,23 +115,23 @@ export async function synthesizeLine(user, { text, voice = 'Sulafat', style = ''
   // SELF-HEAL: a cache row whose FILE is gone from disk (partial restore, crashed write,
   // manual cleanup) must fall through to regeneration — otherwise the dangling row keeps
   // winning the lookup forever and that line plays as silence/404 on every replay.
-  const cached = findCached('audio', cacheKey, user.id);
+  const cached = !regenerate && findCached('audio', cacheKey, user.id);
   if (cached) {
-    if (fs.existsSync(assetPath(cached))) return { ...ownCopy(cached), cached: true, genMs: 0, seconds: pj(cached.meta, {}).seconds || null };
-    console.warn(`[tts] cached audio ${cached.id} has no file on disk — regenerating "${String(text).slice(0, 60)}"`);
+    if (completeAudio(cached,text)) return { ...ownCopy(cached), cached: true, genMs: 0, seconds: pj(cached.meta, {}).seconds || null };
+    console.warn(`[tts] cached audio ${cached.id} is missing or incomplete — regenerating "${String(text).slice(0, 60)}"`);
   }
 
   // exact miss → reuse a clip of the same line by the same speaker from another
   // engine/style era before paying for regeneration (see findReusableAudio)
-  const reusable = findReusableAudio({ text, voice, characterId, preferUserId: user.id });
+  const reusable = !regenerate && findReusableAudio({ text, voice, characterId, preferUserId: user.id });
   if (reusable && fs.existsSync(assetPath(reusable))) return { ...ownCopy(reusable), cached: true, reused: true, genMs: 0, seconds: pj(reusable.meta, {}).seconds || null };
 
   preflight(user.id, EST.tts());
   const t0 = Date.now();
-  const res = await tts(String(text).slice(0, 600), { voice, style, referenceB64 });
+  const res = await tts(text, { voice, style, referenceB64 });
   const genMs = Date.now() - t0;
   debitCall(user.id, res, 'tts');
-  const a = saveAsset({ userId: user.id, kind: 'audio', prompt: cacheKey, buffer: res.buffer, mime: res.mime || 'audio/mpeg', meta: { seconds: res.meter?.seconds, genMs, voice: cacheVoice, style, text, speaker: characterId || 'narrator', lang, provider: res.provider, model: res.model } });
+  const a = saveAsset({ userId: user.id, kind: 'audio', prompt: cacheKey, buffer: res.buffer, mime: res.mime || 'audio/mpeg', meta: { spokenCharacters:text.length, seconds: res.meter?.seconds, genMs, voice: cacheVoice, style, text, speaker: characterId || 'narrator', lang, provider: res.provider, model: res.model } });
   logCall({ userId: user.id, kind: 'tts', surface, request: { text, voice: cacheVoice, style, provider: res.provider }, response: { seconds: res.meter?.seconds }, assetId: a.id, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.meter, meta: res.byok ? { byok: true } : undefined });
   return { assetId: a.id, cached: false, genMs, seconds: res.meter?.seconds ?? null };
 }

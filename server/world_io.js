@@ -33,7 +33,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { db, uid, now, j, pj, ASSET_DIR } from './db.js';
 
-const LIVING_TABLES=['lw_worlds','lw_places','lw_edges','lw_sims','lw_relations','lw_beats','lw_events','lw_journal','lw_anchor_audit','lw_scene_lines','lw_place_music',...EXPANDED_TABLES];
+const LIVING_TABLES=['lw_worlds','lw_places','lw_edges','lw_sims','lw_relations','lw_beats','lw_events','lw_journal','lw_anchor_audit','lw_scene_lines','lw_flashbacks','lw_place_music',...EXPANDED_TABLES];
 export const BUNDLE_FORMAT = 'vivarium-world-zip';
 export const BUNDLE_VERSION = 1;
 
@@ -64,7 +64,18 @@ export function buildWorldManifest(worldId) {
     // asset ROWS only (metadata); the binaries are added to the zip separately by the route
     assets: q('SELECT * FROM assets WHERE world_id=?'),
   };
-  if(world.simulation_mode==='living'){manifest.living={};for(const table of LIVING_TABLES)manifest.living[table]=table==='lw_journal'?db.prepare('SELECT j.* FROM lw_journal j JOIN lw_sims s ON s.id=j.sim_id WHERE s.world_id=? ORDER BY j.rowid').all(worldId):q('SELECT * FROM '+table+' WHERE world_id=? ORDER BY rowid');manifest.livingLibrary=libraryBundle(new Set([...manifest.living.lw_sims,...manifest.living.lw_places].map(p=>p.asset_id).filter(Boolean)));}
+  if(world.simulation_mode==='living'){
+    manifest.living={};
+    for(const table of LIVING_TABLES)manifest.living[table]=table==='lw_journal'?db.prepare('SELECT j.* FROM lw_journal j JOIN lw_sims s ON s.id=j.sim_id WHERE s.world_id=? ORDER BY j.rowid').all(worldId):q('SELECT * FROM '+table+' WHERE world_id=? ORDER BY rowid');
+    const libraryIds=new Set([...manifest.living.lw_sims,...manifest.living.lw_places].map(p=>p.asset_id).filter(Boolean));
+    // A historical expression/background may no longer be anyone's current skin.
+    // Bundle those immutable snapshots too, so a ZIP is portable to another host.
+    for(const row of manifest.living.lw_flashbacks){
+      const scene=pj(row.payload,{}),urls=[...(scene.locations||[]).map(l=>l.background_asset_id),...(scene.characters||[]).flatMap(c=>(c.state?.outfits||[]).map(o=>o.cutout_asset_id))];
+      for(const url of urls){const id=typeof url==='string'&&url.match(/^\/api\/living\/library\/([^?]+)/)?.[1];if(id)libraryIds.add(decodeURIComponent(id));}
+    }
+    manifest.livingLibrary=libraryBundle(libraryIds);
+  }
   // Same-server branches from older versions share asset IDs. Include those files
   // too, so exporting or duplicating a branch produces a self-contained world.
   const references = assetIdsIn({...manifest,assets:[]});

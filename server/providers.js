@@ -258,11 +258,15 @@ async function ttsGemini(text, { voice = 'Sulafat', style = '' } = {}) {
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt) await new Promise(res => setTimeout(res, attempt * 800));
     const resp = await fetch(`${r.base_url}/models/${r.model}:generateContent?key=${key(r)}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(90000),
     });
     if (!resp.ok) {
-      lastErr = new Error(`tts ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
-      if (resp.status === 429 || resp.status >= 500) { console.warn(`[tts] attempt ${attempt + 1}: ${resp.status} — retrying`); continue; }
+      const detail=(await resp.text()).slice(0,300);
+      lastErr = new Error(`tts ${resp.status}: ${detail}`);
+      // HyprLab sometimes reports an upstream aborted generation as HTTP 400.
+      // Retry that exact transient error, not arbitrary bad-key/voice requests.
+      let providerError;try{providerError=JSON.parse(detail).error;}catch{}
+      if (resp.status === 429 || resp.status >= 500 || (resp.status === 400 && providerError?.message === 'aborted' && providerError?.type === 'client_side_error')) { console.warn(`[tts] attempt ${attempt + 1}: ${resp.status} — retrying`); continue; }
       throw lastErr;                                  // real 4xx (bad key, bad voice) — retrying won't help
     }
     const d = await resp.json();

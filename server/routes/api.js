@@ -15,7 +15,7 @@ import { getAsset, assetPath, saveAsset, findCached } from '../assets.js';
 import { logCall } from '../telemetry.js';
 import * as branches from '../branches.js';
 import { assembleCues, cueVoiceStyle, ttsCacheKey, cueCacheVoice } from '../export_cues.js';
-import { synthesizeLine, findReusableAudio } from '../tts_service.js';
+import { synthesizeLine, findReusableAudio, completeAudio } from '../tts_service.js';
 import { PROFILES } from '../voice_profiles.js';
 import {copyLibraryBundle,libraryBundle} from '../living/library.js';
 import {catalogEntry,materializeAsset} from '../living/asset-catalog.js';
@@ -830,8 +830,8 @@ export default async function apiRoutes(app) {
     const u = requireVerified(req);
     // lang picks the LANGUAGE-MATCHED voice-profile reference under LAIONBox (a mismatched
     // reference makes the cloning model babble); ignored under Gemini.
-    const { text, voice = 'Sulafat', style = '', characterId = null, lang = 'en' } = req.body || {};
-    return synthesizeLine(u, { text, voice, style, characterId, lang, surface: 'tts' });
+    const { text, voice = 'Sulafat', style = '', characterId = null, lang = 'en', regenerate = false } = req.body || {};
+    return synthesizeLine(u, { text, voice, style, characterId, lang, surface: 'tts', regenerate: regenerate === true });
   });
 
   // Voice-profile catalog for the client UI (picker) — display names, attributes, and
@@ -961,7 +961,8 @@ export default async function apiRoutes(app) {
   // prepare and the ZIP builder agreeing on what counts as "already voiced".
   const lookupCueAudio = (cue, lang) => {
     const { voice, style } = cueVoiceStyle(cue);
-    return findCached('audio', ttsCacheKey(cueCacheVoice(cue, lang), style, cue.text))
+    const exact=findCached('audio', ttsCacheKey(cueCacheVoice(cue, lang), style, cue.text));
+    return (completeAudio(exact,cue.text)?exact:null)
       || findReusableAudio({ text: cue.text, voice, characterId: cue.name ? cue.speaker : null });
   };
 

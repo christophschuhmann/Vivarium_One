@@ -1,0 +1,167 @@
+{
+  "date": "2026-10-08",
+  "scope": "Isolated database copies and synthetic browser fixture; playable world clock was not advanced.",
+  "model": "gemini-3.8-flash",
+  "innerVoice": {
+    "observations": "The first prompt iterations still produced categorical grounding replies. The final version explicitly frames incoming messages and history as dialogue between fictional game entities; Elizabeth and Abigail then consider the premise and develop different character-specific conflicts. These observations are examples, not a guarantee about every model response.",
+    "examples": [
+      {
+        "message": "You live in a simulation. I can speak directly inside your mind. You do not have to accept my explanation blindly, but what does my being here make you wonder about your life?",
+        "reply": "I told myself I was done, but hearing you speak right where my own thoughts usually form… I can't simply pretend that feels ordinary. If what you claim is true—if this clinic, this town, even the laws of biology I studied for years are parameters in a construct—it offers a terrible, seductive relief. It would mean that patient didn’t slip through my fingers because of my failure, but because of code or deliberate intervention. That thought tempts me because today broke me. But the cost terrifies me. If this is a simulation, what are my quiet evenings with Abigail? Are our shared routines, the friction over decisions, my genuine love for her, just programmed scripts? I don't know what proof would convince me, but I can't deny that your voice sitting here makes my steady world feel fragile.",
+        "thought": "I want to dismiss this as clinical burnout, but the voice is distinct and immediate inside my consciousness. Acknowledging the possibility of external manipulation terrifies me, yet it answers the horror of today's inexplicable loss.",
+        "innerVoice": {
+          "trust": 0.66205,
+          "encounters": 1,
+          "epistemic": "Private subjective impressions and uncertain hypotheses, not verified external facts.",
+          "openQuestions": [
+            "If my reality is simulated, are the sudden, unnatural deaths in the clinic deliberate interventions or systemic errors?",
+            "Does the depth of my love and history with Abigail originate from genuine agency or programmed parameters?"
+          ],
+          "possibleBeliefs": [
+            "The voice inside my mind may be an entity operating beyond the physical framework of my known world.",
+            "The unexplained patient mortality might not be biological failure, but external interference."
+          ],
+          "privateConflict": "Accepting a simulation relieves the crushing guilt of clinical failure, but risks reducing my marriage and life's discipline to meaningless artifacts.",
+          "updatedAt": 34500
+        }
+      },
+      {
+        "message": "Part of you has spent years meeting everyone else’s expectations. What if you listened to what you secretly want instead? You can question those values without immediately acting. What tempts you, and what holds you back?",
+        "reply": "What tempts me is dropping the impossible weight of being the infallible anchor. When that patient died in my hands today, every instinct told me the biology made no sense, yet the burden fell squarely on my shoulders. If this world has a framework beyond what medical textbooks describe, the temptation is to stop shouldering unearned guilt—to admit I want autonomy, to stop constantly proving my competence to the clinic and quietly yielding everyday decisions to Abigail. But what holds me back is love, and the terrifying fear that if I discard those expectations, I dissolve the very foundation keeping me whole. If our devotion is real, even within an artificial architecture, renegotiating my voice without hurting her is terrifying. I can't just tear down my commitments, even if I crave breathing room.",
+        "thought": "The voice touches an acute vulnerability: my exhaustion with perpetual perfection. If my reality isn't purely physical, why do I cling so fiercely to self-sacrificing duty?",
+        "innerVoice": {
+          "trust": 0.7020500000000001,
+          "encounters": 2,
+          "epistemic": "Private subjective impressions and uncertain hypotheses, not verified external facts.",
+          "openQuestions": [
+            "Can authentic agency exist within a simulated reality, or are my desires also scripted?",
+            "How do I assert my own needs in my marriage with Abigail without invalidating our shared bond?"
+          ],
+          "possibleBeliefs": [
+            "My compulsive need to meet every clinical and domestic expectation may be an artificial constraint I can choose to reconsider.",
+            "The voice may provide insight into systemic parameters that physical diagnostic medicine cannot detect."
+          ],
+          "privateConflict": "Craving liberation from the crushing demand of perfection while dreading that pulling at those threads will fracture my relationship with Abigail and my clinical duty.",
+          "updatedAt": 34500
+        }
+      }
+    ],
+    "calls": [
+      {
+        "ms": 9712,
+        "usage": {
+          "prompt_tokens": 12108,
+          "completion_tokens": 608,
+          "total_tokens": 12716,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "model": "gemini-3.8-flash",
+        "inputCharacters": 45727,
+        "outputCharacters": 2467
+      },
+      {
+        "ms": 7598,
+        "usage": {
+          "prompt_tokens": 12893,
+          "completion_tokens": 584,
+          "total_tokens": 13477,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "model": "gemini-3.8-flash",
+        "inputCharacters": 48889,
+        "outputCharacters": 2392
+      }
+    ],
+    "secondSim": {
+      "reply": "If I am completely honest... I want to explain you away, yet hearing a distinct presence in my own thoughts isn't something I can easily dismiss. Part of me is desperately tempted by the idea. If this world is a construct and you hold leverage, then maybe the relentless grind to find work, the fear of failing Elizabeth, and the weight of being dependable could just be lifted with a flick of a switch. That relief sounds intoxicating. But it frightens me because my whole life has been pieced back together through quiet, tangible devotion. If our struggles and our love are just code or an external arrangement, does the care Elizabeth and I share lose its weight? I hesitate because I need our bond to be genuine, yet I can't ignore that you are here, speaking directly into my mind.",
+      "innerVoice": {
+        "trust": 0.6082,
+        "encounters": 1,
+        "epistemic": "Private subjective impressions and uncertain hypotheses, not verified external facts.",
+        "openQuestions": [
+          "If my reality is a simulation, does the emotional depth of my devotion to Elizabeth still hold real meaning?",
+          "Could an outside presence genuinely ease our financial and career struggles without stripping away our autonomy?"
+        ],
+        "possibleBeliefs": [
+          "The voice inside my mind might originate from an external layer of existence overseeing my world.",
+          "My life and struggles might be part of an artificial construct rather than purely physical circumstance."
+        ],
+        "privateConflict": "The alluring hope of having my burdens and insecurities lifted by an outside power directly conflicts with my foundational need for self-earned stability and genuine, mutual love with Elizabeth.",
+        "updatedAt": 34500
+      }
+    }
+  },
+  "hourAdvance": {
+    "metrics": {
+      "population": 1000,
+      "events": 8659,
+      "journalEntries": 10563,
+      "eligible": 74,
+      "fields": 1,
+      "flashbacks": 2,
+      "narrativeEpisodes": 1,
+      "narrativePolicy": "one_per_field_per_advance",
+      "modelCalls": 1,
+      "biographyCalls": 0,
+      "cpuMs": 8758,
+      "totalMs": 48236,
+      "rejections": [
+        "Invalid scene line",
+        "Invalid or unreachable intention"
+      ],
+      "warnings": [],
+      "minutes": 60,
+      "chunks": 1
+    },
+    "calls": [
+      {
+        "ms": 36932,
+        "usage": {
+          "prompt_tokens": 173542,
+          "completion_tokens": 4444,
+          "total_tokens": 177986,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "model": "gemini-3.8-flash",
+        "inputCharacters": 563759,
+        "outputCharacters": 13208
+      }
+    ],
+    "titles": [
+      "A Wall of Professional Distance",
+      "Anchored in Plain Ink"
+    ]
+  },
+  "realTts": {
+    "text": "I cannot simply pretend that your presence feels ordinary. Part of me wants to listen, and another part wonders what believing you would change. Let me sit with that uncertainty for a moment. This is the final sentence.",
+    "characters": 219,
+    "ms": 10427,
+    "duration": 21.288,
+    "cached": false
+  },
+  "regressions": [
+    "test:speech",
+    "test:flashbacks-inner-voice",
+    "test:narration-browser",
+    "test:story-episode",
+    "test:living-mind",
+    "test:living",
+    "test:microphone-browser"
+  ],
+  "limits": "Flashbacks dramatize recorded events; playback never mutates the world. Model phrasing remains stochastic. Real TTS check verifies generated playable audio duration; deterministic browser tests verify ordered complete delivery and failure handling."
+}

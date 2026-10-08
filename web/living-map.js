@@ -172,5 +172,5 @@ async function livingAnchorNavigation(loc){
 async function livingRefreshAnchorNavigation(){const root=document.querySelector('.lw-anchor-nav');if(root){const data=await loadWorld(true);if(root.isConnected){root.remove();await livingAnchorNavigation(data.locations[0]);}}else if(document.querySelector('#lw-atlas')&&location.hash.includes('/atlas'))await livingAtlasScreen();}
 document.addEventListener('keydown',e=>{
   if(!['ArrowLeft','ArrowRight'].includes(e.key)||e.repeat||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||e.target.closest('input,textarea,select,[contenteditable="true"]')||document.querySelector('.modal-bg,.drawer-bg,.thinking-veil,#gmchat'))return;
-  const root=document.querySelector('.lw-anchor-nav');if(root?.cycle&&location.hash.includes('/stage')){e.preventDefault();root.cycle(e.key==='ArrowRight'?1:-1);}
+  const root=document.querySelector('.lw-anchor-nav');if(root?.cycle&&location.hash.includes('/stage')&&!document.querySelector('.lw-reel-active')){e.preventDefault();root.cycle(e.key==='ArrowRight'?1:-1);}
 });

@@ -52,7 +52,10 @@
     "test:microphone-browser": "node scripts/test-microphone-browser.mjs",
     "test:llm-response": "node scripts/test-llm-response.mjs",
     "test:story-context": "node scripts/test-story-context.mjs && node scripts/test-story-coverage.mjs",
-    "test:story-episode": "node scripts/test-story-episode.mjs"
+    "test:story-episode": "node scripts/test-story-episode.mjs",
+    "test:speech": "node scripts/test-speech-integrity.mjs",
+    "test:flashbacks-inner-voice": "node scripts/test-flashbacks-inner-voice.mjs",
+    "test:narration-browser": "node scripts/test-narration-browser.mjs"
   },
   "license": "MIT",
   "dependencies": {

@@ -139,3 +139,15 @@
 @media(max-width:420px){.lw-explorer-advanced summary small{font-size:11px}#lw-rule-count{padding:5px 7px;font-size:10px}.lw-filter-rule{padding:10px}.lw-explorer-summary{flex-wrap:wrap}.lw-explorer-filters label{font-size:11px}}
 .lw-crowd-note{position:absolute;top:152px;left:50%;transform:translateX(-50%);max-width:65%;padding:8px 14px;border-radius:12px;background:#29233ac9;color:#fff;font-size:11px;pointer-events:none;text-align:center}
 @media(max-width:600px){.lw-crowd-note{top:115px;max-width:85%;width:85%;box-sizing:border-box;font-size:10px}}
+
+/* Historical excerpts clearly separated from the current, interactive world. */
+.lw-reel-hud {max-width:min(720px,calc(100vw - 32px));flex-wrap:wrap;z-index:86;}
+.lw-reel-hud .glasschip {color:#fff;background:rgba(41,34,59,.93);border:1px solid #d5b775;}
+.lw-reel-hud #cine-count {white-space:normal;line-height:1.4;}
+.lw-reel-active ~ .here-rail,.lw-reel-active ~ .lw-anchor-nav {visibility:hidden;}
+.lw-reel-active ~ .stage-bottom .stage-controls > :not(.scene-audio-controls) {display:none;}
+.lw-reel-active .stage-bg,.lw-reel-active #stage-cast {transition:opacity .18s ease;}
+.lw-reel-transition .stage-bg,.lw-reel-transition #stage-cast {opacity:.25;}
+.lw-reel-active .stage-char {animation:flashback-enter .45s ease both;}
+@keyframes flashback-enter {from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
+@media (prefers-reduced-motion:reduce){.lw-reel-active .stage-char{animation:none}.lw-reel-active .stage-bg,.lw-reel-active #stage-cast{transition:none}}

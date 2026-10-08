@@ -24,7 +24,7 @@ async function livingStageExtras(loc,present){
   }).catch(()=>{});
 }
 async function livingAdvance(intervention){
-  if(stageState.advanceAbort)return;
+  if(stageState.advanceAbort||typeof livingReel!=='undefined'&&livingReel)return;
   const match=/^\+(\d+)([smhdw])$/.exec(stageState.delta||'+5m');const minutes=match?Number(match[1])*({s:1/60,m:1,h:60,d:1440,w:10080}[match[2]]):5;
   if(!Number.isInteger(minutes)||minutes<1||minutes>1440){toast('Living World: choose 1 minute to 1 day. Longer advances run as a sequence of minute ticks.','err');return;}
   stopNarration();if(ttsPrefs().autoplay)waCtx();
@@ -46,7 +46,7 @@ async function livingAdvance(intervention){
     if(!response.ok){const error=await response.json();throw new Error(error.error?.message||response.statusText);}
     const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',result=null;
     for(;;){const {value,done}=await reader.read();if(done)break;lastByte=Date.now();buffer+=decoder.decode(value,{stream:true});let index;while((index=buffer.indexOf('\n\n'))!==-1){const raw=buffer.slice(0,index);buffer=buffer.slice(index+2);const event=/event: (\w+)/.exec(raw)?.[1],line=/data: (.*)/.exec(raw)?.[1];if(!line)continue;const data=JSON.parse(line);if(event==='error')throw new Error(data.message);if(event==='done')result=data;if(event==='status'&&data.phase!=='thinking'){const el=$('#lw-progress');if(el)el.textContent=data.phase==='storyteller'?`${minutes} min simulated · Writing the whole interval as one episode per anchor scene…`:data.phase==='procedural'?`${minutes} min simulated · Preparing the anchor scenes…`:data.phase==='advance'?`${data.completedMinutes} / ${data.totalMinutes} min saved`:data.phase==='biography_deferred'?data.message:`${data.completedMinutes+(data.completed||0)} / ${data.totalMinutes||minutes} min · Simulating daily life and encounters…`;}}}
-    if(!result)throw new Error('The advance did not finish.');if(S.world===advancingWorld&&location.hash.includes('/stage')){S.worldData=null;stageState.justAdvanced=true;await stageScreen();}refreshMe();for(const warning of result.metrics?.warnings||[])toast(warning.message,'err');
+    if(!result)throw new Error('The advance did not finish.');if(S.world===advancingWorld&&location.hash.includes('/stage')){S.worldData=null;stageState.justAdvanced=true;stageState.pendingFlashbacks=minutes>=60;await stageScreen();}refreshMe();for(const warning of result.metrics?.warnings||[])toast(warning.message,'err');
   }catch(error){if(S.world===advancingWorld&&location.hash.includes('/stage')){S.worldData=null;stageState.justAdvanced=false;await stageScreen();}if(error.name!=='AbortError')fail(error);else toast('Advance stopped. The scene shows the last confirmed save. Narrated intervals are saved only after the whole episode succeeds.');}finally{clearInterval(clock);clearInterval(watchdog);stageState.advanceAbort=null;const veil=$('#veil');if(veil)veil.innerHTML='';const b=$('#advance');if(b)b.disabled=false;}
 }
 function livingCityJump(id,tab='overview'){

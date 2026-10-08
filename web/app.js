@@ -553,6 +553,8 @@ function bindChrome() {
 const nav = (h) => { location.hash = h; };
 window.addEventListener('hashchange', route);
 async function route() {
+  if(typeof livingStopReel==='function')livingStopReel();
+  ivSpeakRun?.stop();
   S.graphPan?.dispose();
   if (typeof stopNarration === 'function') stopNarration();
   const [path, q] = location.hash.slice(2).split('?');
@@ -1028,32 +1030,34 @@ function innerVoiceHtml(c) {
     </div>
     <div class="iv-log" id="iv-log"><div class="msg status">…</div></div>
     <div class="chat-inputrow" style="padding:8px 0 0"><div class="field" id="iv-field" style="background:#fff;margin:0"><input id="iv-in" placeholder="whisper to ${esc(c.name)}…"><button class="btn btn-primary small" id="iv-send">Send</button></div></div>
-    <p style="font-size:10px;color:var(--soft);margin:6px 0 0">an inner dialogue — they\'re used to voices like yours. It may colour their next scene; clearing it removes every trace.</p>`;
+    <p style="font-size:10px;color:var(--soft);margin:6px 0 0">A private voice worth listening to. Trust, doubts and new questions can influence their next scene.</p>`;
 }
-// Chunked read-aloud for inner-voice replies: sentence chunks (≥8 words, short ones merge —
-// factChunks), first chunk requested immediately, the rest staggered 500 ms apart, played
-// seamlessly through the WebAudio engine. One reply speaks at a time; the 🔊 toggles ⏹.
+// Read complete replies in bounded chunks, with two chunks of look-ahead.
+// Never skip failed passages or their final syllable. One reply speaks at a time.
 let ivSpeakRun = null;
 async function speakTextChunks(text, ch, btnEl, emotion = '', mode = 'thought') {
-  if (ivSpeakRun) { const r = ivSpeakRun; ivSpeakRun = null; r.stop(); }
-  const run = { cancelled: false, handle: null };
-  run.stop = () => { run.cancelled = true; run.handle?.stop(); btnEl?.classList.remove('playing'); if (btnEl) btnEl.textContent = '🔊'; };
-  ivSpeakRun = run;
-  if (btnEl) { btnEl.classList.add('playing'); btnEl.textContent = '⏹'; }
-  const chunks = factChunks(text);
-  const proms = chunks.map((t, k) => new Promise(res => setTimeout(() => res(fetchTts(t, ch, emotion, mode).catch(() => null)), k * 500)));
-  try {
-    for (let k = 0; k < chunks.length && !run.cancelled; k++) {
-      const r = await proms[k];
-      if (!r || run.cancelled) continue;
-      if (proms[k + 1]) proms[k + 1].then(n => n && fetch(assetUrl(n.assetId), { credentials: 'same-origin' })).catch(() => {});   // warm next
-      if (!run.cancelled) await new Promise(res => { run.handle = playClipUrl(assetUrl(r.assetId), res); });
+  const button=btnEl?.tagName==='BUTTON'?btnEl:null;
+  if(ivSpeakRun){const old=ivSpeakRun,same=old.button===btnEl;old.stop();if(same)return;}
+  stopNarration({notify:false});
+  const run={cancelled:false,handle:null,button:btnEl,finish:null};
+  run.stop=()=>{run.cancelled=true;run.handle?.stop();run.finish?.();if(ivSpeakRun===run)ivSpeakRun=null;btnEl?.classList.remove('playing');if(button)button.textContent='🔊';};
+  ivSpeakRun=run;waCtx();btnEl?.classList.add('playing');
+  const chunks=factChunks(text),cache=[];
+  const prepare=i=>i<chunks.length?(cache[i]||=(fetchTts(chunks[i],ch,emotion,mode).then(value=>({value}),error=>({error})))):null;
+  try{
+    for(let i=0;i<chunks.length&&!run.cancelled;i++){
+      if(button)button.textContent='⏹';
+      let item=await prepare(i);if(run.cancelled)break;
+      if(item.error){cache[i]=null;item=await prepare(i);}
+      if(item.error)throw item.error;
+      prepare(i+1);prepare(i+2);
+      for(let attempt=0;attempt<2&&!run.cancelled;attempt++){
+        try{await new Promise((resolve,reject)=>{run.finish=resolve;run.handle=playClipUrl(assetUrl(item.value.assetId),resolve,{onError:()=>reject(new Error('Audio could not be played.'))});});break;}
+        catch(error){if(attempt)throw error;item={value:await fetchTts(chunks[i],ch,emotion,mode,{regenerate:true})};}
+      }
     }
-  } finally {
-    if (btnEl) { btnEl.classList.remove('playing'); btnEl.textContent = '🔊'; }
-    if (ivSpeakRun === run) ivSpeakRun = null;
-    refreshMe();
-  }
+  }catch(error){if(!run.cancelled)toast('Speech stopped because a passage could not be played. Nothing was skipped. Press the speaker button to retry.','err',9000);}
+  finally{if(ivSpeakRun===run){ivSpeakRun=null;btnEl?.classList.remove('playing');if(button)button.textContent='🔊';}refreshMe();}
 }
 
 function bindInnerVoice(root, c, { onStateChange } = {}) {
@@ -2245,6 +2249,8 @@ async function stageScreen() {
   const { world, characters, locations } = await loadWorld(true);
   if (world.status !== 'live') return nav(`#/genesis?w=${S.world}`);
   const living=world.simulation_mode==='living';
+  const playFlashbacks=living&&stageState.pendingFlashbacks&&S.worldData.flashbacks?.length;
+  stageState.pendingFlashbacks=false;if(playFlashbacks)stageState.justAdvanced=false;
   const [{ ticks }, branchInfo] = living?[{ticks:[S.worldData.lastTick]},{canUndo:false,canRedo:false}]:await Promise.all([
     api(`/api/worlds/${S.world}/ticks?after=${Math.max(-1, world.tick_index - 2)}`),
     api(`/api/worlds/${S.world}/branches`),
@@ -2313,6 +2319,7 @@ async function stageScreen() {
       <button class="btn btn-primary small" id="advance">${t('advance', '▶ Advance')}</button>
       <button class="btn btn-coral small" id="intervene">${t('intervene', '⚡ Intervene')}</button>
       <span style="width:1px;height:18px;background:rgba(255,255,255,.2)"></span>
+      ${living&&S.worldData.flashbacks?.length?'<button class="tchip" id="lw-recap" title="Replay highlights from the last time advance without changing the clock">Earlier…</button>':''}
       <span class="scene-audio-controls"><button class="tchip playbtn" id="tts-play" aria-label="Szene vollständig vorlesen" title="Gesamte Szene vorlesen · Erzähler und Stimmen in Reihenfolge">▶</button>
       <button class="tchip playbtn" id="tts-replay" title="Von Anfang an vorlesen" aria-label="Gesamte Szene erneut von Anfang an vorlesen">↻ Vorlesen</button>
       <label class="tchip" title="Neue Zeitschritte automatisch vorlesen"><input type="checkbox" id="tts-auto" ${ttsPrefs().autoplay?'checked':''}> Auto</label>
@@ -2387,6 +2394,8 @@ async function stageScreen() {
 
   $('#advance').onclick = () => advanceTick(null);
   $('#intervene').onclick = () => interventionModal(characters, (payload) => advanceTick(payload));
+  const recap=$('#lw-recap');if(recap)recap.onclick=()=>livingPlayFlashbacks().catch(fail);
+  if(playFlashbacks)queueMicrotask(()=>livingPlayFlashbacks().catch(fail));
   $('#undobtn').onclick = async () => {
     if (!branchInfo.canUndo) return;
     stopNarration();
@@ -2824,7 +2833,7 @@ function playClipUrl(url, onended, { earlySec = 0, onEarly = null, onError = nul
   srcNode.connect(g); g.connect(ctx.destination);
   let dead = false, earlyFired = false;
   const rampTo = (v, sec) => { const t = ctx.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(v, t + sec); };
-  const cleanup = () => { try { srcNode.disconnect(); g.disconnect(); } catch {} el.src = ''; };
+  const cleanup = () => { el.onerror=null;el.onended=null;el.ontimeupdate=null;el.onplaying=null;try { srcNode.disconnect(); g.disconnect(); } catch {} el.src = ''; };
   el.onplaying = () => rampTo(voicePrefs().vol, 0.012);   // click-free ramp-in when sound actually starts
   el.ontimeupdate = () => {
     if (dead || !el.duration) return;
@@ -2866,7 +2875,7 @@ function playClipUrl(url, onended, { earlySec = 0, onEarly = null, onError = nul
 
 /* ── the narration player: sentence-by-sentence, prefetching, pausable ── */
 const player = { active: false, paused: false, idx: 0, audio: null, cache: [], lines: [], chars: [], token: 0 };
-function stopNarration() {
+function stopNarration({notify=true}={}) {
   player.token++;
   player.active = false; player.paused = false;
   if (player.audio) { (player.audio.stop || player.audio.pause).call(player.audio); player.audio = null; }
@@ -2877,44 +2886,37 @@ function stopNarration() {
   const pp = $('#tts-pause'); if (pp) { pp.style.display = 'none'; pp.textContent = '⏸'; }
   // one-shot idle hook: cinematic playback (playCinema) waits on this to know a scene's
   // narration is over — fires on natural end AND on manual ⏹ (which thus skips the scene)
-  const h = player.onIdle; player.onIdle = null; h?.();
+  if(notify){const h = player.onIdle; player.onIdle = null; h?.();}
 }
 function setupNarrationPlayer(sceneLines, characters) {
-  const lines = (sceneLines || []).filter(n => n.text);
-  player.lines = lines; player.chars = characters; player.cache = []; player.idx = 0; player.manual = false;
-  const retriedLines = new Set();   // per-scene: each line gets ONE on-the-fly regeneration before being skipped
+  stopNarration();
+  const lines = (sceneLines || []).filter(n=>n.text).flatMap((n,sourceIndex)=>{const chunks=factChunks(n.text);return chunks.map(text=>({...n,text,sourceIndex,audio:chunks.length===1?n.audio:undefined}));});
+  const cache=[];
+  player.lines = lines; player.chars = characters; player.cache = cache; player.idx = 0; player.manual = false;player.failedAt=null;
+  const retriedLines = new Set();   // per-scene: each chunk gets ONE on-the-fly regeneration, then pauses for an explicit retry
   const playBtn = $('#tts-play'), pauseBtn = $('#tts-pause');
   if (!playBtn) return;
   const emptyAuto=$('#tts-auto'),emptyReplay=$('#tts-replay');
   if(emptyAuto)emptyAuto.onchange=()=>saveTtsPrefs({autoplay:emptyAuto.checked});
   if (!lines.length) { playBtn.disabled = true;if(emptyReplay)emptyReplay.disabled=true;stageState.justAdvanced=false;return; }
+  playBtn.disabled=false;
   const chOf = (spk) => spk === 'narrator' ? null : characters.find(c => c.id === spk);
-  const prefetch = (i) => {
-    if (i >= lines.length || player.cache[i]) return player.cache[i];
+  const prefetch = (i, regenerate=false) => {
+    if (i >= lines.length || cache[i]) return cache[i];
     // Authored/intro lines can carry PRE-GENERATED audio per language (line.audio[lang],
     // bundled with the scenario) — play it directly, no synthesis, no cost, no wait.
     // (_noPre is set by the retry path when that pointer turned out to be dead — the retry
     // then goes through /api/tts, which regenerates AND saves the line like any other.)
-    const pre = !lines[i]._noPre && lines[i].audio && lines[i].audio[getLang()];
-    if (pre) { player.cache[i] = Promise.resolve({ assetId: pre, cached: true }); return player.cache[i]; }
-    player.cache[i] = fetchTts(lines[i].text, chOf(lines[i].speaker), lines[i].emotion || '', lines[i].mode || '').catch(e => { player.cache[i] = null; throw e; });
-    return player.cache[i];
+    const pre = !regenerate && !lines[i]._noPre && lines[i].audio && lines[i].audio[getLang()];
+    if (pre) { cache[i] = Promise.resolve({ assetId: pre, cached: true }); return cache[i]; }
+    cache[i] = fetchTts(lines[i].text, chOf(lines[i].speaker), lines[i].emotion || '', lines[i].mode || '',{regenerate}).catch(e => { cache[i] = null; throw e; });
+    return cache[i];
   };
-  // Precompute the WHOLE scene's audio the moment it lands: line 0 fires immediately (it
-  // plays first), then every further line staggered 500 ms apart — the stagger gives the
-  // TTS API room to breathe instead of a burst of parallel requests, while still getting
-  // all chunks generating well ahead of playback (no mid-scene lag). prefetch() dedups via
-  // player.cache + ttsInflight, so playFrom's own look-ahead never double-requests.
-  // Staleness guard: `player.lines === lines` — a newer scene (next tick / cinema scene)
-  // reassigns player.lines, turning this scene's still-pending timers into no-ops.
-  if (ttsPrefs().prepare) {
-    prefetch(0)?.catch(() => {});
-    for (let i = 1; i < lines.length; i++) {
-      setTimeout(() => { if (player.lines === lines) prefetch(i)?.catch(() => {}); }, i * 500);
-    }
-  }
+  // Only a bounded look-ahead: long flashback reels must not burst hundreds
+  // of synthesis requests or prepare audio for scenes the player has skipped.
+  if(ttsPrefs().prepare){prefetch(0)?.catch(()=>{});prefetch(1)?.catch(()=>{});}
   const highlight = (i, on) => {
-    const line = $(`.sline[data-line="${i}"]`);
+    const line = $(`.sline[data-line="${lines[i]?.sourceIndex??i}"]`);
     if (line) { line.classList.toggle('playing-line', on); if (on) line.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
     const spk = lines[i]?.speaker;
     const bub = spk && spk !== 'narrator' ? $(`.bubble[data-c="${spk}"]`) : null;
@@ -2926,74 +2928,74 @@ function setupNarrationPlayer(sceneLines, characters) {
     player.idx = i;
     try {
       const { assetId } = await prefetch(i);
-      if (tok !== player.token) return;                            // stopped while fetching
+      if (tok !== player.token || player.lines!==lines) return;                            // stopped while fetching
       // generate ahead AND warm the browser HTTP cache (assets are immutable-cached)
       prefetch(i + 1)?.then(r => r && fetch(assetUrl(r.assetId), { credentials: 'same-origin' })).catch(() => {});
       prefetch(i + 2)?.catch(() => {});                            // (gen ≈ playback time, so keep two in flight)
+      while(player.paused&&tok===player.token)await sleep(60);
+      if(tok!==player.token||player.lines!==lines)return;
       highlight(i, true);
-      // advance ~180ms early: the next chunk starts under this one's fading tail (crossfade) —
-      // guard so early + natural end can't both advance
+      // Each spoken chunk reaches its real end before the next begins.
       let advanced = false;
-      const next = () => { if (advanced || tok !== player.token) return; advanced = true; playFrom(i + 1); };
+      const next = () => { if (advanced || tok !== player.token || player.lines!==lines) return; advanced = true; playFrom(i + 1); };
       player.audio = playClipUrl(assetUrl(assetId), () => { highlight(i, false); next(); }, {
-        earlySec: 0.18, onEarly: next,
+        // Wait for the actual ended event, including the last syllable.
         // The clip failed to LOAD (dangling asset id, half-written file, transient stream
         // error) — don't skip the line: drop every cached pointer for it and regenerate once
         // through /api/tts (the server re-synthesises and permanently saves a fresh asset).
         onError: () => {
-          if (advanced || tok !== player.token) return;
+          if (advanced || tok !== player.token || player.lines!==lines) return;
           highlight(i, false);
           if (!retriedLines.has(i)) {
             retriedLines.add(i);
             lines[i]._noPre = true;            // a dead pre-stored pointer must not win again
-            player.cache[i] = null;
+            cache[i] = null;
             console.warn(`[tts] line ${i} audio failed to load — regenerating on the fly`);
-            playFrom(i);                        // re-enters through prefetch → fetchTts → fresh asset
+            prefetch(i,true)?.catch(()=>{});playFrom(i);
           } else {
-            toast('🔇 One line could not be voiced — skipping it.', 'err');
-            next();                             // second failure: keep the story moving
+            holdForRetry(i,new Error('Audio could not be played after regeneration.'));
           }
         },
       });
       refreshMe();
     } catch (e) {
-      if (tok !== player.token) return;
+      if (tok !== player.token || player.lines!==lines) return;
       highlight(i, false);
       // LAIONBox: the speaking character has no cloned reference yet → stop cleanly and
       // open the voice-setup popup for exactly that character so the player can fix it.
       if (e.code === 'VOICE_REF_MISSING') {
         const ch = chOf(lines[i].speaker);
-        stopNarration();
+        holdForRetry(i,e);
         if (ch) voiceRefModal(ch.id);
         return;
       }
-      // Cinema/replay: a failed voiceover must NOT yank the scene forward. Leave the text on
-      // screen, drop out of the playing state, and let the player read it and press ⏭ Next.
-      if (player.manual) {
-        player.active = false;
-        const pb = $('#tts-play'); if (pb) { pb.textContent = '▶'; pb.classList.remove('on'); }
-        const pp = $('#tts-pause'); if (pp) pp.style.display = 'none';
-        toast('🔇 voice unavailable for this scene — read it, then press ⏭ Next', 'err');
-        cineWaitHint(true);
-        return;                                    // hold the scene; advance only on ⏭ Next / ⏹
-      }
-      fail(e); stopNarration();
+      if(!retriedLines.has(i)){retriedLines.add(i);cache[i]=null;return playFrom(i);}
+      holdForRetry(i,e);
+
     }
+  }
+  function holdForRetry(i,error){
+    player.active=false;player.paused=false;player.failedAt=i;cache[i]=null;
+    playBtn.textContent='↻';playBtn.classList.remove('on');pauseBtn.style.display='none';
+    toast(`Speech paused at line ${(lines[i]?.sourceIndex??i)+1}. Press ↻ to retry this passage; no following lines were skipped.`,'err',10000);
+    if(player.manual)cineWaitHint(true);
   }
   playBtn.onclick = () => {
     if (player.active) { stopNarration(); return; }
+    ivSpeakRun?.stop();
+    const from=player.failedAt??0;player.failedAt=null;retriedLines.delete(from);
     player.token++; player.active = true; player.paused = false;
     playBtn.textContent = '⏹'; playBtn.classList.add('on');
     pauseBtn.style.display = ''; pauseBtn.textContent = '⏸';
-    playFrom(0);
+    playFrom(from);
   };
   pauseBtn.onclick = () => {
-    if (!player.active || !player.audio) return;
-    if (player.paused) { player.audio.play(); player.paused = false; pauseBtn.textContent = '⏸'; }
-    else { player.audio.pause(); player.paused = true; pauseBtn.textContent = '▶'; }
+    if (!player.active) return;
+    if (player.paused) { player.audio?.play(); player.paused = false; pauseBtn.textContent = '⏸'; }
+    else { player.audio?.pause(); player.paused = true; pauseBtn.textContent = '▶'; }
   };
   const replayBtn=$('#tts-replay'),autoBox=$('#tts-auto');
-  if(replayBtn){replayBtn.disabled=!lines.length;replayBtn.onclick=()=>{stopNarration();playBtn.click();};}
+  if(replayBtn){replayBtn.disabled=!lines.length;replayBtn.onclick=()=>{stopNarration({notify:false});player.failedAt=null;playBtn.click();};}
   if(autoBox)autoBox.onchange=()=>saveTtsPrefs({autoplay:autoBox.checked});
   if (stageState.justAdvanced && ttsPrefs().autoplay) { stageState.justAdvanced = false; playBtn.click(); }
   stageState.justAdvanced = false;
@@ -3153,22 +3155,24 @@ async function initFactBubble() {
   } catch { /* bubble stays hidden */ }
 }
 let factPlayer = { stop: () => {} };
-// Split a fact into speakable chunks: sentence boundaries, but never shorter than
-// 8 words — short sentences merge into the next one (tiny TTS calls aren't worth it).
+// Split into bounded speakable chunks, preferring sentence boundaries.
 function factChunks(text) {
-  const sentences = String(text).match(/[^.!?…]+[.!?…]+["')\]]?\s*/g) || [String(text)];
-  const chunks = [];
-  let buf = '';
-  for (const s of sentences) {
-    buf += s;
-    if (buf.trim().split(/\s+/).length >= 8) { chunks.push(buf.trim()); buf = ''; }
+  // Keep the final unpunctuated fragment; the old sentence regex lost it.
+  // Bounded chunks also prevent provider-side truncation of a long paragraph.
+  const source=String(text).replace(/\s+/g,' ').trim(),chunks=[];
+  let rest=source;
+  while(rest.length>480){
+    const prefix=rest.slice(0,480),marks=[...prefix.matchAll(/[.!?…]["')\]]*(?:\s|$)/g)];
+    let at=marks.at(-1)?.index;
+    if(at!=null&&at>=80)at+=marks.at(-1)[0].length;
+    else at=prefix.lastIndexOf(' ');
+    if(at<1)at=480;
+    chunks.push(rest.slice(0,at).trim());rest=rest.slice(at).trim();
   }
-  if (buf.trim()) {
-    if (chunks.length && buf.trim().split(/\s+/).length < 8) chunks[chunks.length - 1] += ' ' + buf.trim();
-    else chunks.push(buf.trim());
-  }
+  if(rest)chunks.push(rest);
   return chunks;
 }
+
 async function factOverlay() {
   const { facts } = await api(`/api/worlds/${S.world}/facts`);
   if (!facts.length) return;
@@ -3624,6 +3628,7 @@ function playSceneNarration(tick, data) {
     const lines = localizeNarr(tick.narration).filter(n => n.text);
     if (!lines.length) return setTimeout(resolve, 1600);
     stopNarration();
+    stageState.justAdvanced=false;
     setupNarrationPlayer(lines, data.characters);
     player.manual = true;                          // cinema/replay: a TTS-off or TTS-fail scene
                                                    // waits for ⏭ Next instead of self-advancing
@@ -3670,7 +3675,10 @@ function ttsStyleFor(ch, emotion = '', mode = '') {
 const ttsInflight = new Map(); // dedup CONCURRENT requests (entries drop once settled — the
                                // durable cache is server-side; keeping resolved entries forever
                                // made retries re-serve a dead assetId after an asset went missing)
-function fetchTts(text, ch, emotion = '', mode = '') {
+const speechQueue=[];let speechActive=0;
+function queueSpeech(work){return new Promise((resolve,reject)=>{speechQueue.push({work,resolve,reject});pumpSpeech();});}
+function pumpSpeech(){while(speechActive<3&&speechQueue.length){const task=speechQueue.shift();speechActive++;Promise.resolve().then(task.work).then(task.resolve,task.reject).finally(()=>{speechActive--;pumpSpeech();});}}
+function fetchTts(text, ch, emotion = '', mode = '', {regenerate=false}={}) {
   const p = ttsPrefs();
   const voice = ch?.voice || p.narrator;
   const style = ttsStyleFor(ch, emotion, mode);
@@ -3678,40 +3686,26 @@ function fetchTts(text, ch, emotion = '', mode = '') {
   // that character's reference clip. If the reference is missing the server answers 409
   // VOICE_REF_MISSING and speak()/the player opens the voice-setup popup (voiceRefModal).
   const characterId = ch?.id || null;
-  const key = `${S.ttsProvider || 'gemini'}|${getLang()}|${characterId || voice}|${style}|${text}`;
+  const key = `${S.ttsProvider || 'gemini'}|${getLang()}|${characterId || voice}|${style}|${text}|${regenerate}`;
   if (ttsInflight.has(key)) return ttsInflight.get(key);
-  const prom = (async () => {
+  const prom = queueSpeech(async () => {
     const t0 = performance.now();
     // lang: under LAIONBox the server picks the reference clip matching the story's language
     // (an English reference with German text = gibberish); ignored under Gemini.
-    const r = await api('/api/tts', { method: 'POST', body: { text, voice, style, characterId, lang: getLang() } });
+    const r = await api('/api/tts', { method: 'POST', body: { text, voice, style, characterId, lang: getLang(), regenerate } });
     r.clientMs = Math.round(performance.now() - t0);
     console.log(`[tts] ${r.cached ? 'cache' : 'gen'} ${r.clientMs}ms (server ${r.genMs}ms, ~${r.seconds ?? '?'}s audio) — "${text.slice(0, 50)}…"`);
     (window.__ttsStats = window.__ttsStats || []).push({ ms: r.clientMs, cached: r.cached, seconds: r.seconds });
     return r;
-  })();
+  });
   ttsInflight.set(key, prom);
   prom.then(() => ttsInflight.delete(key), () => ttsInflight.delete(key));
   return prom;
 }
 async function speak(text, ch, el, emotion = '', mode = '') {
-  try {
-    el?.classList.add('playing');
-    const { assetId } = await fetchTts(text, ch, emotion, mode);
-    const a = new Audio(assetUrl(assetId));
-    const vp = voicePrefs();
-    a.volume = vp.vol; a.playbackRate = vp.rate;
-    try { a.preservesPitch = true; } catch {}
-    a.onended = () => el?.classList.remove('playing');
-    a.play(); refreshMe();
-  } catch (e) {
-    el?.classList.remove('playing');
-    // LAIONBox: this character has no cloned reference voice yet → open the voice-setup
-    // popup right here so the player can create/upload one and immediately retry.
-    if (e.code === 'VOICE_REF_MISSING' && ch?.id) { voiceRefModal(ch.id); return; }
-    fail(e);
-  }
+  return speakTextChunks(text,ch,el,emotion,mode);
 }
+
 /* ── LAIONBox voice picker ──────────────────────────────────────────────────
    Under LAIONBox every character speaks through a VOICE PROFILE — one of the
    curated identities in config/voice_profiles.json, each with a clean reference

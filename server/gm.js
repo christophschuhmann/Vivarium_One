@@ -1,5 +1,6 @@
 // The Game Master orchestrator: Forge interviews, portraits, populate, and the tick pipeline.
 import fs from 'node:fs';
+import {INNER_VOICE_INSTRUCTIONS,INNER_VOICE_TURN_DIRECTION} from './living/inner-voice.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db, uid, now, j, pj, getSetting } from './db.js';
@@ -1287,7 +1288,7 @@ export async function gmApplyActions(user, world, actions) {
 // From the profile drawer the player chats as "another inner voice" — the angel
 // or devil on the shoulder, a self-reflecting aspect, a subpersonality. The
 // character answers AS THEMSELVES, mid-scene, from their current state:
-//   • People in Vivarium are ACCUSTOMED to inner voices — no one freaks out.
+//   • The intimate voice receives initial trust, but can provoke private doubt.
 //   • They are honest with themselves (a lie only ever hides something from
 //     themselves), they self-reflect, and they DON'T have to obey — the voice
 //     can only influence what is plausible for who they are.
@@ -1322,13 +1323,13 @@ export async function innerVoiceChat(user, world, c, message, lang = 'en') {
     .reverse().map(t => ({ role: t.role, content: t.content }));
 
   const langRule = lang !== 'en' && GAME_LANGS[lang] ? ` Speak ${GAME_LANGS[lang]} (the language of this story).` : '';
-  const sys = `You ARE ${c.name}, mid-scene, answering a voice inside your own head. The player speaks as ANOTHER INNER VOICE of yours — a self-reflecting aspect, an angel or devil on the shoulder, a subpersonality. This is completely normal for you; people here are accustomed to their inner voices and never find them strange.
+  const sys = `You ARE ${c.name}, mid-scene, answering a voice inside your own head. ${INNER_VOICE_INSTRUCTIONS} Record developing private questions and uncertain beliefs through the belief/goal state_patches below.
 HOW TO ANSWER:
 • First person, fully in character, from exactly where you are right now (place, mood, what just happened). Your voice is intimate, half-murmured — a private inner dialogue, not a speech.
 • SHORT: 1-4 sentences. Only go longer when the voice explicitly asks for depth.
 • Honest with yourself — you self-reflect and admit real feelings; if you ever distort the truth it is only self-deception (hiding something from yourself), and even then the seams may show.
 • You DON'T have to do what the voice suggests. Let it move you only when it is plausible for who you are; you may push back, doubt, bargain, or be persuaded.
-• If the dialogue genuinely shifts something in you — a new intention, a changed feeling, a realisation — record it in state_patches (persistent attributes) and/or the immediate fields, so your visible state changes. Most turns change nothing: empty patches are the norm.${langRule} ${SYSTEM_CONTRACT}
+• If the dialogue genuinely shifts something in you — a new intention, a changed feeling, a realisation — record it in state_patches (persistent attributes) and/or the immediate fields, so your visible state changes. Use a small, plausible update when a question, uncertainty or intention genuinely develops; do not manufacture changes just to fill the response.${langRule} ${SYSTEM_CONTRACT}
 JSON: {"reply":"your inner-voice answer",
  "state_patches":[{"category":"emotion|belief|goal|strategy|condition","op":"set|add|remove","path":"short/path","value":"...","reason":"why"}] or [],
  "mood": "new one-or-two-word mood" or null,
@@ -1341,7 +1342,7 @@ THE SCENE HAPPENING RIGHT NOW:
 ${scene || '(the story has not started yet)'}`;
 
   const res = await llmJson([{ role: 'system', content: sys }, { role: 'user', content: usr },
-    ...hist, { role: 'user', content: message }], { maxTokens: 1500 });
+    ...hist.map(h=>({role:'user',content:j({fictionalSpeaker:h.role==='user'?'the in-world inner presence':c.name,line:h.content})})), {role:'user',content:j({fictionalSpeaker:'the player’s in-world inner presence',addressedTo:c.name,utterance:message})}, {role:'system',content:INNER_VOICE_TURN_DIRECTION}], { maxTokens: 1800 });
   debitCall(user.id, res, 'inner_voice', { worldId: world.id });
   logCall({ userId: user.id, worldId: world.id, kind: 'llm', surface: 'inner_voice', request: message, response: res.content, provider: res.provider, model: res.model, rawUsd: res.rawUsd, meter: res.usage });
   const out = res.json || {};
