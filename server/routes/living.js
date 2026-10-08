@@ -137,7 +137,7 @@ export default async function livingRoutes(app) {
     const send=(event,data)=>{if(!finished)reply.raw.write('event: '+event+'\ndata: '+j(data)+'\n\n');};
     reply.raw.on('close',()=>{if(!finished)controller.abort();});
     const heartbeat=setInterval(()=>send('status',{phase:'thinking'}),9000);
-    try{const result=await advanceTown(user,world.id,{minutes:req.body?.minutes ?? 5,story:req.body?.story ?? true,expectedVersion:req.body?.expectedVersion,intervention:req.body?.intervention,signal:controller.signal,onProgress:data=>send('status',data)});send('done',result);}catch(error){req.log.warn({worldId:world.id,code:error.code||'LIVING_TICK_FAILED',reason:error.message},'Living World tick failed before commit');send('error',{message:error.message});}finally{finished=true;clearInterval(heartbeat);reply.raw.end();}
+    try{const result=await advanceTown(user,world.id,{minutes:req.body?.minutes ?? 5,story:req.body?.story ?? true,expectedVersion:req.body?.expectedVersion,intervention:req.body?.intervention,signal:controller.signal,onProgress:data=>send('status',data)});send('done',result);}catch(error){req.log.warn({worldId:world.id,code:error.code||'LIVING_TICK_FAILED',reason:error.message,providerDiagnostics:error.diagnostics},'Living World tick failed before commit');send('error',{message:error.message});}finally{finished=true;clearInterval(heartbeat);reply.raw.end();}
   });
   app.post('/api/living/worlds/:worldId/sims/:id/biography',async req=>{
     const {user,world}=mutable(req),p=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id);if(!p)throw httpErr(404,'NOT_FOUND','Sim not found.');busy.add(world.id);

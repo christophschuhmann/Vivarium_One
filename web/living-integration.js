@@ -107,7 +107,7 @@ async function livingTalkModal(c){
   const log=$('#lw-talk-log',m),add=(role,content)=>{const el=document.createElement('div');el.className='msg '+role;el.textContent=content;log.appendChild(el);log.scrollTop=log.scrollHeight;};
   try{for(const h of (await api(lwPath()+`/sims/${c.id}/talk`)).history)add(h.role,h.content);}catch(e){fail(e);}
   const send=async()=>{const input=$('#lw-talk-input',m),button=$('#lw-talk-send',m),message=input.value.trim();if(!message||button.disabled)return;input.value='';button.disabled=true;add('user',message);try{const r=await api(lwPath()+`/sims/${c.id}/talk`,{method:'POST',body:{message,lang:getLang()}});add('assistant',r.reply);c.state=r.state;c.livingStateChange?.();await loadWorld(true);}catch(e){add('status',e.message);}finally{button.disabled=false;}};
-  $('#lw-talk-send',m).onclick=send;$('#lw-talk-input',m).onkeydown=e=>{if(e.key==='Enter')send();};attachMic($('.field',m),$('#lw-talk-input',m));
+  $('#lw-talk-send',m).onclick=send;$('#lw-talk-input',m).onkeydown=e=>{if(e.key==='Enter')send();};attachMic($('.field',m),$('#lw-talk-input',m),{submit:$('#lw-talk-send',m)});
 }
 function livingSocialProfileHtml(p){
   const social=p.profile.social,n=p.profile.neighborhood;if(!social)return '';

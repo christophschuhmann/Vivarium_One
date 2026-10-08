@@ -9,6 +9,7 @@ import { db, pj, getSetting } from './db.js';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { Agent } from 'undici';
+import { llmResponseContent } from './llm-response.js';
 import { currentPrincipal, PROVIDERS, operatorKey } from './byok.js';
 import {
   generateImage as orGenerateImage, synthesizeSpeech as orSynthesizeSpeech,
@@ -55,9 +56,10 @@ export function route(role) {
 // world's tick lock. glm-5.2 legitimately takes ~2 min on the largest contexts, so the cap
 // sits a little above that to catch true HANGS without killing honest slow generations.
 export const LLM_TIMEOUT_MS = 280000;  // heavy reasoners (gpt-5.6-sol) need >150s per tick; SSE routes heartbeat so the connection survives
-export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, signal = null, timeoutMs = LLM_TIMEOUT_MS, reasoningEffort = null } = {}) {
+export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, signal = null, timeoutMs = LLM_TIMEOUT_MS, reasoningEffort = null, allowToolCalls = false } = {}) {
   const r = route('reasoning_llm');
   if (MOCK) return mockLlm(messages);
+  const started = performance.now();
   const timeout = AbortSignal.timeout(timeoutMs);
   const abortSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
   let resp;
@@ -85,15 +87,14 @@ export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, s
   const rawUsd = r.provider === 'openrouter'
     ? (usage.cost ?? 0)
     : (usage.prompt_tokens / 1e6) * (r.unit_cost.in_per_mtok || 0) + (usage.completion_tokens / 1e6) * (r.unit_cost.out_per_mtok || 0);
-  const msg = data.choices?.[0]?.message || {};
-  // content may be: a plain string (usual) | an array of content blocks (Anthropic-style
-  // pass-through) | empty when a reasoning model burned the whole token budget thinking.
-  let content = msg.content;
-  if (Array.isArray(content)) content = content.map(b => (typeof b === 'string' ? b : b.text || '')).join('');
-  if ((content == null || content === '') && msg.reasoning_content) {
-    throw new Error(`LLM (${r.model}) spent the whole ${maxTokens}-token budget on reasoning and returned no answer — raise maxTokens or lower reasoning effort.`);
+  let content;
+  try { content = llmResponseContent(data, { provider: r.provider, model: r.model, maxTokens, allowToolCalls }); }
+  catch (error) {
+    // Log only the explicit metadata allowlist: never dump private model reasoning.
+    console.warn(JSON.stringify({ event: 'llm_response_failed', durationMs: Math.round(performance.now() - started), code: error.code, ...error.diagnostics }));
+    throw error;
   }
-  if (content == null) throw new Error(`LLM (${r.model}) returned no content: ${JSON.stringify(data).slice(0, 200)}`);
+  console.info(JSON.stringify({ event: 'llm_response_completed', provider: r.provider, model: r.model, responseId: data.id, durationMs: Math.round(performance.now() - started), maxTokens, promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens, reasoningTokens: usage.completion_tokens_details?.reasoning_tokens, finishReason: data.choices?.[0]?.finish_reason, contentChars: content.length, nativeToolCalls: data.choices?.[0]?.message?.tool_calls?.length || 0 }));
   return { content, usage, rawUsd, provider: r.provider, model: r.model, byok: !!r.byok };
 }
 

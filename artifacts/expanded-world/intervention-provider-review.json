@@ -1,0 +1,32 @@
+{
+  "scenario": "Five-minute Elizabeth intervention; 1,000-Sim town",
+  "selectedSims": 137,
+  "narrativeBatches": 6,
+  "providerCalls": 7,
+  "inputTokens": 765610,
+  "outputTokens": 21960,
+  "reusedValidatedBatches": 3,
+  "freshRunFirstThreeMs": 109089,
+  "resumedSuccessfulSliceMs": 87849,
+  "combinedObservedMs": 196938,
+  "contextReductionFirstThree": {
+    "beforeInputTokens": [
+      253850,
+      221672,
+      226488
+    ],
+    "afterInputTokens": [
+      120236,
+      102195,
+      103123
+    ]
+  },
+  "nativeLookupVerified": "catalog",
+  "savedAdvanceMinutes": 5,
+  "remainingFromDiagnosticHour": 55,
+  "originalClockSeconds": 30600,
+  "copyClockSeconds": 30900,
+  "worldStateIntegrity": "ok",
+  "microphoneBrowserTests": "pass",
+  "originalWorldUntouched": true
+}

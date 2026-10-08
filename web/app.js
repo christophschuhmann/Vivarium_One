@@ -163,7 +163,7 @@ const saveTtsPrefs = (p) => localStorage.setItem('viv_tts', JSON.stringify({ ...
 const fmtClock = (iso) => new Date(iso).toLocaleString(getLang()==='de'?'de-DE':'en-GB', {...(S.worldData?.world.simulation_mode==='living'?{timeZone:'UTC'}:{}), weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const cutoutFor = (ch) => { const o = (ch.state.outfits || []).find(o => o.name === (ch.state.outfit || 'everyday')) || (ch.state.outfits || [])[0]; return o?.cutout_asset_id; };
 
-/* ── mic component: 🎙 → record (pulse+✕) → click again → transcribe → insert ── */
+/* ── mic component: record → cancel / transcribe only / transcribe & send ── */
 // Turn a getUserMedia failure into an actionable message. The #1 cause in practice is an
 // INSECURE origin: browsers only expose the microphone on https:// (or localhost), so over a
 // plain http:// address navigator.mediaDevices is undefined — the fix is to open the game via
@@ -203,98 +203,151 @@ async function blobToWav(blob) {
   } catch { return null; } finally { try { ctx.close(); } catch {} }
 }
 
-function attachMic(field, input) {
+// One active recording across all composers. Every attachment supplies its own submit
+// button: never guess via Enter or a global selector (several overlays can be open).
+let activeMicCancel = null;
+function attachMic(field, input, { submit, canSubmit = () => true } = {}) {
+  const de = getLang() === 'de', msg = (en, german) => de ? german : en;
   const btn = document.createElement('button');
-  btn.className = 'micbtn'; btn.type = 'button'; btn.title = 'Speak instead of typing';
-  btn.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4"/></svg>';
-  // State machine: idle → starting (device opening) → recording → transcribing → idle.
-  // Every transition is guarded so double-clicks, slow device opens, unplugged mics and
-  // recorder errors can never leave the button stuck or two capture flows fighting.
-  let rec = null, chunks = [], cancelBtn = null, cancelled = false, starting = false, autoStop = null;
-  // Central teardown — safe from any state, any number of times. Everything that can fail
-  // routes through here so the mic can never stay half-open (which is what made the next
-  // click conflict with a zombie capture).
-  const cleanup = (stream) => {
-    if (autoStop) { clearTimeout(autoStop); autoStop = null; }
-    try { stream?.getTracks().forEach(t => t.stop()); } catch {}
-    btn.classList.remove('rec'); cancelBtn?.remove(); cancelBtn = null; rec = null;
+  btn.className = 'micbtn'; btn.type = 'button';
+  btn.title = msg('Speak instead of typing', 'Sprechen statt tippen');
+  btn.setAttribute('aria-label', btn.title); btn.setAttribute('aria-expanded', 'false');
+  btn.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4"/></svg>';
+  let session = null;
+  const current = s => session === s && field.isConnected && input.isConnected;
+  const releaseStream = s => { try { s.stream?.getTracks().forEach(t => t.stop()); } catch {} };
+  const reset = s => {
+    clearTimeout(s.autoStop); s.observer?.disconnect();
+    window.removeEventListener('hashchange', s.cancel); window.removeEventListener('pagehide', s.cancel);
+    s.controller.abort();
+    if (session === s) session = null;
+    if (activeMicCancel === s.cancel) activeMicCancel = null;
+    try { if (s.rec?.state !== 'inactive') s.rec?.stop(); } catch {}
+    releaseStream(s); s.panel.remove(); field.classList.remove('mic-active');
+    btn.classList.remove('rec', 'busy'); btn.setAttribute('aria-expanded', 'false');
+    btn.title = msg('Speak instead of typing', 'Sprechen statt tippen');
   };
+  // Prevent the ordinary Send/Enter handler from racing a recording or ASR request.
+  // The explicit voice-send action resets this guard before clicking the same button.
+  const guardSend = e => {
+    if (!session) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    session.panel.querySelector('[data-mic-action="send"]')?.focus();
+  };
+  submit?.addEventListener('click', guardSend, true);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) guardSend(e); }, true);
   btn.onclick = async () => {
-    if (starting || btn.classList.contains('busy')) return;      // open/transcribe in flight — ignore extra clicks
-    if (rec) { try { rec.stop(); } catch { cleanup(); } return; } // click #2 = stop & transcribe
-    starting = true; btn.classList.add('busy');                   // instant feedback while the device opens
-    let stream = null, clearOpening = null, timedOut = false;
-    // Opening the device can genuinely take seconds (permission prompt, sleeping USB mic, a
-    // wedged audio stack) — this is the silent "freeze" users hit. Tell them what's happening
-    // after 400 ms, and never wait beyond 12 s.
-    const slow = setTimeout(() => { clearOpening = toast('🎙 Opening the microphone… (if nothing happens, look for a browser permission prompt)', '', 0); }, 400);
-    const open = (constraint) => navigator.mediaDevices.getUserMedia({ audio: constraint })
-      .then(s => { if (timedOut) { try { s.getTracks().forEach(t => t.stop()); } catch {} } return s; }); // a too-late grant must not leave the mic captured
-    const withTimeout = (p) => Promise.race([p, new Promise((_, rej) =>
-      setTimeout(() => { timedOut = true; rej(Object.assign(new Error('mic open timed out'), { name: 'TimeoutError' })); }, 12000))]);
+    if (session) { session.panel.querySelector('[data-mic-action="cancel"]').focus(); return; }
+    if (input.disabled || submit?.disabled || !canSubmit()) {
+      toast(msg('Wait for the current reply before recording another message.', 'Warte auf die aktuelle Antwort, bevor du eine weitere Nachricht aufnimmst.'));
+      return;
+    }
+    activeMicCancel?.();
+    const panel = document.createElement('div'); panel.className = 'mic-actions'; panel.dataset.noTranslate = '';
+    panel.setAttribute('role', 'group'); panel.setAttribute('aria-label', msg('Recording actions', 'Aufnahme-Aktionen'));
+    const status = document.createElement('div'); status.className = 'mic-status'; status.setAttribute('role', 'status');
+    status.textContent = msg('Opening the microphone…', 'Mikrofon wird geöffnet…');
+    const hint = document.createElement('small'); hint.className = 'mic-hint';
+    hint.textContent = msg('Transcribe only keeps your draft. Sending includes existing text', 'Nur transkribieren behält deinen Entwurf. Senden umfasst den vorhandenen Text') + (submit ? msg(' and activates “', ' und löst „') + submit.textContent.trim() + msg('”.', '“ aus.') : '.');
+    const actions = document.createElement('div'); actions.className = 'mic-action-buttons'; panel.append(status, hint, actions);
+    const action = (key, label, primary = false) => {
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.micAction = key;
+      b.className = 'btn small ' + (primary ? 'btn-primary' : 'btn-soft'); b.textContent = label; actions.append(b); return b;
+    };
+    const cancel = action('cancel', msg('Cancel', 'Abbrechen'));
+    const only = action('text', msg('Transcribe only', 'Nur transkribieren'));
+    const send = action('send', msg('Transcribe & send', 'Transkribieren & senden'), true);
+    only.disabled = send.disabled = true;
+    if (submit) send.title = msg('Then activates: ', 'Löst anschließend aus: ') + submit.textContent.trim();
+    const s = session = { panel, controller: new AbortController(), chunks: [], phase: 'starting', choice: null };
+    s.cancel = () => { if (session !== s) return; reset(s); if (input.isConnected) input.focus(); };
+    activeMicCancel = s.cancel; cancel.onclick = s.cancel;
+    field.classList.add('mic-active'); field.append(panel); btn.classList.add('busy'); btn.setAttribute('aria-expanded', 'true');
+    window.addEventListener('hashchange', s.cancel); window.addEventListener('pagehide', s.cancel);
+    s.observer = new MutationObserver(() => { if (!current(s)) s.cancel(); });
+    s.observer.observe(document.body, { childList: true, subtree: true });
+    const transcribe = async () => {
+      if (!current(s)) return;
+      s.phase = 'transcribing'; only.disabled = send.disabled = true; btn.classList.remove('rec'); btn.classList.add('busy');
+      status.textContent = msg('Transcribing…', 'Wird transkribiert…');
+      hint.textContent = s.choice === 'send'
+        ? msg('The text will be sent when ready. Cancel stops this.', 'Der Text wird anschließend abgesendet. Abbrechen stoppt dies.')
+        : msg('The text will stay in the field for you to review.', 'Der Text bleibt zum Prüfen im Eingabefeld.');
+      try {
+        const blob = new Blob(s.chunks, { type: s.rec.mimeType || 'audio/webm' });
+        const wav = await blobToWav(blob);
+        if (!current(s)) return;
+        const fd = new FormData(); fd.append('file', wav || blob, wav ? 'clip.wav' : 'clip.webm');
+        const { text } = await api('/api/asr', { method: 'POST', body: fd, signal: s.controller.signal });
+        if (!current(s)) return; // cancelled, closed, or navigated away: never insert/send late results
+        const clean = (text || '').trim();
+        if (!clean) { toast(msg('No speech recognized. Your draft is unchanged; please try again.', 'Keine Sprache erkannt. Dein Entwurf bleibt unverändert; versuche es erneut.'), 'err'); reset(s); return; }
+        input.value = (input.value ? input.value + ' ' : '') + clean;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        const shouldSend = s.choice === 'send'; reset(s); input.focus();
+        if (shouldSend) {
+          if (submit?.isConnected && !submit.disabled && canSubmit()) submit.click();
+          else toast(msg('The text is ready. Send is currently unavailable; your draft has been kept.', 'Der Text ist fertig. Senden ist gerade nicht verfügbar; dein Entwurf bleibt erhalten.'));
+        }
+        refreshMe();
+      } catch (e) { if (current(s)) { reset(s); if (e.name !== 'AbortError') fail(e); } }
+    };
+    const finish = choice => {
+      if (!current(s) || !['recording', 'review'].includes(s.phase)) return;
+      s.choice = choice;
+      if (s.phase === 'review') { void transcribe(); return; }
+      s.phase = 'stopping'; only.disabled = send.disabled = true; clearTimeout(s.autoStop);
+      try { s.rec.stop(); } catch (e) { reset(s); fail(e); }
+    };
+    only.onclick = () => finish('text'); send.onclick = () => finish('send');
+    // A late permission grant must release its stream even after cancellation/timeout.
+    const open = constraint => new Promise((resolve, reject) => {
+      let settled = false;
+      const settle = (fn, value) => {
+        if (settled) return; settled = true; clearTimeout(timer);
+        s.controller.signal.removeEventListener('abort', abort); fn(value);
+      };
+      const abort = () => settle(reject, new DOMException('Cancelled', 'AbortError'));
+      const timer = setTimeout(() => settle(reject, Object.assign(new Error('Microphone opening timed out'), { name: 'TimeoutError' })), 12000);
+      s.controller.signal.addEventListener('abort', abort, { once: true });
+      Promise.resolve().then(() => navigator.mediaDevices.getUserMedia({ audio: constraint })).then(stream => {
+        if (settled || !current(s)) { stream.getTracks().forEach(t => t.stop()); settle(reject, new DOMException('Cancelled', 'AbortError')); }
+        else settle(resolve, stream);
+      }, error => settle(reject, error));
+    });
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('insecure'), { name: 'InsecureContext' });
       const micId = ttsPrefs().micId;
-      try {
-        stream = await withTimeout(open(micId ? { deviceId: { exact: micId } } : true));
-      } catch (e) {
-        // The saved device may be unplugged or held by another app — fall back to the system
-        // default once before giving up, so a stale Settings pick doesn't brick the mic.
-        if (micId && ['OverconstrainedError', 'NotFoundError', 'NotReadableError'].includes(e?.name)) {
-          toast('🎤 Your saved microphone is unavailable — using the system default. (Settings → Microphone to re-pick.)');
-          timedOut = false;
-          stream = await withTimeout(open(true));
+      try { s.stream = await open(micId ? { deviceId: { exact: micId } } : true); }
+      catch (e) {
+        if (current(s) && micId && ['OverconstrainedError', 'NotFoundError', 'NotReadableError'].includes(e.name)) {
+          toast(msg('Your saved microphone is unavailable; using the system default.', 'Dein gespeichertes Mikrofon ist nicht verfügbar; verwende das Standardgerät.'));
+          s.stream = await open(true);
         } else throw e;
       }
-      rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : undefined });
-      chunks = []; cancelled = false;
-      rec.onerror = (ev) => {   // mid-recording device failure (unplugged, OS revoked, encoder died)
-        toast(`🎤 Recording failed${ev.error?.message ? ': ' + ev.error.message : ''} — nothing was lost but this take; try again.`, 'err');
-        cancelled = true;
-        try { rec?.stop(); } catch { cleanup(stream); }
+      if (!current(s)) { releaseStream(s); return; }
+      s.rec = new MediaRecorder(s.stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : undefined });
+      s.rec.ondataavailable = e => { if (e.data.size) s.chunks.push(e.data); };
+      s.rec.onerror = () => { if (current(s)) { reset(s); toast(msg('Recording failed. Your draft is unchanged; please try again.', 'Aufnahme fehlgeschlagen. Dein Entwurf bleibt unverändert; versuche es erneut.'), 'err'); } };
+      s.rec.onstop = () => {
+        clearTimeout(s.autoStop); releaseStream(s);
+        if (!current(s)) return;
+        if (s.choice) { void transcribe(); return; }
+        // Reaching the time limit stops capture, but NEVER implicitly uploads or sends.
+        s.phase = 'review'; btn.classList.remove('rec'); only.disabled = false; send.disabled = !submit;
+        status.textContent = msg('Recording stopped · choose what to do with it', 'Aufnahme beendet · wähle eine Aktion');
       };
-      rec.ondataavailable = (e) => chunks.push(e.data);
-      rec.onstop = async () => {
-        const localRec = rec;
-        cleanup(stream);
-        if (cancelled) { btn.classList.remove('busy'); return; }
-        btn.classList.add('busy');
-        // Visible progress so the transcription round-trip never reads as a frozen mic.
-        const clearBusyToast = toast('🎧 Transcribing…', '', 0);
-        try {
-          const blob = new Blob(chunks, { type: localRec?.mimeType || 'audio/webm' });
-          // Prefer WAV (BYOK transcription only accepts WAV/MP3); fall back to the raw clip.
-          const wav = await blobToWav(blob);
-          const fd = new FormData();
-          if (wav) fd.append('file', wav, 'clip.wav'); else fd.append('file', blob, 'clip.webm');
-          const { text } = await api('/api/asr', { method: 'POST', body: fd });
-          const clean = (text || '').trim();
-          if (!clean) { toast('🤔 Didn\'t catch that — speak a little closer and try again.', 'err'); }
-          else {
-            input.value = (input.value ? input.value + ' ' : '') + clean;
-            input.dispatchEvent(new Event('input')); input.focus();
-          }
-          refreshMe();
-        } catch (e) { fail(e); } finally { btn.classList.remove('busy'); clearBusyToast(); }
-      };
-      rec.start();
-      btn.classList.remove('busy'); btn.classList.add('rec'); btn.title = 'Click to stop & transcribe';
-      cancelBtn = document.createElement('button');
-      cancelBtn.className = 'cancelrec'; cancelBtn.type = 'button'; cancelBtn.textContent = '✕'; cancelBtn.title = 'Discard recording';
-      cancelBtn.onclick = () => { cancelled = true; try { rec?.stop(); } catch { cleanup(stream); } };
-      field.prepend(cancelBtn);
-      autoStop = setTimeout(() => { try { rec?.stop(); } catch { cleanup(stream); } }, 60000);  // cleared by cleanup() so it can never kill a LATER take
+      s.rec.start(); s.phase = 'recording'; only.disabled = false; send.disabled = !submit;
+      btn.classList.remove('busy'); btn.classList.add('rec');
+      btn.title = msg('Recording · choose an action below', 'Aufnahme läuft · Aktion unten wählen');
+      status.textContent = msg('Recording… · up to 60 seconds', 'Aufnahme läuft… · bis zu 60 Sekunden');
+      cancel.focus();
+      s.autoStop = setTimeout(() => { if (current(s) && s.rec.state === 'recording') s.rec.stop(); }, 60000);
     } catch (e) {
-      cleanup(stream);
-      btn.classList.remove('busy');
-      if (e?.name === 'TimeoutError')
-        toast('🎤 The microphone did not respond within 12 s — it may be held by another app (video call?) or the audio system is stuck. Free it up, or pick another device in Settings → Microphone, then try again.', 'err');
-      else if (e?.name === 'NotReadableError')
-        toast('🎤 The microphone is busy — another app or tab is using it. Close it there and try again.', 'err');
-      else micError(e);
-    } finally {
-      starting = false;
-      clearTimeout(slow); clearOpening?.();
+      if (!current(s)) return;
+      reset(s);
+      if (e.name === 'TimeoutError') toast(msg('The microphone did not respond. Check browser permissions or choose a device in Settings → Microphone.', 'Das Mikrofon antwortet nicht. Prüfe die Browser-Berechtigung oder wähle ein Gerät unter Einstellungen → Mikrofon.'), 'err');
+      else if (e.name !== 'AbortError') micError(e);
     }
   };
   field.appendChild(btn);
@@ -506,7 +559,8 @@ async function route() {
   const params = new URLSearchParams(q || '');
   if (params.get('w')) S.world = params.get('w');
   if (!S.user) await refreshMe();
-  if (!S.user && path !== 'auth') return nav('#/auth');
+  if (!S.user && path !== 'auth') { if(path==='stage')sessionStorage.setItem('viv_after_auth',location.hash);return nav('#/auth'); }
+  if(path==='stage'&&params.get('sim')){stageState.pov={type:'character',id:params.get('sim')};S.worldData=null;}
   const screens = { auth: authScreen, home: homeScreen, forge: forgeScreen, cast: castScreen, bonds: bondsScreen, atlas: atlasScreen, city:()=>livingEconomyScreen(), genesis: genesisScreen, stage: stageScreen, populate: populateScreen, wizard: wizardScreen };
   (screens[path] || homeScreen)();
 }
@@ -514,12 +568,14 @@ async function loadWorld(force = false) {
   if (!force && S.worldData?.world.id === S.world) return S.worldData;
   const pov=typeof stageState!=='undefined'?stageState.pov:null;
   const query=pov?(pov.type==='character'?'sim=':'place=')+encodeURIComponent(pov.id||''):'';
-  S.worldData = await api(`/api/worlds/${S.world}`+(S.livingWorld===S.world&&pov?.id?'?'+query:''));
+  const requested=new URLSearchParams(location.hash.split('?')[1]||''),direct=location.hash.startsWith('#/stage?')&&requested.get('w')===S.world&&requested.get('sim')===pov?.id;
+  S.worldData = await api(`/api/worlds/${S.world}`+((S.livingWorld===S.world||direct)&&pov?.id?'?'+query:''));
   if(S.worldData.world.simulation_mode==='living')S.livingWorld=S.world;
   return S.worldData;
 }
 
 /* ───────── auth ───────── */
+function authDestination(){const target=sessionStorage.getItem('viv_after_auth');sessionStorage.removeItem('viv_after_auth');return target?.startsWith('#/stage?')?target:'#/home';}
 function authScreen() {
   let mode = 'signin', pendingEmail = null;
   const render = () => {
@@ -567,7 +623,7 @@ function authScreen() {
           const { user } = await api('/api/auth/verify', { method: 'POST', body: { email: pendingEmail, code } });
           S.user = user; refreshMe(); // also fetches S.ttsProvider (voice UI depends on it)
           toast(`Welcome, ${user.displayName}! 🌱 ${user.credits} credits in your pocket.`, 'gold');
-          nav('#/home');
+          nav(authDestination());
         } catch (e) { err(e.message); }
       };
       $('#resend').onclick = () => api('/api/auth/resend', { method: 'POST', body: { email: pendingEmail } }).then(() => toast('Code re-sent ✉️')).catch(fail);
@@ -593,7 +649,7 @@ function authScreen() {
         } else {
           const { user } = await api('/api/auth/login', { method: 'POST', body: { email, password } });
           S.user = user; refreshMe(); // also fetches S.ttsProvider (voice UI depends on it)
-          nav('#/home');
+          nav(authDestination());
         }
       } catch (e) {
         if (e.code === 'NOT_VERIFIED') { pendingEmail = email; mode = 'verify'; render(); }
@@ -723,7 +779,7 @@ async function forgeScreen() {
   F.history.forEach(m => addMsg(m.role, m.content));
   if (F.draft) renderDraft();
   if (F.cutoutId) showPortrait();
-  attachMic($('#forge-field'), $('#forge-in'));
+  attachMic($('#forge-field'), $('#forge-in'), { submit: $('#forge-send'), canSubmit: () => !F.busy });
   // Cast-suggestion handoff: arriving via the storyteller's "introduce X?" overlay, the
   // seeded first message is auto-sent so the assistant drafts the character immediately.
   if (F.seed) { const s = F.seed; F.seed = null; $('#forge-in').value = s; setTimeout(send, 50); }
@@ -1024,7 +1080,7 @@ function bindInnerVoice(root, c, { onStateChange } = {}) {
     for (const h of history) addMsg(h.role === 'user' ? 'user' : 'assistant', h.content);
     scroll();
   }).catch(() => { log.innerHTML = ''; hello(); });
-  attachMic($('#iv-field', root), $('#iv-in', root));
+  attachMic($('#iv-field', root), $('#iv-in', root), { submit: $('#iv-send', root), canSubmit: () => !busy });
   let busy = false;
   const send = async () => {
     const text = $('#iv-in', root).value.trim(); if (!text || busy) return;
@@ -1203,7 +1259,7 @@ function godEditModal(c, done) {
     <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px"><button class="btn btn-ghost" id="ge-cancel">Cancel</button><button class="btn btn-coral" id="ge-apply">Apply</button></div>
   </div></div>`;
   document.body.appendChild(m);
-  attachMic($('#ge-field', m), $('#ge-reason', m));
+  attachMic($('#ge-field', m), $('#ge-reason', m), { submit: $('#ge-apply', m) });
   let kind = 'condition';
   $$('.kind-tabs .tag', m).forEach(b => b.onclick = () => { kind = b.dataset.k; $$('.kind-tabs .tag', m).forEach(x => x.className = 'tag grey'); b.className = 'tag c'; });
   m.onclick = (e) => { if (e.target === m) m.remove(); };
@@ -1228,7 +1284,7 @@ async function populateScreen() {
     <div id="pop-cards" class="world-grid"></div>
   </div></div>`;
   bindChrome();
-  attachMic($('#pop-field'), $('#pop-in'));
+  attachMic($('#pop-field'), $('#pop-in'), { submit: $('#pop-go') });
   $('#pop-go').onclick = async () => {
     const reqText = $('#pop-in').value.trim(); if (!reqText) return;
     $('#pop-progress').innerHTML = '<span class="spinner dark"></span> drafting profiles · wiring relationships…';
@@ -1293,7 +1349,7 @@ async function wizardScreen() {
   W.history.forEach(m => addMsg(m.role, m.content));
   if (W.plan) renderPlan();
   if (W.jobId) pollBuild(); // resume watching an in-flight build after navigation
-  attachMic($('#wz-field'), $('#wz-in'));
+  attachMic($('#wz-field'), $('#wz-in'), { submit: $('#wz-send'), canSubmit: () => !W.busy });
 
   // Right panel: readable plan summary + itemised cost + the approval button.
   function renderPlan() {
@@ -1702,7 +1758,7 @@ async function introEditor(worldId) {
   const chat = $('#ie-chat', m);
   const addChat = (cls, text) => { const d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = text; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d; };
   addChat('assistant', 'Tell me how you want the scene to go — “make Sam angrier”, “add a line where Jessie jokes”, “move this to the rooftop” — and I\'ll rewrite it. Review it on the left, then Save.');
-  attachMic($('#ie-cfield', m), $('#ie-cin', m));
+  attachMic($('#ie-cfield', m), $('#ie-cin', m), { submit: $('#ie-csend', m), canSubmit: () => !busy });
   let busy = false;
   const sendChat = async () => {
     const text = $('#ie-cin', m).value.trim(); if (!text || busy) return;
@@ -1853,7 +1909,7 @@ function bondEditModal(r, from, to, done) {
     <div style="display:flex;justify-content:flex-end;gap:9px"><button class="btn btn-ghost" id="be-cancel">Cancel</button><button class="btn btn-coral" id="be-save">Save bond</button></div>
   </div></div>`;
   document.body.appendChild(m);
-  attachMic($('#be-descf', m), $('#be-desc', m));
+  attachMic($('#be-descf', m), $('#be-desc', m), { submit: $('#be-save', m) });
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   $('.x', m).onclick = () => m.remove(); $('#be-cancel', m).onclick = () => m.remove();
   $('#be-save', m).onclick = async () => {
@@ -1892,7 +1948,7 @@ function bondBuilderModal(characters, done, seed = {}) {
     </div>
   </div></div>`;
   document.body.appendChild(m);
-  attachMic($('#bond-descf', m), $('#bond-desc', m));
+  attachMic($('#bond-descf', m), $('#bond-desc', m), { submit: $('#bond-create', m) });
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   $('.x', m).onclick = () => m.remove();
   const charById = (id) => characters.find(c => c.id === id);
@@ -3334,7 +3390,7 @@ async function gmChatOverlay() {
     }
     scroll();
   } catch (e) { log.innerHTML = ''; addMsg('assistant', '😔 could not load our history: ' + e.message); }
-  attachMic($('#gmc-field'), $('#gmc-in'));
+  attachMic($('#gmc-field'), $('#gmc-in'), { submit: $('#gmc-send'), canSubmit: () => !busy });
 
   let busy = false;
   const send = async () => {
@@ -4054,7 +4110,7 @@ function interventionModal(characters, onApply) {
     <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:12px"><button class="btn btn-ghost" id="iv-cancel">Cancel</button><button class="btn btn-coral" id="iv-go">▶ Apply & advance</button></div>
   </div></div>`;
   document.body.appendChild(m);
-  attachMic($('#iv-field', m), $('#iv-text', m));
+  attachMic($('#iv-field', m), $('#iv-text', m), { submit: $('#iv-go', m) });
   let kind = 'event', target = '';
   $$('.kind-tabs [data-k]', m).forEach(b => b.onclick = () => { kind = b.dataset.k; $$('[data-k]', m).forEach(x => x.className = 'tag grey'); b.className = 'tag c'; });
   $$('#targets [data-t]', m).forEach(b => b.onclick = () => { target = b.dataset.t; $$('#targets [data-t]', m).forEach(x => x.className = 'tag grey'); b.className = 'tag v'; });

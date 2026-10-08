@@ -12,7 +12,7 @@ export async function advisorChat(user,world,{message,simId,lang='en'},modelCall
  const tools=worldTools(world.id),context=simId?await tools('sim',{id:simId}):{town:world.title,monitor:await tools('monitor')};
  if(!modelCall)preflight(user.id,EST.chat());
  const messages=[{role:'system',content:DR_WELL_PROMPT+'\n'+ROMANCE_INSTRUCTIONS+'\nPreferred language: '+(lang==='de'?'German':'English')},{role:'user',content:j({context,history:advisorHistory(world.id),message})}];
- const result=await agenticChat(messages,modelCall||(m=>withPrincipal(user,()=>llmChat(m,{maxTokens:4000,reasoningEffort:'low'}))),tools,{onCall:r=>{if(!modelCall)debitCall(user.id,r,'dr_well',{worldId:world.id});}}),out=JSON.parse(result.content.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g,''));
+ const result=await agenticChat(messages,modelCall||(m=>withPrincipal(user,()=>llmChat(m,{maxTokens:4000,reasoningEffort:'low',allowToolCalls:true}))),tools,{onCall:r=>{if(!modelCall)debitCall(user.id,r,'dr_well',{worldId:world.id});}}),out=JSON.parse(result.content.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g,''));
  if(typeof out.reply!=='string')throw Error('Dr. Well did not return an answer.');
  // Only the reply and validated navigation references leave this read-only role.
  // A model-supplied actions/tool mutation object is intentionally discarded.
