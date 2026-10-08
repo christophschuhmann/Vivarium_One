@@ -68,7 +68,7 @@ export function socialWellbeing(p,event,time){
  return recordExperience(p,event,time,'social',!accepted?(event.participants?.[0]===p.id?{P:-.003}:{}):hostile?{P:-.009,R:-.012}:impact.quality==='mixed'?{E:.002}:{P:.006,R:category==='greet'?.003:.012,M:care?.007:0,E:['play_together','share_interest','collaborate_project'].includes(category)?.008:0},!accepted?'Eine abgelehnte Begegnung kann enttäuschen; sie beweist keine schlechte Beziehung.':hostile?'Ein selbst erlebter konflikthafter Austausch belastet Gefühle und Beziehungserleben.':care?'Eine tatsächlich erlebte zugewandte Begegnung stärkt Verbundenheit und das Gefühl, füreinander da zu sein.':'Ein tatsächlich erlebter freiwilliger Kontakt stärkt Beziehungserleben.');
 }
 export function reflectionWellbeing(p,effects,event,time){
- const feelings=effects.emotions||[],value=feelings.reduce((n,e)=>n+(positive.has(e.id)?1:distress.has(e.id)?-1:0)*e.intensity,0)/Math.max(1,feelings.length);
+ const feelings=effects.emotions||[],value=feelings.reduce((n,e)=>n+(positive.has(e.id)?1:distress.has(e.id)?-1:0)*(event.conversationChannel&&Number.isFinite(e.delta)?e.delta:e.intensity),0)/Math.max(1,feelings.length);
  // A subjective response can affect P; it cannot invent mastery, meaning,
  // friendships, wealth or accomplishments simply by supplying model numbers.
  return recordExperience(p,event,time,'reflection',{P:value*.012},'Die eigene begrenzte emotionale Deutung eines wirklichen Ereignisses beeinflusst positive Gefühle.');

@@ -35,19 +35,40 @@ export function dailyGoals(p,time){
   ]};return s.daily_goals.items;
 }
 export function rebuildAffect(p,time){
-  const states=(p.state.affect?.states||[]).map(e=>({...e,components:(e.components||[]).filter(c=>c.expires_at>time&&c.intensity>0)})).filter(e=>e.components.length);
-  for(const e of states){e.intensity=Math.max(...e.components.map(c=>c.intensity));e.causes=e.components.map(c=>c.cause);e.expires_at=Math.max(...e.components.map(c=>c.expires_at));}
+  const states=(p.state.affect?.states||[]).map(e=>({...e,components:(e.components||[]).filter(c=>c.expires_at>time&&(c.intensity>0||Number.isFinite(c.adjustment)&&c.adjustment!==0))})).filter(e=>e.components.length);
+  for(const e of states){
+    const bodily=e.components.filter(c=>c.source==='need'),personal=e.components.filter(c=>c.source!=='need'&&!Number.isFinite(c.adjustment));
+    // Reassurance changes the present response, not the facts that caused it.
+    // A separate signed, journal-linked component can be removed on clear and
+    // expires naturally. Words cannot suppress distress from unmet bodily needs.
+    const adjustment=e.components.reduce((n,c)=>n+(Number.isFinite(c.adjustment)?c.adjustment:0),0);
+    e.intensity=Math.max(0,...bodily.map(c=>c.intensity),clamp(Math.max(0,...personal.map(c=>c.intensity))+adjustment));e.causes=e.components.map(c=>c.cause);e.expires_at=Math.max(...e.components.map(c=>c.expires_at));
+  }
   states.sort((a,b)=>b.intensity-a.intensity);
-  p.state.affect={schema_version:2,taxonomy_id:taxonomy.taxonomy_id,states,primary:states[0]?.id||null,updated_at:time};
-  p.state.mood=states[0]?.label||'calm';
+  p.state.affect={schema_version:2,taxonomy_id:taxonomy.taxonomy_id,states,primary:states.find(e=>e.intensity>0)?.id||null,updated_at:time};
+  p.state.mood=states.find(e=>e.intensity>0)?.label||'calm';
 }
+function conversationFeeling(p,id,target,time,cause){
+  const existing=p.state.affect?.states?.find(e=>e.id===id);
+  if(!existing)return addFeeling(p,id,target,time,cause,{ttl:900});
+  if(!labels.has(id)||forbidden.has(id)||id==='sexual_lust'&&(p.age<18||(p.state.needs.romantic_affection||0)<ROMANCE_POLICY.romantic_need.adult_desire_threshold)||p.age<14&&id==='infatuation')return false;
+  const delta=Math.max(-.35,Math.min(.35,target-existing.intensity));if(Math.abs(delta)<.0001)return true;
+  existing.components.push({key:'event:'+cause.evidence_id+':regulation:'+id,source:'event',adjustment:delta,activated_at:time,expires_at:time+900,cause:{...cause,at:time}});
+  // Retain original evidence while bounding conversational modifiers separately.
+  existing.components=existing.components.filter(c=>!Number.isFinite(c.adjustment)).concat(existing.components.filter(c=>Number.isFinite(c.adjustment)).slice(-12));
+  rebuildAffect(p,time);return true;
+}
+export function goalMotivation(p,id,time=p.state.affect?.updated_at||0){
+  return clamp(.5+(p.state.goal_motivation||[]).filter(e=>e.goalId===id&&e.at<=time&&e.expires_at>time).reduce((n,e)=>n+e.delta*(e.expires_at-time)/(e.expires_at-e.at),0));
+}
+export function projectGoalMotivation(p,time){for(const a of p.state.psychology?.ambitions||[]){if(p.state.goal_motivation)a.motivation=goalMotivation(p,a.id,time);else delete a.motivation;}}
 export function addFeeling(p,id,intensity,time,cause,{ttl=900,key}={}){
   if(!labels.has(id)||forbidden.has(id)||id==='sexual_lust'&&(p.age<18||(p.state.needs.romantic_affection||0)<ROMANCE_POLICY.romantic_need.adult_desire_threshold)||p.age<14&&id==='infatuation'||!Number.isFinite(intensity)||intensity<=0)return false;
   if(p.age<18&&id==='infatuation')intensity=Math.min(ROMANCE_POLICY.romantic_need.teen_cap,intensity);
   const a=p.state.affect ||= {states:[]};a.states||=[];
   let e=a.states.find(e=>e.id===id);if(!e){const label=labels.get(id);e={id,label:label.label,label_de:label.label_de,components:[]};a.states.push(e);}
   const component={key:key||'event:'+cause.evidence_id+':'+id,source:cause.kind==='modeled_need'?'need':'event',intensity:clamp(intensity),activated_at:time,expires_at:time+ttl,cause:{...cause,at:time}};
-  e.components=(e.components||[]).filter(c=>c.key!==component.key&&c.expires_at>time).concat(component).slice(-6);rebuildAffect(p,time);return true;
+  const components=(e.components||[]).filter(c=>c.key!==component.key&&c.expires_at>time).concat(component);e.components=components.filter(c=>!Number.isFinite(c.adjustment)).slice(-6).concat(components.filter(c=>Number.isFinite(c.adjustment)).slice(-12));rebuildAffect(p,time);return true;
 }
 export function evaluateMind(p,time,catalog){
   normalizeRomance(p);
@@ -71,7 +92,7 @@ export function evaluateMind(p,time,catalog){
   if(urgent?.[1]>.7)proceduralThought(p,s.current_desire,time);
   s.affect.actual_narrative=s.affect.states.map(e=>e.label+' '+Math.round(e.intensity*100)+'%').join(' · ');
   s.affect.self_narrative=s.current_desire;
-  dailyGoals(p,time);projectWellbeing(p,time);
+  dailyGoals(p,time);projectGoalMotivation(p,time);projectWellbeing(p,time);
 }
 export function proceduralThought(p,text,time){
   const s=p.state;if(['conversation','storyteller'].includes(s.thought_source)&&time-(s.thought_at||0)<900)return;
@@ -92,6 +113,8 @@ function matchesAmbition(p,a,kind){
 export function motivationBias(p,kind){
   const goals=p.state.psychology.ambitions,focus=p.state.focus_goal_id;
   let bias=goals.some(a=>!a.completed&&matchesAmbition(p,a,kind))?.1:0;
+  const motivated=goals.filter(a=>!a.completed&&matchesAmbition(p,a,kind));
+  if(motivated.length)bias+=motivated.reduce((n,a)=>n+(goalMotivation(p,a.id)-.5)*.24,0)/motivated.length;
   if(goals.some(a=>a.id===focus&&matchesAmbition(p,a,kind)))bias+=.08;
   const stress=Math.max(0,...(p.state.affect?.states||[]).filter(e=>['distress','fatigue_exhaustion','anger'].includes(e.id)).map(e=>e.intensity));
   if(['relax','sleep','stroll','leisure_meditate'].includes(kind))bias+=stress*.12;
@@ -141,18 +164,43 @@ export function reflect(p,proposal,event,time){
   normalizeRomance(p);
   const effects={emotions:[],needsDelta:{}};
   if(!proposal||typeof proposal!=='object')return effects;
-  for(const e of Array.isArray(proposal.emotions)?proposal.emotions.slice(0,3):[]){if(typeof e?.id!=='string'||typeof e.intensity!=='number'||!Number.isFinite(e.intensity))continue;
-    const intensity=Math.max(.05,Math.min(p.age<18&&e.id==='infatuation'?.35:.75,e.intensity));if(addFeeling(p,e.id,intensity,time,{kind:'subjective_reflection',text:String(proposal.reason||p.state.thought||'My own reaction to this event.').slice(0,240),evidence_id:event.id},{ttl:900}))effects.emotions.push({id:e.id,intensity});}
+  const seenEmotions=new Set();
+  for(const e of Array.isArray(proposal.emotions)?proposal.emotions.slice(0,3):[]){if(seenEmotions.has(e?.id))continue;seenEmotions.add(e?.id);if(typeof e?.id!=='string'||typeof e.intensity!=='number'||!Number.isFinite(e.intensity))continue;
+    const before=p.state.affect?.states?.find(s=>s.id===e.id)?.intensity||0;
+    const intensity=Math.max(event.conversationChannel?0:.05,Math.min(p.age<18&&e.id==='infatuation'?.35:.75,e.intensity)),cause={kind:'subjective_reflection',text:String(proposal.reason||p.state.thought||'My own reaction to this event.').slice(0,240),evidence_id:event.id};
+    if((event.conversationChannel?conversationFeeling:addFeeling)(p,e.id,intensity,time,cause,{ttl:900})){const after=p.state.affect.states.find(s=>s.id===e.id)?.intensity||0;effects.emotions.push({id:e.id,intensity:after,...(event.conversationChannel?{before,delta:after-before}:{})});}}
   for(const [need,value] of Object.entries(proposal.needsDelta||{})){if(!['social','romantic_affection','fun','comfort','fatigue'].includes(need)||typeof value!=='number'||!Number.isFinite(value))continue;
     const bound=need==='fatigue'?.03:.08,delta=Math.max(-bound,Math.min(bound,value)),before=p.state.needs[need];p.state.needs[need]=Math.min(need==='romantic_affection'?romanticCap(p.age):1,clamp(before+delta));effects.needsDelta[need]=p.state.needs[need]-before;}
   if(typeof proposal.focusGoalId==='string'&&p.state.psychology.ambitions.some(a=>a.id===proposal.focusGoalId&&!a.completed)){p.state.focus_goal_id=proposal.focusGoalId;effects.focusGoalId=proposal.focusGoalId;}
+  if(event.conversationChannel){
+    const seen=new Set();effects.goalMotivation=[];
+    for(const entry of (Array.isArray(proposal.goalMotivation)?proposal.goalMotivation:[]).slice(0,3)){
+      if(!entry||seen.has(entry.goalId)||!Number.isFinite(entry.delta)||!p.state.psychology.ambitions.some(a=>a.id===entry.goalId&&!a.completed))continue;
+      seen.add(entry.goalId);const before=goalMotivation(p,entry.goalId,time),delta=Math.max(-.15,Math.min(.15,entry.delta));if(!delta)continue;
+      p.state.goal_motivation=(p.state.goal_motivation||[]).filter(e=>e.expires_at>time).concat({goalId:entry.goalId,delta,at:time,expires_at:time+21600,eventId:event.id,reason:String(proposal.reason||'').slice(0,240)}).slice(-48);
+      effects.goalMotivation.push({goalId:entry.goalId,before,after:goalMotivation(p,entry.goalId,time)});
+    }
+    projectGoalMotivation(p,time);
+  }
   const perma=reflectionWellbeing(p,effects,event,time);if(perma)effects.wellbeingDelta=perma;projectWellbeing(p,time);
   return effects;
 }
 export function mindContext(p){return {lifeCircumstances:p.state.life,community:p.profile.community,initialBackground:p.state.initialSituation,publicManner:p.state.presentation?.until>p.state.affect?.updated_at?p.state.presentation:null,resources:economicContext(p),socialExpectations:socialMindContext(p),aptitudes:p.state.aptitudes,skills:p.state.skills,wellbeing:wellbeingContext(p),romancePolicy:romanticContext(p),emotions:p.state.affect,currentDesire:p.state.current_desire,goals:p.state.psychology.ambitions,dailyGoals:p.state.daily_goals,focusGoalId:p.state.focus_goal_id,needs:p.state.needs,thought:p.state.thought};}
 export const REFLECTION_INSTRUCTIONS='Optional reflection/reflections may express a subjective response, never a new physical event. An entry has emotions:[{id,intensity}], needsDelta:{social,romantic_affection,fun,comfort,fatigue}, focusGoalId and reason. Use emotion IDs contentment, affection, hope_enthusiasm_optimism, pride, interest, concentration, contemplation, relief, longing, doubt, fear, distress, embarrassment, disappointment, sadness, anger or fatigue_exhaustion; intensity 0.05–0.75. All needs are urgency levels: 0 means satisfied and 1 means urgent. A positive needsDelta increases an unmet need; a negative delta provides relief. Social is social warmth; romantic_affection is a separate unmet wish for romantic affection. Romantic affection must stay 0 under 14 and <=0.35 for ages 14–17. A friendly conversation reduces warmth urgency and does not automatically satisfy romantic affection. A supportive conversation usually reduces social/comfort urgency; increasing it requires a grounded reason such as conflict or a renewed longing. Emotional needsDelta is bounded to ±0.08 (fatigue ±0.03). Never change hunger, thirst, bladder or hygiene through words. focusGoalId must be an existing supplied ambition; it directs future action and never grants completed achievement. Own PERMA wellbeing scores are read-only derived context; never return score changes or invent achievements to improve them. Keep needs, conflicting feelings, current desires and existing progress coherent; relief in one dimension need not erase another.';
-export function conversationReflection(output){
-  if(output.reflection&&typeof output.reflection==='object')return output.reflection;
-  const moods={hopeful:'hope_enthusiasm_optimism',happy:'contentment',calm:'contentment',sad:'sadness',worried:'distress',angry:'anger',friendly:'affection',warm:'affection',thoughtful:'contemplation',curious:'interest',tired:'fatigue_exhaustion',confident:'hope_enthusiasm_optimism'};
-  const id=labels.has(output.mood)?output.mood:moods[output.mood];return id?{emotions:[{id,intensity:.35}],reason:String(output.thought||output.reply||'').slice(0,240)}:{};
+export const CONVERSATION_REFLECTION_INSTRUCTIONS=`Every conversation response must include reflection:{emotions:[{id,intensity}],needsDelta:{social,romantic_affection,fun,comfort,fatigue},focusGoalId:string|null,goalMotivation:[{goalId,delta}],reason:string}. This is the playable consequence of the reply, not optional decorative text. Match the Sim's own response: a frightening disclosure can raise fear and comfort/warmth urgency; welcome reassurance can lower fear or distress, add relief or hope, and reduce those unmet needs. Consider personality, trust and current stress; words need not affect everyone equally. Return 1–3 relevant emotion IDs with their desired CURRENT intensities (0–0.75); include a lower target for an existing emotion when comfort actually eases it. A zero target means calming that feeling, not erasing the event that caused it. Do not leave all effects empty when the reply describes a meaningful emotional shift. Neutral factual exchanges may explicitly have no change. goalMotivation can encourage or discourage up to 3 supplied unfinished ambitions by -0.15 to +0.15; it changes willingness to pursue the goal, NEVER progress, practiced minutes, skill, wealth or achievement. Effects on motivation ease over six simulated hours. Only choose a focusGoalId already supplied; do not choose the same career goal automatically if a hobby or personal goal better fits. Include a concise reason linking the specific conversation to the actual reaction. `+REFLECTION_INSTRUCTIONS.replace('Optional reflection/reflections may','The required conversation reflection can').replace('intensity 0.05–0.75','intensity 0–0.75');
+export function conversationReflection(output,currentState){
+  const proposal=output.reflection&&typeof output.reflection==='object'&&!Array.isArray(output.reflection)?{...output.reflection}:{};
+  const moods={hopeful:'hope_enthusiasm_optimism',optimistic:'hope_enthusiasm_optimism',happy:'contentment',calm:'contentment',sad:'sadness',worried:'distress',anxious:'fear',afraid:'fear',scared:'fear',frightened:'fear',terrified:'fear',uneasy:'fear',unsettled:'doubt',conflicted:'doubt',angry:'anger',friendly:'affection',warm:'affection',grateful:'gratitude',thoughtful:'contemplation',curious:'interest',tired:'fatigue_exhaustion',confident:'hope_enthusiasm_optimism',relieved:'relief',reassured:'relief',encouraged:'hope_enthusiasm_optimism',inspired:'hope_enthusiasm_optimism',discouraged:'disappointment',hurt:'sadness'};
+  const emotionId=value=>{const key=String(value||'').trim().toLowerCase();return labels.has(key)?key:moods[key]||taxonomy.emotions.find(e=>e.label?.toLowerCase()===key||e.label_de?.toLowerCase()===key)?.id;};
+  let emotions=(Array.isArray(proposal.emotions)?proposal.emotions:[]).filter(e=>e&&Number.isFinite(e.intensity)).map(e=>({...e,id:emotionId(e.id)})).filter(e=>e.id);
+  const previous=id=>currentState?.affect?.states?.find(e=>e.id===id)?.intensity||0;
+  if(!emotions.length&&(!Array.isArray(proposal.emotions)||proposal.emotions.length)){const id=emotionId(output.mood);if(id)emotions=[{id,intensity:Math.min(.75,Math.max(.35,previous(id)+.05))}];}
+  // Older/provider responses may omit the structured need changes. Infer only
+  // from the Sim's reported affect, never from keywords in the player's message.
+  if(!proposal.needsDelta){
+    const direction=e=>(e.intensity-previous(e.id))*(['affection','relief','hope_enthusiasm_optimism','contentment','gratitude'].includes(e.id)?1:['fear','distress','sadness','anger'].includes(e.id)?-1:0);
+    const good=emotions.some(e=>direction(e)>.01),bad=emotions.some(e=>direction(e)<-.01);
+    proposal.needsDelta=good&&!bad?{social:-.04,comfort:-.04}:bad&&!good?{social:.03,comfort:.04}:{};
+  }
+  return {...proposal,emotions,reason:String(proposal.reason||output.thought||output.reply||'').slice(0,500)};
 }

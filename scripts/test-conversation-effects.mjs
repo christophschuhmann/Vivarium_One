@@ -1,0 +1,55 @@
+// Actual conversation persistence and browser UI, deterministic model replies.
+// No paid calls or edits to the playable world.
+import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import net from 'node:net';
+import {spawn,execFileSync} from 'node:child_process';import {chromium} from 'playwright';
+const root=path.resolve(new URL('..',import.meta.url).pathname),scratch=fs.mkdtempSync(path.join(os.tmpdir(),'viv-conversation-effects-'));
+process.env.VIV_DATA_DIR=scratch;process.env.VIV_SECRET='effects-test';process.env.MOCK_PROVIDERS='1';
+execFileSync(process.execPath,['scripts/seed_demo.js'],{cwd:root,env:process.env,stdio:'pipe'});
+const {db}=await import('../server/living/schema.js'),j=JSON.stringify;
+const {createTown,loadTown}=await import('../server/living/engine.js'),{converse,clearChat,chatHistory}=await import('../server/living/vivarium.js'),{addFeeling,evaluateMind,reflect,motivationBias,goalMotivation,conversationReflection}=await import('../server/living/cognition.js'),{openSimsCatalog,closeOpenSims}=await import('../server/living/open_sims.js');
+const user=db.prepare("SELECT * FROM users WHERE email='demo@vivarium.local'").get(),catalog=await openSimsCatalog();let browser,server;
+try{
+ const {worldId}=await createTown(user,{population:20,seed:73,scenario:'bennington'});let town=loadTown(worldId),person=town.people.find(p=>p.age>=18&&p.state.psychology.ambitions.some(a=>a.kind==='career'));
+ const goal=person.state.psychology.ambitions.find(a=>a.kind==='career'),clock=town.world.seconds;
+ person.state.needs=Object.fromEntries(Object.keys(person.state.needs).map(k=>[k,.4]));person.state.affect={states:[]};delete person.state.goal_motivation;
+ addFeeling(person,'fear',.15,clock,{kind:'initialized_background',text:'A concern predating this conversation.'},{ttl:86400});evaluateMind(person,clock,catalog);
+ db.prepare('UPDATE lw_sims SET state=? WHERE id=?').run(j(person.state),person.id);
+ const original=structuredClone(person.state),baseBias=motivationBias(person,'work');
+ const replyFor=message=>message==='scary'?{reply:'That frightens me. I feel exposed and less able to face my work.',thought:'I need reassurance before I can concentrate.',reflection:{emotions:[{id:'fear',intensity:.72}],needsDelta:{social:.06,comfort:.08,hunger:-1},goalMotivation:[{goalId:goal.id,delta:-.12}],reason:'The warning feels credible and makes me doubt my readiness.'}}:{reply:'Your encouragement helps. I can feel the fear easing and want to take one useful step.',thought:'I can return to my work without pretending the worry never existed.',reflection:{emotions:[{id:'fear',intensity:.1},{id:'hope_enthusiasm_optimism',intensity:.62},{id:'relief',intensity:.55}],needsDelta:{social:-.06,comfort:-.08},focusGoalId:goal.id,goalMotivation:[{goalId:goal.id,delta:.15}],reason:'The reassurance eases my fear and supports a concrete existing ambition.'}};
+ const chat=message=>converse(user,worldId,person.id,{message,channel:'inner',lang:'en',modelCall:async messages=>{assert.match(messages[0].content,/Every conversation response must include reflection/);return {content:j(replyFor(message))};}});
+ const scared=await chat('scary');assert(scared.state.affect.states.find(e=>e.id==='fear').intensity>.15);assert(scared.state.needs.comfort>original.needs.comfort);assert.equal(scared.state.needs.hunger,original.needs.hunger);assert(scared.effects.changes.emotions.some(e=>e.id==='fear'&&e.after>e.before));
+ let current=loadTown(worldId).byId.get(person.id);assert(motivationBias(current,'work')<baseBias);const lowMotivation=goalMotivation(current,goal.id);
+ const supported=await chat('support');assert(supported.state.affect.states.find(e=>e.id==='fear').intensity<scared.state.affect.states.find(e=>e.id==='fear').intensity);assert(supported.state.needs.social<scared.state.needs.social);assert(supported.state.wellbeing.scores.P>scared.state.wellbeing.scores.P);
+ current=loadTown(worldId).byId.get(person.id);assert(goalMotivation(current,goal.id)>lowMotivation);assert.equal(goalMotivation(current,goal.id,clock+21600),.5);assert(motivationBias(current,'work')>baseBias);assert.equal(current.state.focus_goal_id,goal.id);
+ assert.deepEqual(current.state.skills,original.skills);assert.deepEqual(current.state.psychology.ambitions.map(a=>[a.id,a.progress,a.practice_seconds]),original.psychology.ambitions.map(a=>[a.id,a.progress,a.practice_seconds]));assert.equal(loadTown(worldId).world.seconds,clock);assert.equal(current.state.location_id,original.location_id);
+ assert(chatHistory(worldId,person.id).at(-1).effects.changes.motivation.length);assert(current.state.affect.states.find(e=>e.id==='fear').components.some(c=>c.cause.text==='A concern predating this conversation.'));
+ // A conversation cannot narratively satisfy physical needs or cross age limits.
+ const child=structuredClone(current);child.age=10;child.state.needs.romantic_affection=0;child.state.affect={states:[]};reflect(child,{emotions:[{id:'sexual_lust',intensity:.75},{id:'infatuation',intensity:.75}],needsDelta:{romantic_affection:1,bladder:-1},goalMotivation:[{goalId:'invented',delta:1}]},{id:'safety',conversationChannel:'inner'},clock);assert.equal(child.state.needs.romantic_affection,0);assert.equal(child.state.needs.bladder,current.state.needs.bladder);assert(!child.state.affect.states.some(e=>['sexual_lust','infatuation'].includes(e.id)));
+ assert.deepEqual(conversationReflection({mood:'calm',reflection:{emotions:[],needsDelta:{}}}).emotions,[]);
+ const body=structuredClone(current);body.state.affect={states:[]};addFeeling(body,'distress',.6,clock,{kind:'modeled_need',need:'hunger',text:'Hunger remains real.'});reflect(body,{emotions:[{id:'distress',intensity:0}]},{id:'soothe',conversationChannel:'inner'},clock);assert.equal(body.state.affect.states.find(e=>e.id==='distress').intensity,.6);
+ const anxious=conversationReflection({mood:'Frightened',thought:'I feel unsafe.'});assert.equal(anxious.emotions[0].id,'fear');assert(anxious.needsDelta.comfort>0);
+ const worriedState={affect:{states:[{id:'fear',intensity:.6}]}};assert(conversationReflection({mood:'frightened'},worriedState).emotions[0].intensity>=.6);assert(conversationReflection({reflection:{emotions:[{id:'fear',intensity:.3}]}},worriedState).needsDelta.comfort<0);
+ clearChat(worldId,person.id);current=loadTown(worldId).byId.get(person.id);assert.deepEqual(current.state.needs,original.needs);assert.deepEqual(current.state.affect,original.affect);assert.equal(goalMotivation(current,goal.id),.5);
+ console.log('PASS actual fear/support effects, calming older feelings without erasing causes, needs/PERMA, goal motivation changes action weights and expires, progress/physical/age guards, persisted feedback and exact clear');
+
+ if(process.argv.includes('--browser')){
+  const socket=net.createServer();await new Promise(r=>socket.listen(0,'127.0.0.1',r));const port=socket.address().port;await new Promise(r=>socket.close(r));const base='http://127.0.0.1:'+port;
+  server=spawn(process.execPath,['server/index.js'],{cwd:root,env:{...process.env,VIV_HOST:'127.0.0.1',PORT:String(port),HYPRLAB_API_KEY:'',OPENROUTER_API_KEY:'',MUSIC_AUTOSTART:'0',MUSIC_API_URL:'http://127.0.0.1:1'},detached:true,stdio:'ignore'});
+  for(let i=0;i<100;i++){try{if((await fetch(base)).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+  browser=await chromium.launch({headless:true,args:['--no-sandbox']});const ctx=await browser.newContext({viewport:{width:1280,height:960}});
+  await ctx.addInitScript(()=>{localStorage.setItem('viv_lang','en');localStorage.setItem('viv_living_display','en');localStorage.setItem('viv_tts',JSON.stringify({prepare:false,autoplay:false,innerVoice:false,musicOn:false}));});
+  await ctx.route('**/api/living/worlds/*/places/*/music',r=>r.fulfill({json:{music:null}}));
+  await ctx.route('**/api/living/worlds/'+worldId+'/sims/'+person.id+'/inner',async route=>{if(route.request().method()!=='POST')return route.continue();const result=await chat(route.request().postDataJSON().message);await route.fulfill({json:result});});
+  assert.equal((await ctx.request.post(base+'/api/auth/login',{data:{email:'demo@vivarium.local',password:'alice-and-bob'}})).status(),200);
+  const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base+'/#/stage?w='+worldId+'&sim='+person.id);await page.locator('#stage-root').waitFor();await page.evaluate(id=>mindModal(id),person.id);await page.locator('#iv-in').waitFor();
+  const fear=()=>page.locator('.lw-mind-feelings [data-emotion="fear"] progress').getAttribute('value');
+  const initial=Number(await fear());await page.locator('#iv-in').fill('scary');await page.locator('#iv-send').click();await page.locator('.iv-effects').waitFor();await page.locator('.iv-effects summary').click();await page.locator('.iv-effects [data-effect="emotion:fear"]').waitFor();const raised=Number(await fear());assert(raised>initial);
+  await page.locator('#iv-in').fill('support');await page.locator('#iv-send').click();await page.waitForFunction(()=>document.querySelectorAll('.iv-effects').length===2);assert(Number(await fear())<raised);assert(await page.locator('.iv-effects [data-effect="motivation:'+goal.id+'"]').count()>0);assert(await page.locator('.lw-mind-goals .lw-goal-motivation').count()>0);
+  await page.locator('.iv-effects').last().locator('summary').click();await page.screenshot({path:'artifacts/expanded-world/conversation-effects-desktop.png'});
+  // Reopening the full profile shows the durable same values and feedback.
+  await page.locator('#mm-profile').click();await page.locator('#lw-profile-needs').waitFor();assert.equal(Number(await page.locator('#lw-profile-emotions [data-emotion="fear"] progress').getAttribute('value')),Number(await page.evaluate(id=>S.worldData?.characters.find(c=>c.id===id)?.state.affect.states.find(e=>e.id==='fear')?.intensity,person.id)));
+  await page.locator('.iv-effects').first().waitFor();await page.setViewportSize({width:390,height:844});await page.locator('#iv-in').scrollIntoViewIfNeeded();await page.screenshot({path:'artifacts/expanded-world/conversation-effects-mobile.png'});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),false);
+  page.on('dialog',d=>d.accept());await page.locator('#iv-clear').click();await page.waitForFunction(()=>!document.querySelector('.iv-effects'));assert.equal(Number(await page.locator('#lw-profile-emotions [data-emotion="fear"] progress').getAttribute('value')),initial);assert.deepEqual(errors,[]);assert.equal(loadTown(worldId).world.seconds,clock);
+  console.log('PASS browser sends through real persistence, updates Mind meters immediately, displays before/after feedback, profile reload/history, mobile layout and clear refresh without advancing time');
+ }
+}finally{await browser?.close();if(server)try{process.kill(-server.pid,'SIGTERM');}catch{}closeOpenSims();db.close();fs.rmSync(scratch,{recursive:true,force:true,maxRetries:5,retryDelay:100});}

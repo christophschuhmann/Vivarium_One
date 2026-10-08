@@ -151,3 +151,7 @@
 .lw-reel-active .stage-char {animation:flashback-enter .45s ease both;}
 @keyframes flashback-enter {from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 @media (prefers-reduced-motion:reduce){.lw-reel-active .stage-char{animation:none}.lw-reel-active .stage-bg,.lw-reel-active #stage-cast{transition:none}}
+
+.iv-effects{margin-top:12px;padding:11px 12px;background:var(--paper,#f8f5fb);border:1px solid #d8cfe2;border-radius:12px;color:#554b61;font:12px/1.5 Poppins,sans-serif;overflow-wrap:anywhere}.iv-effects>small{display:block;font-size:10px;color:#766784}.iv-effect-list{display:flex;flex-wrap:wrap;gap:6px;margin:7px 0}.iv-effect{padding:3px 7px;background:#ede6f5;border-radius:7px;font-size:11px}.iv-effect b{font-weight:500}.iv-effects p{font:inherit!important;margin:6px 0!important}.lw-goal-motivation{color:#6b4787}
+
+.iv-effects summary{cursor:pointer;font-weight:600;line-height:1.5}.iv-effects[open] summary{margin-bottom:.5rem}

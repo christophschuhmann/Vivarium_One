@@ -60,7 +60,7 @@ export default async function livingRoutes(app) {
   for(const channel of ['inner','talk']){
     app.get('/api/living/worlds/:worldId/sims/:id/'+channel,async req=>{const {world}=own(req);if(!db.prepare('SELECT 1 FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id))throw httpErr(404,'NOT_FOUND','Sim not found.');return {history:chatHistory(world.id,req.params.id,channel)};});
     app.post('/api/living/worlds/:worldId/sims/:id/'+channel,async req=>{const {user,world}=mutable(req);return converse(user,world.id,req.params.id,{message:String(req.body?.message||''),lang:req.body?.lang,channel});});
-    app.delete('/api/living/worlds/:worldId/sims/:id/'+channel,async req=>{const {world}=mutable(req);if(!db.prepare('SELECT 1 FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id))throw httpErr(404,'NOT_FOUND','Sim not found.');return clearChat(world.id,req.params.id,channel);});
+    app.delete('/api/living/worlds/:worldId/sims/:id/'+channel,async req=>{const {world}=mutable(req);if(!db.prepare('SELECT 1 FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id))throw httpErr(404,'NOT_FOUND','Sim not found.');clearChat(world.id,req.params.id,channel);const catalog=await openSimsCatalog(),person=db.prepare('SELECT * FROM lw_sims WHERE world_id=? AND id=?').get(world.id,req.params.id);return {ok:true,state:character(person,catalog).state};});
   }
   app.patch('/api/living/worlds/:worldId/sims/:id',async req=>{
     const catalog=await openSimsCatalog();

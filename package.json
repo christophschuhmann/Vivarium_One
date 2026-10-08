@@ -55,6 +55,8 @@
     "test:story-episode": "node scripts/test-story-episode.mjs",
     "test:speech": "node scripts/test-speech-integrity.mjs",
     "test:flashbacks-inner-voice": "node scripts/test-flashbacks-inner-voice.mjs",
+    "test:conversation-effects": "node scripts/test-conversation-effects.mjs",
+    "test:conversation-effects-browser": "node scripts/test-conversation-effects.mjs --browser",
     "test:narration-browser": "node scripts/test-narration-browser.mjs"
   },
   "license": "MIT",

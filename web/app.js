@@ -1064,12 +1064,13 @@ function bindInnerVoice(root, c, { onStateChange } = {}) {
   const log = $('#iv-log', root);
   if (!log) return;
   const scroll = () => { log.scrollTop = log.scrollHeight; };
-  const addMsg = (cls, text) => {
+  const addMsg = (cls, text, effects) => {
     const d = document.createElement('div');
     d.className = 'msg ' + cls;
     if (cls === 'assistant') {
       d.innerHTML = `<span class="serif" style="font-style:italic">${esc(text)}</span> <button class="iv-speak" title="hear it in ${esc(c.name)}\'s voice">🔊</button>`;
       // the reply reads aloud in THIS character's voice, chunk by chunk (click again = stop)
+      if(effects&&typeof livingConversationEffectsHtml==='function')d.insertAdjacentHTML('beforeend',livingConversationEffectsHtml(effects));
       $('.iv-speak', d).onclick = (e) => {
         if (e.target.classList.contains('playing')) { ivSpeakRun?.stop(); ivSpeakRun = null; return; }
         speakTextChunks(text, c, e.target, c.state.mood || '', 'thought');
@@ -1081,7 +1082,7 @@ function bindInnerVoice(root, c, { onStateChange } = {}) {
   api(`/api/characters/${c.id}/inner-voice`).then(({ history }) => {
     log.innerHTML = '';
     if (!history.length) hello();
-    for (const h of history) addMsg(h.role === 'user' ? 'user' : 'assistant', h.content);
+    for (const h of history) addMsg(h.role === 'user' ? 'user' : 'assistant', h.content, h.effects);
     scroll();
   }).catch(() => { log.innerHTML = ''; hello(); });
   attachMic($('#iv-field', root), $('#iv-in', root), { submit: $('#iv-send', root), canSubmit: () => !busy });
@@ -1094,7 +1095,7 @@ function bindInnerVoice(root, c, { onStateChange } = {}) {
     try {
       const r = await api(`/api/characters/${c.id}/inner-voice`, { method: 'POST', body: { message: text, lang: getLang() } });
       status.remove();
-      const bubble = addMsg('assistant', r.reply);
+      const bubble = addMsg('assistant', r.reply, r.effects);
       if (r.changed) { c.state = r.state; S.worldData = null; onStateChange?.(r.state); }
       // by default the character speaks their reply (Account → Voice to turn off)
       if (ttsPrefs().innerVoice !== false) speakTextChunks(r.reply, c, $('.iv-speak', bubble), c.state.mood || '', 'thought');
@@ -1105,8 +1106,8 @@ function bindInnerVoice(root, c, { onStateChange } = {}) {
   $('#iv-send', root).onclick = send;
   $('#iv-in', root).onkeydown = (e) => { if (e.key === 'Enter') send(); };
   $('#iv-clear', root).onclick = async () => {
-    if (!confirm(`Forget this whole inner dialogue? ${c.name} keeps any changes it already caused, but nothing of the conversation will reach the story.`)) return;
-    try { await api(`/api/characters/${c.id}/inner-voice`, { method: 'DELETE' }); log.innerHTML = ''; hello(); toast('Inner dialogue forgotten'); } catch (e) { fail(e); }
+    if (busy||!confirm(S.livingWorld===S.world?`Forget this inner dialogue with ${c.name}? Its recorded mental effects are removed where possible; later real experiences remain.`:`Forget this whole inner dialogue? ${c.name} keeps any changes it already caused, but nothing of the conversation will reach the story.`)) return;
+    try { const r=await api(`/api/characters/${c.id}/inner-voice`, { method: 'DELETE' });if(r.state){c.state=r.state;S.worldData=null;onStateChange?.(r.state);}log.innerHTML = ''; hello(); toast('Inner dialogue forgotten'); } catch (e) { fail(e); }
   };
 }
 
