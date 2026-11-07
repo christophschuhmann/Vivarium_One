@@ -309,7 +309,7 @@ export function advanceTime(iso, delta) {
 }
 export function deltaMinutes(iso, delta) { return Math.max(0.02, (new Date(advanceTime(iso, delta)) - new Date(iso)) / 60000); }
 
-const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', { weekday: 'long', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', { timeZone: 'UTC', weekday: 'long', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
 
 // ---------- Auto-bonds for a newly created character ----------
 // When someone joins the cast (Forge accept / GM cast-suggestion), draft how they relate
@@ -1353,7 +1353,7 @@ export async function gmApplyActions(user, world, actions, adminMode = false) {
           break;
         }
         case 'set_direction': {
-          db.prepare('UPDATE worlds SET directives=?, updated_at=? WHERE id=?').run(String(a.directives || '').slice(0, 3000), now(), world.id);
+          db.prepare('UPDATE worlds SET directives=?, updated_at=? WHERE id=?').run(String(a.directives || '').slice(0, 20000), now(), world.id);
           results.push({ ok: true, type: a.type, summary: 'world direction rewritten' });
           break;
         }

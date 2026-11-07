@@ -252,6 +252,10 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .stage-char img{height:100%;pointer-events:none;animation:breathe 5s ease-in-out infinite}
 @keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .stage-char.pov img{animation-duration:4s}
+/* One visible RPG speech bubble keeps a full common room readable. The complete
+   dialogue remains in the script; speech playback brings its active bubble back. */
+body.rpg .stage-cast .bubble:not(.rpg-latest):not(.speaking){display:none}
+body.rpg .stage-cast:has(.bubble.speaking) .bubble:not(.speaking){display:none}
 .bubble{position:absolute;bottom:calc(100% - 10px);left:50%;min-width:130px;max-width:230px;background:#fffdf8;color:var(--ink);
   border:2.5px solid var(--ink);border-radius:16px;padding:10px 13px;font-size:12.5px;line-height:1.45;
   box-shadow:0 6px 0 rgba(34,31,69,.14);animation:bubblein .35s cubic-bezier(.34,1.56,.64,1);z-index:5;cursor:pointer}
@@ -744,6 +748,12 @@ body.rpg .storylines{max-height:min(27vh,270px);overflow-y:auto;line-height:1.65
 @media(max-width:760px){.rpg-identity{left:12px;right:12px;top:112px;max-width:none;padding:8px 10px;gap:8px}.rpg-identity img{height:42px;width:36px}.rpg-identity b{font-size:12px}.rpg-identity button{margin-left:auto}.rpg-identity span{font-size:9px}.rpg-home-intro{padding:22px}.rpg-identity~.here-rail{top:185px}body.rpg .storylines{max-height:28vh}}
 
 body.rpg #panel-toggle{font-size:11px;font-weight:600;width:auto;padding:8px 16px}
+@media(min-width:761px){
+ body.rpg .stage-hud{left:18px;right:420px;transform:none;width:auto;max-width:none}
+ body.rpg .stage-hud>.glasschip:first-child{flex:1;min-width:0;overflow:hidden}
+ body.rpg .stage-hud>.glasschip:first-child b,body.rpg .stage-hud>.glasschip:first-child span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ body.rpg .stage-hud>.glasschip:nth-child(2){flex-shrink:0}
+}
 @media(max-width:760px){
  body.rpg .stage-hud{top:57px;left:12px;right:12px;transform:none;width:auto;max-width:none;justify-content:space-between;gap:6px!important}
  body.rpg .stage-hud>.glasschip:first-child{display:block;flex:1;min-width:0;padding:7px 11px;line-height:1.5;overflow:hidden}

@@ -236,7 +236,9 @@ async function runWizardBuild(jobId, user, plan, lang, visualChoices) {
       new Date(Number.isFinite(Date.parse(plan.start_time))?plan.start_time:'2026-09-15T08:00:00Z').toISOString(), plan.genre || 'slice-of-life', plan.mood || 'cosy',
       Math.max(0, Math.min(1, +plan.pacing || 0.4)),
       // scenario-specific directives from the plan, layered over the game-wide defaults
-      [`${(plan.directives || '').slice(0, 500)}`, DEFAULT_WORLD_DIRECTIVES].filter(Boolean).join('\n'), now(), now());
+      // A scenario bible includes continuity, player agency and power limitations.
+      // The old 500-character cutoff silently discarded those rules mid-sentence.
+      [String(plan.directives || '').slice(0, 20000), DEFAULT_WORLD_DIRECTIVES].filter(Boolean).join('\n'), now(), now());
   jobSet(jobId, { world_id: wid });
 
   const locIdByName = {};

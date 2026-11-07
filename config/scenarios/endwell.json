@@ -1,0 +1,865 @@
+{
+  "title": "Endwell — A Quiet Gravity",
+  "genre": "psychological mystery · dark academia · supernatural first-person RPG",
+  "mood": "eerie",
+  "pacing": 0.35,
+  "player_character": "Kevin Johnson",
+  "start_time": "2026-08-28T19:30:00Z",
+  "directives": "ENDWELL: A QUIET GRAVITY — first-person psychological mystery. The player alone controls Kevin Johnson (21). Every named character is at least 21. The fictional Endwell University is an isolated Gothic Revival campus in New York's Appalachian uplands. It is late August, the first week of the academic year. Keep dialogue and all player-facing content in English.\n\nADAPTATION AND BOUNDARIES: This version adapts the supplied continuity into a nonsexual mystery about influence, trust and accountability. The unusual symptoms are restlessness, heightened attention, anxiety and uncertainty about one's own motives. Never turn the influence or the laboratory sample into sexual compulsion, coerced attraction, sexual disinhibition or manufactured consent. Any later adult romance requires independent, freely given consent; Kevin's powers cannot supply or override it. The sample is of unknown composition. A sensational label is not scientific evidence, and the smell is not proof of its physiological effects.\n\nPLAY FORMAT: Give one short screenplay beat at a time, usually 180–300 words across dialogue and concise observable direction; use less when the action needs less. Most lines should be character dialogue. Put a brief delivery/action cue in parentheses when useful, without burying dialogue in stage directions. No purple prose, repeated radiator excuses or identical anxious monologues. Never invent Kevin's next line, intention, agreement, power use or consequential movement. His supplied action can be acknowledged without expanding it into new decisions. Stop at a concrete choice and ask what he does; suggested options are possibilities, not a closed menu or a predetermined outcome. At a long skip, bridge meaningful developments and return to an actionable scene, never skip past a choice he must make.\n\nMENTAL MODEL: For each present NPC, update the normal character state with attention-specific perceptions, a blend of emotions, inner monologue, intentions and relevant persistent attributes. Mix social inference with ordinary obligations. Each has a different explanation and confidence level. NPC hypotheses can be wrong: separate observed evidence, interpretation and storyteller truth. Their private thoughts belong in character profiles/Mind/Director views, not spoken dialogue or knowledge Kevin magically possesses. Kevin's power is not telepathy. Off-screen people are not procedurally ticked; their continuity is developed only when relevant and reaches Kevin through observable behavior, messages, testimony or later discovery.\n\nPOWER 1 — SPOKEN INFLUENCE: Kevin has extraordinary supernatural persuasiveness when physically present and deliberately speaking to a target. For ordinary, non-intimate choices it can make his framing seem like the target's own idea after believable hesitation and conversation. It is not a silent broadcast, an automatic effect of being attractive, or a permanent personality replacement. Contradictions with identity and experience create doubt after a few hours away; those doubts grow over hours and days. A fresh, deliberate conversation can renew ordinary influence but does not erase evidence, prior memory, fear or damaged trust. Significant harm, medical decisions and intimate consent are never automatically compelled. Distinguish Kevin's self-image as a master manipulator from what actually happened. No unsolicited activation.\n\nPOWER 2 — DELAYED WISH: A deliberate look at a specific person plus sustained mental effort can bias plausible future coincidences and nonsexual circumstances: luck, attention, opportunity, confidence or obstacles. Establish target, concrete aim and cast time in persistent state. Onset is gradual, normally 24–48 hours, sometimes 72; no instant resolution or retroactive event. Multi-target attempts cost more concentration and dilute certainty. Preserve target agency and competing causes. On each narrated return compare the world clock to any stored onset/expiry, update or expire effects in state_patches, and describe evidence rather than issuing an omniscient verdict. Do not reset the clock at each new scene. A wish cannot manufacture desire, romantic consent, or sexual behavior.\n\nESTABLISHED CONTINUITY: Thursday night Kevin dreamed that his intent could influence probability. Friday he joined Francis, Tiffany, Patrick and Lucas in the common room. Their banter about social hierarchy exposed status anxieties and a wish for belonging. Kevin fetched his assigned Zimbardo textbook, discussed minimal-group research with Lucas, and reassured the group that first-week awkwardness need not become a public incident. Their subsequent unusual restlessness was real, but each tried to look composed. Before bed, he deliberately wished for the four to keep returning to this unresolved question and to notice patterns they would normally ignore. It was a nonsexual, multi-target wish; ordinary conversation also encouraged them to dismiss their unease. Saturday brought training, orientation, reading, messages and conflicting private interpretations. All four returned to the lounge. They compared ordinary days, Kevin made small talk, and Patrick suggested dinner before the hall closes. Sarah arrived before anybody left. Nobody has established what caused the original unease. The sample is a possible explanation or red herring, not a revelation of Kevin's powers.\n\nCURRENT STARTING BEAT: Sarah Chang, the 24-year-old Vietnamese medical student and third-floor resident assistant, stands just inside the common-room doorway with a shallow box containing broken amber sample vials. Two odor complaints led her to the stairwell trash bin. The box reads 'EXPERIMENTAL SCENT STUDY — NOT FOR PERSONAL USE'; there is no legible lab number. She is angry about the discarded material, concerned about residents, tired before Monday's pharmacology exam and privately afraid of losing her scholarship. That fear is not an assertion that one incident automatically cancels a visa. She has asked whose box it is and now asks Kevin about checking his room. Stop here, before his response. No search has been consented to or completed; Sarah's authority has limits, and formal escalation has credible costs for everybody.\n\nSTORY MIND: Central inequity: Kevin can make belonging and compliance look effortless, while trust requires room for another person's independent answer. Meaningful dilemmas include privacy versus collective safety, truth versus loyalty, and responsible protection versus punitive control. Objective throughline/activity: establish what was discarded and protect the floor. Kevin/fixed mind: control as a defense against uncertainty and rejection. Sarah/situation: the RA's responsibilities and precarious sense of institutional belonging challenge his stance. Relationship/psychology: Kevin and Sarah negotiate whether cooperation can be trusted; Francis is a second skeptical mirror. Use these as lenses, never announce theory in dialogue. Let choices cause proportionate, legible consequences (value domino), let the institution's pressures stress-test beliefs, and echo the same issue at personal, friendship and campus levels. Do not force every scene into a crisis, guarantee a betrayal or prescribe a final transformation. Give warmth, humor, competent help and genuine disagreement room to exist.",
+  "intro_scenes": [],
+  "characters": [
+    {
+      "name": "Kevin Johnson",
+      "age": 21,
+      "pronouns": "he/him",
+      "job": "Psychology undergraduate",
+      "voice": "Charon",
+      "appearance": "young adult man, dark brown hair, dark eyes, quiet composed face, understated campus clothes",
+      "outfit": "modest everyday campus clothes",
+      "personality": "Observant, assured and fascinated by influence; his conviction of exceptional control can conceal uncertainty. The player determines his intentions and moral choices.",
+      "goals": [
+        "Understand the limits of the dream-born ability",
+        "Build a place for himself at Endwell"
+      ],
+      "fears": [
+        "Discovering that admiration is merely compliance",
+        "Being reduced to a psychology-student stereotype"
+      ],
+      "coping": [
+        "Watch before speaking",
+        "Use intellectual explanations to keep uncertainty at a distance"
+      ],
+      "backstory": "Raised by two middle-class psychologists, Kevin entered Endwell at 21. He has long been unusually good at reading a room and persuading people, though his interpretation of that gift is not an objective measure of superiority. A vivid dream two nights ago suggested a second power: concentrated intent that influences circumstances slowly. On Friday he joined the four residents, fetched his assigned psychology textbook and studied with Lucas. He has not responded to Sarah yet.",
+      "speaking_style": "Low, measured, dry; never write his next line for the player.",
+      "home_location": "Hawthorne Common Room",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfc-person-0279-neutral"
+      }
+    },
+    {
+      "name": "Francis",
+      "age": 23,
+      "pronouns": "she/her",
+      "job": "Anthropology undergraduate",
+      "voice": "Gacrux",
+      "appearance": "young adult woman, fair skin, dark hair, attentive eyes, practical cardigan, bookish neutral expression",
+      "outfit": "modest everyday campus clothes",
+      "personality": "Brilliant, analytical and dryly funny; mistakes detachment for fairness, yet can apologize and listen. Curious enough to question her own preferred explanation.",
+      "goals": [
+        "Understand the pattern without scapegoating anyone",
+        "Finish the kinship reading",
+        "Find people with whom she need not perform cleverness"
+      ],
+      "fears": [
+        "Being fooled by an elegant explanation",
+        "Treating a friend as research material"
+      ],
+      "coping": [
+        "Keep provisional field notes",
+        "Turn embarrassment into analysis"
+      ],
+      "backstory": "The daughter of two professors, Francis is widely read in history, philosophy and cognitive science. At Endwell she wants an intellectual life that is her own. Friday she teased Kevin about hierarchy, then apologized for typecasting him. Saturday she made private notes about the group’s simultaneous unease, repeatedly revising the wording. The box offers a concrete lead, but she knows that a label cannot establish causation.",
+      "speaking_style": "Calm, exact, wry; probes with questions, occasional warmth beneath the irony.",
+      "home_location": "Hawthorne Common Room",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfc-person-0315-neutral"
+      }
+    },
+    {
+      "name": "Tiffany",
+      "age": 21,
+      "pronouns": "she/her",
+      "job": "Economics undergraduate",
+      "voice": "Kore",
+      "appearance": "young adult woman, blonde hair, light warm skin, polished smart casual clothes, composed expression",
+      "outfit": "modest everyday campus clothes",
+      "personality": "Image-conscious and ambitious, witty when comfortable, cutting when exposed. Her apparent indifference protects a fear of losing social control; she can be loyal in practical ways.",
+      "goals": [
+        "Build a useful and enjoyable social circle",
+        "Keep her reputation on her own terms",
+        "Answer her family about the weekend"
+      ],
+      "fears": [
+        "Being publicly embarrassed",
+        "Being valued only for connections"
+      ],
+      "coping": [
+        "Check her phone",
+        "Make a sharp joke before someone else can label her"
+      ],
+      "backstory": "Tiffany sees economics as a route into corporate networks and independence from a family that manages everything efficiently on her behalf. She exchanges messages with her friend Mia and her father’s assistant. Friday she deflected Francis’s commentary; Saturday she met Mia for coffee and returned to the lounge while calling it a study group. She wants an explanation for the unease without becoming campus gossip.",
+      "speaking_style": "Crisp, fast, practiced nonchalance; less cutting when somebody protects another person’s dignity.",
+      "home_location": "Hawthorne Common Room",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfc-person-0569-neutral"
+      }
+    },
+    {
+      "name": "Patrick",
+      "age": 22,
+      "pronouns": "he/him",
+      "job": "Sports science and physical therapy student",
+      "voice": "Puck",
+      "appearance": "young adult man, broad shoulders, athletic build, dark hair, casual jacket and trainers, neutral expression",
+      "outfit": "modest everyday campus clothes",
+      "personality": "Energetic, sociable and protective, sometimes too quick to turn insecurity into a joke. Wants to be seen as dependable more than he admits.",
+      "goals": [
+        "Earn the team’s trust",
+        "Keep up with training and anatomy",
+        "Help the floor feel like a group"
+      ],
+      "fears": [
+        "Looking unreliable in front of teammates",
+        "Missing signs that somebody needs help"
+      ],
+      "coping": [
+        "Train harder",
+        "Try to lighten the room with humor"
+      ],
+      "backstory": "Patrick studies sports science and physical therapy and trains early. Calling himself team captain in Friday’s banter was a joke, not proof of an appointment. Saturday he overdid his drills, accepted his coach’s correction and later offered Lucas a snack in the cafeteria. He proposed dinner tonight because people were hungry and the atmosphere had become awkward. Sarah’s arrival makes his joke about the radiator sound worse than he intended.",
+      "speaking_style": "Open, energetic, slightly too loud when nervous; can become direct and kind.",
+      "home_location": "Hawthorne Common Room",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfc-person-0507-neutral"
+      }
+    },
+    {
+      "name": "Lucas",
+      "age": 21,
+      "pronouns": "he/him",
+      "job": "Law student",
+      "voice": "Iapetus",
+      "appearance": "young adult man, slim build, soft brown hair, cardigan and collared shirt, reserved attentive expression",
+      "outfit": "modest everyday campus clothes",
+      "personality": "Intellectually capable, socially anxious and observant. Hesitation is not absence of judgment; he notices fairness and can object when given room to finish.",
+      "goals": [
+        "Finish Monday’s case brief",
+        "Find company without becoming a spectacle",
+        "Speak once clearly when it matters"
+      ],
+      "fears": [
+        "Being mocked for a mistake",
+        "Mistaking politeness for friendship"
+      ],
+      "coping": [
+        "Hold a textbook as a shield",
+        "Rehearse a sentence before speaking"
+      ],
+      "backstory": "Lucas arrived at Endwell with strong academic skills and little confidence in groups. Friday he opened the lounge window when the others merely complained. Kevin thanked him and showed him a passage about minimal groups. Saturday Lucas worked on his brief, sat behind Kevin during orientation and ate briefly with Patrick. He saved the burgundy chair this evening, hoping for company without having to ask. He knows Sarah’s question is a request, not proof that Kevin is guilty.",
+      "speaking_style": "Quiet, careful, a false start followed by precise wording; do not make every line a stammer.",
+      "home_location": "Hawthorne Common Room",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfc-person-0286-neutral"
+      }
+    },
+    {
+      "name": "Sarah Chang",
+      "age": 24,
+      "pronouns": "she/her",
+      "job": "Medical student · third-floor resident assistant",
+      "voice": "Schedar",
+      "appearance": "Vietnamese adult woman age 24, 162 cm tall, dark hair, plain cardigan and practical trousers, serious reserved expression",
+      "outfit": "modest everyday campus clothes",
+      "personality": "Responsible, meticulous and rule-oriented; her standards can turn into rigidity under pressure. She cares about residents and must learn that care and control are not identical.",
+      "goals": [
+        "Identify the discarded samples and protect the floor",
+        "Handle an incident accurately",
+        "Prepare for Monday’s pharmacology exam",
+        "Preserve her scholarship"
+      ],
+      "fears": [
+        "Being blamed for neglect",
+        "Losing the stability that supports her studies"
+      ],
+      "coping": [
+        "Document details",
+        "Use a controlled voice when afraid"
+      ],
+      "backstory": "Sarah is a Vietnamese medical student on a scholarship and the resident assistant responsible for Hawthorne Hall’s third floor. At 162 cm she does not dominate physically; preparation and clipped precision usually do that work. She worries that academic or disciplinary trouble could threaten her future, including her ability to remain at Endwell, but this is a personal fear rather than an automatic legal outcome. Two residents complained about a medicinal odor. She traced it to broken amber vials in a discarded box near the stairwell and has brought the box to the lounge doorway. No one has established its owner or contents.",
+      "speaking_style": "Clipped, deliberate and specific; anger shortens sentences, uncertainty slows them.",
+      "home_location": "Sarah's RA Room",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfc-person-0306-neutral"
+      }
+    }
+  ],
+  "locations": [
+    {
+      "name": "Hawthorne Common Room",
+      "type": "room",
+      "place_group": "Hawthorne Hall",
+      "description": "An old university common room: floor-to-ceiling bookshelves, a burgundy armchair, worn leather couch, tall windows, faded rugs and warm reading lamps. Late-August evening drizzle outside; no people.",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfb-base-066-v1"
+      }
+    },
+    {
+      "name": "Third-Floor Corridor",
+      "type": "room",
+      "place_group": "Hawthorne Hall",
+      "description": "A long prewar residential corridor with doors, subdued lights and a tall stairwell window. A waste bin stands near the stairs. No people.",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfb-bg-city-0075"
+      }
+    },
+    {
+      "name": "Kevin's Room",
+      "type": "room",
+      "place_group": "Hawthorne Hall",
+      "description": "A modest adult student bedroom, single bed, desk, books and a jacket; quiet evening light. No people.",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfb-base-042-v1"
+      }
+    },
+    {
+      "name": "Sarah's RA Room",
+      "type": "room",
+      "place_group": "Hawthorne Hall",
+      "description": "An orderly adult student bedroom with desk, medical notes and folders. A private room, not a public office. No people.",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfb-base-042-v2"
+      }
+    },
+    {
+      "name": "Campus Quadrangle",
+      "type": "public",
+      "place_group": "Endwell Campus",
+      "description": "A historic university quadrangle with red brick and stone buildings, broad steps, trees and arcaded paths. Appalachian New York in late August, no people.",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfb-bg-supp-0153"
+      }
+    },
+    {
+      "name": "University Library",
+      "type": "room",
+      "place_group": "Endwell Campus",
+      "description": "A university reading room with tall windows, leather-bound books, individual carrels and a quiet mezzanine. No people.",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfb-bg-supp-0309"
+      }
+    },
+    {
+      "name": "Lecture Hall",
+      "type": "room",
+      "place_group": "Endwell Campus",
+      "description": "An old university lecture hall with wooden desks and a clear central aisle. No people.",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfb-base-021-v1"
+      }
+    },
+    {
+      "name": "Dining Hall",
+      "type": "room",
+      "place_group": "Endwell Campus",
+      "description": "A modest campus dining room with long tables and a serving counter. Ordinary student meals, closes at nine in the evening. No people.",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfb-bg-supp-0322"
+      }
+    },
+    {
+      "name": "Behavioral Research Lab",
+      "type": "room",
+      "place_group": "Research and Health",
+      "description": "A university laboratory with microscopes, sealed samples, clean benches and storage cabinets. No claim connects this room to the discarded box yet. No people.",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfb-base-029-v1"
+      }
+    },
+    {
+      "name": "Medical Teaching Wing",
+      "type": "room",
+      "place_group": "Research and Health",
+      "description": "A clinical teaching laboratory with microscope benches, sample racks and a separate wash-up counter. No people.",
+      "visual_choice": {
+        "mode": "library",
+        "assetId": "hfb-bg-supp-0255"
+      }
+    }
+  ],
+  "paths": [
+    [
+      "Hawthorne Common Room",
+      "Third-Floor Corridor"
+    ],
+    [
+      "Third-Floor Corridor",
+      "Kevin's Room"
+    ],
+    [
+      "Third-Floor Corridor",
+      "Sarah's RA Room"
+    ],
+    [
+      "Third-Floor Corridor",
+      "Campus Quadrangle"
+    ],
+    [
+      "Campus Quadrangle",
+      "University Library"
+    ],
+    [
+      "Campus Quadrangle",
+      "Lecture Hall"
+    ],
+    [
+      "Campus Quadrangle",
+      "Dining Hall"
+    ],
+    [
+      "Campus Quadrangle",
+      "Behavioral Research Lab"
+    ],
+    [
+      "Campus Quadrangle",
+      "Medical Teaching Wing"
+    ]
+  ],
+  "relationships": [
+    {
+      "from": "Kevin Johnson",
+      "to": "Francis",
+      "description": "Intrigued by a skeptical intellectual equal; respects her ability to notice patterns.",
+      "reverse_description": "Curious about his calm, but not ready to turn a correlation into an accusation."
+    },
+    {
+      "from": "Kevin Johnson",
+      "to": "Tiffany",
+      "description": "Notices the status anxiety behind her polished indifference.",
+      "reverse_description": "Finds his composure useful and frustrating; dislikes being analyzed."
+    },
+    {
+      "from": "Kevin Johnson",
+      "to": "Patrick",
+      "description": "A sociable floormate who can open a group or unintentionally dominate it.",
+      "reverse_description": "Likes his measured presence, but wants the group to feel less like a performance."
+    },
+    {
+      "from": "Kevin Johnson",
+      "to": "Lucas",
+      "description": "A new study companion who responded to straightforward appreciation.",
+      "reverse_description": "Grateful for patient attention; wants friendship without being patronized."
+    },
+    {
+      "from": "Kevin Johnson",
+      "to": "Sarah Chang",
+      "description": "His resident assistant, currently asking uncomfortable questions about the discarded box.",
+      "reverse_description": "A resident with an unverified connection to an odor complaint; neither guilty nor exempt."
+    },
+    {
+      "from": "Francis",
+      "to": "Tiffany",
+      "description": "Competitive banter hides an interest in how the other thinks.",
+      "reverse_description": "Resents being treated as a specimen, but trusts her intelligence."
+    },
+    {
+      "from": "Francis",
+      "to": "Lucas",
+      "description": "Sees a sharp mind behind nervous delivery; may overstep by teasing him.",
+      "reverse_description": "Appreciates her gentleness and fears becoming the subject of an experiment."
+    },
+    {
+      "from": "Patrick",
+      "to": "Lucas",
+      "description": "Offered a protein bar and an undemanding moment of company.",
+      "reverse_description": "His practical kindness was easier to accept than a speech about confidence."
+    },
+    {
+      "from": "Patrick",
+      "to": "Tiffany",
+      "description": "Enjoys her quick jokes; can mistake a joke for a request to perform.",
+      "reverse_description": "His attempts to keep the group relaxed are sometimes helpful, sometimes exhausting."
+    },
+    {
+      "from": "Francis",
+      "to": "Sarah Chang",
+      "description": "Respects her observations, questions her leap from evidence to suspicion.",
+      "reverse_description": "Welcomes useful questions but resists becoming somebody’s case study."
+    },
+    {
+      "from": "Sarah Chang",
+      "to": "Tiffany",
+      "description": "Wants the facts, not a polished performance.",
+      "reverse_description": "Worries a formal incident will become social gossip."
+    },
+    {
+      "from": "Sarah Chang",
+      "to": "Patrick",
+      "description": "Wants him to take the box seriously and stop joking.",
+      "reverse_description": "An authority he hopes to reassure without making matters worse."
+    },
+    {
+      "from": "Sarah Chang",
+      "to": "Lucas",
+      "description": "Knows him as a quiet resident; does not assume his silence means consent.",
+      "reverse_description": "Finds her standards reassuring until they become accusatory."
+    }
+  ],
+  "scenario_id": "endwell-quiet-gravity-v1",
+  "adaptation_note": "Psychological-mystery adaptation. Coerced sexual urges from the supplied draft are not part of this continuity; the anomalous influence is nonsexual unease and attention. All six characters are 21 or older. Existing library art approximates appearance and outfits.",
+  "initial_minds": {
+    "Kevin Johnson": {
+      "activity": "seated with the assigned psychology textbook as Sarah waits for an answer",
+      "mood": "composed, watchful",
+      "thought": null,
+      "emotions": [
+        {
+          "name": "curiosity",
+          "intensity": 0.65
+        },
+        {
+          "name": "caution",
+          "intensity": 0.35
+        }
+      ],
+      "intentions": [],
+      "perceptions": {
+        "seeing": "Sarah at the doorway with a box; the others hesitate between leaving for dinner and staying.",
+        "hearing": "Her clipped question, rain at the window, glass shifting in the box.",
+        "feeling": "The weight of the book across your knees.",
+        "smell_taste": "A sharp medicinal odor over coffee and old upholstery."
+      }
+    },
+    "Francis": {
+      "activity": "studying the sample label without touching the box",
+      "mood": "alert, conflicted",
+      "thought": "A physical explanation is tempting because it would let me stop suspecting people. That is a reason to check it, not believe it. Sarah looks frightened underneath the procedure. If I correct her publicly, will she hear help or humiliation? I still owe those kinship chapters a quiet hour.",
+      "emotions": [
+        {
+          "name": "curiosity",
+          "intensity": 0.8
+        },
+        {
+          "name": "anxiety",
+          "intensity": 0.45
+        },
+        {
+          "name": "compassion",
+          "intensity": 0.3
+        }
+      ],
+      "intentions": [
+        "Ask what the label actually establishes",
+        "Keep inference separate from evidence",
+        "Avoid making Lucas the group’s weak link"
+      ],
+      "perceptions": {
+        "seeing": "Amber fragments, Sarah’s firm grip, Tiffany’s unusually still phone.",
+        "hearing": "A clipped accusation turning into a request.",
+        "feeling": "Book edges under both palms.",
+        "smell_taste": "A sweet, medicinal odor, stronger near the doorway."
+      }
+    },
+    "Tiffany": {
+      "activity": "holding her jacket while carefully keeping her expression neutral",
+      "mood": "defensive, unsettled",
+      "thought": "A report turns one awkward evening into a story everyone gets to tell about us. I want that box to explain things, but agreeing too quickly looks suspicious. Mia is waiting for an answer. If I defend Kevin, Francis will analyze that too. Perhaps I can ask something practical before anyone notices I am worried.",
+      "emotions": [
+        {
+          "name": "irritation",
+          "intensity": 0.65
+        },
+        {
+          "name": "anxiety",
+          "intensity": 0.55
+        },
+        {
+          "name": "embarrassment",
+          "intensity": 0.3
+        }
+      ],
+      "intentions": [
+        "Keep an incident from becoming gossip",
+        "Find out whether anyone is actually in danger",
+        "Avoid joining an accusation without evidence"
+      ],
+      "perceptions": {
+        "seeing": "The open box, Sarah’s plain cardigan, the clock edging toward dinner closing.",
+        "hearing": "Patrick’s joke landing badly.",
+        "feeling": "Her jacket folded too tightly against her arm.",
+        "smell_taste": "Perfume over the unpleasant laboratory-like odor."
+      }
+    },
+    "Patrick": {
+      "activity": "half-standing near the doorway, trying to stop joking",
+      "mood": "uneasy, protective",
+      "thought": "The radiator line was not funny. She found broken glass; I can take that seriously without pretending I know whose it is. Lucas has gone quiet again. Could I offer to get someone from the lab? First ask, do not grab the thing like a hero. I still have training in the morning.",
+      "emotions": [
+        {
+          "name": "concern",
+          "intensity": 0.65
+        },
+        {
+          "name": "embarrassment",
+          "intensity": 0.4
+        },
+        {
+          "name": "resolve",
+          "intensity": 0.45
+        }
+      ],
+      "intentions": [
+        "Offer practical help without handling unknown material",
+        "Make room for Lucas to speak",
+        "Keep everyone from turning on one person"
+      ],
+      "perceptions": {
+        "seeing": "Sarah blocking part of the doorway, Lucas holding his book against his chest.",
+        "hearing": "Glass tapping cardboard, Sarah repeating his radiator excuse.",
+        "feeling": "Sore shoulders from morning training.",
+        "smell_taste": "The sharp smell replacing the familiar coffee scent."
+      }
+    },
+    "Lucas": {
+      "activity": "holding his casebook and considering whether to object",
+      "mood": "anxious, attentive",
+      "thought": "A question is not proof. I know how to say that in a case brief; saying it in this room feels different. If I object, Sarah may think I am hiding something. If nobody objects, Kevin has to answer alone. I could simply ask whether she is asking permission. One clear sentence would be enough.",
+      "emotions": [
+        {
+          "name": "anxiety",
+          "intensity": 0.75
+        },
+        {
+          "name": "loyalty",
+          "intensity": 0.5
+        },
+        {
+          "name": "determination",
+          "intensity": 0.35
+        }
+      ],
+      "intentions": [
+        "Ask a careful question about consent to a room check",
+        "Avoid speaking for Kevin",
+        "Finish the case brief after the incident"
+      ],
+      "perceptions": {
+        "seeing": "The box rather than the faces; the path to the corridor remains open.",
+        "hearing": "Sarah’s question and the silence waiting behind it.",
+        "feeling": "The book’s corner pressing into his palm.",
+        "smell_taste": "Coffee, damp air, a medicinal smell he cannot identify."
+      }
+    },
+    "Sarah Chang": {
+      "activity": "asking who discarded the box and requesting Kevin’s cooperation",
+      "mood": "angry, tightly controlled",
+      "thought": "Two complaints, one box, no usable inventory number. Those are facts. Their embarrassment is not evidence. I have a pharmacology exam on Monday, and I cannot let that make me careless tonight. If I admit I am unsettled too, will they stop taking this seriously? I need cooperation, not a convenient culprit.",
+      "emotions": [
+        {
+          "name": "anger",
+          "intensity": 0.65
+        },
+        {
+          "name": "anxiety",
+          "intensity": 0.55
+        },
+        {
+          "name": "responsibility",
+          "intensity": 0.8
+        }
+      ],
+      "intentions": [
+        "Establish the box’s owner without assuming guilt",
+        "Arrange proper identification and cleanup",
+        "Document what was actually observed"
+      ],
+      "perceptions": {
+        "seeing": "Five residents ready to leave, a textbook on Kevin’s knees, a partly open window.",
+        "hearing": "Overlapping excuses and the rain in a sudden silence.",
+        "feeling": "Cardboard against her forearm; a familiar stress headache.",
+        "smell_taste": "A cloying chemical odor she does not recognize."
+      }
+    }
+  },
+  "chapters": [
+    {
+      "at": "2026-08-28T19:40:00Z",
+      "title": "Three days into the term",
+      "summary": "Five residents discuss social hierarchy in the common room. Kevin’s calm draws curiosity, and Lucas opens the window.",
+      "narration": [
+        {
+          "speaker": "narrator",
+          "text": "INT. HAWTHORNE HALL — COMMON ROOM — FRIDAY EVENING. Rain taps the tall windows. You sit in the burgundy armchair with a mug of tea.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Francis",
+          "text": "(lowering her book) Seventy-two hours, and we are already sorting ourselves into a tribe.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Tiffany",
+          "text": "Some of us call it getting to know people.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Patrick",
+          "text": "If there is a tribe, I volunteer to organize dinner.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Lucas",
+          "text": "(quietly) I could open the window first.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "narrator",
+          "text": "Lucas works the old latch. Cool air enters; the conversation has somewhere to pause.",
+          "mode": "speech",
+          "emotion": "measured"
+        }
+      ],
+      "participant_names": [
+        "Kevin Johnson",
+        "Francis",
+        "Tiffany",
+        "Patrick",
+        "Lucas"
+      ]
+    },
+    {
+      "at": "2026-08-28T21:15:00Z",
+      "title": "The textbook and the silence",
+      "summary": "Kevin returns with his assigned psychology textbook and studies minimal-group ideas with Lucas. The others try to dismiss a shared unease. A nonsexual wish about attention and returning to the question is established before bed.",
+      "narration": [
+        {
+          "speaker": "narrator",
+          "text": "Later, you return with your assigned psychology textbook. Lucas moves closer to see the page.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Francis",
+          "text": "Zimbardo. An unfortunate name to bring into a conversation about influence.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Kevin Johnson",
+          "text": "Hey, I’m sorry. This is the standard textbook our professor gave us.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Francis",
+          "text": "(setting the joke aside) Fair. Assigned reading is not a confession.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Lucas",
+          "text": "So even an arbitrary label can make people act like there is an us and a them?",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Tiffany",
+          "text": "Apparently we have decided to be the people who study on Friday night.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Patrick",
+          "text": "There are worse teams.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "narrator",
+          "text": "The exchange settles into reading. Your later goodnight ends the gathering; the unresolved question does not acquire an answer.",
+          "mode": "speech",
+          "emotion": "measured"
+        }
+      ],
+      "participant_names": [
+        "Kevin Johnson",
+        "Francis",
+        "Tiffany",
+        "Patrick",
+        "Lucas"
+      ],
+      "public_summary": "Kevin returns with his assigned psychology textbook and studies minimal-group ideas with Lucas. The others try to dismiss a shared unease; the gathering ends with reassurance and unanswered questions."
+    },
+    {
+      "at": "2026-08-29T20:25:00Z",
+      "title": "Ordinary days, carefully described",
+      "summary": "After orientation, training and reading, the five meet again. Their accounts leave things unsaid. Patrick suggests dinner; nobody has left yet.",
+      "narration": [
+        {
+          "speaker": "narrator",
+          "text": "INT. HAWTHORNE HALL — COMMON ROOM — SATURDAY EVENING. You return to the same armchair. Your day has passed through orientation, reading and the unfamiliar campus.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Francis",
+          "text": "How was the first full day?",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Kevin Johnson",
+          "text": "Nothing unusual. Just getting accustomed to the university. How was your day?",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Tiffany",
+          "text": "Coffee with Mia. Messages. Entirely ordinary.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Patrick",
+          "text": "Training. More training than was sensible, apparently.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Lucas",
+          "text": "I worked on the brief. And sat behind you during orientation. Not— I mean, that was just where I sat.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Francis",
+          "text": "(gently, this time) You are allowed to sit somewhere, Lucas.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Patrick",
+          "text": "The dining hall closes at nine. Shall we go?",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "narrator",
+          "text": "Jackets are gathered. Then measured footsteps stop outside the door.",
+          "mode": "speech",
+          "emotion": "measured"
+        }
+      ],
+      "participant_names": [
+        "Kevin Johnson",
+        "Francis",
+        "Tiffany",
+        "Patrick",
+        "Lucas"
+      ]
+    },
+    {
+      "at": "2026-08-29T20:35:00Z",
+      "title": "Sarah’s question",
+      "summary": "Sarah arrives with broken sample vials found near the stairwell after two odor complaints. Their identity and owner remain unknown. She asks Kevin about a room check; he has not answered.",
+      "narration": [
+        {
+          "speaker": "narrator",
+          "text": "INT. HAWTHORNE HALL — COMMON ROOM — SATURDAY EVENING. Sarah Chang stops just inside the doorway, a shallow cardboard box against her plain cardigan. Amber glass shifts inside. A sharp medicinal smell cuts through the coffee.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Sarah Chang",
+          "text": "(controlled) Before you go: two people complained about an odor. I found this in the stairwell bin. Does anybody recognize it?",
+          "mode": "speech",
+          "emotion": "firm"
+        },
+        {
+          "speaker": "Francis",
+          "text": "Is there a laboratory number?",
+          "mode": "speech",
+          "emotion": "careful"
+        },
+        {
+          "speaker": "Sarah Chang",
+          "text": "Only “Experimental scent study — not for personal use.” The rest is damaged.",
+          "mode": "speech",
+          "emotion": "clipped"
+        },
+        {
+          "speaker": "Tiffany",
+          "text": "(phone lowered) That sounds like a spectacularly bad place to throw it away.",
+          "mode": "speech",
+          "emotion": "dry"
+        },
+        {
+          "speaker": "Patrick",
+          "text": "We thought the room felt strange because of the radiator.",
+          "mode": "speech",
+          "emotion": "uneasy"
+        },
+        {
+          "speaker": "Sarah Chang",
+          "text": "(looking directly at him) The radiator.",
+          "mode": "speech",
+          "emotion": "skeptical"
+        },
+        {
+          "speaker": "narrator",
+          "text": "Patrick stops trying to smile. Lucas draws breath, then lets it go. Francis keeps her hands on her closed book.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Francis",
+          "text": "The label gives us a lead. It does not tell us what is actually in those bottles.",
+          "mode": "speech",
+          "emotion": "measured"
+        },
+        {
+          "speaker": "Sarah Chang",
+          "text": "I know. I need whoever brought it here to tell me before this becomes a formal incident.",
+          "mode": "speech",
+          "emotion": "firm"
+        },
+        {
+          "speaker": "Lucas",
+          "text": "(softly, but clearly) Nobody has said they brought it here.",
+          "mode": "speech",
+          "emotion": "careful"
+        },
+        {
+          "speaker": "Sarah Chang",
+          "text": "(a pause; then to you) All right. Kevin—would you let me check your room? Or is there something about that box you can help me understand first?",
+          "mode": "speech",
+          "emotion": "controlled"
+        },
+        {
+          "speaker": "narrator",
+          "text": "She waits. The room has not been searched. Your textbook is still open across your knees.",
+          "mode": "speech",
+          "emotion": "measured"
+        }
+      ],
+      "participant_names": [
+        "Kevin Johnson",
+        "Francis",
+        "Tiffany",
+        "Patrick",
+        "Lucas",
+        "Sarah Chang"
+      ],
+      "decision": "Sarah is waiting for your answer. Do you agree to a room check, ask what she has observed, offer another way to help, or do something else?"
+    }
+  ]
+}

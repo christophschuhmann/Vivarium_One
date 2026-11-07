@@ -33,7 +33,7 @@ function describeDelta(delta) {
   const n = +m[1];
   return `${n} ${UNIT_WORDS[m[2]]}${n === 1 ? '' : 's'} later`;
 }
-const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+const fmtClock = (iso) => new Date(iso).toLocaleString('en-GB', { timeZone: 'UTC', weekday: 'short', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
 
 // Delivery templates — kept BYTE-IDENTICAL to web/app.js (ttsStyleFor at default prefs):
 // live Stage playback and the export pipeline must build the exact same style string so

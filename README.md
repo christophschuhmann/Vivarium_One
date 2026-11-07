@@ -49,6 +49,20 @@ The **Cast** screen adds and edits individual characters; **World** manages plac
 
 [config/rpg-starter.json](config/rpg-starter.json) contains a complete example: *The Letter at Closing Time*, a small-town mystery with four adults, four connected settings and a player-controlled journalist.
 
+### Endwell — A Quiet Gravity
+
+[config/scenarios/endwell.json](config/scenarios/endwell.json) is an authored dark-academia mystery: play **Kevin Johnson, 21**, at Endwell University. Six adult characters, ten connected places, expression variants, distinct private perspectives and four replayable opening scenes lead to **Sarah's question at the common-room doorway**. She has found discarded sample vials and is asking about a room check. The game waits for your answer; it has not accepted a search for you.
+
+This is a **nonsexual psychological-mystery adaptation** of the supplied outline. The anomalous experiences concern attention, restlessness, trust and uncertainty. Coerced sexual desire is excluded; any romance must be freely chosen. Kevin's spoken influence requires deliberate conversation and fades into doubt; his nonsexual probability wishes develop over 24–72 hours. The storyteller tracks these rules and their timestamps, rather than treating them as an automatic background simulation.
+
+On an installation with the asset catalog downloaded (`npm run assets:sync`), first create the player account, then install the authored save:
+
+```bash
+node --env-file=.env scripts/install-authored-scenario.mjs config/scenarios/endwell.json --email your-account@example.com
+```
+
+The installer reuses the reviewed library image IDs, imports their available expressions, optionally selects local background music, and prints the new world/player IDs. It makes no model or image-generation calls. It refuses to replace an existing copy for that account. Open the new story from **Home → Play**; **From the beginning** replays the four authored scenes. **Timeline** lets you inspect or revisit each scene. Use **Director mode** if you want to read the NPCs' separate inner lives; Kevin does not automatically know them. Existing art is an approximation of the described architecture, appearance and clothes and remains replaceable through the image picker.
+
 ## Play
 
 - **You are** identifies your player character; **Inner voice** opens their thoughts and conversation panel.

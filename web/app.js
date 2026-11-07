@@ -176,7 +176,9 @@ const rpgPrefs = () => { const st = JSON.parse(localStorage.getItem('viv_rpg') |
 const saveRpgPrefs = (p) => localStorage.setItem('viv_rpg', JSON.stringify({ ...rpgPrefs(), ...p }));
 const adminOn = () => !rpgPC() || rpgPrefs().adminMode;   // classic worlds behave like admin-on
 const saveTtsPrefs = (p) => localStorage.setItem('viv_tts', JSON.stringify({ ...ttsPrefs(), ...p }));
-const fmtClock = (iso) => new Date(iso).toLocaleString(getLang()==='de'?'de-DE':'en-GB', {...(S.worldData?.world.simulation_mode==='living'?{timeZone:'UTC'}:{}), weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+// Simulation timestamps encode the fictional wall clock. Do not shift the story
+// when a player's browser and the storyteller server use different timezones.
+const fmtClock = (iso) => new Date(iso).toLocaleString(getLang()==='de'?'de-DE':'en-GB', {timeZone:'UTC', weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const cutoutFor = (ch) => { const o = (ch.state.outfits || []).find(o => o.name === (ch.state.outfit || 'everyday')) || (ch.state.outfits || [])[0]; return o?.cutout_asset_id; };
 
 /* ── mic component: record → cancel / transcribe only / transcribe & send ── */
@@ -2324,6 +2326,7 @@ async function stageScreen() {
   // not-yet-introduced characters (rewound below their intro tick) don't exist in this era
   const present = characters.filter(c => (c.state.location_id === loc?.id || living && S.worldData.journey?.simId === c.id) && (c.intro_tick_idx || 0) <= world.tick_index);
   const scene = buildScene(lastTick, loc, present, povChar);
+  const latestSpeaker = [...scene.lines].reverse().find(n => n.speaker !== 'narrator' && n.mode !== 'thought')?.speaker;
   const stagePeople=living&&present.length>8?[...present.filter(c=>c.id!==povChar?.id).slice(0,7),...(povChar&&present.some(c=>c.id===povChar.id)?[povChar]:present.filter(c=>c.id!==povChar?.id).slice(7,8))]:present;
 
   const dec = (pcLocked && lastTick?.decision && lastTick.idx === world.tick_index) ? lastTick.decision : null;
@@ -2338,7 +2341,7 @@ async function stageScreen() {
         const isPov = c.id === povChar?.id;
         return `<div class="stage-char ${isPov ? 'pov' : ''}" data-id="${c.id}" style="left:${x}%;height:${isPov ? 76 : 71}%">
           <img src="${assetUrl(cutoutFor(c))}" alt="${esc(c.name)}">
-          ${c.state.dialogue ? `<div class="bubble talk" data-say="${esc(c.state.dialogue)}" data-c="${c.id}">${esc(c.state.dialogue)}</div>`
+          ${c.state.dialogue ? `<div class="bubble talk ${c.id===latestSpeaker?'rpg-latest':''}" data-say="${esc(c.state.dialogue)}" data-c="${c.id}">${esc(c.state.dialogue)}</div>`
             : (isPov && c.state.thought ? `<div class="bubble think" data-say="${esc(c.state.thought)}" data-c="${c.id}">${esc(c.state.thought)}</div>` : '')}
         </div>`;
       }).join('')}
@@ -4104,7 +4107,7 @@ async function mindModal(charId) {
   // RPG without 🛠 admin mode: other minds are closed — the player discovers people by
   // talking to them, not by reading their state. (Their OWN character's head is always open.)
   if (rpgPC() && !adminOn() && c.id !== rpgPC()) {
-    toast(`🔒 You can't read ${c.name}'s mind — that's for the simulation's admin. Enable 🛠 Admin mode in Account settings, or just talk to them.`);
+    toast(`🔒 You can't read ${c.name}'s private thoughts in character. Enable Director mode in Account settings to explore them, or talk to them in the scene.`);
     return;
   }
   const st = c.state, per = st.perceptions || {};
