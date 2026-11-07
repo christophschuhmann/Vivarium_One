@@ -233,13 +233,13 @@ db.prepare(`INSERT OR IGNORE INTO settings(key,value) VALUES ('context_config', 
   .run(JSON.stringify({ tickWindow: 50, memChunk: 5, contextBudget: 200000, compressionRatio: 0.5 }));
 // Bring-your-own-key policy. `enabled` lets the operator switch player-supplied OpenRouter
 // keys off fleet-wide (default on — the app works standalone without an admin). The
-// `defaults` are the per-role model picks a fresh BYOK user starts with: options (Gemini 3.8 Flash + Nano Banana 2 Lite + Gemini 3.8 Flash TTS
+// `defaults` are the per-role model picks a fresh BYOK user starts with: options (DeepSeek V4.1 Flash 1017 + Nano Banana 2 Lite + Gemini 3.8 Flash TTS
 // + Gemini Flash Lite for transcription). Players can change every one in Settings.
 db.prepare(`INSERT OR IGNORE INTO settings(key,value) VALUES ('byok', ?)`)
   .run(JSON.stringify({
     enabled: true,
     defaults: {
-      llm: 'google/gemini-3.8-flash',
+      llm: 'deepseek/deepseek-v4.1-flash-1017',
       image: 'google/gemini-3.1-flash-lite-image',
       tts: 'google/gemini-3.1-flash-tts-preview',
       asr: 'google/gemini-3.1-flash-lite',

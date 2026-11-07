@@ -61,7 +61,8 @@
     "test:scene-monitor-browser": "node scripts/test-scene-monitor.mjs --browser",
     "test:narration-browser": "node scripts/test-narration-browser.mjs",
     "test:rpg": "node scripts/test-first-person.mjs",
-    "test:rpg-browser": "node scripts/test-first-person-browser.mjs"
+    "test:rpg-browser": "node scripts/test-first-person-browser.mjs",
+    "test:provider-hosts-browser": "node scripts/test-provider-hosts-browser.mjs"
   },
   "license": "MIT",
   "dependencies": {

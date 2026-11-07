@@ -15,10 +15,11 @@
 //                models like Gemini Flash Lite transcribe it)
 //
 // The model CATALOG (live /models list) is cached in memory for 10 minutes and
-// classified per role; free models are detected from zero pricing and sorted to
-// the top so the UI can highlight them.
+// classified per role and grouped alphabetically by model author. Free models
+// retain their badge without breaking that ordering.
 // ─────────────────────────────────────────────────────────────────────────────
 import { spawn } from 'node:child_process';
+import { routingBody } from './openrouter-routing.js';
 
 const API = 'https://openrouter.ai/api/v1';
 const CATALOG_TTL_MS = 10 * 60 * 1000;
@@ -63,6 +64,7 @@ export async function fetchCatalog({ force = false } = {}) {
     const free = prompt === 0 && completion === 0;
     return {
       id: m.id,
+      provider: modelAuthor(m),
       endpoint: m.architecture?.output_modalities?.includes('speech') ? 'speech' : undefined,
       voices: m.supported_voices || [],
       pricing: p,
@@ -83,15 +85,18 @@ export async function fetchCatalog({ force = false } = {}) {
   return models;
 }
 
+export function modelAuthor(model) {
+  const slug = model.id.split('/')[0];
+  const names = { anthropic:'Anthropic', google:'Google', deepseek:'DeepSeek', openai:'OpenAI', 'meta-llama':'Meta', qwen:'Qwen', 'x-ai':'xAI', 'z-ai':'Z.AI', mistralai:'Mistral', moonshotai:'Moonshot AI' };
+  return names[slug] || (model.name?.includes(':') ? model.name.split(':')[0].trim() : slug);
+}
 export function classify(models) {
-  const ok = (m) => !m.id.includes(':batch') && !m.id.startsWith('~');
-  const rank = (m) => (m.featured ? 0 : m.free ? 1 : 2);
-  const newestFirst = (a, b) => (rank(a) - rank(b)) || (b.created - a.created);
-  const llm = models.filter(m => ok(m) && m.output.includes('text') && !m.output.includes('image') && !m.output.includes('audio') && !m.output.includes('speech')).sort(newestFirst);
-  const image = models.filter(m => ok(m) && m.output.includes('image')).sort(newestFirst);
-  // speech-endpoint models (Gemini TTS) first — they aren't in the catalog, so merge them in
-  const tts = models.filter(m => ok(m) && (m.output.includes('speech') || m.output.includes('audio')) && !/lyria|music/i.test(m.id + ' ' + m.name)).sort(newestFirst);
-  const asr = models.filter(m => ok(m) && m.input.includes('audio') && m.output.includes('text') && !m.output.includes('audio') && !m.output.includes('speech')).sort(newestFirst);
+  const ok = m => !m.id.includes(':batch');
+  const alphabetical = (a,b) => (a.provider || modelAuthor(a)).localeCompare(b.provider || modelAuthor(b), 'en') || a.name.localeCompare(b.name, 'en', { numeric:true }) || a.id.localeCompare(b.id, 'en');
+  const llm = models.filter(m => ok(m) && m.output.includes('text') && !m.output.includes('image') && !m.output.includes('audio') && !m.output.includes('speech')).sort(alphabetical);
+  const image = models.filter(m => ok(m) && m.output.includes('image')).sort(alphabetical);
+  const tts = models.filter(m => ok(m) && (m.output.includes('speech') || m.output.includes('audio')) && !/lyria|music/i.test(m.id + ' ' + m.name)).sort(alphabetical);
+  const asr = models.filter(m => ok(m) && m.input.includes('audio') && m.output.includes('text') && !m.output.includes('audio') && !m.output.includes('speech')).sort(alphabetical);
   return { llm, image, tts, asr };
 }
 
@@ -144,10 +149,10 @@ export async function chat(key, body, { timeoutMs = 150000 } = {}) {
 // ---------- image generation ----------
 // Returns the app-standard image result. `refs` are data URLs (character reference
 // images) — passed as image_url parts so the model keeps the same person.
-export async function generateImage(key, { model, prompt, aspect = '2:3', refs = [] }) {
+export async function generateImage(key, { model, prompt, aspect = '2:3', refs = [], routing }) {
   const info = await modelInfo(model);
   const params = info?.parameters || {};
-  const body = { model, prompt, ...(params.aspect_ratio ? { aspect_ratio: aspect } : {}) };
+  const body = { model, prompt, provider: routingBody(routing), ...(params.aspect_ratio ? { aspect_ratio: aspect } : {}) };
   if (refs.length) body.input_references = refs.map(url => ({ type: 'image_url', image_url: { url } }));
   const resp = await fetch(`${API}/images`, { method: 'POST', headers: headers(key), body: JSON.stringify(body), signal: AbortSignal.timeout(240000) });
   if (!resp.ok) await orError(resp, 'OpenRouter image');
@@ -245,13 +250,13 @@ export function voiceFor(model, geminiVoice, preferred) {
 }
 
 // Collect a streaming audio response → { buffer, mime, rawUsd, meter, text }
-export async function synthesizeSpeech(key, { model, text, voice, style = '', sampleRate = 24000, timeoutMs = 180000 }) {
+export async function synthesizeSpeech(key, { model, text, voice, style = '', sampleRate = 24000, timeoutMs = 180000, routing }) {
   await fetchCatalog();
   // Gemini TTS family → the dedicated speech endpoint (raw PCM; rate in Content-Type).
   if (speechModel(model)) {
-    const body = { model, input: text, voice: voice || 'Sulafat', response_format: model.startsWith('google/') ? 'pcm' : 'mp3' };
-    if (style && model.startsWith('google/')) body.provider = { options: { 'google-ai-studio': { speech_metadata: { style } } } };
-    else if (style && model.startsWith('openai/')) body.provider = { options: { openai: { instructions: style } } };
+    const body = { model, input: text, voice: voice || 'Sulafat', provider: routingBody(routing), response_format: model.startsWith('google/') ? 'pcm' : 'mp3' };
+    if (style && model.startsWith('google/')) body.provider = { ...body.provider, options: { 'google-ai-studio': { speech_metadata: { style } } } };
+    else if (style && model.startsWith('openai/')) body.provider = { ...body.provider, options: { openai: { instructions: style } } };
     const resp = await fetch(`${API}/audio/speech`, {
       method: 'POST', headers: headers(key),
       body: JSON.stringify(body), signal: AbortSignal.timeout(timeoutMs),
@@ -284,7 +289,7 @@ export async function synthesizeSpeech(key, { model, text, voice, style = '', sa
   }
   const { messages } = ttsTemplateFor(model).build({ text, style });
   const body = {
-    model, messages,
+    model, messages, provider: routingBody(routing),
     modalities: ['text', 'audio'],
     audio: { voice: voice || 'alloy', format: 'pcm16' },
     stream: true,
@@ -364,7 +369,7 @@ function convertToWav(buffer, mime) {
   });
 }
 
-export async function transcribeAudio(key, { model, buffer, mime, lang = '' }) {
+export async function transcribeAudio(key, { model, buffer, mime, lang = '', routing }) {
   let fmt = AUDIO_FORMATS[mime];
   if (!fmt) {
     buffer = await convertToWav(buffer, mime);
@@ -373,7 +378,7 @@ export async function transcribeAudio(key, { model, buffer, mime, lang = '' }) {
   const b64 = buffer.toString('base64');
   const langHint = { en: 'English', de: 'German', fr: 'French', es: 'Spanish' }[lang];
   const body = {
-    model,
+    model, provider: routingBody(routing),
     messages: [{
       role: 'user',
       content: [

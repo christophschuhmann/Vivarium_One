@@ -1,3 +1,4 @@
+import { routingBody } from './openrouter-routing.js';
 import {requireImageConsent} from './visual-choice.js';
 // Model Router — the only module that talks to model providers. Injects the key,
 // meters raw cost, returns results + meter. Mock mode for CI (MOCK_PROVIDERS=1).
@@ -38,7 +39,7 @@ export function route(role) {
   if (p?.byok && ['llm','image','tts','asr'].includes(prefKey)) {
     const config = p.prefs.roles[prefKey], provider = config.provider;
     const base = provider === 'hyprlab' && role === 'tts' && /gemini/.test(config.model) ? 'https://api.hyprlab.io/v1beta' : PROVIDERS[provider].base;
-    return { role, provider, model: config.model, base_url: base, key_env: 'PERSONAL', api_key: p.keys[provider], byok: true, unit_cost: { in_per_mtok: 0.25, out_per_mtok: 4.5, per_image: 0.02, per_minute: 0.0042 }, params: {} };
+    return { role, provider, model: config.model, base_url: base, key_env: 'PERSONAL', api_key: p.keys[provider], byok: true, unit_cost: { in_per_mtok: 0.25, out_per_mtok: 4.5, per_image: 0.02, per_minute: 0.0042 }, params: { openrouter: config.openrouter } };
   }
   const r = db.prepare('SELECT * FROM model_routes WHERE role=? AND enabled=1').get(role);
   if (!r) throw new Error(`no enabled model route for role ${role}`);
@@ -71,7 +72,7 @@ export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, s
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key(r)}` },
       // OpenRouter: ask for the real cost in the response (usage.cost) so BYOK usage
       // is still fully logged for the player/admin without touching the credit ledger.
-      body: JSON.stringify({ model: r.model, messages, max_tokens: maxTokens, temperature, ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}), ...(r.provider === 'openrouter' ? { usage: { include: true } } : {}) }),
+      body: JSON.stringify({ model: r.model, messages, max_tokens: maxTokens, temperature, ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}), ...(r.provider === 'openrouter' ? { usage: { include: true }, provider: routingBody(r.params.openrouter) } : {}) }),
     });
   } catch (e) {
     if (timeout.aborted) throw Object.assign(new Error(`The AI model took longer than ${Math.round(timeoutMs / 1000)}s and was stopped. Try again, or switch to a faster model in your settings.`), { code: 'LLM_TIMEOUT', statusCode: 504 });
@@ -95,8 +96,8 @@ export async function llmChat(messages, { maxTokens = 6000, temperature = 0.8, s
     console.warn(JSON.stringify({ event: 'llm_response_failed', durationMs: Math.round(performance.now() - started), code: error.code, ...error.diagnostics }));
     throw error;
   }
-  console.info(JSON.stringify({ event: 'llm_response_completed', provider: r.provider, model: r.model, responseId: data.id, durationMs: Math.round(performance.now() - started), maxTokens, promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens, reasoningTokens: usage.completion_tokens_details?.reasoning_tokens, finishReason: data.choices?.[0]?.finish_reason, contentChars: content.length, nativeToolCalls: data.choices?.[0]?.message?.tool_calls?.length || 0 }));
-  return { content, usage, rawUsd, provider: r.provider, model: r.model, byok: !!r.byok };
+  console.info(JSON.stringify({ event: 'llm_response_completed', provider: r.provider, hostingProvider: data.provider, requestedEndpoint: r.params.openrouter?.endpoint || null, model: r.model, responseId: data.id, durationMs: Math.round(performance.now() - started), maxTokens, promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens, reasoningTokens: usage.completion_tokens_details?.reasoning_tokens, finishReason: data.choices?.[0]?.finish_reason, contentChars: content.length, nativeToolCalls: data.choices?.[0]?.message?.tool_calls?.length || 0 }));
+  return { content, usage, rawUsd, hostingProvider: data.provider, responseId: data.id, provider: r.provider, model: r.model, byok: !!r.byok };
 }
 
 // Best-effort recovery of a TRUNCATED JSON object: the model hit its token budget
@@ -177,7 +178,7 @@ export async function genImage(prompt, { aspect = '2:3', refs = [] } = {}) {
   if (MOCK) return mockImage(aspect);
   // BYOK → OpenRouter image models (Nano Banana 2 Lite & friends) via chat completions;
   // reference images travel as image_url parts, exactly like the HyprLab path's `image`.
-  if (r.provider === 'openrouter') return { ...await orGenerateImage(key(r), { model: r.model, prompt, aspect, refs }), byok: !!r.byok };
+  if (r.provider === 'openrouter') return { ...await orGenerateImage(key(r), { model: r.model, prompt, aspect, refs, routing: r.params.openrouter }), byok: !!r.byok };
   const body = {
     model: r.model, prompt, aspect_ratio: aspect, resolution: r.params.resolution || '1K',
     google_search: false, image_search: false, response_format: 'b64_json',
@@ -211,7 +212,7 @@ export function hostedTtsCacheVoice(voice) {
   const r = route('tts'), p = currentPrincipal();
   const preferred=p?.prefs.tts_voice || getSetting('central_tts_voice');
   const mapped=r.provider==='hyprlab'&&!/gemini/.test(r.model)?hyprlabVoice(r.model,voice,preferred):r.provider==='openrouter'?voiceFor(r.model,voice,preferred):voice;
-  return `${p?.id || 'central'}:${r.provider}:${r.model}:${mapped}`;
+  return `${p?.id || 'central'}:${r.provider}:${r.model}:${JSON.stringify(r.params.openrouter || {})}:${mapped}`;
 }
 
 // ---------- TTS front door ----------
@@ -229,7 +230,7 @@ export async function tts(text, { voice = 'Sulafat', style = '', referenceB64 = 
   if (getTtsProvider() === 'laionbox') return ttsLaionbox(text, { style, referenceB64, speakerDesc });
   const r = route('tts');
   if (MOCK) return { ...mockTts(), provider: r.provider, model: r.model, byok: !!r.byok };
-  if (r.provider === 'openrouter') return { ...await orSynthesizeSpeech(key(r), { model: r.model, text, voice: voiceFor(r.model, voice, currentPrincipal()?.prefs.tts_voice || getSetting('central_tts_voice')), style }), byok: !!r.byok };
+  if (r.provider === 'openrouter') return { ...await orSynthesizeSpeech(key(r), { model: r.model, text, routing: r.params.openrouter, voice: voiceFor(r.model, voice, currentPrincipal()?.prefs.tts_voice || getSetting('central_tts_voice')), style }), byok: !!r.byok };
   if (r.provider === 'hyprlab' && !/gemini/.test(r.model)) {
     const selected=hyprlabVoice(r.model,voice,currentPrincipal()?.prefs.tts_voice || getSetting('central_tts_voice'));
     const eleven=r.model.startsWith('eleven-');
@@ -389,7 +390,7 @@ export async function asr(buffer, mime, filename = 'audio.webm', { lang = '' } =
   const r = route('asr');
   if (MOCK) return { text: 'mock transcription of your voice note', seconds: 3, rawUsd: 0.0002, meter: { seconds: 3 }, provider: r.provider, model: r.model, byok: !!r.byok };
   // BYOK → transcribe with an audio-input chat model on OpenRouter (WAV/MP3 only).
-  if (r.provider === 'openrouter') return { ...await orTranscribeAudio(key(r), { model: r.model, buffer, mime, lang }), byok: !!r.byok };
+  if (r.provider === 'openrouter') return { ...await orTranscribeAudio(key(r), { model: r.model, buffer, mime, lang, routing: r.params.openrouter }), byok: !!r.byok };
   // Defensive: strip any codecs parameter ('audio/webm;codecs=opus' → 'audio/webm') — Whisper
   // returns an empty transcription when it's present.
   const cleanMime = (mime || 'audio/webm').split(';')[0].trim() || 'audio/webm';

@@ -1,3 +1,4 @@
+import { validateRouting } from './openrouter-routing.js';
 import { PROVIDERS, operatorKey } from './byok.js';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -47,6 +48,7 @@ export async function validateRoles(roles, getKey, previous = {}) {
   const catalogs = new Map();
   for (const [role, config] of Object.entries(roles)) {
     if (!['llm','image','tts','asr'].includes(role) || !PROVIDERS[config?.provider] || typeof config.model !== 'string') throw Object.assign(new Error('Ungültige Modellkonfiguration.'), { statusCode: 400 });
+    await validateRouting(config);
     if (previous[role]?.provider === config.provider && previous[role]?.model === config.model) continue;
     if (!catalogs.has(config.provider)) catalogs.set(config.provider, await providerCatalog(config.provider, getKey(config.provider)));
     if (!catalogs.get(config.provider)[role].some(m => m.id === config.model)) throw Object.assign(new Error(`${config.model} ist für ${role} nicht im ${PROVIDERS[config.provider].label}-Katalog verfügbar.`), { statusCode: 400 });

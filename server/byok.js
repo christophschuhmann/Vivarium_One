@@ -54,8 +54,13 @@ export function maskKey(k) { return k ? '••••' + String(k).slice(-4) : n
 export const ROLES = ['llm', 'image', 'tts', 'asr'];
 export const PROVIDERS = {
   hyprlab: { label: 'HyprLab', base: 'https://api.hyprlab.io/v1', env: 'HYPRLAB_API_KEY', defaults: { llm: 'gemini-3.5-flash', image: 'nano-banana-2', tts: 'gemini-3.8-flash-tts', asr: 'whisper-1' } },
-  openrouter: { label: 'OpenRouter', base: 'https://openrouter.ai/api/v1', env: 'OPENROUTER_API_KEY', defaults: { llm: 'google/gemini-3.8-flash', image: 'google/gemini-3.1-flash-lite-image', tts: 'google/gemini-3.8-flash-tts', asr: 'google/gemini-3.1-flash-lite' } },
+  openrouter: { label: 'OpenRouter', base: 'https://openrouter.ai/api/v1', env: 'OPENROUTER_API_KEY', defaults: { llm: 'deepseek/deepseek-v4.1-flash-1017', image: 'google/gemini-3.1-flash-lite-image', tts: 'google/gemini-3.8-flash-tts', asr: 'google/gemini-3.1-flash-lite' } },
 };
+export const DEFAULT_OPENROUTER_ROUTING = { llm: { endpoint:'baseten/fast', sort:'throughput', allowFallbacks:true } };
+export function defaultRole(provider, role, model = PROVIDERS[provider].defaults[role]) {
+  return { provider, model, ...(provider === 'openrouter' && role === 'llm' && model === PROVIDERS.openrouter.defaults.llm
+    ? { openrouter: { ...DEFAULT_OPENROUTER_ROUTING.llm } } : {}) };
+}
 export const FALLBACK_DEFAULTS = { ...PROVIDERS.openrouter.defaults, tts_voice: 'Sulafat' };
 export function byokPolicy() { return { enabled: true, defaults: FALLBACK_DEFAULTS, ...(getSetting('byok') || {}) }; }
 export function normalizePrefs(raw) {
@@ -74,7 +79,7 @@ export function prefsFor(user, policy = byokPolicy()) {
     // Older preferences may still name the other provider after a key was removed.
     // One connected account powers every role; never fall back to an operator key.
     roles[role] = selected && (connected.length !== 1 || selected.provider === defaultProvider)
-      ? selected : { provider: defaultProvider, model: defaultProvider === 'openrouter' ? old[role] || policy.defaults?.[role] || FALLBACK_DEFAULTS[role] : PROVIDERS.hyprlab.defaults[role] };
+      ? selected : defaultRole(defaultProvider, role, defaultProvider === 'openrouter' ? old[role] || policy.defaults?.[role] || FALLBACK_DEFAULTS[role] : PROVIDERS.hyprlab.defaults[role]);
     models[role] = roles[role].model;
   }
   return { roles, models, tts_voice: saved.ttsVoice || old.tts_voice || 'Sulafat' };
@@ -95,7 +100,7 @@ export function resolvePersonalRoles(user, roles) {
   if (connected.length !== 1) return roles;
   const provider = connected[0];
   return Object.fromEntries(Object.entries(roles).map(([role, selected]) => [role,
-    selected.provider === provider ? selected : { provider, model: PROVIDERS[provider].defaults[role] }]));
+    selected.provider === provider ? selected : defaultRole(provider, role)]));
 }
 const als = new AsyncLocalStorage();
 export function principalOf(user, policy = byokPolicy()) {

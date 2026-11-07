@@ -1,0 +1,44 @@
+// Opt-in: use a disposable installation. Changes only this test account's AI preferences.
+import assert from 'node:assert/strict';
+import { chromium } from 'playwright';
+const base=process.env.RPG_TEST_BASE;
+if(!base)throw new Error('Set RPG_TEST_BASE to a test server.');
+const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+const context=await browser.newContext({viewport:{width:1440,height:1000}}),page=await context.newPage(),errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+const model='deepseek/deepseek-v4.1-flash-1017';
+try {
+  const login=await context.request.post(base+'/api/auth/login',{data:{email:process.env.RPG_TEST_EMAIL,password:process.env.RPG_TEST_PASSWORD}});assert.equal(login.status(),200);
+  await page.goto(base);await page.locator('#avatar-chip').click();await page.locator('[data-settings-tab="ai"]').click();
+  await page.waitForFunction(()=>document.querySelector('[data-model="llm"]')?.onchange);
+  const groupLabels=await page.locator('[data-model="llm"] optgroup').evaluateAll(nodes=>nodes.map(n=>n.label.split(' · ')[0]));
+  assert.ok(groupLabels.includes('Anthropic'));assert.ok(groupLabels.includes('DeepSeek'));
+  assert.deepEqual(groupLabels,[...groupLabels].sort((a,b)=>a.localeCompare(b,'en')));
+  await page.locator('[data-search="llm"]').fill('anthropic');
+  assert.ok((await page.locator('[data-model="llm"] optgroup').allTextContents()).every(text=>/claude/i.test(text)));
+  await page.locator('[data-search="llm"]').fill('');
+  await page.locator('[data-model="llm"]').selectOption('google/gemini-3.8-flash');
+  await page.locator('[data-model="llm"]').selectOption(model);
+  await page.waitForFunction(()=>!document.querySelector('[data-endpoint="llm"]').disabled&&!!document.querySelector('[data-endpoint="llm"] option[value="baseten/fast"]'));
+  await page.locator('[data-hosting="llm"] summary').click();
+  await page.locator('[data-endpoint="llm"]').selectOption('baseten/fast');
+  await page.locator('[data-routing-sort="llm"]').selectOption('throughput');
+  await page.locator('[data-host-fallback="llm"]').uncheck();
+  assert.match(await page.locator('[data-host-meta="llm"]').innerText(),/Only this endpoint/);
+  await page.locator('[data-host-fallback="llm"]').check();
+  await page.locator('[data-host-refresh="llm"]').click();
+  await page.waitForFunction(()=>!document.querySelector('[data-endpoint="llm"]').disabled);
+  assert.equal(await page.locator('[data-endpoint="llm"]').inputValue(),'baseten/fast');
+  await page.locator('[data-save-models]').click();await page.getByText('Saved.',{exact:true}).waitFor();
+  const saved=await (await context.request.get(base+'/api/provider/settings')).json();
+  assert.deepEqual(saved.roles.llm,{provider:'openrouter',model,openrouter:{endpoint:'baseten/fast',sort:'throughput',allowFallbacks:true}});
+  await page.locator('[data-role="llm"]').scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/vivarium-provider-hosts-desktop.png'});
+  await page.setViewportSize({width:390,height:844});await page.locator('[data-role="llm"]').scrollIntoViewIfNeeded();
+  assert.ok(await page.locator('.settings-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+2));
+  await page.screenshot({path:'/tmp/vivarium-provider-hosts-mobile.png'});
+  await page.reload();await page.locator('#avatar-chip').click();await page.locator('[data-settings-tab="ai"]').click();
+  await page.waitForFunction(()=>!document.querySelector('[data-endpoint="llm"]')?.disabled&&document.querySelector('[data-endpoint="llm"]')?.value==='baseten/fast');
+  assert.match(await page.locator('[data-host-summary="llm"]').innerText(),/baseten\/fast/);
+  assert.deepEqual(errors,[]);
+  console.log('PASS grouped authors, search, model-change race, hosting options, fallback explanation, refresh, save/reload, mobile overflow and no browser exceptions');
+} finally {await browser.close();}

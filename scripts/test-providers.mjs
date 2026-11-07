@@ -38,6 +38,7 @@ globalThis.fetch=async (url,opts={})=>{
  const auth=opts.headers?.Authorization || parsed.searchParams.get('key');requests.push({url:String(url),body,auth});
  if(auth?.includes('rejected')) return json({error:{message:'Rejected'}},{status:401});
  if(parsed.pathname.endsWith('/models')) return json({data:hp?hpIds.map(id=>({id})):parsed.pathname.includes('/images/')?orModels.filter(m=>m.architecture.output_modalities.includes('image')):orModels});
+ if(parsed.pathname.endsWith('/endpoints'))return json({data:{endpoints:[{provider_name:'BaseTen',tag:'baseten/fast',status:0,throughput_last_30m:null,latency_last_30m:0.4,pricing:{prompt:'0.0000006'}},{provider_name:'Z host',tag:'z-host',status:-5},{provider_name:'Anthropic',tag:'anthropic',status:0}]}});
  if(parsed.pathname.endsWith('/key'))return json({data:{limit_remaining:100}});
  if(parsed.pathname.endsWith('/generation'))return json({data:{total_cost:0.003}});
  if(parsed.pathname.endsWith('/chat/completions'))return json({choices:[{message:{content:body.messages[0].content?.[0]?.type==='text'?'A spoken test.':'Test response.'}}],usage:{prompt_tokens:10,completion_tokens:10,cost:0.005}});
@@ -101,4 +102,29 @@ console.log('PASS API permissions, encrypted write-only keys, model validation, 
 const modern=requests.find(q=>q.body?.contents?.[0]?.parts?.[0]?.speechMetadata);assert.ok(modern);assert.equal(modern.body.contents[0].parts[0].text,'Only this sentence.');
 const imageRequest=requests.find(q=>q.url.endsWith('/images')&&q.body?.input_references);assert.ok(imageRequest);
 console.log('PASS Gemini 3.8 verbatim text and dedicated OpenRouter image references');
+// Hosting choices survive round-trips and reach every provider request, independently per user.
+const {modelEndpoints,routingBody}=await import('../server/openrouter-routing.js');
+assert.deepEqual(routingBody({endpoint:'baseten/fast',sort:'throughput',allowFallbacks:false}),{sort:'throughput',only:['baseten/fast'],allow_fallbacks:false});
+assert.deepEqual(routingBody({endpoint:'baseten/fast',sort:'latency',allowFallbacks:true}),{sort:'latency',order:['baseten/fast'],allow_fallbacks:true});
+assert.throws(()=>routingBody({endpoint:'https://wrong.example',sort:'price'}));
+assert.throws(()=>routingBody({endpoint:'baseten',sort:'anything'}));
+res=await app.inject({method:'GET',url:'/api/provider/endpoints?model=deepseek/test'});assert.equal(res.statusCode,401);
+res=await inject('GET','/api/provider/endpoints?model=deepseek/test');assert.equal(res.statusCode,200);assert.equal(res.json().endpoints[0].provider,'Anthropic');assert.equal(res.json().endpoints[1].throughput,null);
+res=await inject('PUT','/api/provider/keys/openrouter',{key:'test-hosted-or'});assert.equal(res.statusCode,200);
+const hostedRoles=Object.fromEntries(Object.entries(PROVIDERS.openrouter.defaults).map(([role,model])=>[role,{provider:'openrouter',model,openrouter:{endpoint:'baseten/fast',sort:'throughput',allowFallbacks:false}}]));
+res=await inject('PUT','/api/provider/settings',{enabled:true,roles:hostedRoles});assert.equal(res.statusCode,200);assert.deepEqual(res.json().roles,hostedRoles);
+const beforeInvalid=db.prepare('SELECT provider_prefs FROM users WHERE id=?').get(player.id);
+for(const endpoint of ['missing','z-host','https://evil.example']){
+ res=await inject('PUT','/api/provider/settings',{roles:{llm:{...hostedRoles.llm,openrouter:{endpoint}}}});assert.equal(res.statusCode,400);
+ assert.deepEqual(db.prepare('SELECT provider_prefs FROM users WHERE id=?').get(player.id),beforeInvalid);
+}
+await withPrincipal(db.prepare('SELECT * FROM users WHERE id=?').get(player.id),async()=>{
+ for(const [kind,fn] of modalities){const offset=requests.length;await fn();const call=requests.slice(offset).find(q=>q.body?.model);assert.deepEqual(call.body.provider.only,['baseten/fast'],kind);assert.equal(call.body.provider.allow_fallbacks,false);}
+});
+res=await inject('PUT','/admin/api/provider/settings',{roles:{llm:{...hostedRoles.llm,openrouter:{endpoint:'baseten/fast',sort:'throughput',allowFallbacks:true}}}},adminCookie);assert.equal(res.statusCode,200);assert.equal(res.json().roles.llm.openrouter.endpoint,'baseten/fast');
+await withPrincipal(other,async()=>{const offset=requests.length;await llmChat([{role:'user',content:'Central'}]);assert.deepEqual(requests[offset].body.provider.order,['baseten/fast']);assert.equal(requests[offset].body.provider.allow_fallbacks,true);});
+const {classify,modelAuthor}=await import('../server/openrouter.js');
+const ordered=classify(['z-ai/z','google/b','anthropic/z','google/a'].map(id=>({id,name:id,provider:modelAuthor({id}),input:['text'],output:['text']}))).llm;
+assert.deepEqual(ordered.map(m=>m.id),['anthropic/z','google/a','google/b','z-ai/z']);
+console.log('PASS live host normalization, alphabetic authors, auth, endpoint validation, atomic save, per-user and central routing across all four modalities');
 await app.close();db.close();fs.rmSync(scratch,{recursive:true,force:true});process.exit(0);

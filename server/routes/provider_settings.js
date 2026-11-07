@@ -1,17 +1,18 @@
+import { modelEndpoints } from '../openrouter-routing.js';
 import { db, getSetting, setSetting, pj, j, uid, now } from '../db.js';
 import { requireUser, requireVerified, requireAdmin, httpErr } from '../auth.js';
-import { PROVIDERS, ROLES, byokPolicy, byokActive, prefsFor, resolvePersonalRoles, userKey, operatorKey, encryptSecret, maskKey, enterPrincipal } from '../byok.js';
+import { PROVIDERS, ROLES, DEFAULT_OPENROUTER_ROUTING, byokPolicy, byokActive, prefsFor, resolvePersonalRoles, userKey, operatorKey, encryptSecret, maskKey, enterPrincipal } from '../byok.js';
 import { providerCatalog, checkProviderKey, validateRoles } from '../provider_catalog.js';
 import { voicesFor } from '../openrouter.js';
 const routeRole = role => role === 'llm' ? 'reasoning_llm' : role;
 const providerOf = r => r.base_url.includes('openrouter.ai') ? 'openrouter' : r.base_url.includes('hyprlab.io') ? 'hyprlab' : 'custom';
-function centralRoles() { return Object.fromEntries(ROLES.map(role => { const r = db.prepare('SELECT * FROM model_routes WHERE role=?').get(routeRole(role)); return [role, { provider: providerOf(r), model: r.model }]; })); }
+function centralRoles() { return Object.fromEntries(ROLES.map(role => { const r = db.prepare('SELECT * FROM model_routes WHERE role=?').get(routeRole(role)); return [role, { provider: providerOf(r), model: r.model, ...(pj(r.params, {}).openrouter ? { openrouter: pj(r.params, {}).openrouter } : {}) }]; })); }
 function status(user, admin) {
   const prefs = admin ? { roles: centralRoles(), tts_voice: getSetting('central_tts_voice') || 'Sulafat' } : prefsFor(user);
   return { roles: prefs.roles, models: Object.fromEntries(Object.entries(prefs.roles).map(([r,c])=>[r,c.model])), ttsVoice: prefs.tts_voice,
     enabled: admin ? true : !!user.or_enabled, active: admin ? true : byokActive(user), policyEnabled: byokPolicy().enabled,
     keys: Object.fromEntries(Object.keys(PROVIDERS).map(p => { const key = admin ? operatorKey(p) : userKey(user,p); return [p, { configured: !!key, masked: maskKey(key), source: admin && getSetting('provider_credentials')?.[p] ? 'settings' : admin && key ? 'environment' : 'personal' }]; })),
-    defaults: Object.fromEntries(Object.entries(PROVIDERS).map(([p,c])=>[p,c.defaults])), central: centralRoles(), voices: voicesFor(prefs.roles.tts.model),
+    routingDefaults: { openrouter: DEFAULT_OPENROUTER_ROUTING }, defaults: Object.fromEntries(Object.entries(PROVIDERS).map(([p,c])=>[p,c.defaults])), central: centralRoles(), voices: voicesFor(prefs.roles.tts.model),
     hasKey: Object.keys(PROVIDERS).some(p => !!userKey(user,p)), keyMasked: maskKey(userKey(user) || userKey(user,'hyprlab')), ttsProvider: getSetting('tts_provider') || 'gemini' };
 }
 export default async function providerSettingsRoutes(app) {
@@ -26,6 +27,7 @@ export default async function providerSettingsRoutes(app) {
       if (kind && !ROLES.includes(kind)) throw httpErr(400,'BAD_KIND','Unbekannte Modellaufgabe.');
       return kind ? { provider, kind, models: catalog[kind] } : { provider, catalog };
     });
+    app.get(prefix + '/endpoints', async req => { auth(req); return modelEndpoints(req.query?.model, { force: req.query?.refresh === '1' }); });
     app.post(prefix + '/test', async req => {
       const u = writeAuth(req), provider = req.body?.provider || 'openrouter';
       const key = String(req.body?.key || '').trim() || (admin ? operatorKey(provider) : userKey(u,provider));
@@ -75,7 +77,10 @@ export default async function providerSettingsRoutes(app) {
             const previous = db.prepare('SELECT * FROM model_routes WHERE role=?').get(routeRole(role));
             const sameProvider = providerOf(previous) === c.provider;
             const costs = c.provider === 'hyprlab' && role === 'tts' && /gemini-3\.1/.test(c.model) ? {in_per_mtok:0.5,out_per_mtok:10} : c.provider === 'hyprlab' && role === 'tts' && /gemini-3\.8/.test(c.model) ? {in_per_mtok:0.25,out_per_mtok:4.5} : sameProvider ? pj(previous.unit_cost,{}) : c.provider === 'hyprlab' ? role === 'tts' ? {in_per_mtok:0.25,out_per_mtok:4.5} : role === 'image' ? {per_image:0.02} : role === 'asr' ? {per_minute:0.0042} : {in_per_mtok:0.75,out_per_mtok:4.5} : {};
-            db.prepare('UPDATE model_routes SET model=?,base_url=?,key_env=?,enabled=1,unit_cost=? WHERE role=?').run(c.model,base,PROVIDERS[c.provider].env,j(costs),routeRole(role));
+            const params = sameProvider ? pj(previous.params,{}) : {};
+            delete params.openrouter;
+            if (c.provider === 'openrouter' && c.openrouter) params.openrouter = c.openrouter;
+            db.prepare('UPDATE model_routes SET model=?,base_url=?,key_env=?,enabled=1,unit_cost=?,params=? WHERE role=?').run(c.model,base,PROVIDERS[c.provider].env,j(costs),j(params),routeRole(role));
           }
           setSetting('central_tts_voice',ttsVoice);
           if (changed.tts) setSetting('tts_provider','gemini');

@@ -26,10 +26,14 @@ For optional local music, run `npm run setup -- --with-music` or `npm run music:
 
 1. Sign in and open the account button at the top right, then **AI & models**.
 2. Select **My own providers**, enter your **OpenRouter** key and choose **Save my settings**. One key is enough; HyprLab is optional.
-3. Pick models separately for language, images, speech and transcription. The catalog comes from OpenRouter. Default choices include Gemini 3.8 Flash for story and Gemini 3.8 Flash TTS for voices; alternative models remain selectable.
+3. Pick models separately for language, images, speech and transcription. The live catalog is grouped alphabetically by model author (Anthropic, DeepSeek, Google, etc.); search accepts model names, IDs and authors. New OpenRouter setups default to **DeepSeek V4.1 Flash 1017** for story and Gemini 3.8 Flash TTS for voices. Existing saved model choices are preserved.
 4. Text, speech and transcription requests are billed by your provider. Existing library images are reused locally. Optional new images use the selected image model only after you confirm generation.
 
 Personal keys are encrypted at rest and are never returned to the browser. Keep `.env`, runtime databases and the encryption secret out of public repositories. To expose a local installation remotely, configure `VIV_HOST` and a reverse proxy appropriate to your host; the default binds to localhost.
+
+After selecting a model, expand **Hosting provider**. This lists the actual OpenRouter endpoints that serve that model, grouped by host. The model author and host can differ: DeepSeek creates the model, while Baseten can run it. Each endpoint shows its price, context size, precision, availability and recent speed when OpenRouter publishes those metrics. Missing metrics say **Not reported**, never zero. Catalog prices are starting prices; the selected host's prices can be higher.
+
+The default DeepSeek route prefers **`baseten/fast`**, with fallback enabled and other hosts ranked by generation throughput. **Automatic** removes the preferred host; choose fastest generation, quickest first token, lowest price or OpenRouter's balanced routing. Uncheck the fallback box to require one endpoint strictly; rate limits or outages then fail rather than moving elsewhere. An endpoint is specific to a model, so switching models resets the host choice. **Refresh hosts** reloads the selected model's live endpoints; **Save my settings** persists all choices. These controls also appear in the operator console and apply to language, images, speech and transcription separately.
 
 ## Create a story
 
