@@ -167,6 +167,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
     genesis_state: remapJsonCol(w.genesis_state, idMap),
     created_at: w.created_at, updated_at: now(),
     current_music: remapJsonCol(w.current_music,idMap), curiosity: w.curiosity || '{}',
+    player_character_id: remapId(w.player_character_id, idMap) ?? null,
   };
   const chars = (manifest.characters || []).map((c) => ({
     id: idMap.get(c.id), world_id: newWorldId, name: c.name,
@@ -205,6 +206,7 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
     cost: t.cost, created_at: t.created_at, pov_location_id: remapId(t.pov_location_id, idMap),
     branch_id: remapId(t.branch_id, idMap), rel_snapshot: remapJsonCol(t.rel_snapshot, idMap),
     seq: t.seq || null, music: remapJsonCol(t.music,idMap),   // sequence membership + scene score
+    decision: t.decision || null,
   }));
   const memRows = (manifest.memory_chunks || []).map((mchunk) => ({
     id: idMap.get(mchunk.id), world_id: newWorldId, branch_id: remapId(mchunk.branch_id, idMap),
@@ -228,8 +230,8 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
 
   // ── commit rows atomically ──
   const tx = db.transaction(() => {
-    db.prepare(`INSERT INTO worlds(id,user_id,title,art_style,sim_time,tick_index,genre,mood,pacing,directives,status,cover_asset_id,active_branch_id,genesis_state,created_at,updated_at,current_music,curiosity)
-      VALUES (@id,@user_id,@title,@art_style,@sim_time,@tick_index,@genre,@mood,@pacing,@directives,@status,@cover_asset_id,@active_branch_id,@genesis_state,@created_at,@updated_at,@current_music,@curiosity)`).run(worldRow);
+    db.prepare(`INSERT INTO worlds(id,user_id,title,art_style,sim_time,tick_index,genre,mood,pacing,directives,status,cover_asset_id,active_branch_id,genesis_state,created_at,updated_at,current_music,curiosity,player_character_id)
+      VALUES (@id,@user_id,@title,@art_style,@sim_time,@tick_index,@genre,@mood,@pacing,@directives,@status,@cover_asset_id,@active_branch_id,@genesis_state,@created_at,@updated_at,@current_music,@curiosity,@player_character_id)`).run(worldRow);
     if(manifest.living){db.prepare("UPDATE worlds SET simulation_mode='living' WHERE id=?").run(newWorldId);for(const table of LIVING_TABLES){const schema=db.prepare('PRAGMA table_info('+table+')').all(),columns=schema.map(c=>c.name).filter(k=>!(table==='lw_anchor_audit'&&k==='id'));const insert=db.prepare('INSERT INTO '+table+' ('+columns.join(',')+') VALUES ('+columns.map(()=>'?').join(',')+')');for(const row of manifest.living[table] || [])insert.run(...columns.map(column=>{let value=column==='world_id'?newWorldId:row[column];if(['parent_id','household_id','from_id','to_id','location_id','beat_id','sim_id','event_id','entity_id','speaker','account_id','transaction_id','owner_id'].includes(column)&&value!=null&&value!=='narrator'&&!idMap.has(value))throw new Error('Foreign reference in Living World snapshot');if(value===undefined)throw new Error('Incomplete '+table+' snapshot');if(typeof value==='string'){const parsed=pj(value,Symbol.for('invalid-json'));if(parsed!==null&&typeof parsed==='object')value=j(remapDeep(parsed,idMap));else value=remapDeep(value,idMap);}return value;}));}}
     const ins = (sql, rows) => { const st = db.prepare(sql); for (const r of rows) st.run(r); };
     if(manifest.living){normalizeImportedRomance(db,newWorldId);validateExpandedImport(loadTown(newWorldId));}
@@ -242,8 +244,8 @@ export function importWorldManifest(user, manifest, unpackedAssetsDir, opts = {}
          VALUES (@id,@world_id,@from_id,@to_id,@description,@strength,@history,@attributes)`, rels);
     ins(`INSERT INTO branches(id,world_id,parent_branch_id,fork_tick_idx,label,created_at)
          VALUES (@id,@world_id,@parent_branch_id,@fork_tick_idx,@label,@created_at)`, branchRows);
-    ins(`INSERT INTO ticks(id,world_id,idx,sim_time,time_delta,intervention,states,narration,mood_tag,summary,cost,created_at,pov_location_id,branch_id,rel_snapshot,seq,music)
-         VALUES (@id,@world_id,@idx,@sim_time,@time_delta,@intervention,@states,@narration,@mood_tag,@summary,@cost,@created_at,@pov_location_id,@branch_id,@rel_snapshot,@seq,@music)`, tickRows);
+    ins(`INSERT INTO ticks(id,world_id,idx,sim_time,time_delta,intervention,states,narration,mood_tag,summary,cost,created_at,pov_location_id,branch_id,rel_snapshot,seq,music,decision)
+         VALUES (@id,@world_id,@idx,@sim_time,@time_delta,@intervention,@states,@narration,@mood_tag,@summary,@cost,@created_at,@pov_location_id,@branch_id,@rel_snapshot,@seq,@music,@decision)`, tickRows);
     ins(`INSERT INTO memory_chunks(id,world_id,branch_id,level,start_idx,end_idx,text,created_at)
          VALUES (@id,@world_id,@branch_id,@level,@start_idx,@end_idx,@text,@created_at)`, memRows);
     ins(`INSERT INTO state_patches(id,world_id,entity_ref,entity_id,idx,tick_ref,author,category,op,path,value,reason,created_at)

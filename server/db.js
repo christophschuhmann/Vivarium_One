@@ -177,6 +177,12 @@ try { db.exec(`ALTER TABLE video_jobs ADD COLUMN silent_lines INTEGER DEFAULT 0`
 // Both stay NULL under the Gemini provider, where characters.voice (a prebuilt name) is used.
 try { db.exec(`ALTER TABLE characters ADD COLUMN voice_ref_asset_id TEXT`); } catch { /* exists */ }
 try { db.exec(`ALTER TABLE characters ADD COLUMN voice_ref_prompt TEXT`); } catch { /* exists */ }
+// RPG fork: every playable world has ONE player character (the first-person protagonist) —
+// the stage locks its point of view to them and the GM never decides for them.
+try { db.exec(`ALTER TABLE worlds ADD COLUMN player_character_id TEXT`); } catch { /* exists */ }
+// A tick can end on a DECISION STOP: the GM pauses the story at a significant choice for the
+// player character and stores the question it asked the player here.
+try { db.exec(`ALTER TABLE ticks ADD COLUMN decision TEXT`); } catch { /* exists */ }
 // World Wizard: background scenario-builder jobs (mirrors video_jobs' shape). `log` collects a
 // human-readable build diary (one line per step incl. retries/moderation fallbacks) that the
 // wizard screen streams to the user while the world is being assembled.
@@ -227,14 +233,13 @@ db.prepare(`INSERT OR IGNORE INTO settings(key,value) VALUES ('context_config', 
   .run(JSON.stringify({ tickWindow: 50, memChunk: 5, contextBudget: 200000, compressionRatio: 0.5 }));
 // Bring-your-own-key policy. `enabled` lets the operator switch player-supplied OpenRouter
 // keys off fleet-wide (default on — the app works standalone without an admin). The
-// `defaults` are the per-role model picks a fresh BYOK user starts with: cheapest good
-// options (Muse Spark 1.3 Contributor + Nano Banana 2 Lite + Gemini 3.1 Flash TTS
-// Preview + Gemini Flash Lite for transcription). Players can change every one in Settings.
+// `defaults` are the per-role model picks a fresh BYOK user starts with: options (Gemini 3.8 Flash + Nano Banana 2 Lite + Gemini 3.8 Flash TTS
+// + Gemini Flash Lite for transcription). Players can change every one in Settings.
 db.prepare(`INSERT OR IGNORE INTO settings(key,value) VALUES ('byok', ?)`)
   .run(JSON.stringify({
     enabled: true,
     defaults: {
-      llm: 'meta/muse-spark-1.3-contributor',
+      llm: 'google/gemini-3.8-flash',
       image: 'google/gemini-3.1-flash-lite-image',
       tts: 'google/gemini-3.1-flash-tts-preview',
       asr: 'google/gemini-3.1-flash-lite',

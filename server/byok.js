@@ -54,7 +54,7 @@ export function maskKey(k) { return k ? '••••' + String(k).slice(-4) : n
 export const ROLES = ['llm', 'image', 'tts', 'asr'];
 export const PROVIDERS = {
   hyprlab: { label: 'HyprLab', base: 'https://api.hyprlab.io/v1', env: 'HYPRLAB_API_KEY', defaults: { llm: 'gemini-3.5-flash', image: 'nano-banana-2', tts: 'gemini-3.8-flash-tts', asr: 'whisper-1' } },
-  openrouter: { label: 'OpenRouter', base: 'https://openrouter.ai/api/v1', env: 'OPENROUTER_API_KEY', defaults: { llm: 'meta/muse-spark-1.3-contributor', image: 'google/gemini-3.1-flash-lite-image', tts: 'google/gemini-3.8-flash-tts', asr: 'google/gemini-3.1-flash-lite' } },
+  openrouter: { label: 'OpenRouter', base: 'https://openrouter.ai/api/v1', env: 'OPENROUTER_API_KEY', defaults: { llm: 'google/gemini-3.8-flash', image: 'google/gemini-3.1-flash-lite-image', tts: 'google/gemini-3.8-flash-tts', asr: 'google/gemini-3.1-flash-lite' } },
 };
 export const FALLBACK_DEFAULTS = { ...PROVIDERS.openrouter.defaults, tts_voice: 'Sulafat' };
 export function byokPolicy() { return { enabled: true, defaults: FALLBACK_DEFAULTS, ...(getSetting('byok') || {}) }; }

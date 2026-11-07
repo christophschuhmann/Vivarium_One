@@ -7,7 +7,8 @@ import {DATA_DIR} from '../db.js';
 export const assetRoot=path.resolve(process.env.VIV_ASSET_LIBRARY||path.join(DATA_DIR,'hf-asset-library'));
 let catalog,stamp,characterPool;const pending=new Map();let active=0;const queue=[];
 function connection(){const file=path.join(assetRoot,'catalog.sqlite');if(!fs.existsSync(file))return null;const next=fs.statSync(file).mtimeMs;if(next!==stamp){catalog?.close();catalog=new Database(file,{readonly:true});stamp=next;characterPool=null;}return catalog;}
-export function catalogEntry(id){return connection()?.prepare('SELECT * FROM assets WHERE id=?').get(id)||null;}
+export function catalogEntry(id){if(!id)return null;return connection()?.prepare('SELECT * FROM assets WHERE id=?').get(id)||null;}
+export function catalogVariants(identityId,style){return connection()?.prepare("SELECT * FROM assets WHERE identity_id=? AND style=? ORDER BY CASE WHEN id LIKE '%-neutral' THEN 0 ELSE 1 END,id").all(identityId,style)||[];}
 export function catalogStats(){const c=connection();return c?{count:c.prepare('SELECT count(*) n FROM assets').get().n,characters:c.prepare("SELECT count(*) n FROM assets WHERE kind='character'").get().n,identities:c.prepare("SELECT count(DISTINCT identity_id) n FROM assets WHERE kind='character'").get().n,sources:c.prepare('SELECT repo,revision FROM sources').all()}: {count:0,characters:0,identities:0,sources:[]};}
 export function catalogSearch(query='',{kind='background',age,gender,heritage,style,emotion,limit=24,offset=0,excludeIdentities=[]}={}){
  const c=connection();if(!c)return [];

@@ -249,7 +249,7 @@ export async function synthesizeSpeech(key, { model, text, voice, style = '', sa
   await fetchCatalog();
   // Gemini TTS family → the dedicated speech endpoint (raw PCM; rate in Content-Type).
   if (speechModel(model)) {
-    const body = { model, input: text, voice: voice || 'Sulafat', response_format: 'mp3' };
+    const body = { model, input: text, voice: voice || 'Sulafat', response_format: model.startsWith('google/') ? 'pcm' : 'mp3' };
     if (style && model.startsWith('google/')) body.provider = { options: { 'google-ai-studio': { speech_metadata: { style } } } };
     else if (style && model.startsWith('openai/')) body.provider = { options: { openai: { instructions: style } } };
     const resp = await fetch(`${API}/audio/speech`, {
@@ -260,7 +260,9 @@ export async function synthesizeSpeech(key, { model, text, voice, style = '', sa
     const rate = Number(/rate=(\d+)/.exec(resp.headers.get('content-type') || '')?.[1]) || 24000;
     const pcm = Buffer.from(await resp.arrayBuffer());
     if (!pcm.length) throw new Error('openrouter tts: empty audio returned');
-    const isPcm = /pcm/.test(resp.headers.get('content-type') || '');
+    const contentType=resp.headers.get('content-type')||'';
+    const isWav=pcm.subarray(0,4).toString()==='RIFF'&&pcm.subarray(8,12).toString()==='WAVE';
+    const isPcm = !isWav && (/pcm|L16/i.test(contentType) || body.response_format==='pcm'&&/octet-stream|^$/.test(contentType));
     const genId = resp.headers.get('x-generation-id');
     let cost = null;
     if (genId) {
@@ -275,7 +277,7 @@ export async function synthesizeSpeech(key, { model, text, voice, style = '', sa
     const info = await modelInfo(model);
     const estimate = text.length * Number(info?.pricing?.prompt || 0) + (isPcm ? pcm.length / 2 / rate * 25 : Math.max(1, text.length / 12) * 25) * Number(info?.pricing?.completion || 0);
     return {
-      buffer: isPcm ? pcmToWav(pcm, rate) : pcm, mime: isPcm ? 'audio/wav' : 'audio/mpeg', rawUsd: cost ?? estimate,
+      buffer: isPcm ? pcmToWav(pcm, rate) : pcm, mime: isPcm || isWav ? 'audio/wav' : 'audio/mpeg', rawUsd: cost ?? estimate,
       meter: { seconds: isPcm ? pcm.length / 2 / rate : null, generation_id: genId, estimated_cost: cost == null },
       provider: 'openrouter', model,
     };

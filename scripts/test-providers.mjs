@@ -1,3 +1,4 @@
+import {withVisualChoice} from '../server/visual-choice.js';
 // Isolated integration tests: real routing/credentials/metering, stubbed provider HTTP.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -41,7 +42,7 @@ globalThis.fetch=async (url,opts={})=>{
  if(parsed.pathname.endsWith('/generation'))return json({data:{total_cost:0.003}});
  if(parsed.pathname.endsWith('/chat/completions'))return json({choices:[{message:{content:body.messages[0].content?.[0]?.type==='text'?'A spoken test.':'Test response.'}}],usage:{prompt_tokens:10,completion_tokens:10,cost:0.005}});
  if(parsed.pathname.endsWith('/images')||parsed.pathname.endsWith('/images/generations'))return json({data:[{b64_json:Buffer.from('image fixture').toString('base64'),media_type:'image/png'}],usage:{cost:0.02}});
- if(parsed.pathname.endsWith('/audio/speech'))return new Response(Buffer.from('mp3-fixture'),{headers:{'content-type':'audio/mpeg','x-generation-id':'test-generation'}});
+ if(parsed.pathname.endsWith('/audio/speech')){assert.equal(body.response_format,body.model.startsWith('google/')?'pcm':'mp3');return new Response(body.response_format==='pcm'?Buffer.alloc(4800):Buffer.from('mp3-fixture'),{headers:{'content-type':body.response_format==='pcm'?'audio/pcm;rate=24000':'audio/mpeg','x-generation-id':'test-generation'}});}
  if(parsed.pathname.endsWith(':generateContent'))return json({candidates:[{content:{parts:[{inlineData:{data:audio.toString('base64'),mimeType:'audio/pcm;rate=24000'}}]}}],usageMetadata:{promptTokenCount:10,candidatesTokenCount:10}});
  if(parsed.pathname.endsWith('/audio/transcriptions'))return json({text:'A spoken test.',usage:{seconds:2}});
  throw new Error('Unexpected provider URL '+parsed.pathname);
@@ -50,7 +51,7 @@ function insertUser(id,role='player') { db.prepare("INSERT INTO users(id,email,d
 const player=insertUser('player'),other=insertUser('other'),admin=insertUser('admin','admin');
 function personal(provider,id='player') {return {...player,id,or_enabled:1,or_key:provider==='openrouter'?encryptSecret('test-personal-or-'+id):null,hypr_key:provider==='hyprlab'?encryptSecret('test-personal-hp-'+id):null,provider_prefs:JSON.stringify({roles:Object.fromEntries(Object.entries(PROVIDERS[provider].defaults).map(([r,m])=>[r,{provider,model:m}]))})};}
 function setCentral(provider) {for(const [role,model] of Object.entries(PROVIDERS[provider].defaults)){const r=role==='llm'?'reasoning_llm':role;db.prepare('UPDATE model_routes SET model=?,base_url=?,key_env=? WHERE role=?').run(model,provider==='hyprlab'&&role==='tts'?'https://api.hyprlab.io/v1beta':PROVIDERS[provider].base,PROVIDERS[provider].env,r);}}
-const modalities=[['llm',()=>llmChat([{role:'user',content:'Test'}])],['image',()=>genImage('Test',{refs:['data:image/png;base64,dGVzdA==']})],['tts',()=>tts('Only this sentence.',{style:'Warm voice'})],['asr',()=>asr(audio,'audio/wav','test.wav')]];
+const modalities=[['llm',()=>llmChat([{role:'user',content:'Test'}])],['image',()=>withVisualChoice({mode:'generate',confirmImageGeneration:true},()=>genImage('Test',{refs:['data:image/png;base64,dGVzdA==']}))],['tts',()=>tts('Only this sentence.',{style:'Warm voice'})],['asr',()=>asr(audio,'audio/wav','test.wav')]];
 for(const provider of ['hyprlab','openrouter'])for(const own of [false,true]){
  setCentral(own ? provider==='hyprlab'?'openrouter':'hyprlab' : provider);
  const u=own?personal(provider):player;

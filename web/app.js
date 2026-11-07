@@ -29,6 +29,7 @@ const I18N = {
     resume: 'Weiter', continue_building: 'Weiterbauen', create_world: 'Welt erschaffen', wizard: '🧙 Welten-Assistent',
     sign_in: 'Anmelden', create_account: 'Konto erstellen', step_inside: 'Eintreten', advance: '▶ Weiter',
     intervene: '⚡ Eingreifen', character: 'Figur', location: 'Ort', custom: 'eigene', listen_hint: '💡 Zeile anklicken zum Anhören',
+    continue: 'Weiter', act_ph: 'Was tust du? (handeln, sprechen — oder Zeit überspringen)', act_ph_dec: 'Was tust du?',
     first_page: 'Lass die Zeit voranschreiten, um die erste Seite aufzuschlagen…', voice: 'Stimme', settings_voice: '🔊 Stimme & Erzählung',
     sign_out: 'Abmelden', credits: 'Guthaben', spent_today: 'heute verbraucht',
   },
@@ -40,6 +41,7 @@ const I18N = {
     intervene: '⚡ Intervenir', character: 'Personnage', location: 'Lieu', custom: 'perso', listen_hint: '💡 cliquez une ligne pour l\'écouter',
     first_page: 'Faites avancer le temps pour tourner la première page…', voice: 'Voix', settings_voice: '🔊 Voix & narration',
     sign_out: 'Déconnexion', credits: 'crédits', spent_today: 'dépensé aujourd\'hui',
+    continue: 'Continuer', act_ph: 'Que fais-tu ? (agir, parler — ou sauter du temps)', act_ph_dec: 'Que fais-tu ?',
   },
   es: {
     home: 'Inicio', cast: 'Personajes', bonds: 'Vínculos', world: 'Mundo', play: 'Jugar', share: 'Compartir',
@@ -49,6 +51,7 @@ const I18N = {
     intervene: '⚡ Intervenir', character: 'Personaje', location: 'Lugar', custom: 'propio', listen_hint: '💡 pulsa una línea para escucharla',
     first_page: 'Avanza el tiempo para pasar la primera página…', voice: 'Voz', settings_voice: '🔊 Voz y narración',
     sign_out: 'Cerrar sesión', credits: 'créditos', spent_today: 'gastado hoy',
+    continue: 'Continuar', act_ph: '¿Qué haces? (actúa, habla — o salta el tiempo)', act_ph_dec: '¿Qué haces?',
   },
 };
 const getLang = () => { if(S.world&&S.livingWorld===S.world)return localStorage.getItem('viv_living_display')||'en'; const l = localStorage.getItem('viv_lang'); return LANGS.includes(l) ? l : 'en'; };
@@ -58,6 +61,7 @@ const t = (key, fallback) => (I18N[getLang()] || {})[key] || fallback || key;
 
 /* ───────── helpers ───────── */
 async function api(path, opts = {}) {
+  if(opts.method==='POST'&&/(?:\/cover|\/forge\/portrait|\/outfits|\/background|\/locations\/accept)$/.test(path)&&!opts.body?.visualChoice){opts={...opts,body:{...(opts.body||{}),visualChoice:await rpgVisualForRequest(path,opts.body||{})}};}
   if(S.livingWorld===S.world&&/^\/api\/characters\//.test(path)){path=path.replace('/api/characters/',`/api/living/worlds/${S.world}/sims/`).replace('/inner-voice','/inner');}
   // Only send a JSON Content-Type when there's actually a JSON body — Fastify's
   // JSON parser rejects an empty body sent with that header (e.g. bodyless POSTs
@@ -117,7 +121,7 @@ function toast(msg, cls = '', ms = 3400) {
   const timer = ms > 0 ? setTimeout(dismiss, ms) : null;
   return () => { if (timer) clearTimeout(timer); dismiss(); };
 }
-const fail = (e) => toast(e.message || 'Something went wrong', 'err');
+const fail = (e) => {if(e.code!=='CANCELLED')toast(e.message || 'Something went wrong', 'err');};
 async function refreshMe() {
   // Also captures which TTS engine the admin has activated ('gemini' | 'laionbox') —
   // the voice UI adapts to it (prebuilt-voice pickers vs reference-clip management).
@@ -159,6 +163,18 @@ const ttsPrefs = () => {
 // development); 'main' = only plot-critical events (a skip may then have no scenes at all).
 const skipPrefs = () => ({ animate: true, detail: 'full', ...JSON.parse(localStorage.getItem('viv_skip') || '{}') });
 const saveSkipPrefs = (p) => localStorage.setItem('viv_skip', JSON.stringify({ ...skipPrefs(), ...p }));
+// ── RPG fork: first-person mode ──────────────────────────────────────────────
+// A world with player_character_id is a first-person RPG: the stage locks to that
+// character, time is storyteller-paced ('auto'), and the player acts via the action bar.
+const rpgPC = () => S.worldData?.world?.player_character_id || null;
+// adminMode: 🛠 the player steps OUTSIDE their character into the simulation's admin seat —
+// read ANY mind (even off-scene), talk to any inner voice, ask the GM about secrets, and
+// change anything about the world. Off (default) = you are only your character: other minds
+// are closed, their thought-lines are hidden from storybook & voiceover, the GM keeps
+// secrets and refuses godlike changes (sprites & new places to explore remain fine).
+const rpgPrefs = () => { const st = JSON.parse(localStorage.getItem('viv_rpg') || '{}'); return { adminMode: !!(st.adminMode ?? st.innerSight), ...st }; };
+const saveRpgPrefs = (p) => localStorage.setItem('viv_rpg', JSON.stringify({ ...rpgPrefs(), ...p }));
+const adminOn = () => !rpgPC() || rpgPrefs().adminMode;   // classic worlds behave like admin-on
 const saveTtsPrefs = (p) => localStorage.setItem('viv_tts', JSON.stringify({ ...ttsPrefs(), ...p }));
 const fmtClock = (iso) => new Date(iso).toLocaleString(getLang()==='de'?'de-DE':'en-GB', {...(S.worldData?.world.simulation_mode==='living'?{timeZone:'UTC'}:{}), weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const cutoutFor = (ch) => { const o = (ch.state.outfits || []).find(o => o.name === (ch.state.outfit || 'everyday')) || (ch.state.outfits || [])[0]; return o?.cutout_asset_id; };
@@ -556,6 +572,7 @@ async function route() {
   if(typeof livingStopReel==='function')livingStopReel();
   ivSpeakRun?.stop();
   S.graphPan?.dispose();
+  document.body.classList.remove('rpg');   // re-set by stageScreen when the world has a PC
   if (typeof stopNarration === 'function') stopNarration();
   const [path, q] = location.hash.slice(2).split('?');
   const params = new URLSearchParams(q || '');
@@ -607,7 +624,7 @@ function authScreen() {
         <p style="font-size:10.5px;color:var(--soft);margin:0 0 6px" id="r-hint">Full stories, rated for adults.</p>` : ''}
         <div class="err" id="autherr"></div>
         <button class="btn btn-primary" style="width:100%" id="go">${mode === 'signup' ? 'Create my account' : 'Step inside'}</button>
-        ${mode === 'signup' ? '<p style="font-size:11px;color:var(--soft);margin:12px 0 0">New accounts get a <b style="color:#a86f0d">200-credit</b> welcome gift ✨</p>' : ''}`}
+        ${mode === 'signup' ? '<p style="font-size:11px;color:var(--soft);margin:12px 0 0">Use your own <b>OpenRouter key</b> in Settings. No admin account or Vivarium credit purchase is needed.</p>' : ''}`}
     </div></div>`;
     $$('.auth-tabs button').forEach(b => b.onclick = () => { mode = b.dataset.m; render(); });
     const err = (m) => { $('#autherr').textContent = m; };
@@ -672,11 +689,11 @@ async function homeScreen() {
     const { worlds } = await api('/api/worlds');
     const featured = worlds[0];
     $('#home-c').innerHTML = `
-      <p class="eyebrow">${t('your_studio', 'Your studio')}</p>
+      <div class="rpg-home-intro"><p class="eyebrow">VIVARIUM · FIRST-PERSON STORIES</p><h1>One life. Your choices.</h1><p>Step into a character's world. Speak, explore, build relationships — and decide what happens next.</p><div><span>Illustrated scenes</span><span>Voiced conversations</span><span>Rewind & branch</span></div></div>
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
         <h1 class="title" style="margin:0">${t('my_worlds', 'My Worlds')}</h1>
-        <div style="display:flex;gap:9px">
-          <button class="btn btn-teal" id="newliving">🌳 Living World</button>
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn btn-teal" id="visual-library-home">🎨 Anime library</button>
           <button class="btn btn-teal" id="wizardbtn" title="Chat a whole new scenario into being">${t('wizard', '🧙 World Wizard')}</button>
           <button class="btn btn-soft" id="importworld" title="Restore a saved game from a .vivarium.zip">${t('import_save', '⬆ Import save')}</button>
           <button class="btn btn-primary" id="newworld">${t('new_world', '+ New world')}</button>
@@ -694,7 +711,7 @@ async function homeScreen() {
     };
     $('#newworld').onclick = create; $('#create2').onclick = create;
     $('#importworld').onclick = () => importGamePicker();
-    $('#newliving').onclick=livingTownModal;
+    $('#visual-library-home').onclick=()=>rpgLibraryBrowser();
     $('#wizardbtn').onclick = () => nav('#/wizard');
     $$('.world-card').forEach(c => {
       c.onclick = async (e) => {
@@ -761,12 +778,12 @@ async function forgeScreen() {
       </div>
       <div class="panel portrait-stage">
         <div style="display:flex;gap:6px"><span class="tag v">Anime</span><span class="tag grey">green-screen cut-out · transparent</span></div>
-        <div class="checker" id="portrait-box" style="width:100%;display:flex;justify-content:center"><div class="ph">The portrait appears here once the draft feels ready — or press Paint now.</div></div>
+        <div class="checker" id="portrait-box" style="width:100%;display:flex;justify-content:center"><div class="ph">The portrait appears here once the draft feels ready — or press Choose an image.</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
-          <button class="btn btn-soft small" id="paint">🎨 Paint portrait</button>
+          <button class="btn btn-soft small" id="paint">🎨 Choose portrait</button>
           <button class="btn btn-soft small" id="voicebtn">🔊 Voice preview</button>
         </div>
-        <div id="paint-hint" style="display:none;font-size:11.5px;color:var(--violet);font-weight:500">👆 Ready to see them? Hit <b>Paint portrait</b>.</div>
+        <div id="paint-hint" style="display:none;font-size:11.5px;color:var(--violet);font-weight:500">👆 Ready to see them? Hit <b>Choose portrait</b>.</div>
         <div style="display:flex;gap:10px;margin-top:2px">
           <button class="btn btn-ghost" id="discard">Discard</button>
           <button class="btn btn-primary" id="accept" disabled>+ Accept & add to cast</button>
@@ -800,7 +817,7 @@ async function forgeScreen() {
   }
   function showPortrait() {
     $('#portrait-box').innerHTML = `<img src="${assetUrl(F.cutoutId)}" alt="portrait">`;
-    const pb = $('#paint'); if (pb) { pb.classList.remove('btn-primary'); pb.classList.add('btn-soft'); pb.style.animation = ''; pb.textContent = '↻ Regenerate'; }
+    const pb = $('#paint'); if (pb) { pb.classList.remove('btn-primary'); pb.classList.add('btn-soft'); pb.style.animation = ''; pb.textContent = '↻ Change image'; }
     const hint = $('#paint-hint'); if (hint) hint.style.display = 'none';
     if (F.draft?.name) $('#accept').disabled = false;
   }
@@ -871,10 +888,11 @@ async function forgeScreen() {
       addMsg('status', `🖼 ${esc(F.draft.name)} is on the canvas in ${((performance.now() - t0) / 1000).toFixed(0)}s — regenerate or tweak the look anytime.`);
     } catch (e) {
       clearInterval(timer);
+      if(e.code==='CANCELLED'){F.painting=false;$('#paint').disabled=false;if(F.cutoutId)showPortrait();else $('#portrait-box').innerHTML='<div class="ph">Choose an existing portrait whenever you are ready.</div>';return;}
       $('#portrait-box').innerHTML = `<div class="ph" style="flex-direction:column;gap:12px"><div style="font-size:30px">🎨💔</div><div>The portrait didn't come through.</div><button class="btn btn-soft small" id="retry-paint">↻ Try again</button></div>`;
       const rb = $('#retry-paint'); if (rb) rb.onclick = paint;
       const reason = e.code === 'INSUFFICIENT_CREDITS' ? e.message : e.code === 'RATE_LIMITED' ? 'the studio is busy right now — give it a few seconds.' : `${e.message}`;
-      addMsg('assistant', `😔 I couldn't finish the portrait: ${reason} You can hit "🎨 Paint portrait" to try again whenever you like.`);
+      addMsg('assistant', `😔 I couldn't finish the portrait: ${reason} You can hit "🎨 Choose portrait" to try again whenever you like.`);
     }
     F.painting = false;
     const pb = $('#paint'); if (pb) pb.disabled = false;
@@ -1302,7 +1320,7 @@ async function populateScreen() {
           <b>${esc(s.name)}</b> <span class="tag grey">${esc(s.age ?? '')}</span>
           <div class="meta">${esc(s.personality || '')}</div>
           <div style="font-size:11.5px;color:#4b4573;margin-bottom:9px">${(s.bonds || []).map(b => `<span class="tag c" style="margin:2px 2px 0 0">${esc(b.description)}</span>`).join('')}</div>
-          <button class="btn btn-primary small" data-approve="${i}" style="width:100%">+ Approve (paints portrait)</button>
+          <button class="btn btn-primary small" data-approve="${i}" style="width:100%">+ Approve & choose image</button>
         </div></div>`).join('');
       $$('[data-approve]').forEach(b => b.onclick = async () => {
         const s = suggestions[+b.dataset.approve];
@@ -1317,7 +1335,7 @@ async function populateScreen() {
             }
           }
           b.textContent = '✓ joined the cast'; S.worldData = null; refreshMe();
-        } catch (e) { b.disabled = false; b.textContent = '+ Approve (paints portrait)'; fail(e); }
+        } catch (e) { b.disabled = false; b.textContent = '+ Approve & choose image'; fail(e); }
       });
     } catch (e) { $('#pop-progress').textContent = ''; fail(e); }
   };
@@ -1336,9 +1354,21 @@ async function wizardScreen() {
   <div class="screen"><div class="container">
     <div class="forge-layout" style="grid-template-columns:minmax(320px,1fr) minmax(300px,420px)">
       <div class="chatpanel">
-        <div style="padding:13px 16px;border-bottom:1px solid var(--line)"><b style="font-size:14px">Describe the world you want</b><div style="font-size:11px;color:var(--soft)">genre, characters, places — I'll draft the whole scenario and refine it with you</div></div>
+        <div style="padding:13px 16px;border-bottom:1px solid var(--line)"><b style="font-size:14px">Who do you want to be?</b><div style="font-size:11px;color:var(--soft)">your character, their world, the people in their life — I'll draft everything and refine it with you</div></div>
         <div class="chatlog" id="wz-log">
-          <div class="msg assistant">Where are we going? A medieval keep, a space freighter, a sleepy seaside town? Tell me the world you want and roughly who lives in it — I'll draft everything. 🧙</div>
+          <div class="msg assistant">This is YOUR story — so first: who do you want to be? A billionaire in today's world, a vampire in a modern city, a wizard in a medieval academy, a starship captain on the frontier…? Pick a spark below, or just tell me in your own words (age, epoch, dreams, fears — as much or as little as you like). 🧙</div>
+          <div class="wz-seeds">
+            ${[['💰','Billionaire','a billionaire in the contemporary world'],
+               ['🧛','Vampire','a vampire in a modern-fantasy setting'],
+               ['🧙','Wizard','a wizard in a medieval fantasy world'],
+               ['🚀','Starship captain','a starship captain in a sci-fi setting'],
+               ['🕵️','Detective','a detective in a noir metropolis'],
+               ['⚔️','Knight','a knight in a medieval kingdom'],
+               ['🎸','Rockstar','a musician chasing a breakthrough'],
+               ['🏝','Castaway','a castaway on a mysterious island'],
+               ['🃏','Reality-bender','someone in the contemporary world who discovered — maybe over a Magic: The Gathering deck — that reality behaves like a dream, and learned to bend it']]
+              .map(x => `<button class="wz-seed" data-seed="${esc(x[2])}">${x[0]} ${x[1]}</button>`).join('')}
+          </div>
         </div>
         <div class="chat-inputrow"><div class="field" id="wz-field"><input id="wz-in" placeholder="e.g. a medieval scenario with a knight, a mage, and the knight's jealous brother…"><button class="btn btn-primary small" id="wz-send">Send</button></div></div>
       </div>
@@ -1355,6 +1385,13 @@ async function wizardScreen() {
   if (W.plan) renderPlan();
   if (W.jobId) pollBuild(); // resume watching an in-flight build after navigation
   attachMic($('#wz-field'), $('#wz-in'), { submit: $('#wz-send'), canSubmit: () => !W.busy });
+  // Seed chips fill the input for REVIEW — the player edits or just presses Send; nothing
+  // is submitted for them, and the phrasing invites the wizard to ASK before drafting.
+  $$('.wz-seed').forEach(bn => bn.onclick = () => {
+    const inp = $('#wz-in');
+    inp.value = `I'd like to play ${bn.dataset.seed} — but ask me a few questions first to figure out exactly what kind.`;
+    inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+  });
 
   // Right panel: readable plan summary + itemised cost + the approval button.
   function renderPlan() {
@@ -1364,16 +1401,32 @@ async function wizardScreen() {
       <b style="font-size:15px">${esc(p.title || 'Untitled world')}</b>
       <div style="font-size:11px;color:var(--soft);margin:2px 0 8px">${esc(p.genre || '')} · ${esc(p.mood || '')}</div>
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:8px 0 4px">CAST (${(p.characters || []).length})</h5>
-      ${(p.characters || []).map(c => `<div style="font-size:12px;margin-bottom:3px"><b>${esc(c.name)}</b> <span style="color:var(--soft)">· ${esc(c.age ?? '')} · ${esc((c.personality || '').slice(0, 60))}</span></div>`).join('')}
+      ${(p.characters || []).map(c => {
+        const isPC = c.name === p.player_character;
+        // this character's bonds, PLAYER bonds first — the plan panel must show how everyone connects
+        const bonds = (p.relationships || []).filter(r => r.from === c.name || r.to === c.name)
+          .sort((x, y) => ((y.from === p.player_character || y.to === p.player_character) ? 1 : 0) - ((x.from === p.player_character || x.to === p.player_character) ? 1 : 0));
+        const bondLines = bonds.slice(0, 4).map(r => {
+          const other = r.from === c.name ? r.to : r.from;
+          const txt = r.from === c.name ? r.description : (r.reverse_description || r.description);
+          return `<div style="font-size:11px;color:#4b4573;margin-top:2px">↔ <b>${esc(other)}${other === p.player_character ? ' 🎮' : ''}</b> — ${esc(txt || '')}</div>`;
+        }).join('');
+        return `<div style="font-size:12px;margin-bottom:9px;padding:8px 9px;border:1.5px solid ${isPC ? 'var(--violet)' : 'var(--line)'};border-radius:11px;${isPC ? 'background:var(--tint)' : ''}">
+          <b>${esc(c.name)}</b> ${isPC ? '<span class="tag v" style="font-size:9px">🎮 YOU — player character</span>' : '<span class="tag" style="font-size:9px;background:#efecfb;color:#6a63a0">NPC</span>'} <span style="color:var(--soft)">· ${esc(c.age ?? '')}</span>
+          <div style="font-size:11.5px;color:#3c3763;margin-top:3px">${esc(c.personality || '')}</div>
+          ${c.backstory ? `<div style="font-size:11px;color:#5a5487;margin-top:3px;line-height:1.45">${esc(c.backstory)}</div>` : ''}
+          ${bondLines}
+        </div>`;
+      }).join('')}
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:10px 0 4px">PLACES (${(p.locations || []).length})</h5>
       <div style="font-size:11.5px;color:#3c3763">${(p.locations || []).map(l => esc(l.name)).join(' · ')}</div>
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:10px 0 4px">BONDS (${(p.relationships || []).length})</h5>
       <div style="font-size:11.5px;color:#3c3763">${(p.relationships || []).slice(0, 6).map(r => `${esc(r.from)} → ${esc(r.to)}`).join(' · ')}${(p.relationships || []).length > 6 ? ' …' : ''}</div>
       ${e ? `
       <div class="attr" style="margin-top:12px;background:#fdf3e0;border-color:#f4d79a"><h5 style="color:#a86f0d">ESTIMATED COST</h5>
-        <p style="font-size:11.5px">${e.images} images (${e.portraits} portraits + ${e.outfitVariants} outfits + ${e.backgrounds} backgrounds)${e.voiceRefs ? ` · ${e.voiceRefs} cloned voices` : ''} ${S.byok ? '<b>your provider account</b>' : `≈ <b>${e.estCredits} credits</b>`}<br>
+        <p style="font-size:11.5px">${e.portraits} cast portraits + ${e.backgrounds} backgrounds from the library (no image generation by default)${e.voiceRefs ? ` · ${e.voiceRefs} cloned voices` : ''} ${S.byok ? '<b>your provider account</b>' : `≈ <b>${e.estCredits} credits</b>`}<br>
         <span style="color:var(--soft)">${S.byok ? 'Your selected providers bill you directly. No Vivarium credits are used.' : `an upper estimate — you are billed per actual generation; you have ${S.user?.credits ?? '?'} credits`}</span></p></div>
-      <button class="btn btn-coral" id="wz-go" style="width:100%;margin-top:10px">🚀 Build this world · ${S.byok ? 'my providers' : `≈${e.estCredits} credits`}</button>` : ''}`;
+      <button class="btn btn-coral" id="wz-go" style="width:100%;margin-top:10px">🎨 Review images & build · ${S.byok ? 'my providers' : `≈${e.estCredits} credits`}</button>` : ''}`;
     const go = $('#wz-go');
     if (go) go.onclick = startBuild;
   }
@@ -1398,9 +1451,10 @@ async function wizardScreen() {
   // Approval → background build → poll + stream the build diary until the world is live.
   async function startBuild() {
     try {
-      const { jobId } = await api('/api/wizard/build', { method: 'POST', body: { plan: W.plan, lang: getLang() } });
+      const visualChoices=await rpgReviewVisuals(W.plan);if(!visualChoices)return;
+      const { jobId } = await api('/api/wizard/build', { method: 'POST', body: { plan: W.plan, lang: getLang(), visualChoices } });
       W.jobId = jobId;
-      addMsg('status', '🏗 building — grab a tea, this takes a few minutes. You can leave this screen; the build continues.');
+      addMsg('status', 'Preparing your cast and locations, then writing the opening. You can leave this screen; the build continues.');
       pollBuild();
     } catch (e) { fail(e); }
   }
@@ -2141,7 +2195,7 @@ async function atlasScreen() {
       ${l.background_asset_id ? `<img class="bgprev" src="${assetUrl(l.background_asset_id)}">` : '<div class="shimmer" style="height:120px"></div>'}
       <h4 style="margin-top:10px">${esc(l.name)}</h4>
       <p style="font-size:12px;color:#4b4573">${esc(l.description || '')}</p>
-      <button class="btn btn-teal small" id="genbg" style="width:100%;margin:4px 0 12px">${l.background_asset_id ? '↻ Regenerate background' : '🎨 Generate background'}</button>
+      <button class="btn btn-teal small" id="genbg" style="width:100%;margin:4px 0 12px">${l.background_asset_id ? '↻ Change image background' : '🎨 Choose background'}</button>
       <h5 style="font-size:10px;letter-spacing:.12em;color:var(--violet);margin:0 0 5px">GROUP</h5>
       <select id="locgroup" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:7px 9px;font-family:inherit;font-size:12px;margin-bottom:12px">
         <option value="">— no group —</option>
@@ -2154,7 +2208,7 @@ async function atlasScreen() {
       <div style="margin-top:10px">${who(l.id).map(c => `<span class="tag g" style="margin:0 4px 4px 0">👤 ${esc(c.name)}</span>`).join('')}</div>`;
     $('#genbg').onclick = async () => {
       $('#genbg').disabled = true; $('#genbg').innerHTML = '<span class="spinner"></span> painting…';
-      try { await api(`/api/locations/${l.id}/background`, { method: 'POST' }); S.worldData = null; refreshMe(); atlasScreen(); } catch (e) { fail(e); $('#genbg').disabled = false; $('#genbg').textContent = '🎨 Generate background'; }
+      try { await api(`/api/locations/${l.id}/background`, { method: 'POST' }); S.worldData = null; refreshMe(); atlasScreen(); } catch (e) { fail(e); $('#genbg').disabled = false; $('#genbg').textContent = '🎨 Choose background'; }
     };
     // Assign this location to a cluster after the fact (its frame on the map updates live).
     $('#locgroup').onchange = async () => {
@@ -2257,7 +2311,10 @@ async function stageScreen() {
     api(`/api/worlds/${S.world}/branches`),
   ]);
   const lastTick = ticks[ticks.length - 1] || null;
-  if (!stageState.pov || (stageState.pov.type === 'character' && !characters.find(c => c.id === stageState.pov.id)))
+  // RPG: the stage IS the player character's experience — the point of view is locked to them.
+  const pcLocked = world.player_character_id && characters.find(c => c.id === world.player_character_id) ? world.player_character_id : null;
+  if (pcLocked) stageState.pov = { type: 'character', id: pcLocked };
+  else if (!stageState.pov || (stageState.pov.type === 'character' && !characters.find(c => c.id === stageState.pov.id)))
     stageState.pov = { type: 'character', id: characters[0]?.id };
 
   stageState.delta = stageState.delta || '+1m';
@@ -2269,8 +2326,10 @@ async function stageScreen() {
   const scene = buildScene(lastTick, loc, present, povChar);
   const stagePeople=living&&present.length>8?[...present.filter(c=>c.id!==povChar?.id).slice(0,7),...(povChar&&present.some(c=>c.id===povChar.id)?[povChar]:present.filter(c=>c.id!==povChar?.id).slice(7,8))]:present;
 
+  const dec = (pcLocked && lastTick?.decision && lastTick.idx === world.tick_index) ? lastTick.decision : null;
+  document.body.classList.toggle('rpg', !!pcLocked);   // CSS scope: stage-root closes before the control strip
   app.innerHTML = `
-  <div id="stage-root">
+  <div id="stage-root" class="${pcLocked ? 'rpg' : ''}">
     <div class="stage-bg" style="background-image:url(${assetUrl(loc?.background_asset_id)})"></div>
     <div class="stage-vignette"></div>
     <div class="stage-cast" id="stage-cast">
@@ -2304,11 +2363,12 @@ async function stageScreen() {
     <div class="glasschip" id="credits-chip"><div class="coin"></div><span id="credits-num">${S.byok ? 'Own API' : S.user?.credits ?? '–'}</span></div>
     <button class="glasschip" id="avatar-chip">${esc((S.user?.displayName || '?')[0].toUpperCase())}</button></div></div>
   <button id="fact-bubble" title="Did you know? — curiosity cards" style="display:none">💡</button>
+  ${pcLocked?`<div class="rpg-identity"><img src="${assetUrl(cutoutFor(povChar))}" alt=""><div><small>YOU ARE</small><b>${esc(povChar.name)}</b><span>${esc([povChar.base?.age?'Age '+povChar.base.age:'',povChar.base?.pronouns,povChar.base?.job].filter(Boolean).join(' · '))}</span></div><button class="btn small" id="rpg-my-mind">Inner voice</button></div>`:''}
   <div class="here-rail"><span class="hlabel">HERE</span>
     ${present.map(c => `<div class="rail-face ${c.id === povChar?.id ? 'active' : ''}" data-pov="${c.id}" style="background-image:url(${assetUrl(cutoutFor(c))})" title="See through ${esc(c.name)}'s eyes"><span>${esc(c.name)}</span></div>`).join('')}
     <div class="rail-face places" data-places title="Watch a place instead">🗺</div>
   </div>
-  <div class="stage-bottom${(localStorage.getItem('viv_panel') ?? (innerWidth <= 760 || living&&present.length>8 ? 'collapsed' : 'open')) === 'collapsed' ? ' collapsed' : ''}" id="stage-bottom">
+  <div class="stage-bottom${(localStorage.getItem(pcLocked?'viv_rpg_panel':'viv_panel') ?? (pcLocked?'open':innerWidth <= 760 || living&&present.length>8 ? 'collapsed' : 'open')) === 'collapsed' ? ' collapsed' : ''}" id="stage-bottom">
     <!-- mobile-only handle: collapses the controls+storybook so sprites own the small screen -->
     <button class="panel-toggle" id="panel-toggle">📖</button>
     <div class="stage-controls">
@@ -2321,9 +2381,9 @@ async function stageScreen() {
       <button class="btn btn-coral small" id="intervene">${t('intervene', '⚡ Intervene')}</button>
       <span style="width:1px;height:18px;background:rgba(255,255,255,.2)"></span>
       ${living&&(S.worldData.sceneManifest?.length||S.worldData.flashbacks?.length)?'<button class="tchip" id="lw-recap" title="Replay all recorded scenes from the last step">▶ Replay step</button>':''}${living?'<button class="tchip" id="lw-scenes">▤ Scenes & history</button>':''}
-      <span class="scene-audio-controls"><button class="tchip playbtn" id="tts-play" aria-label="Szene vollständig vorlesen" title="Gesamte Szene vorlesen · Erzähler und Stimmen in Reihenfolge">▶</button>
-      <button class="tchip playbtn" id="tts-replay" title="Von Anfang an vorlesen" aria-label="Gesamte Szene erneut von Anfang an vorlesen">↻ Vorlesen</button>
-      <label class="tchip" title="Neue Zeitschritte automatisch vorlesen"><input type="checkbox" id="tts-auto" ${ttsPrefs().autoplay?'checked':''}> Auto</label>
+      <span class="scene-audio-controls"><button class="tchip playbtn" id="tts-play" aria-label="Read the full scene" title="Read the full scene · narration and voices in order">▶</button>
+      <button class="tchip playbtn" id="tts-replay" title="Read from the beginning" aria-label="Replay the complete scene">↻ Replay voice</button>
+      <label class="tchip" title="Automatically read each new scene"><input type="checkbox" id="tts-auto" ${ttsPrefs().autoplay?'checked':''}> Auto</label>
       <button class="tchip playbtn" id="tts-pause" title="Pause / resume" style="display:none">⏸</button></span>
     </div>
     <div class="storybox">
@@ -2333,11 +2393,23 @@ async function stageScreen() {
       </div>
       <div class="story-meta"><span>${esc(scene.meta)}</span><span>${t('listen_hint', '💡 click any line to hear it spoken')}</span></div>
     </div>
+    ${pcLocked ? `
+    <!-- RPG action bar: the player speaks/acts as their character; the storyteller paces time -->
+    ${dec ? `<div class="decision-card" id="decision-card"><span class="dc-ico">🎭</span><span>${esc(dec)}</span></div>` : ''}
+    <div class="action-bar" id="action-bar">
+      <div class="field action-field" id="act-field" style="flex:1;margin:0"><input id="act-in" placeholder="${dec ? t('act_ph_dec', 'What do you do?') : t('act_ph', 'What do you do? (act, speak — or ask to skip ahead)')}"></div>
+      <div class="skip-chips" title="Fast-forward time — longer skips play as scenes">
+        ${['+30s', '+5m', '+1h', '+1d'].map(d => `<button class="tchip" data-skip="${d}">${d.slice(1)}</button>`).join('')}
+        <button class="tchip" id="act-skip" title="Custom time skip (any amount)">⏱</button>
+      </div>
+      <button class="btn btn-primary small" id="act-go">▶ ${t('continue', 'Continue')}</button>
+    </div>` : ''}
   </div>
   <nav id="dock">${['home', 'cast', 'bonds', 'world', 'play', 'share'].flatMap(k=>k==='world'&&S.worldData?.world.simulation_mode==='living'?['world','city']:[k]).map(k => `
     <button class="dock-btn ${k === 'play' ? 'active' : ''}" data-nav="${k}">${ICONS[k]}<span>${dockLabel(k)}</span></button>`).join('')}</nav>`;
   bindChrome();
   if(living)await livingStageExtras(loc,present);
+  if($('#rpg-my-mind'))$('#rpg-my-mind').onclick=()=>mindModal(pcLocked);
   // "From the beginning"/replay pending: cover the stage instantly so the current scene
   // never flashes before the film's first transition card takes over.
   if (S.replay && !$('#cine-blackout')) {
@@ -2360,9 +2432,11 @@ async function stageScreen() {
   // 📖 collapse/expand — wired BEFORE the film handoff so the storybook text can be
   // maximized/minimized DURING intro/time-skip sequences too. Preference persists.
   const sb = $('#stage-bottom');
+  if(pcLocked)$('#panel-toggle').textContent=sb.classList.contains('collapsed')?'Show story':'Hide story';
   $('#panel-toggle').onclick = () => {
     sb.classList.toggle('collapsed');
-    localStorage.setItem('viv_panel', sb.classList.contains('collapsed') ? 'collapsed' : 'open');
+    localStorage.setItem(pcLocked?'viv_rpg_panel':'viv_panel', sb.classList.contains('collapsed') ? 'collapsed' : 'open');
+    if(pcLocked)$('#panel-toggle').textContent=sb.classList.contains('collapsed')?'Show story':'Hide story';
   };
   // Timeline handoff: a ▶ Replay click stashes the target; play it now that the stage exists.
   if (S.replay) {
@@ -2378,7 +2452,7 @@ async function stageScreen() {
     const cb = $('#customdelta'); cb.classList.add('sel'); cb.innerHTML = `⏱ ${d.slice(1)}`;
   });
 
-  $$('[data-pov]').forEach(f => f.onclick = () => { stopNarration(); stageState.pov = { type: 'character', id: f.dataset.pov }; stageScreen(); });
+  $$('[data-pov]').forEach(f => f.onclick = () => { if (pcLocked) { mindModal(f.dataset.pov); return; } stopNarration(); stageState.pov = { type: 'character', id: f.dataset.pov }; stageScreen(); });
   const openLocPicker = () => locationPickerModal(locations, characters, loc?.id, (l) => { stopNarration(); stageState.pov = { type: 'location', id: l.id }; stageScreen(); });
   $('[data-places]').onclick = openLocPicker;
   $('#pl').onclick = openLocPicker;
@@ -2399,6 +2473,25 @@ async function stageScreen() {
   const monitor=$('#lw-scenes');if(monitor)monitor.onclick=()=>livingTimeline().catch(fail);
   const recap=$('#lw-recap');if(recap)recap.onclick=()=>livingPlayFlashbacks().catch(fail);
   if(playFlashbacks)queueMicrotask(()=>livingPlayFlashbacks().catch(fail));
+  if (pcLocked) {
+    const actField = $('#act-field'), actIn = $('#act-in');
+    if (actField && actIn) {
+      attachMic(actField, actIn, { submit: $('#act-go') });
+      const go = () => {
+        const text = actIn.value.trim();
+        stopNarration();
+        advanceTick(text ? { kind: 'player_action', target: pcLocked, text } : null, { delta: 'auto' });
+      };
+      $('#act-go').onclick = go;
+      actIn.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); } };
+      // quick fast-forward presets — one click, no popup; any typed action rides along.
+      // Longer spans go through the chapter planner and play as scene films, decision
+      // stops included, exactly like the ⏱ custom popup.
+      const skipTo = (d) => { stopNarration(); advanceTick(actIn.value.trim() ? { kind: 'player_action', target: pcLocked, text: actIn.value.trim() } : null, { delta: d }); };
+      $$('.skip-chips [data-skip]').forEach(ch => ch.onclick = () => skipTo(ch.dataset.skip));
+      $('#act-skip').onclick = () => customDeltaModal(skipTo);
+    }
+  }
   $('#undobtn').onclick = async () => {
     if (!branchInfo.canUndo) return;
     stopNarration();
@@ -2495,7 +2588,7 @@ async function stageScreen() {
         // lang = the 🌐 preference: the Game Master writes this tick's story in that language.
         // chapter = the player's time-skip settings (animate on/off + detail level) — for
         // large skips the server may answer with SEVERAL scene-ticks instead of one.
-        body: JSON.stringify({ timeDelta: stageState.delta, intervention, perspective: stageState.pov, lang: getLang(), chapter: skipPrefs() }),
+        body: JSON.stringify({ timeDelta: opts.delta || (rpgPC() ? 'auto' : stageState.delta), intervention, perspective: stageState.pov, lang: getLang(), chapter: skipPrefs() }),
       });
       const reader = res.body.getReader(); const dec = new TextDecoder();
       let buf = '', errored = null;
@@ -2585,8 +2678,14 @@ function buildScene(lastTick, loc, present, povChar) {
 // ticks are already generated in-language and have no i18n, so this is a no-op for them.
 function localizeNarr(narration) {
   const lang = getLang();
-  if (lang === 'en') return narration || [];
-  return (narration || []).map(n => (n.i18n && n.i18n[lang]) ? { ...n, text: n.i18n[lang] } : n);
+  let lines = narration || [];
+  // RPG without 🔮 inner sight: other characters' PRIVATE THOUGHTS are not the player's to
+  // read (or hear) — only their own character's inner monologue shows. Filtering here covers
+  // every consumer at once: storybook, voiceover, films and replays.
+  const pc = rpgPC();
+  if (pc && !adminOn()) lines = lines.filter(n => !(n.mode === 'thought' && n.speaker !== pc));
+  if (lang === 'en') return lines;
+  return lines.map(n => (n.i18n && n.i18n[lang]) ? { ...n, text: n.i18n[lang] } : n);
 }
 function renderNarration(lines, characters) {
   // Only real characters get a name/voice; anything else (narrator or a GM-invented walk-on) reads as narration.
@@ -3373,7 +3472,7 @@ async function gmChatOverlay() {
       const slow = actions.some(a => ['create_character', 'new_outfit', 'create_location'].includes(a.type) || a.regenerate_background);
       btn.textContent = slow ? '⏳ Applying… image generation takes ~30s each' : '⏳ Applying…';
       try {
-        const { results } = await api(`/api/worlds/${S.world}/gm-apply`, { method: 'POST', body: { actions } });
+        const { results } = await api(`/api/worlds/${S.world}/gm-apply`, { method: 'POST', body: { actions, adminMode: adminOn() } });
         const res = card.querySelector('.gmc-res');
         res.style.display = 'block';
         res.innerHTML = results.map(r => `<div style="font-size:11.5px;color:${r.ok ? '#0d7e83' : '#d92e66'}">${r.ok ? '✓' : '✗'} ${esc(r.summary)}</div>` +
@@ -3406,7 +3505,7 @@ async function gmChatOverlay() {
     addMsg('user', text);
     const status = addMsg('status', '🎭 the Game Master is thinking…');
     try {
-      const out = await api(`/api/worlds/${S.world}/gm-chat`, { method: 'POST', body: { message: text, lang: getLang(), perspective:typeof livingAdvisorContext==='function'&&livingAdvisorContext()?{type:'character',id:livingAdvisorContext()}:stageState.pov } });
+      const out = await api(`/api/worlds/${S.world}/gm-chat`, { method: 'POST', body: { message: text, lang: getLang(), adminMode: adminOn(), perspective:typeof livingAdvisorContext==='function'&&livingAdvisorContext()?{type:'character',id:livingAdvisorContext()}:stageState.pov } });
       status.remove();
       addAssistant(out.reply, out.actions);
       refreshMe();
@@ -4002,6 +4101,12 @@ function characterPickerModal(characters, locations, currentId, onPick) {
 async function mindModal(charId) {
   const { characters, locations } = await loadWorld();
   const c = characters.find(x => x.id === charId); if (!c) return;
+  // RPG without 🛠 admin mode: other minds are closed — the player discovers people by
+  // talking to them, not by reading their state. (Their OWN character's head is always open.)
+  if (rpgPC() && !adminOn() && c.id !== rpgPC()) {
+    toast(`🔒 You can't read ${c.name}'s mind — that's for the simulation's admin. Enable 🛠 Admin mode in Account settings, or just talk to them.`);
+    return;
+  }
   const st = c.state, per = st.perceptions || {};
   const m = document.createElement('div');
   m.className = 'modal-bg';
@@ -4294,6 +4399,7 @@ async function accountModal() {
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-prepare" ${ttsPrefs().prepare ? 'checked' : ''}> Prepare the first spoken line in the background (instant playback)</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-auto" ${ttsPrefs().autoplay ? 'checked' : ''}> Read each new moment aloud automatically</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-inner" ${ttsPrefs().innerVoice !== false ? 'checked' : ''}> 🕯 Read inner-voice replies aloud (the character's voice)</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-innersight" ${rpgPrefs().adminMode ? 'checked' : ''}> 🛠 Director mode — step outside your character: see every mind, ask the Game Master anything (secrets included) and change the world at will. Off = you are only your character; the GM keeps secrets and only grants sprite refreshes &amp; new places to explore.</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tp-music" ${ttsPrefs().musicOn !== false ? 'checked' : ''}> 🎵 Background music (scene-matched, chosen by the storyteller)</label>
         <div style="display:grid;grid-template-columns:130px 1fr 44px;gap:8px 10px;align-items:center;margin:6px 0 0 26px;max-width:420px">
           <span style="font-size:11.5px;color:var(--soft)">🔊 voice volume</span>
@@ -4359,7 +4465,7 @@ async function accountModal() {
   };
   settingsTabs.forEach((t,index) => { t.onclick = () => showSettingsPage(t.dataset.settingsTab); t.onkeydown = e => { if (!['ArrowDown','ArrowUp','ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const next=settingsTabs[(index+(['ArrowDown','ArrowRight'].includes(e.key)?1:settingsTabs.length-1))%settingsTabs.length];showSettingsPage(next.dataset.settingsTab);next.focus(); }; });
   showSettingsPage('account'); settingsTabs[0].focus();
-  const closeSettings = () => { m.remove(); previousFocus?.focus(); };
+  const closeSettings = () => { m.remove(); previousFocus?.focus(); if(m._rpgDirty && location.hash.includes('stage')) {stopNarration();stageScreen();} };
   m.addEventListener('keydown', e => { if(e.key==='Escape') closeSettings(); if(e.key==='Tab') { const nodes=[...m.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]')].filter(el=>el.getClientRects().length&&!el.disabled);const first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();} } });
 
   m.onclick = (e) => { if (e.target === m) closeSettings(); };
@@ -4368,6 +4474,7 @@ async function accountModal() {
   renderMicSettings($('#mic-settings', m));
   renderByokSettings($('#byok-settings', m));
   const savePrefs = () => {
+    if ($('#tp-innersight', m)) saveRpgPrefs({ adminMode: $('#tp-innersight', m).checked });
     saveTtsPrefs({ narrator: $('#tp-narr', m).value, prepare: $('#tp-prepare', m).checked, autoplay: $('#tp-auto', m).checked, innerVoice: $('#tp-inner', m).checked, musicOn: $('#tp-music', m).checked, musicVol: (+$('#tp-musicvol', m).value) / 100, voiceVol: (+$('#tp-voicevol', m).value) / 100, voiceRate: (+$('#tp-voicerate', m).value) / 100, narratorStyle: $('#tp-narr-style', m).value, characterStyle: $('#tp-char-style', m).value, custom: $('#tp-custom', m).value });
     // apply live: volume ramps immediately; toggling off fades the score out, on resumes it
     if (!$('#tp-music', m).checked) stopMusic(); else setMusicVolume((+$('#tp-musicvol', m).value) / 100);
@@ -4375,7 +4482,15 @@ async function accountModal() {
   $('#tp-musicvol', m).oninput = () => { $('#tp-musicvol-n', m).textContent = $('#tp-musicvol', m).value + '%'; setMusicVolume((+$('#tp-musicvol', m).value) / 100); };
   $('#tp-voicevol', m).oninput = () => { $('#tp-voicevol-n', m).textContent = $('#tp-voicevol', m).value + '%'; };
   $('#tp-voicerate', m).oninput = () => { $('#tp-voicerate-n', m).textContent = $('#tp-voicerate', m).value + '%'; };
-  ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-inner', '#tp-music', '#tp-musicvol', '#tp-voicevol', '#tp-voicerate', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); if (el) { el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); } });
+  ['#tp-narr', '#tp-prepare', '#tp-auto', '#tp-inner', '#tp-innersight', '#tp-music', '#tp-musicvol', '#tp-voicevol', '#tp-voicerate', '#tp-narr-style', '#tp-char-style', '#tp-custom'].forEach(sel => { const el = $(sel, m); if (el) { el.addEventListener('change', savePrefs); el.addEventListener('blur', savePrefs); } });
+  // Admin mode feedback + live apply: confirm the switch immediately, and re-render the
+  // stage on modal close so thought-lines/mind access reflect the new mode without a reload.
+  const sight = $('#tp-innersight', m);
+  if (sight) sight.addEventListener('change', () => {
+    savePrefs();
+    toast(sight.checked ? '🛠 Admin mode ON — every mind is open to you' : '🎭 Admin mode off — you are your character again');
+    m._rpgDirty = true;
+  });
   $('#tp-narr-reset', m).onclick = () => { $('#tp-narr-style', m).value = DEFAULT_NARRATOR_STYLE; savePrefs(); };
   $('#tp-char-reset', m).onclick = () => { $('#tp-char-style', m).value = DEFAULT_CHARACTER_STYLE; savePrefs(); };
   const saveSkip = () => saveSkipPrefs({ animate: $('#sk-animate', m).checked, detail: $('#sk-detail', m).value });

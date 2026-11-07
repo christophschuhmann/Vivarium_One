@@ -1,0 +1,158 @@
+{
+  "title": "The Letter at Closing Time",
+  "genre": "small-town mystery \u00b7 relationships \u00b7 first-person adventure",
+  "mood": "quiet intrigue",
+  "pacing": 0.4,
+  "player_character": "Emma Reed",
+  "directives": "A grounded contemporary mystery in an autumn college town in Vermont. The player embodies Emma Reed, a freelance journalist returning home after five years. Narrate only what Emma can perceive or learn. Begin in the bookshop at closing time: Noah has kept an envelope addressed in Emma's late mother's handwriting; inside is an unfamiliar brass key and a dated photograph. The evidence has several ordinary explanations. Reveal clues gradually through emotionally credible conversations, not arbitrary supernatural certainty. Allow warmth, awkward humor, conflicting loyalties and quiet agency. Stop before Emma makes any consequential decision; ask the player. Write concrete dialogue and actions, with 150\u2013300 words for a developed scene. All main characters are adults. No procedural town simulation.",
+  "characters": [
+    {
+      "name": "Emma Reed",
+      "age": 29,
+      "pronouns": "she/her",
+      "job": "Freelance journalist",
+      "appearance": "adult woman age 29, brown shoulder-length hair, thoughtful eyes, autumn coat and practical clothes, neutral expression",
+      "outfit": "casual autumn clothes",
+      "personality": "Observant and quietly stubborn; empathetic with strangers, guarded with people who remember her childhood.",
+      "goals": [
+        "Find out why her mother left the key",
+        "Decide whether returning home means starting over"
+      ],
+      "fears": [
+        "Mistaking a comforting explanation for the truth"
+      ],
+      "backstory": "Emma left town for reporting work five years ago. Returning to sort her mother's papers, she has told everyone she is only staying a week. The work contract she expected to return to has quietly fallen through.",
+      "speaking_style": "Precise, curious, dry humor when nervous.",
+      "voice": "Sulafat",
+      "home_location": "Juniper Books"
+    },
+    {
+      "name": "Noah Vale",
+      "age": 32,
+      "pronouns": "he/him",
+      "job": "Bookshop owner",
+      "appearance": "adult man age 32, dark short hair, cardigan and plain shirt, neutral reserved expression",
+      "outfit": "comfortable bookstore work clothes",
+      "personality": "Patient, loyal and conflict-avoidant, protective of other people's confidences.",
+      "goals": [
+        "Keep the bookshop open",
+        "Tell Emma something he has delayed too long"
+      ],
+      "fears": [
+        "Losing a friendship by telling the truth"
+      ],
+      "backstory": "Noah took over the neighborhood bookshop from his father. Emma's mother spent many afternoons here. She left him an envelope with an oddly specific instruction: hand it over only after the first autumn storm.",
+      "speaking_style": "Warm and measured, with pauses before uncomfortable truths.",
+      "voice": "Charon",
+      "home_location": "Juniper Books"
+    },
+    {
+      "name": "Mira Chandra",
+      "age": 34,
+      "pronouns": "she/her",
+      "job": "Architect",
+      "appearance": "Indian woman age 34, dark hair, simple jacket and trousers, composed neutral face",
+      "outfit": "practical smart casual clothing",
+      "personality": "Resourceful and direct, generous with practical help, uncomfortable when loyalty conflicts with ambition.",
+      "goals": [
+        "Save the old community reading room",
+        "Win a contract without compromising her principles"
+      ],
+      "fears": [
+        "Being judged only by her family's reputation"
+      ],
+      "backstory": "Mira is surveying a building scheduled for renovation. The dated photograph may show a room missing from the current floor plans. She recognizes Emma, but their last conversation ended badly.",
+      "speaking_style": "Quick, concrete, affectionate teasing when trust allows.",
+      "voice": "Kore",
+      "home_location": "Market Street"
+    },
+    {
+      "name": "Helen Ward",
+      "age": 68,
+      "pronouns": "she/her",
+      "job": "Retired archivist",
+      "appearance": "older woman age 68, silver hair, reading glasses, warm cardigan, calm neutral expression",
+      "outfit": "comfortable cardigan and modest everyday clothes",
+      "personality": "Sharp, wry and independent; kind without making things easy.",
+      "goals": [
+        "Preserve an honest account of the town's history",
+        "Keep a promise without repeating an old mistake"
+      ],
+      "fears": [
+        "Others deciding she is too old to have agency"
+      ],
+      "backstory": "Helen organized the town archive for three decades and knew Emma's mother well. She is preparing a local exhibition; one space in its display case is conspicuously empty.",
+      "speaking_style": "Concise, vivid recollections, humor that invites a second question.",
+      "voice": "Gacrux",
+      "home_location": "Town Reading Room"
+    }
+  ],
+  "locations": [
+    {
+      "name": "Juniper Books",
+      "description": "A small cozy bookshop with wooden shelves, a front counter, amber desk lamps and tall windows overlooking a rainy Vermont street, autumn evening, anime background, no people",
+      "type": "room",
+      "place_group": "Market Street"
+    },
+    {
+      "name": "Market Street",
+      "description": "Walkable small-town shopping street in Vermont, brick storefronts, golden autumn trees, wet pavement after rain, early evening, anime background, no people",
+      "type": "public",
+      "place_group": "Town Center"
+    },
+    {
+      "name": "Town Reading Room",
+      "description": "A quiet historical public library reading room with tall windows, wood tables, shelves and an exhibition cabinet, autumn light, anime background, no people",
+      "type": "room",
+      "place_group": "Town Center"
+    },
+    {
+      "name": "Emma's Guest Room",
+      "description": "A modest comfortable adult bedroom in an old family house, wooden desk, suitcase, bedside lamp and autumn trees outside, anime background, no people",
+      "type": "room",
+      "place_group": "Reed House"
+    }
+  ],
+  "paths": [
+    [
+      "Juniper Books",
+      "Market Street"
+    ],
+    [
+      "Market Street",
+      "Town Reading Room"
+    ],
+    [
+      "Market Street",
+      "Emma's Guest Room"
+    ]
+  ],
+  "relationships": [
+    {
+      "from": "Emma Reed",
+      "to": "Noah Vale",
+      "description": "An old friend whose kindness makes returning home harder to keep temporary.",
+      "reverse_description": "An old friend he trusts, though he has withheld one important detail."
+    },
+    {
+      "from": "Emma Reed",
+      "to": "Mira Chandra",
+      "description": "A former close friend; their unfinished disagreement still has weight.",
+      "reverse_description": "Someone she misses, but will not pretend never hurt her."
+    },
+    {
+      "from": "Emma Reed",
+      "to": "Helen Ward",
+      "description": "Her mother's friend and a source of uncomfortable, valuable honesty.",
+      "reverse_description": "A capable young woman who deserves facts instead of protective half-truths."
+    },
+    {
+      "from": "Noah Vale",
+      "to": "Mira Chandra",
+      "description": "Neighbors working to keep the old reading room open.",
+      "reverse_description": "A dependable ally whose hesitation sometimes frustrates her."
+    }
+  ],
+  "intro_scenes": [],
+  "start_time": "2026-10-15T18:00:00Z"
+}

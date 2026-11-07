@@ -1,3 +1,5 @@
+import {withVisualChoice,visualChoice} from '../visual-choice.js';
+import {libraryBackground} from '../rpg-library.js';
 import {directorChat,directorApply} from '../living/director.js';
 import {stageView} from '../living/vivarium.js';
 // Player API — every UI action is exactly one endpoint here.
@@ -88,6 +90,13 @@ const charOut = (c) => ({
 });
 
 export default async function apiRoutes(app) {
+  app.addHook('onRoute', options => {
+    if(options.method==='POST' && /(?:\/cover|\/forge\/portrait|\/outfits|\/background|\/locations\/accept)$/.test(options.url)){
+      const handler=options.handler;
+      options.handler=function(req,reply){return withVisualChoice(req.body?.visualChoice,()=>handler.call(this,req,reply));};
+    }
+  });
+
   // ---------- auth ----------
   app.post('/api/auth/signup', async (req, reply) => {
     const { email, password, displayName, rating } = req.body || {};
@@ -149,6 +158,7 @@ export default async function apiRoutes(app) {
     const w = ownWorld(u, req.params.id);
     const prompt = String(req.body?.prompt || `cinematic key art for a story called "${w.title}", genre ${w.genre}, mood ${w.mood}`).slice(0, 600)
       + ',  -  warm & bright colors, very nice HQ Anime style, ghiblhi style, cinematic key art poster, dramatic lighting, widescreen';
+    if(visualChoice().mode!=='generate'){const a=await libraryBackground(u,w,{name:w.title,description:prompt});db.prepare('UPDATE worlds SET cover_asset_id=?,updated_at=? WHERE id=?').run(a.id,now(),w.id);return {coverId:a.id};}
     preflight(u.id, EST.image());
     const { genImage } = await import('../providers.js');
     const res = await genImage(prompt, { aspect: '16:9' });
@@ -227,6 +237,15 @@ export default async function apiRoutes(app) {
     const u = requireUser(req);
     const w = ownWorld(u, req.params.id);
     const b = req.body || {};
+    // RPG fork: which cast member the player embodies (first-person POV lock). Must be a
+    // real character of THIS world; null clears it (classic god-view world).
+    if (b.playerCharacterId !== undefined) {
+      const cid = b.playerCharacterId;
+      if (cid !== null && !db.prepare('SELECT 1 FROM characters WHERE id=? AND world_id=?').get(cid, w.id)) {
+        throw httpErr(400, 'BAD_PC', 'That character is not part of this world.');
+      }
+      db.prepare('UPDATE worlds SET player_character_id=?, updated_at=? WHERE id=?').run(cid, now(), w.id);
+    }
     db.prepare(`UPDATE worlds SET title=COALESCE(?,title), genre=COALESCE(?,genre), mood=COALESCE(?,mood),
                 pacing=COALESCE(?,pacing), directives=COALESCE(?,directives), updated_at=? WHERE id=?`)
       .run(b.title, b.genre, b.mood, b.pacing, b.directives, now(), w.id);
@@ -283,7 +302,7 @@ export default async function apiRoutes(app) {
     const d = req.body?.draft || {};
     if (!d.name || !d.appearance) throw httpErr(400, 'DRAFT_INCOMPLETE', 'The draft needs at least a name and appearance.');
     const { portrait, cutout } = await gm.generatePortrait(u, w, {
-      name: d.name, appearance: d.appearance, outfit: d.outfit || 'casual everyday clothes', refAssetId: req.body?.refAssetId || null });
+      name: d.name, age:d.age, pronouns:d.pronouns, appearance: d.appearance, outfit: d.outfit || 'casual everyday clothes', refAssetId: req.body?.refAssetId || null });
     return { portraitId: portrait.id, cutoutId: cutout.id };
   });
   app.post('/api/worlds/:id/characters', async (req) => {
@@ -308,9 +327,15 @@ export default async function apiRoutes(app) {
       thought: null, dialogue: null, outfit: 'everyday',
       outfits: req.body?.cutoutId ? [{ name: 'everyday', cutout_asset_id: req.body.cutoutId, portrait_asset_id: req.body?.portraitId || null }] : [],
     };
+    let selected=req.body?.portraitId?getAsset(req.body.portraitId):null;
+    if(selected&&(selected.user_id!==u.id||selected.world_id!==w.id||selected.kind!=='portrait'))throw httpErr(403,'FORBIDDEN','This portrait does not belong to this story.');
+    if(!selected){const picture=await gm.generatePortrait(u,w,{...d});selected=picture.portrait;state.outfits=picture.outfits||[{name:'everyday',portrait_asset_id:picture.portrait.id,cutout_asset_id:picture.cutout.id}];}
+    else {const variants=pj(selected.meta,{}).outfits;if(variants)state.outfits=variants;}
+    for(const outfit of state.outfits){const a=getAsset(outfit.cutout_asset_id);if(!a||a.user_id!==u.id||a.world_id!==w.id)throw httpErr(403,'FORBIDDEN','This sprite does not belong to this story.');}
     // intro_tick_idx: they JOIN THE STORY now — rewinding below this hides them (consistency)
     db.prepare(`INSERT INTO characters(id,world_id,name,base_profile,materialised,reference_asset_id,voice,intro_tick_idx,created_at) VALUES (?,?,?,?,?,?,?,?,?)`)
-      .run(id, w.id, d.name, j(d), j(state), req.body?.portraitId || null, d.voice && d.voice.split(' ')[0] || 'Sulafat', w.tick_index, now());
+      .run(id, w.id, d.name, j(d), j(state), selected?.id || null, d.voice && d.voice.split(' ')[0] || 'Sulafat', w.tick_index, now());
+    if(!w.player_character_id)db.prepare('UPDATE worlds SET player_character_id=? WHERE id=?').run(id,w.id);
     db.prepare(`INSERT INTO state_patches(id,world_id,entity_ref,entity_id,idx,tick_ref,author,category,op,path,value,reason,created_at)
                 VALUES (?,?,?,?,1,0,'player','physical','set','/created',?,?,?)`)
       .run(uid('sp_'), w.id, 'character', id, j('time-zero base'), 'character created in the Forge', now());
@@ -561,15 +586,13 @@ export default async function apiRoutes(app) {
   app.post('/api/worlds/:id/gm-chat', async (req) => {
     const u = requireVerified(req);
     const w = ownWorld(u, req.params.id);
-    if(w.simulation_mode==='living')return directorChat(u,w,String(req.body?.message||''),req.body?.lang,undefined,req.body?.perspective);
-    return gm.gmChat(u, w, String(req.body?.message || '').slice(0, 4000), req.body?.lang || 'en');
+    return gm.gmChat(u, w, String(req.body?.message || '').slice(0, 4000), req.body?.lang || 'en', !!req.body?.adminMode);
   });
   // Execute the player-APPROVED actions (may generate images — can take a minute).
   app.post('/api/worlds/:id/gm-apply', async (req) => {
     const u = requireVerified(req);
     const w = ownWorld(u, req.params.id);
-    if(w.simulation_mode==='living')return directorApply(u,w,req.body?.actions||[]);
-    const results = await gm.gmApplyActions(u, w, req.body?.actions || []);
+    const results = await gm.gmApplyActions(u, w, req.body?.actions || [], !!req.body?.adminMode);
     return { results };
   });
   // The overlay's persisted conversation (newest last; the model itself only sees ~20k tokens).
@@ -605,7 +628,7 @@ export default async function apiRoutes(app) {
   // Validates + preflights credits synchronously; the heavy work runs async (poll the job).
   app.post('/api/wizard/build', async (req) => {
     const u = requireVerified(req);
-    const job = startWizardBuild(u, req.body?.plan, req.body?.lang || 'en');
+    const job = startWizardBuild(u, req.body?.plan, req.body?.lang || 'en', req.body?.visualChoices || {});
     return { jobId: job.id };
   });
   app.get('/api/wizard/jobs/:id', async (req) => {
@@ -1146,6 +1169,7 @@ export default async function apiRoutes(app) {
       if (!fs.existsSync(manifestPath)) throw httpErr(400, 'BAD_BUNDLE', 'The zip has no manifest.json — not a Vivarium world bundle.');
       const manifest = pj(fs.readFileSync(manifestPath, 'utf8'), null);
       if (!manifest) throw httpErr(400, 'BAD_BUNDLE', 'The manifest could not be parsed.');
+      if(manifest.world?.simulation_mode==='living'||manifest.living)throw httpErr(409,'LIVING_WORLD_PAUSED','This is a Living World save. Restore it in the preserved Living World installation; this installation runs First-Person RPG stories.');
       const result = importWorldManifest(u, manifest, path.join(unpacked, 'assets'));
       return { ok: true, ...result };
     } finally {

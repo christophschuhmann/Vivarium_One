@@ -1,3 +1,4 @@
+import {requireImageConsent} from './visual-choice.js';
 // Model Router — the only module that talks to model providers. Injects the key,
 // meters raw cost, returns results + meter. Mock mode for CI (MOCK_PROVIDERS=1).
 //
@@ -171,6 +172,7 @@ export async function llmJson(messages, opts = {}) {
 
 // ---------- Image ----------
 export async function genImage(prompt, { aspect = '2:3', refs = [] } = {}) {
+  requireImageConsent();
   const r = route('image');
   if (MOCK) return mockImage(aspect);
   // BYOK → OpenRouter image models (Nano Banana 2 Lite & friends) via chat completions;

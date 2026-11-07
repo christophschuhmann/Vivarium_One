@@ -1,7 +1,7 @@
 {
   "name": "vivarium",
   "version": "1.0.0",
-  "description": "A warm, browser-based life-simulation sandbox: AI-driven characters live in illustrated worlds you create, narrate their days aloud, and can be nudged, rewound, exported and shared.",
+  "description": "First-person illustrated RPG: play one character, explore relationships and branch your story with reusable anime assets and your own OpenRouter key.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
@@ -59,7 +59,9 @@
     "test:conversation-effects-browser": "node scripts/test-conversation-effects.mjs --browser",
     "test:scene-monitor": "node scripts/test-scene-monitor.mjs",
     "test:scene-monitor-browser": "node scripts/test-scene-monitor.mjs --browser",
-    "test:narration-browser": "node scripts/test-narration-browser.mjs"
+    "test:narration-browser": "node scripts/test-narration-browser.mjs",
+    "test:rpg": "node scripts/test-first-person.mjs",
+    "test:rpg-browser": "node scripts/test-first-person-browser.mjs"
   },
   "license": "MIT",
   "dependencies": {

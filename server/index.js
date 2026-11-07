@@ -16,14 +16,7 @@ import './db.js';
 import providerSettingsRoutes from './routes/provider_settings.js';
 import { isolatedRequest } from './byok.js';
 import storageRoutes from './routes/storage.js';
-import livingRoutes from './routes/living.js';
-import expandedRoutes from './routes/expanded.js';
-import {upgradeAllNeighborhoods} from './living/upgrade.js';
-import {upgradeAllLife} from './living/upgrade-life.js';
-import {upgradeAllRomance} from './living/upgrade-romance.js';
-import {loadTown} from './living/engine.js';
-import {upgradeExpanded} from './living/expanded/index.js';
-import {upgradeAllWellbeing} from './living/upgrade-wellbeing.js';
+import visualRoutes from './routes/rpg_visuals.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 12 * 1024 * 1024 });
@@ -71,8 +64,9 @@ app.setErrorHandler((err, req, reply) => {
 
 await app.register(providerSettingsRoutes);
 await app.register(storageRoutes);
-await app.register(livingRoutes);
-await app.register(expandedRoutes);
+// First-person deployment: procedural simulation endpoints are disabled.
+
+await app.register(visualRoutes);
 await app.register(apiRoutes);
 await app.register(adminRoutes);
 if (process.env.TEST_MODE === '1' && process.env.NODE_ENV !== 'production') await app.register(testRoutes);
@@ -86,14 +80,5 @@ app.setNotFoundHandler((req, reply) => {
 });
 
 const port = Number(process.env.PORT || 8890);
-const socialUpgrade=await upgradeAllNeighborhoods();
-if(socialUpgrade.worlds)app.log.info(socialUpgrade,'Living World neighborhoods upgraded; saved history preserved.');
-const lifeUpgrade=await upgradeAllLife();
-if(lifeUpgrade.worlds)app.log.info(lifeUpgrade,'Living World feelings, goals and public rooms upgraded.');
-const romanceUpgrade=await upgradeAllRomance();
-if(romanceUpgrade.worlds)app.log.info(romanceUpgrade,'Living World social warmth and age-bounded romantic affection initialized.');
-const wellbeingUpgrade=await upgradeAllWellbeing();
-const expandedUpgrade=await upgradeExpanded(loadTown);if(expandedUpgrade.worlds)app.log.info(expandedUpgrade,'Expanded town resources initialized; previous clock and witnessed history retained.');
-if(wellbeingUpgrade.worlds)app.log.info(wellbeingUpgrade,'Living World individual PERMA wellbeing initialized from current state.');
 await app.listen({ port, host: process.env.VIV_HOST || '0.0.0.0' });
 console.log(`Vivarium listening on :${port}  (TEST_MODE=${process.env.TEST_MODE || '0'}, MOCK_PROVIDERS=${process.env.MOCK_PROVIDERS || '0'})`);

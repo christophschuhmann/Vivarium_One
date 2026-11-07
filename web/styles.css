@@ -640,14 +640,108 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .storage-delete{color:#ad3650!important}.storage-pager{justify-content:space-between}
 @media(max-width:700px){.storage-assets{grid-template-columns:1fr}.storage-row{align-items:flex-start;flex-direction:column}.storage-metrics article{padding:10px}.storage-metrics b{font-size:18px}}
 
-/* mobile hardening (shared with the RPG fork): the thinking veil must cover the screen —
-   at z-index:8 it hid behind the storybook on phones and looked like a dead button. */
+/* ── RPG fork: first-person mode ──
+   The stage locks to the player character: classic god-view controls (POV pickers, time
+   chips, Advance/Intervene) vanish; the action bar under the storybook takes over. */
+body.rpg #pc, body.rpg #pl, body.rpg [data-delta],
+body.rpg #customdelta, body.rpg #advance, body.rpg #intervene { display:none }
+body.rpg .here-rail .rail-face.places { display:none }
+.action-bar{display:flex;align-items:center;gap:8px;background:rgba(24,21,54,.78);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:9px 11px;box-shadow:0 14px 34px rgba(10,8,30,.4)}
+.action-bar .field input{width:100%;background:rgba(255,255,255,.94);border:1.5px solid rgba(255,255,255,.3);
+  border-radius:11px;padding:9px 12px;font-size:13.5px;font-family:inherit}
+.action-bar .tchip{flex:none}
+.action-field{position:relative;display:flex;align-items:center;gap:6px}
+.decision-card{display:flex;gap:10px;align-items:flex-start;background:linear-gradient(135deg,rgba(240,169,46,.28),rgba(109,74,255,.24));
+  border:1.5px solid rgba(240,169,46,.55);border-radius:16px;padding:11px 14px;margin-bottom:8px;color:#fff7e8;
+  font-size:14px;line-height:1.5;box-shadow:0 12px 30px rgba(10,8,30,.42);animation:decIn .4s ease}
+.decision-card .dc-ico{font-size:19px;line-height:1.2}
+@keyframes decIn{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+@media(max-width:760px){.action-bar{padding:7px 8px;gap:6px}.action-bar .field input{font-size:13px;padding:8px 10px}}
+/* wizard: clickable player-fantasy seeds under the greeting */
+.wz-seeds{display:flex;flex-wrap:wrap;gap:7px;padding:4px 2px 8px}
+.wz-seed{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:12.5px;
+  font-family:inherit;cursor:pointer;transition:all .15s ease;color:#3c3763}
+.wz-seed:hover{border-color:var(--violet);background:var(--tint);transform:translateY(-1px)}
+/* RPG action bar: quick fast-forward presets */
+.skip-chips{display:flex;gap:4px;flex:none;align-items:center}
+.skip-chips .tchip{padding:5px 8px;font-size:11px;color:#d9d2f5;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2)}
+.skip-chips .tchip:hover{background:rgba(255,255,255,.18);color:#fff}
+@media(max-width:760px){.skip-chips .tchip{padding:4px 6px;font-size:10px}}
+/* mobile: the action input deserves the full width — chips & Continue drop to a second row */
+@media(max-width:760px){
+  .action-bar{flex-wrap:wrap}
+  .action-bar .action-field{flex:1 1 100%;min-width:100%}
+  .action-bar .skip-chips{flex:1;justify-content:flex-start}
+  #act-go{flex:none;margin-left:auto}
+}
+
+/* ── mobile hardening (Samsung & friends) ─────────────────────────────────────
+   The action bar must always float ABOVE the dock and never slip under the
+   browser chrome or the gesture bar; the storybook stays touch-scrollable and
+   collapsible; landscape gets a compact layout. */
+/* stacking: storybook+action bar must beat the dock (tap safety), and the thinking veil
+   must beat EVERYTHING — at its old z-index:8 it hid BEHIND the storybook on phones, so
+   "thinking" was invisible and looked exactly like a dead button. */
+.stage-bottom{z-index:61}
+.action-bar{position:relative;z-index:62}
 .thinking-veil{z-index:70}
 #veil:not(:empty){position:fixed;inset:0;z-index:70}
-.stage-bottom{z-index:61}
 .storybox{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-.panel-toggle{min-width:52px;min-height:36px}
+.storylines{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.panel-toggle{min-width:52px;min-height:36px}   /* comfortable thumb target for collapse/expand */
 @media(max-width:760px){
   .stage-bottom{bottom:calc(76px + env(safe-area-inset-bottom, 0px))}
   #dock{padding-bottom:env(safe-area-inset-bottom, 0px)}
+  .action-bar{padding-bottom:calc(9px + env(safe-area-inset-bottom, 0px) / 2)}
+  #act-go{min-height:40px;min-width:104px}      /* big, unmissable tap target */
+  .decision-card{font-size:13px;padding:9px 11px;max-height:30vh;overflow-y:auto}
+}
+/* phone LANDSCAPE: little height — compact everything, keep the scene visible */
+@media(max-height:520px) and (orientation:landscape){
+  .stage-bottom{bottom:8px;gap:4px;left:70px;right:70px}
+  #dock{transform:scale(.82);transform-origin:bottom center}
+  .storybox{max-height:26vh}
+  .storylines{max-height:18vh;font-size:12px}
+  .here-rail .rail-face{width:34px;height:34px}
+  .here-rail{gap:4px}
+  #topbar .glasschip{padding:4px 8px;font-size:11px}
+  .action-bar{padding:6px 8px;gap:5px}
+  .action-bar .field input{padding:6px 9px;font-size:12.5px}
+  .decision-card{max-height:24vh;overflow-y:auto;font-size:12.5px;padding:8px 10px}
+  .skip-chips .tchip{padding:3px 6px;font-size:10px}
+  .thinking-veil{gap:8px}
+}
+
+/* First-person visual library: spacious review, bounded lazy thumbnails, keyboard access. */
+.rpg-visual-layer{position:fixed;inset:0;z-index:12000;display:flex;align-items:center;justify-content:center;padding:24px;background:#17223999;backdrop-filter:blur(8px)}
+.rpg-visual-dialog{width:min(1080px,100%);height:min(850px,92dvh);display:flex;flex-direction:column;background:#faf9f5;border-radius:24px;box-shadow:0 24px 90px #13203855;overflow:hidden;color:#27394b}
+.rpg-visual-dialog header{display:flex;justify-content:space-between;align-items:flex-start;padding:24px 28px 18px;border-bottom:1px solid #e0e5df;gap:20px}.rpg-visual-dialog small{font-size:11px;letter-spacing:.06em;color:#64796e}.rpg-visual-dialog h2{font-size:27px;margin:6px 0 8px}.rpg-visual-dialog p{margin:0;color:#627181;line-height:1.5}
+.rpg-visual-body{padding:22px 28px;overflow:auto;min-height:0;flex:1}.rpg-visual-dialog footer{display:flex;align-items:center;gap:12px;padding:16px 28px;border-top:1px solid #e0e5df;background:#fff;justify-content:space-between}.rpg-visual-spacer{flex:1}
+.rpg-visual-search{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}.rpg-visual-search input,.rpg-visual-search select{border:1px solid #ccd6cf;padding:10px 12px;border-radius:11px;background:white;min-width:0}.rpg-visual-search input[name=q]{flex:1;min-width:200px}.rpg-visual-search input[name=age]{width:78px}.rpg-visual-status{padding-bottom:16px;font-size:12px}
+.rpg-visual-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:16px}.rpg-visual-card{text-align:left;background:#fff;border:1px solid #dae2dc;border-radius:15px;overflow:hidden;padding:0;cursor:pointer;color:inherit;transition:transform .15s,box-shadow .15s}.rpg-visual-card:hover,.rpg-visual-card:focus-visible{transform:translateY(-3px);box-shadow:0 8px 24px #12312320;border-color:#588b72}.rpg-visual-card img{width:100%;height:170px;object-fit:contain;background:#eaf0e8}.rpg-visual-card>span{display:block;padding:12px}.rpg-visual-card b,.rpg-visual-card small{display:block;overflow-wrap:anywhere}.rpg-visual-caption{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:11px;line-height:1.5;margin-top:6px;color:#6a7681}
+.rpg-story-assets{display:grid;gap:12px}.rpg-story-asset{display:flex;align-items:center;gap:18px;background:#fff;border:1px solid #dfe5df;border-radius:16px;padding:12px}.rpg-story-asset>img,.rpg-visual-placeholder{height:112px;width:140px;object-fit:contain;background:#edf1eb;border-radius:9px;flex-shrink:0}.rpg-visual-placeholder{display:grid;place-items:center;font-size:42px}.rpg-story-asset>div:not(.rpg-visual-placeholder){flex:1}.rpg-story-asset h3{margin:5px 0;font-size:18px}.rpg-story-asset p{font-size:12px}.rpg-story-asset span{display:block;font-size:11px;margin-top:7px;color:#468067}
+@media(max-width:640px){.rpg-visual-layer{padding:8px}.rpg-visual-dialog{height:96dvh;border-radius:16px}.rpg-visual-dialog header,.rpg-visual-body,.rpg-visual-dialog footer{padding:16px}.rpg-visual-dialog h2{font-size:22px}.rpg-visual-dialog footer{flex-wrap:wrap}.rpg-story-asset{flex-wrap:wrap;gap:10px}.rpg-story-asset>img,.rpg-visual-placeholder{width:88px;height:96px}.rpg-story-asset>button{margin-left:auto}.rpg-visual-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rpg-visual-card img{height:150px}}
+
+/* Keep the existing stage while making the player's identity and artwork legible. */
+body.rpg .stage-bg{filter:brightness(.92);transform:none;inset:0}
+body.rpg .storylines{max-height:min(27vh,270px);overflow-y:auto;line-height:1.65}
+.rpg-identity{position:fixed;left:95px;top:78px;z-index:55;display:flex;align-items:center;gap:12px;max-width:460px;padding:10px 14px;background:#fffdf2e8;backdrop-filter:blur(12px);border:1px solid #ffffffa6;border-radius:18px;box-shadow:0 5px 22px #12212c18}
+.rpg-identity img{width:46px;height:56px;object-fit:cover;object-position:top;background:#e8ebdf;border-radius:12px}.rpg-identity b,.rpg-identity span,.rpg-identity small{display:block}.rpg-identity small{font-size:9px;letter-spacing:.15em;color:#6c7a68}.rpg-identity b{font-size:15px}.rpg-identity span{font-size:10px;color:#6b7169}.rpg-identity button{margin-left:8px}
+.rpg-home-intro{padding:28px 32px;margin:10px 0 28px;border-radius:24px;border:1px solid #dce4d4;background:linear-gradient(120deg,#f5f8ed,#fff8ed,#f3effb)}.rpg-home-intro h1{font-family:Lora,serif;font-size:clamp(30px,4vw,48px);margin:8px 0 12px;letter-spacing:-.04em;color:#283d37}.rpg-home-intro>p:not(.eyebrow){font-size:14px;line-height:1.7;max-width:650px;color:#5f7068}.rpg-home-intro>div{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.rpg-home-intro span{font-size:11px;color:#496154;border-radius:20px;padding:6px 12px;background:#ffffffa1;border:1px solid #d8e4d6}
+@media(max-width:760px){.rpg-identity{left:12px;right:12px;top:112px;max-width:none;padding:8px 10px;gap:8px}.rpg-identity img{height:42px;width:36px}.rpg-identity b{font-size:12px}.rpg-identity button{margin-left:auto}.rpg-identity span{font-size:9px}.rpg-home-intro{padding:22px}.rpg-identity~.here-rail{top:185px}body.rpg .storylines{max-height:28vh}}
+
+body.rpg #panel-toggle{font-size:11px;font-weight:600;width:auto;padding:8px 16px}
+@media(max-width:760px){
+ body.rpg .stage-hud{top:57px;left:12px;right:12px;transform:none;width:auto;max-width:none;justify-content:space-between;gap:6px!important}
+ body.rpg .stage-hud>.glasschip:first-child{display:block;flex:1;min-width:0;padding:7px 11px;line-height:1.5;overflow:hidden}
+ body.rpg .stage-hud>.glasschip:first-child b,body.rpg .stage-hud>.glasschip:first-child span{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0}
+ body.rpg .stage-hud>.glasschip:first-child span:last-child{display:none}
+ body.rpg .stage-hud>.glasschip:nth-child(2){flex-shrink:0;max-width:95px}
+ body.rpg #topbar{left:0;right:0;top:8px;padding:0 12px}body.rpg #topbar>div{gap:6px!important}
+ body.rpg #topbar .glasschip{height:34px;padding:7px 10px}body.rpg #credits-chip{display:none}
+ body.rpg .rpg-identity{top:116px}.rpg-identity~.here-rail{top:188px}
+ body.rpg .storylines{max-height:18vh;font-size:12px}body.rpg .storylines .sline{font-size:12px;line-height:1.6}
+ body.rpg .decision-card{font-size:11px;line-height:1.5;max-height:105px;overflow:auto;padding:10px 12px}
+ body.rpg .stage-bottom{gap:6px;bottom:78px}body.rpg .stage-bottom .story-meta{font-size:8px}
 }

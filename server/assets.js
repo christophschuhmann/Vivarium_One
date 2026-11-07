@@ -45,6 +45,7 @@ export function matte(buffer) {
     const py = spawn(process.env.VIV_PYTHON_BIN || (fs.existsSync(virtualPython)?virtualPython:'python3'), [path.join(ROOT, 'scripts', 'matte.py'), inFile, outFile]);
     let err = '';
     py.stderr.on('data', d => err += d);
+    py.on('error', e => {fs.rmSync(inFile,{force:true});fs.rmSync(outFile,{force:true});reject(e);});
     py.on('close', code => {
       try {
         if (code !== 0) return reject(new Error('matte failed: ' + err.slice(0, 300)));
